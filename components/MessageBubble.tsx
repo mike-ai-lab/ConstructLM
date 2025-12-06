@@ -2,7 +2,6 @@ import React from 'react';
 import { Message } from '../types';
 import { Bot, User, Cpu } from 'lucide-react';
 import CitationRenderer from './CitationRenderer';
-import ReactMarkdown from 'react-markdown';
 
 interface MessageBubbleProps {
   message: Message;
@@ -37,7 +36,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
              )}
           </div>
           
-          <div className="text-sm prose prose-sm max-w-none prose-p:my-1 prose-headings:my-2">
+          <div className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
             {isUser ? (
                 <div>{message.content}</div>
             ) : (

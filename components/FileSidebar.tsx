@@ -84,7 +84,7 @@ const FileSidebar: React.FC<FileSidebarProps> = ({ files, onUpload, onRemove, is
             type="file"
             ref={folderInputRef}
             onChange={handleFolderChange}
-            webkitdirectory=""
+            {...({ webkitdirectory: "" } as any)}
             multiple
             className="hidden"
             />

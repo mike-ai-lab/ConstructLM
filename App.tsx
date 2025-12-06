@@ -23,7 +23,11 @@ const App: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   useEffect(() => {
-      initializeGemini();
+      try {
+        initializeGemini();
+      } catch (e) {
+        console.error("Failed to initialize Gemini service:", e);
+      }
   }, []);
 
   const scrollToBottom = () => {
@@ -95,6 +99,7 @@ const App: React.FC = () => {
           }
       );
     } catch (error) {
+       console.error(error);
        setMessages(prev => prev.map(msg => 
             msg.id === modelMsgId 
             ? { ...msg, content: "Sorry, I encountered an error communicating with Gemini. Please check your connection or API key." } 

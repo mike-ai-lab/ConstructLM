@@ -1,5 +1,3 @@
-import 'react';
-
 export interface ProcessedFile {
   id: string;
   name: string;
@@ -28,13 +26,5 @@ declare global {
   interface Window {
     pdfjsLib: any;
     XLSX: any;
-  }
-}
-
-// Extends input attributes to support 'webkitdirectory'
-declare module 'react' {
-  interface InputHTMLAttributes<T> {
-    webkitdirectory?: string;
-    directory?: string;
   }
 }
