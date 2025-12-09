@@ -5,12 +5,13 @@ import FileSidebar from './components/FileSidebar';
 import MessageBubble from './components/MessageBubble';
 import DocumentViewer from './components/DocumentViewer';
 import { sendMessageToGemini, initializeGemini } from './services/geminiService';
-import { Send, Menu, Sparkles, X, AtSign, FileText, Database } from 'lucide-react';
+import { Send, Menu, Sparkles, X, AtSign, FileText, Database, PanelLeft, PanelLeftOpen } from 'lucide-react';
 
 interface ViewState {
   fileId: string;
   page?: number;
   quote?: string;
+  location?: string;
 }
 
 const MIN_SIDEBAR_WIDTH = 260;
@@ -129,12 +130,11 @@ const App: React.FC = () => {
     const lastAt = val.lastIndexOf('@', cursor - 1);
     
     if (lastAt !== -1) {
-        // check if there's a space after the @ before the cursor, which breaks the mention
         const query = val.slice(lastAt + 1, cursor);
         if (!query.includes(' ')) {
             setShowMentionMenu(true);
             setMentionQuery(query.toLowerCase());
-            setMentionIndex(0); // Reset selection on typing
+            setMentionIndex(0);
             return;
         }
     }
@@ -150,7 +150,6 @@ const App: React.FC = () => {
           const newValue = `${before}@${fileName} ${after}`;
           setInput(newValue);
           setShowMentionMenu(false);
-          // Focus back logic could go here
       }
   };
 
@@ -184,9 +183,6 @@ const App: React.FC = () => {
   const handleSendMessage = async () => {
     if (!input.trim() || isGenerating) return;
 
-    // 1. Identify Mentions for Context Filtering
-    // We strictly check if the filename exists in the user input prefixed by @
-    // This allows for "Efficiency Mode"
     const mentionedFiles = files.filter(f => input.includes(`@${f.name}`));
     const activeContextFiles = mentionedFiles.length > 0 ? mentionedFiles : files;
 
@@ -216,8 +212,8 @@ const App: React.FC = () => {
     try {
       await sendMessageToGemini(
           userMsg.content,
-          files, // Pass all for citation matching if needed (though service mostly uses active)
-          activeContextFiles, // The optimized subset
+          files, 
+          activeContextFiles, 
           (streamedText) => {
               setMessages(prev => prev.map(msg => 
                   msg.id === modelMsgId 
@@ -243,13 +239,14 @@ const App: React.FC = () => {
     }
   };
 
-  const handleViewDocument = (fileName: string, page?: number, quote?: string) => {
+  const handleViewDocument = (fileName: string, page?: number, quote?: string, location?: string) => {
       const file = files.find(f => f.name === fileName);
       if (file) {
           setViewState({
               fileId: file.id,
               page: page || 1,
-              quote
+              quote,
+              location
           });
       }
   };
@@ -271,12 +268,13 @@ const App: React.FC = () => {
       {/* --- LEFT SIDEBAR --- */}
       <div 
         className={`
-            fixed md:relative z-40 h-full bg-[#fcfcfc] flex flex-col transition-transform duration-300 ease-in-out border-r-0
+            fixed md:relative z-40 h-full bg-[#fcfcfc] flex flex-col transition-all duration-300 ease-in-out border-r border-gray-200 md:border-r-0
             ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+            ${!isSidebarOpen && !isMobile ? 'md:w-0 md:opacity-0 md:overflow-hidden' : ''}
         `}
-        style={{ width: isMobile ? '85%' : sidebarWidth }}
+        style={{ width: isMobile ? '85%' : (isSidebarOpen ? sidebarWidth : 0) }}
       >
-        <div className="h-full flex flex-col relative">
+        <div className="h-full flex flex-col relative w-full">
             {/* Mobile Close */}
             {isMobile && (
                 <button 
@@ -287,17 +285,20 @@ const App: React.FC = () => {
                 </button>
             )}
             
-            <FileSidebar 
-                files={files} 
-                onUpload={handleFileUpload} 
-                onRemove={handleRemoveFile}
-                isProcessing={isProcessingFiles}
-            />
+            {/* Hide content when collapsed to prevent squishing during transition */}
+            <div className={`flex flex-col h-full w-full ${!isSidebarOpen && !isMobile ? 'hidden' : 'block'}`}>
+                 <FileSidebar 
+                    files={files} 
+                    onUpload={handleFileUpload} 
+                    onRemove={handleRemoveFile}
+                    isProcessing={isProcessingFiles}
+                />
+            </div>
         </div>
       </div>
 
       {/* Resize Handle: Left */}
-      {!isMobile && (
+      {!isMobile && isSidebarOpen && (
           <div 
             className={`resize-handle-vertical ${isResizingSidebar ? 'active' : ''}`}
             onMouseDown={() => setIsResizingSidebar(true)}
@@ -305,10 +306,19 @@ const App: React.FC = () => {
       )}
 
       {/* --- MIDDLE CHAT AREA --- */}
-      <div className="flex-1 flex flex-col min-w-0 h-full relative bg-white">
+      <div className="flex-1 flex flex-col min-w-0 h-full relative bg-white transition-all duration-300">
         {/* Header */}
         <header className="h-14 flex-none border-b border-gray-100 flex items-center justify-between px-6 bg-white/80 backdrop-blur-sm z-10">
           <div className="flex items-center gap-2">
+             {!isMobile && (
+                 <button 
+                    onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
+                    className="mr-2 p-1.5 text-gray-400 hover:bg-gray-100 rounded-md transition-colors"
+                    title={isSidebarOpen ? "Close Sidebar" : "Open Sidebar"}
+                 >
+                    {isSidebarOpen ? <PanelLeft size={20} /> : <PanelLeftOpen size={20} />}
+                 </button>
+             )}
              <div className="bg-gradient-to-tr from-blue-600 to-indigo-500 p-1.5 rounded-lg shadow-sm">
                 <Sparkles size={16} className="text-white" />
              </div>
@@ -431,6 +441,7 @@ const App: React.FC = () => {
                 file={activeFile} 
                 initialPage={viewState?.page} 
                 highlightQuote={viewState?.quote}
+                location={viewState?.location}
                 onClose={() => setViewState(null)}
               />
           </div>

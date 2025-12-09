@@ -7,6 +7,7 @@ export interface ProcessedFile {
   status: 'processing' | 'ready' | 'error';
   tokenCount?: number;
   fileHandle?: File; // Store original file for re-reading binary data (rendering PDFs)
+  path?: string; // Relative path for folder uploads
 }
 
 export interface Message {

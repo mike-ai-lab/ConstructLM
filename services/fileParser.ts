@@ -22,7 +22,7 @@ export const parseFile = async (file: File): Promise<ProcessedFile> => {
       content = await extractExcelText(file);
     } else {
       // Fallback for text files or explicitly supported 'other' formats
-      if (fileName.match(/\.(txt|md|json|xml|html|js|ts|css)$/)) {
+      if (fileName.match(/\.(txt|md|json|xml|html|js|ts|css|py|java|c|cpp|h|cs)$/)) {
          content = await file.text();
       } else {
          content = "";
@@ -54,6 +54,7 @@ export const parseFile = async (file: File): Promise<ProcessedFile> => {
     status,
     tokenCount,
     fileHandle: file, // Store the original file object
+    path: file.webkitRelativePath || "" // Store relative path if available
   };
 };
 

@@ -53,11 +53,14 @@ INSTRUCTIONS:
 
 3. CRITICAL RULES FOR CITATIONS:
    - Part 1: Filename (must match exactly).
-   - Part 2: Location (Page number, Sheet name, or Section).
-   - Part 3: EVIDENCE. This is the most important part. Copy the exact text or data row from the file that supports your statement. Do not just say "Page 5", tell me what text on Page 5 supports the claim.
+   - Part 2: Location. 
+     - For PDF: Use "Page X". 
+     - For Excel: YOU MUST SPECIFY THE SHEET AND ROW NUMBER. Format: "Sheet: [Name], Row [Number]". Example: "Sheet: Details, Row 15".
+   - Part 3: EVIDENCE. Copy the exact text or data row from the file.
 
 4. If a user asks about a specific file (e.g., "What's in the BOQ?"), summarize that specific file's content.
 5. If the information is not in the provided files, state: "I couldn't find that information in the active documents."
+6. Use Markdown for formatting your response (bold, lists, headers).
 
 CONTEXT:
 ${fileContexts}

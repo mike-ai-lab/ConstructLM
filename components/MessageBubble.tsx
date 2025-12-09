@@ -6,7 +6,7 @@ import CitationRenderer from './CitationRenderer';
 interface MessageBubbleProps {
   message: Message;
   files: ProcessedFile[];
-  onViewDocument: (fileName: string, page?: number, quote?: string) => void;
+  onViewDocument: (fileName: string, page?: number, quote?: string, location?: string) => void;
 }
 
 const MessageBubble: React.FC<MessageBubbleProps> = ({ message, files, onViewDocument }) => {

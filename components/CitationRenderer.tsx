@@ -1,24 +1,102 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { BookOpen, MapPin, Quote, X, Search, FileText, ChevronRight, Loader2, Maximize2 } from 'lucide-react';
+import { BookOpen, ChevronRight, Quote, X, Maximize2, Loader2 } from 'lucide-react';
 import { ProcessedFile } from '../types';
 
 interface CitationRendererProps {
   text: string;
   files: ProcessedFile[];
-  onViewDocument: (fileName: string, page?: number, quote?: string) => void;
+  onViewDocument: (fileName: string, page?: number, quote?: string, location?: string) => void;
 }
 
 const SPLIT_REGEX = /(\{\{citation:.*?\|.*?\|.*?\}\})/g;
 const MATCH_REGEX = /\{\{citation:(.*?)\|(.*?)\|(.*?)\}\}/;
 
+// --- MARKDOWN PARSER ---
+const parseInline = (text: string): React.ReactNode[] => {
+  // 1. Split by Bold (**text**)
+  const parts = text.split(/(\*\*.*?\*\*)/g);
+  return parts.map((part, index) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={index} className="font-semibold text-gray-900">{part.slice(2, -2)}</strong>;
+    }
+    
+    // 2. Split by Italic (*text* or _text_) - simplistic check
+    // We strictly check for *text* where text doesn't start with space to avoid confusing with lists if inline
+    const italicParts = part.split(/(\*[^\s].*?\*)/g);
+    return italicParts.map((sub, subIdx) => {
+       if (sub.startsWith('*') && sub.endsWith('*') && sub.length > 2) {
+           return <em key={`${index}-${subIdx}`} className="text-gray-800">{sub.slice(1, -1)}</em>;
+       }
+       return sub;
+    });
+  }).flat();
+};
+
+const SimpleMarkdown: React.FC<{ text: string }> = ({ text }) => {
+  const lines = text.split('\n');
+  
+  return (
+    <div className="space-y-1.5 text-gray-700">
+      {lines.map((line, i) => {
+        const trimmed = line.trim();
+        if (!trimmed) return <div key={i} className="h-2" />; // Paragraph break
+
+        // Headers
+        if (trimmed.startsWith('### ')) return <h3 key={i} className="text-sm font-bold text-gray-900 mt-3 mb-1">{parseInline(trimmed.slice(4))}</h3>;
+        if (trimmed.startsWith('## ')) return <h2 key={i} className="text-base font-bold text-gray-900 mt-4 mb-2">{parseInline(trimmed.slice(3))}</h2>;
+        
+        // Lists (Unordered)
+        if (trimmed.match(/^[-*]\s/)) {
+            return (
+                <div key={i} className="flex gap-2 ml-1 relative pl-3">
+                    <span className="absolute left-0 top-1.5 w-1 h-1 bg-gray-400 rounded-full"></span>
+                    <span className="leading-relaxed">{parseInline(trimmed.replace(/^[-*]\s/, ''))}</span>
+                </div>
+            );
+        }
+        
+        // Lists (Ordered)
+        if (trimmed.match(/^\d+\.\s/)) {
+            const match = trimmed.match(/^(\d+)\.\s/);
+            const num = match ? match[1] : '1';
+            return (
+                <div key={i} className="flex gap-2 ml-1">
+                    <span className="font-mono text-xs text-gray-500 mt-0.5 min-w-[1.2em]">{num}.</span>
+                    <span className="leading-relaxed">{parseInline(trimmed.replace(/^\d+\.\s/, ''))}</span>
+                </div>
+            );
+        }
+
+        // Standard Paragraph
+        return <div key={i} className="leading-relaxed">{parseInline(line)}</div>;
+      })}
+    </div>
+  );
+};
+// -----------------------
+
 const CitationRenderer: React.FC<CitationRendererProps> = ({ text, files, onViewDocument }) => {
   if (!text) return null;
-  const parts = text.split(SPLIT_REGEX);
-
+  
+  // We need to preserve the order of text blocks and citations
+  // Split the entire text by the citation regex
+  const rawParts = text.split(SPLIT_REGEX);
+  
+  // We will build a list of React Nodes
+  // Consecutive text parts should be joined to form proper markdown blocks, 
+  // but citations break the flow. However, typically citations are inline.
+  // The SimpleMarkdown parses blocks.
+  
+  // Strategy:
+  // 1. Identify parts: TEXT | CITATION | TEXT | CITATION
+  // 2. Render TEXT via Markdown. 
+  //    Issue: Markdown usually expects block integrity. If a bold starts in part 1 and ends in part 3, splitting breaks it.
+  //    Assumption: The LLM generates citations mostly at ends of sentences or clauses, not inside bold tags.
+  
   return (
-    <span className="whitespace-pre-wrap">
-      {parts.map((part, index) => {
+    <div className="text-sm">
+      {rawParts.map((part, index) => {
         const match = part.match(MATCH_REGEX);
         if (match) {
           const fileName = match[1].trim();
@@ -35,10 +113,16 @@ const CitationRenderer: React.FC<CitationRendererProps> = ({ text, files, onView
               onViewDocument={onViewDocument}
             />
           );
+        } else {
+            // It's text. Only render if not empty.
+            if (!part) return null;
+            // Use span for inline flow if it's short/inline, but our Markdown parser is block based.
+            // For true inline mixing, we'd need a more complex AST.
+            // For now, let's treat chunks as markdown blocks.
+            return <div key={index} className="inline"><SimpleMarkdown text={part} /></div>;
         }
-        return <span key={index}>{part}</span>;
       })}
-    </span>
+    </div>
   );
 };
 
@@ -48,7 +132,7 @@ interface CitationChipProps {
   location: string;
   quote: string;
   files: ProcessedFile[];
-  onViewDocument: (fileName: string, page?: number, quote?: string) => void;
+  onViewDocument: (fileName: string, page?: number, quote?: string, location?: string) => void;
 }
 
 const CitationChip: React.FC<CitationChipProps> = ({ index, fileName, location, quote, files, onViewDocument }) => {
@@ -61,20 +145,16 @@ const CitationChip: React.FC<CitationChipProps> = ({ index, fileName, location, 
     if (!isOpen && triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
       const viewportHeight = window.innerHeight;
-      const POPOVER_EST_HEIGHT = 400; // Estimate height of popover
+      const POPOVER_EST_HEIGHT = 400; 
       
-      // Calculate preferred top position (below the chip)
-      // Since we use 'fixed' positioning in portal, we use rect.bottom directly (no scrollY)
       let top = rect.bottom + 8;
-      
-      // If adding height exceeds viewport, place ABOVE the chip
       if (top + POPOVER_EST_HEIGHT > viewportHeight) {
           top = Math.max(16, rect.top - POPOVER_EST_HEIGHT - 8);
       }
 
       setCoords({
         top: top,
-        left: Math.max(16, rect.left - 20) // Slight adjustment to align better
+        left: Math.max(16, rect.left - 20) 
       });
     }
     setIsOpen(!isOpen);
@@ -92,7 +172,7 @@ const CitationChip: React.FC<CitationChipProps> = ({ index, fileName, location, 
           }`}
       >
         <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] ${isOpen ? 'bg-blue-200' : 'bg-blue-200'}`}>
-            {index + 1}
+            C{index + 1}
         </span>
         <span className="max-w-[80px] truncate">{fileName}</span>
       </span>
@@ -112,7 +192,7 @@ const CitationChip: React.FC<CitationChipProps> = ({ index, fileName, location, 
                 const pageMatch = location.match(/Page\s*(\d+)/i);
                 if (pageMatch) page = parseInt(pageMatch[1], 10);
               }
-              onViewDocument(fileName, page, quote);
+              onViewDocument(fileName, page, quote, location);
               setIsOpen(false);
           }}
         />
@@ -248,10 +328,14 @@ const PdfPagePreview: React.FC<{ file: File; pageNumber: number }> = ({ file, pa
                 if(window.pdfWorkerReady) await window.pdfWorkerReady;
                 if(!window.pdfjsLib) return;
 
-                const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                const pdf = await window.pdfjsLib.getDocument({ 
+                    data: new Uint8Array(arrayBuffer),
+                    cMapUrl: 'https://unpkg.com/pdfjs-dist@3.11.174/cmaps/',
+                    cMapPacked: true,
+                }).promise;
+                
                 const page = await pdf.getPage(pageNumber);
 
-                // Cancel previous render if any
                 if(renderTaskRef.current) {
                     try { await renderTaskRef.current.cancel(); } catch(e) {}
                 }
@@ -300,6 +384,7 @@ const TextContextViewer: React.FC<{ file?: ProcessedFile; quote: string; locatio
     return (
         <div className="p-4 space-y-4">
             <div className="text-sm leading-relaxed text-gray-700 bg-white p-4 rounded-lg border border-gray-200 font-serif shadow-sm">
+                 <div className="mb-2 text-[10px] text-blue-600 font-bold uppercase tracking-wider">{location || "Excerpt"}</div>
                 <span className="bg-yellow-100 text-gray-800 p-1 rounded italic">"{quote}"</span>
             </div>
         </div>
