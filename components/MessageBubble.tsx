@@ -1,6 +1,6 @@
 import React from 'react';
 import { Message, ProcessedFile } from '../types';
-import { Bot, User, Cpu } from 'lucide-react';
+import { Sparkles, User, Cpu } from 'lucide-react';
 import CitationRenderer from './CitationRenderer';
 
 interface MessageBubbleProps {
@@ -13,38 +13,47 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, files, onViewDoc
   const isUser = message.role === 'user';
 
   return (
-    <div className={`flex w-full mb-6 ${isUser ? 'justify-end' : 'justify-start'}`}>
-      <div className={`flex max-w-[85%] ${isUser ? 'flex-row-reverse' : 'flex-row'} gap-3`}>
-        <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
-          isUser ? 'bg-indigo-600 text-white' : 'bg-emerald-600 text-white'
+    <div className={`flex w-full mb-8 ${isUser ? 'justify-end' : 'justify-start'}`}>
+      <div className={`flex max-w-[90%] md:max-w-[85%] ${isUser ? 'flex-row-reverse' : 'flex-row'} gap-4 group`}>
+        {/* Avatar */}
+        <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center shadow-sm border ${
+          isUser ? 'bg-white border-gray-100 text-gray-600' : 'bg-gradient-to-br from-blue-600 to-indigo-600 border-transparent text-white'
         }`}>
-          {isUser ? <User size={16} /> : <Bot size={16} />}
+          {isUser ? <User size={14} /> : <Sparkles size={14} fill="currentColor" />}
         </div>
 
-        <div className={`flex flex-col p-4 rounded-2xl shadow-sm border ${
-          isUser 
-            ? 'bg-white border-indigo-100 text-gray-800 rounded-tr-none' 
-            : 'bg-white border-gray-200 text-gray-800 rounded-tl-none'
-        }`}>
-          <div className="flex items-center gap-2 mb-1">
-             <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+        {/* Content */}
+        <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
+          <div className="flex items-center gap-2 mb-1.5 opacity-0 group-hover:opacity-100 transition-opacity px-1">
+             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                  {isUser ? 'You' : 'ConstructLM'}
              </span>
-             {message.isStreaming && !isUser && (
-                 <Cpu size={12} className="text-emerald-500 animate-pulse" />
-             )}
           </div>
           
-          <div className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
-            {isUser ? (
-                <div>{message.content}</div>
-            ) : (
-                <CitationRenderer 
-                    text={message.content} 
-                    files={files} 
-                    onViewDocument={onViewDocument}
-                />
-            )}
+          <div className={`
+             relative px-5 py-3.5 text-sm leading-7 rounded-2xl shadow-sm
+             ${isUser 
+                ? 'bg-[#f1f5f9] text-gray-800 rounded-tr-sm' 
+                : 'bg-white border border-gray-100 text-gray-800 rounded-tl-sm'
+             }
+          `}>
+            {message.isStreaming && !isUser && (
+                 <div className="absolute -left-5 top-4">
+                     <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-ping" />
+                 </div>
+             )}
+             
+            <div className="whitespace-pre-wrap font-normal">
+              {isUser ? (
+                  <div>{message.content}</div>
+              ) : (
+                  <CitationRenderer 
+                      text={message.content} 
+                      files={files} 
+                      onViewDocument={onViewDocument}
+                  />
+              )}
+            </div>
           </div>
         </div>
       </div>

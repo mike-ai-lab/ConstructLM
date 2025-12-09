@@ -5,7 +5,7 @@ import FileSidebar from './components/FileSidebar';
 import MessageBubble from './components/MessageBubble';
 import DocumentViewer from './components/DocumentViewer';
 import { sendMessageToGemini, initializeGemini } from './services/geminiService';
-import { Send, Menu, StopCircle } from 'lucide-react';
+import { Send, Menu, StopCircle, Sparkles, X } from 'lucide-react';
 
 interface ViewState {
   fileId: string;
@@ -13,13 +13,18 @@ interface ViewState {
   quote?: string;
 }
 
+const MIN_SIDEBAR_WIDTH = 260;
+const MAX_SIDEBAR_WIDTH = 500;
+const MIN_VIEWER_WIDTH = 400;
+const MAX_VIEWER_WIDTH = 1200;
+
 const App: React.FC = () => {
   const [files, setFiles] = useState<ProcessedFile[]>([]);
   const [messages, setMessages] = useState<Message[]>([
       {
           id: 'intro',
           role: 'model',
-          content: 'Hello! I am ConstructLM. Please upload your construction documents (Drawings, BOQs, Specs) in the sidebar to get started. I can answer questions and cite specific files.',
+          content: 'Hello. I am ConstructLM, your research assistant. \n\nUpload your project documents to the left to begin. I can analyze PDFs and Excel spreadsheets, providing precise citations for every claim.',
           timestamp: Date.now()
       }
   ]);
@@ -27,17 +32,25 @@ const App: React.FC = () => {
   const [isProcessingFiles, setIsProcessingFiles] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // Layout State
+  const [isMobile, setIsMobile] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   
-  // State for the Right Panel PDF Viewer
+  const [sidebarWidth, setSidebarWidth] = useState(320);
+  const [viewerWidth, setViewerWidth] = useState(600);
+  const [isResizingSidebar, setIsResizingSidebar] = useState(false);
+  const [isResizingViewer, setIsResizingViewer] = useState(false);
+
+  // Document View State
   const [viewState, setViewState] = useState<ViewState | null>(null);
 
   useEffect(() => {
-      try {
-        initializeGemini();
-      } catch (e) {
-        console.error("Failed to initialize Gemini service:", e);
-      }
+      initializeGemini();
+      const handleResize = () => setIsMobile(window.innerWidth < 768);
+      handleResize();
+      window.addEventListener('resize', handleResize);
+      return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   const scrollToBottom = () => {
@@ -47,6 +60,39 @@ const App: React.FC = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Resizing Logic
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isResizingSidebar) {
+        setSidebarWidth(Math.max(MIN_SIDEBAR_WIDTH, Math.min(e.clientX, MAX_SIDEBAR_WIDTH)));
+      }
+      if (isResizingViewer) {
+        // Calculate width from the right side of the screen
+        const newWidth = window.innerWidth - e.clientX;
+        setViewerWidth(Math.max(MIN_VIEWER_WIDTH, Math.min(newWidth, MAX_VIEWER_WIDTH)));
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizingSidebar(false);
+      setIsResizingViewer(false);
+      document.body.style.cursor = 'default';
+      document.body.style.userSelect = 'auto'; // Re-enable selection
+    };
+
+    if (isResizingSidebar || isResizingViewer) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none'; // Disable selection while dragging
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizingSidebar, isResizingViewer]);
 
   const handleFileUpload = async (fileList: FileList) => {
     setIsProcessingFiles(true);
@@ -109,7 +155,7 @@ const App: React.FC = () => {
        console.error(error);
        setMessages(prev => prev.map(msg => 
             msg.id === modelMsgId 
-            ? { ...msg, content: "Sorry, I encountered an error communicating with Gemini. Please check your connection or API key." } 
+            ? { ...msg, content: "Sorry, I encountered an error. Please check your connection." } 
             : msg
         ));
     } finally {
@@ -136,51 +182,71 @@ const App: React.FC = () => {
   const activeFile = viewState ? files.find(f => f.id === viewState.fileId) : null;
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden font-sans">
-      {/* Mobile Sidebar Toggle */}
-      {!isSidebarOpen && (
+    <div className="flex h-screen w-full bg-white overflow-hidden text-sm">
+      {/* Mobile Menu Button */}
+      {isMobile && !isSidebarOpen && (
           <button 
             onClick={() => setIsSidebarOpen(true)}
-            className="absolute top-4 left-4 z-20 p-2 bg-white shadow-md rounded-lg md:hidden"
+            className="absolute top-4 left-4 z-50 p-2 bg-white shadow-md rounded-full border border-gray-200"
           >
-              <Menu size={20} />
+              <Menu size={20} className="text-gray-600" />
           </button>
       )}
 
-      {/* Left Sidebar */}
-      <div className={`
-        fixed md:relative z-10 h-full transition-transform duration-300 ease-in-out
-        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0 md:w-72 lg:w-80'}
-        ${!isSidebarOpen && 'w-0 overflow-hidden'}
-      `}>
-         <div className="relative h-full">
-            <button 
-                onClick={() => setIsSidebarOpen(false)}
-                className="absolute top-2 right-2 p-1 text-gray-400 hover:text-gray-600 md:hidden"
-            >
-                <StopCircle size={20} />
-            </button>
+      {/* --- LEFT SIDEBAR --- */}
+      <div 
+        className={`
+            fixed md:relative z-40 h-full bg-[#fcfcfc] flex flex-col transition-transform duration-300 ease-in-out border-r-0
+            ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+        `}
+        style={{ width: isMobile ? '85%' : sidebarWidth }}
+      >
+        <div className="h-full flex flex-col relative">
+            {/* Mobile Close */}
+            {isMobile && (
+                <button 
+                    onClick={() => setIsSidebarOpen(false)}
+                    className="absolute top-3 right-3 p-1 text-gray-400"
+                >
+                    <X size={20} />
+                </button>
+            )}
+            
             <FileSidebar 
                 files={files} 
                 onUpload={handleFileUpload} 
                 onRemove={handleRemoveFile}
                 isProcessing={isProcessingFiles}
             />
-         </div>
+        </div>
       </div>
 
-      {/* Main Chat Area */}
-      <div className={`flex-1 flex flex-col h-full relative transition-all duration-300 ${activeFile ? 'w-1/2 lg:w-5/12 hidden md:flex' : 'w-full'}`}>
-        <header className="h-16 bg-white border-b border-gray-200 flex items-center px-6 justify-between flex-shrink-0">
+      {/* Resize Handle: Left */}
+      {!isMobile && (
+          <div 
+            className={`resize-handle-vertical ${isResizingSidebar ? 'active' : ''}`}
+            onMouseDown={() => setIsResizingSidebar(true)}
+          />
+      )}
+
+      {/* --- MIDDLE CHAT AREA --- */}
+      <div className="flex-1 flex flex-col min-w-0 h-full relative bg-white">
+        {/* Header */}
+        <header className="h-14 flex-none border-b border-gray-100 flex items-center justify-between px-6 bg-white/80 backdrop-blur-sm z-10">
           <div className="flex items-center gap-2">
-             <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-emerald-600">
-               ConstructLM
-             </h1>
+             <div className="bg-gradient-to-tr from-blue-600 to-indigo-500 p-1.5 rounded-lg shadow-sm">
+                <Sparkles size={16} className="text-white" />
+             </div>
+             <h1 className="font-semibold text-gray-800 text-lg tracking-tight">ConstructLM</h1>
+          </div>
+          <div className="text-xs text-gray-400 font-medium hidden sm:block">
+              Research Assistant
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-2">
-            <div className="max-w-3xl mx-auto w-full">
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 scroll-smooth">
+            <div className="max-w-3xl mx-auto w-full pb-4">
                 {messages.map((msg) => (
                     <MessageBubble 
                         key={msg.id} 
@@ -189,40 +255,64 @@ const App: React.FC = () => {
                         onViewDocument={handleViewDocument}
                     />
                 ))}
-                <div ref={messagesEndRef} />
+                <div ref={messagesEndRef} className="h-4" />
             </div>
         </div>
 
-        <div className="p-4 bg-white border-t border-gray-200">
-          <div className="max-w-3xl mx-auto w-full relative">
-            <div className="relative flex items-center gap-2">
+        {/* Input Area */}
+        <div className="p-4 md:p-6 bg-gradient-to-t from-white via-white to-transparent">
+          <div className="max-w-3xl mx-auto w-full">
+            <div className="relative flex items-center shadow-lg shadow-gray-200/50 rounded-full bg-white border border-gray-200 focus-within:ring-2 focus-within:ring-blue-100 transition-all">
                 <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
-                placeholder={files.length === 0 ? "Upload files..." : "Ask questions..."}
-                disabled={files.length === 0 || isGenerating}
-                className="w-full bg-gray-50 text-gray-900 border border-gray-300 rounded-xl pl-4 pr-12 py-3.5 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                    type="text"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
+                    placeholder={files.length === 0 ? "Add sources to start..." : "Ask a question about your documents..."}
+                    disabled={files.length === 0 || isGenerating}
+                    className="w-full bg-transparent text-gray-800 placeholder-gray-400 rounded-full pl-6 pr-14 py-4 focus:outline-none"
                 />
                 
                 <div className="absolute right-2 top-1/2 -translate-y-1/2">
                     <button
                         onClick={handleSendMessage}
                         disabled={!input.trim() || isGenerating}
-                        className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                        className={`
+                            p-2.5 rounded-full transition-all duration-200
+                            ${!input.trim() || isGenerating ? 'bg-gray-100 text-gray-400' : 'bg-blue-600 text-white hover:bg-blue-700 shadow-md'}
+                        `}
                     >
-                        {isGenerating ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Send size={18} />}
+                        {isGenerating ? <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" /> : <Send size={18} />}
                     </button>
                 </div>
+            </div>
+            <div className="text-center mt-2">
+                 <span className="text-[10px] text-gray-400">AI can make mistakes. Please verify citations.</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Right Document Viewer Panel */}
+      {/* Resize Handle: Right (Only if Viewer is open) */}
+      {!isMobile && activeFile && (
+          <div 
+            className={`resize-handle-vertical ${isResizingViewer ? 'active' : ''}`}
+            onMouseDown={() => setIsResizingViewer(true)}
+          />
+      )}
+
+      {/* --- RIGHT DOCUMENT VIEWER --- */}
       {activeFile && (
-          <div className="w-full md:w-1/2 lg:w-7/12 h-full z-20 absolute md:static top-0 right-0 bg-white border-l border-gray-200 animate-in slide-in-from-right duration-300">
+          <div 
+            className={`
+               fixed md:relative z-30 h-full bg-gray-50 flex flex-col shadow-2xl md:shadow-none border-l-0
+               animate-in slide-in-from-right duration-300
+            `}
+            style={{ 
+                width: isMobile ? '100%' : viewerWidth,
+                display: 'flex'
+            }}
+          >
               <DocumentViewer 
                 file={activeFile} 
                 initialPage={viewState?.page} 
