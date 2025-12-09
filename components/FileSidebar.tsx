@@ -36,6 +36,14 @@ const FileSidebar: React.FC<FileSidebarProps> = ({ files, onUpload, onRemove, is
     }
   };
 
+  const getStatusColor = (status: ProcessedFile['status']) => {
+      switch (status) {
+          case 'error': return 'text-red-500';
+          case 'processing': return 'text-blue-500';
+          default: return 'text-gray-400';
+      }
+  };
+
   // Calculate total tokens
   const totalTokens = files.reduce((acc, f) => acc + (f.tokenCount || 0), 0);
 
@@ -68,7 +76,7 @@ const FileSidebar: React.FC<FileSidebarProps> = ({ files, onUpload, onRemove, is
             onChange={handleFileChange}
             multiple
             className="hidden"
-            accept=".pdf,.xlsx,.xls,.csv,.txt"
+            accept=".pdf,.xlsx,.xls,.csv" 
             />
 
              {/* Folder Upload Button */}
@@ -102,24 +110,24 @@ const FileSidebar: React.FC<FileSidebarProps> = ({ files, onUpload, onRemove, is
         {files.length === 0 ? (
           <div className="text-center mt-10 p-4">
             <p className="text-sm text-gray-400">No files loaded.</p>
-            <p className="text-xs text-gray-400 mt-1">Upload PDFs, BOQs, or specs to begin context-aware chat.</p>
+            <p className="text-xs text-gray-400 mt-1">Upload PDF drawings, specifications, or Excel BOQs.</p>
           </div>
         ) : (
           files.map((file) => (
             <div
               key={file.id}
-              className="group flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 border border-transparent hover:border-gray-200 transition-all"
+              className={`group flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 border border-transparent hover:border-gray-200 transition-all ${file.status === 'error' ? 'bg-red-50' : ''}`}
             >
               <div className="flex items-center gap-3 overflow-hidden">
                 <div className="flex-shrink-0 bg-white p-1.5 rounded border border-gray-100 shadow-sm">
-                    {getIcon(file.type)}
+                    {file.status === 'processing' ? <Loader2 size={18} className="animate-spin text-blue-500"/> : getIcon(file.type)}
                 </div>
                 <div className="flex flex-col min-w-0">
-                  <span className="text-sm font-medium text-gray-700 truncate block" title={file.name}>
+                  <span className={`text-sm font-medium truncate block ${file.status === 'error' ? 'text-red-700' : 'text-gray-700'}`} title={file.name}>
                     {file.name}
                   </span>
-                  <span className="text-[10px] text-gray-400 uppercase tracking-wider">
-                    {file.type} • {(file.size / 1024).toFixed(0)}KB
+                  <span className={`text-[10px] uppercase tracking-wider ${getStatusColor(file.status)}`}>
+                    {file.status === 'error' ? 'Error reading file' : `${file.type} • ${(file.size / 1024).toFixed(0)}KB`}
                   </span>
                 </div>
               </div>

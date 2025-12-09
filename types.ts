@@ -6,6 +6,7 @@ export interface ProcessedFile {
   size: number;
   status: 'processing' | 'ready' | 'error';
   tokenCount?: number;
+  fileHandle?: File; // Store original file for re-reading binary data (rendering PDFs)
 }
 
 export interface Message {
@@ -26,5 +27,6 @@ declare global {
   interface Window {
     pdfjsLib: any;
     XLSX: any;
+    pdfWorkerReady: Promise<void>;
   }
 }

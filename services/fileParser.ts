@@ -3,11 +3,14 @@ import { ProcessedFile } from '../types';
 export const generateId = () => Math.random().toString(36).substr(2, 9);
 
 export const parseFile = async (file: File): Promise<ProcessedFile> => {
-  const fileType = file.name.toLowerCase().endsWith('.pdf')
-    ? 'pdf'
-    : file.name.toLowerCase().match(/\.(xlsx|xls|csv)$/)
-    ? 'excel'
-    : 'other';
+  const fileName = file.name.toLowerCase();
+  let fileType: ProcessedFile['type'] = 'other';
+
+  if (fileName.endsWith('.pdf')) {
+    fileType = 'pdf';
+  } else if (fileName.match(/\.(xlsx|xls|csv)$/)) {
+    fileType = 'excel';
+  }
 
   let content = '';
   let status: ProcessedFile['status'] = 'ready';
@@ -18,12 +21,25 @@ export const parseFile = async (file: File): Promise<ProcessedFile> => {
     } else if (fileType === 'excel') {
       content = await extractExcelText(file);
     } else {
-      content = await file.text();
+      // Fallback for text files or explicitly supported 'other' formats
+      if (fileName.match(/\.(txt|md|json|xml|html|js|ts|css)$/)) {
+         content = await file.text();
+      } else {
+         content = "";
+         if(!fileName.startsWith('.')) { // Ignore hidden files
+             content = "[Binary or Unsupported File]";
+         }
+      }
     }
+    
+    if (!content.trim()) {
+        content = "[Empty File] This file appears to have no readable text content.";
+    }
+
   } catch (error) {
     console.error(`Error parsing ${file.name}:`, error);
     status = 'error';
-    content = 'Error reading file content.';
+    content = `Error reading file: ${(error as Error).message}. Ensure it is a valid ${fileType.toUpperCase()} file.`;
   }
 
   // Estimate token count (rough heuristic: 1 token ~= 4 chars)
@@ -37,41 +53,78 @@ export const parseFile = async (file: File): Promise<ProcessedFile> => {
     size: file.size,
     status,
     tokenCount,
+    fileHandle: file, // Store the original file object
   };
 };
 
 const extractPdfText = async (file: File): Promise<string> => {
-  const arrayBuffer = await file.arrayBuffer();
-  // Using the global pdfjsLib loaded via CDN
-  const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-  let fullText = '';
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    
+    // Ensure the global worker/lib logic has finished
+    if (window.pdfWorkerReady) {
+        try {
+            await window.pdfWorkerReady;
+        } catch (e) {
+            console.warn("PDF worker promise rejected, trying to proceed without worker optimization", e);
+        }
+    }
 
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i);
-    const textContent = await page.getTextContent();
-    const pageText = textContent.items
-      // @ts-ignore - items usually have 'str' property in standard PDF.js output
-      .map((item: any) => item.str)
-      .join(' ');
-    fullText += `[Page ${i}] ${pageText}\n`;
+    // Now check if library exists
+    if (!window.pdfjsLib) {
+        throw new Error("PDF.js library failed to load. Please check your internet connection or try refreshing.");
+    }
+
+    const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    let fullText = `[METADATA: PDF Document "${file.name}", ${pdf.numPages} Pages]\n\n`;
+
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const textContent = await page.getTextContent();
+      
+      // Improved layout preservation:
+      const pageText = textContent.items
+        // @ts-ignore
+        .map((item: any) => item.str)
+        .join(' ');
+
+      if (pageText.trim()) {
+        fullText += `--- [Page ${i}] ---\n${pageText}\n\n`;
+      } else {
+        fullText += `--- [Page ${i}] ---\n(Empty Page or Scanned Image)\n\n`;
+      }
+    }
+
+    return fullText;
+  } catch (e) {
+    console.error("PDF Parsing failed details:", e);
+    const msg = (e instanceof Error) ? e.message : "Unknown error";
+    throw new Error(`Failed to parse PDF structure: ${msg}`);
   }
-
-  return fullText;
 };
 
 const extractExcelText = async (file: File): Promise<string> => {
-  const arrayBuffer = await file.arrayBuffer();
-  // Using the global XLSX loaded via CDN
-  const workbook = window.XLSX.read(arrayBuffer, { type: 'array' });
-  let fullText = '';
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    if (!window.XLSX) throw new Error("SheetJS library not loaded");
 
-  workbook.SheetNames.forEach((sheetName: string) => {
-    const sheet = workbook.Sheets[sheetName];
-    const csv = window.XLSX.utils.sheet_to_csv(sheet);
-    if (csv.trim().length > 0) {
-      fullText += `[Sheet: ${sheetName}]\n${csv}\n`;
-    }
-  });
+    const workbook = window.XLSX.read(arrayBuffer, { type: 'array' });
+    let fullText = `[METADATA: Excel Workbook "${file.name}", Sheets: ${workbook.SheetNames.join(', ')}]\n\n`;
 
-  return fullText;
+    workbook.SheetNames.forEach((sheetName: string) => {
+      const sheet = workbook.Sheets[sheetName];
+      const csv = window.XLSX.utils.sheet_to_csv(sheet, { blankrows: false });
+      
+      if (csv && csv.trim().length > 0) {
+        fullText += `--- [Sheet: ${sheetName}] ---\n${csv}\n\n`;
+      } else {
+        fullText += `--- [Sheet: ${sheetName}] ---\n(Empty Sheet)\n\n`;
+      }
+    });
+
+    return fullText;
+  } catch (e) {
+    console.error("Excel Parsing failed details:", e);
+    throw new Error("Failed to parse Excel structure.");
+  }
 };

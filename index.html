@@ -5,14 +5,74 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ConstructLM</title>
     <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
-    <!-- PDF.js for parsing PDF files -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    
+    <!-- PDF.js for parsing PDF files - Using unpkg for better CORS reliability -->
+    <script src="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js" crossorigin="anonymous"></script>
+    <!-- PDF.js Viewer CSS for Text Layer -->
+    <link rel="stylesheet" href="https://unpkg.com/pdfjs-dist@3.11.174/web/pdf_viewer.css">
+    
     <script>
-      // Configure PDF.js worker
-      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      // Create a global promise that resolves when the PDF worker is ready
+      window.pdfWorkerReady = new Promise((resolve, reject) => {
+        let initialized = false;
+
+        // Function to initialize worker
+        function initWorker() {
+            if (initialized) return;
+            initialized = true;
+
+            const pdfWorkerUrl = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+            
+            // 1. Try fetching to create a local Blob (Best for avoiding Cross-Origin Worker errors)
+            fetch(pdfWorkerUrl)
+              .then(res => {
+                if (!res.ok) throw new Error("Network response was not ok");
+                return res.text();
+              })
+              .then(text => {
+                const blob = new Blob([text], { type: "application/javascript" });
+                const workerUrl = URL.createObjectURL(blob);
+                if (window.pdfjsLib) {
+                    window.pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
+                    console.log("PDF Worker initialized via Blob");
+                }
+                resolve();
+              })
+              .catch(err => {
+                console.warn("Worker fetch failed, falling back to direct URL. This might cause CORS warnings.", err);
+                // 2. Fallback: Set URL directly (Might work depending on browser security policies)
+                if (window.pdfjsLib) {
+                    window.pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+                }
+                resolve();
+              });
+        }
+
+        // Polling to wait for pdfjsLib to be defined on window
+        const checkLibInterval = setInterval(() => {
+          if (window.pdfjsLib) {
+            clearInterval(checkLibInterval);
+            initWorker();
+          }
+        }, 100);
+
+        // Timeout after 15 seconds
+        setTimeout(() => {
+            if (!initialized) {
+                clearInterval(checkLibInterval);
+                if (!window.pdfjsLib) {
+                    console.error("PDF.js library failed to load within timeout.");
+                    // We resolve anyway so the app doesn't hang, but parsing will fail cleanly later
+                    resolve();
+                }
+            }
+        }, 15000);
+      });
     </script>
+    
     <!-- SheetJS for parsing Excel files -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    
     <style>
       /* Custom scrollbar for better aesthetics */
       ::-webkit-scrollbar {
@@ -38,20 +98,56 @@
         visibility: visible;
         opacity: 1;
       }
+      
+      /* PDF.js Text Layer Fixes */
+      .textLayer {
+        position: absolute;
+        left: 0;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        overflow: hidden;
+        opacity: 1;
+        line-height: 1.0;
+        pointer-events: none;
+      }
+
+      /* Ensure text is invisible (transparent ink) but selectable */
+      .textLayer span, .textLayer br {
+        color: transparent !important;
+        opacity: 1 !important;
+        line-height: 1.0 !important;
+        position: absolute;
+        white-space: pre;
+        cursor: text;
+        transform-origin: 0% 0%;
+        pointer-events: auto;
+        /* Critical for some browsers to ensure text is truly invisible */
+        -webkit-text-fill-color: transparent !important;
+      }
+
+      /* Highlight selection */
+      .textLayer ::selection {
+        background: rgba(0, 0, 255, 0.2);
+        color: transparent; 
+      }
     </style>
-  <script type="importmap">
+    <script type="importmap">
 {
   "imports": {
     "@google/genai": "https://aistudiocdn.com/@google/genai@^1.31.0",
+    "react-dom/client": "https://aistudiocdn.com/react-dom@^19.2.1/client",
     "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.1/",
     "react/": "https://aistudiocdn.com/react@^19.2.1/",
     "react": "https://aistudiocdn.com/react@^19.2.1",
-    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.556.0"
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.556.0",
+    "react-dom": "https://aistudiocdn.com/react-dom@^19.2.1"
   }
 }
 </script>
 </head>
   <body class="bg-gray-50 text-slate-900 font-sans antialiased h-screen overflow-hidden">
-    <div id="root"></div>
+    <div id="root" class="h-full w-full flex items-center justify-center text-gray-400">Loading ConstructLM...</div>
+    <script type="module" src="/index.tsx"></script>
   </body>
 </html>
