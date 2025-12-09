@@ -33,8 +33,19 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
         setPdfDocument(null);
         setScale(null);
 
+        // Ensure worker is configured before loading
+        if (window.pdfWorkerReady) {
+            await window.pdfWorkerReady;
+        }
+
         const arrayBuffer = await file.fileHandle.arrayBuffer();
-        const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        
+        // Use Uint8Array and provide CMap params to avoid "Invalid PDF structure" and font errors
+        const pdf = await window.pdfjsLib.getDocument({ 
+            data: new Uint8Array(arrayBuffer),
+            cMapUrl: 'https://unpkg.com/pdfjs-dist@3.11.174/cmaps/',
+            cMapPacked: true,
+        }).promise;
         
         if (isMounted) {
             setPdfDocument(pdf);

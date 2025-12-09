@@ -75,7 +75,13 @@ const extractPdfText = async (file: File): Promise<string> => {
         throw new Error("PDF.js library failed to load. Please check your internet connection or try refreshing.");
     }
 
-    const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    // Use Uint8Array and provide CMap params to avoid "Invalid PDF structure"
+    const pdf = await window.pdfjsLib.getDocument({ 
+        data: new Uint8Array(arrayBuffer),
+        cMapUrl: 'https://unpkg.com/pdfjs-dist@3.11.174/cmaps/',
+        cMapPacked: true,
+    }).promise;
+    
     let fullText = `[METADATA: PDF Document "${file.name}", ${pdf.numPages} Pages]\n\n`;
 
     for (let i = 1; i <= pdf.numPages; i++) {

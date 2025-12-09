@@ -5,7 +5,7 @@ import FileSidebar from './components/FileSidebar';
 import MessageBubble from './components/MessageBubble';
 import DocumentViewer from './components/DocumentViewer';
 import { sendMessageToGemini, initializeGemini } from './services/geminiService';
-import { Send, Menu, StopCircle, Sparkles, X } from 'lucide-react';
+import { Send, Menu, Sparkles, X, AtSign, FileText, Database } from 'lucide-react';
 
 interface ViewState {
   fileId: string;
@@ -24,7 +24,7 @@ const App: React.FC = () => {
       {
           id: 'intro',
           role: 'model',
-          content: 'Hello. I am ConstructLM, your research assistant. \n\nUpload your project documents to the left to begin. I can analyze PDFs and Excel spreadsheets, providing precise citations for every claim.',
+          content: 'Hello. I am ConstructLM. \n\nUpload your project documents (PDF, Excel) or a whole folder to begin. \n\n**Tip:** Type "@" in the chat to mention a specific file and save tokens.',
           timestamp: Date.now()
       }
   ]);
@@ -44,6 +44,12 @@ const App: React.FC = () => {
 
   // Document View State
   const [viewState, setViewState] = useState<ViewState | null>(null);
+
+  // Mention State
+  const [showMentionMenu, setShowMentionMenu] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState('');
+  const [mentionIndex, setMentionIndex] = useState(0); // For keyboard nav
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
       initializeGemini();
@@ -114,8 +120,75 @@ const App: React.FC = () => {
     if (viewState?.fileId === id) setViewState(null);
   };
 
+  // --- Mention Logic ---
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setInput(val);
+
+    const cursor = e.target.selectionStart || 0;
+    const lastAt = val.lastIndexOf('@', cursor - 1);
+    
+    if (lastAt !== -1) {
+        // check if there's a space after the @ before the cursor, which breaks the mention
+        const query = val.slice(lastAt + 1, cursor);
+        if (!query.includes(' ')) {
+            setShowMentionMenu(true);
+            setMentionQuery(query.toLowerCase());
+            setMentionIndex(0); // Reset selection on typing
+            return;
+        }
+    }
+    setShowMentionMenu(false);
+  };
+
+  const insertMention = (fileName: string) => {
+      const cursor = inputRef.current?.selectionStart || 0;
+      const lastAt = input.lastIndexOf('@', cursor - 1);
+      if (lastAt !== -1) {
+          const before = input.slice(0, lastAt);
+          const after = input.slice(cursor);
+          const newValue = `${before}@${fileName} ${after}`;
+          setInput(newValue);
+          setShowMentionMenu(false);
+          // Focus back logic could go here
+      }
+  };
+
+  const filteredFiles = files.filter(f => f.name.toLowerCase().includes(mentionQuery));
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+      if (showMentionMenu && filteredFiles.length > 0) {
+          if (e.key === 'ArrowDown') {
+              e.preventDefault();
+              setMentionIndex(prev => (prev + 1) % filteredFiles.length);
+          } else if (e.key === 'ArrowUp') {
+              e.preventDefault();
+              setMentionIndex(prev => (prev - 1 + filteredFiles.length) % filteredFiles.length);
+          } else if (e.key === 'Enter') {
+              e.preventDefault();
+              insertMention(filteredFiles[mentionIndex].name);
+          } else if (e.key === 'Escape') {
+              setShowMentionMenu(false);
+          }
+          return;
+      }
+
+      if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          handleSendMessage();
+      }
+  };
+
+
+  // --- Sending Logic ---
   const handleSendMessage = async () => {
     if (!input.trim() || isGenerating) return;
+
+    // 1. Identify Mentions for Context Filtering
+    // We strictly check if the filename exists in the user input prefixed by @
+    // This allows for "Efficiency Mode"
+    const mentionedFiles = files.filter(f => input.includes(`@${f.name}`));
+    const activeContextFiles = mentionedFiles.length > 0 ? mentionedFiles : files;
 
     const userMsg: Message = {
       id: Date.now().toString(),
@@ -126,6 +199,7 @@ const App: React.FC = () => {
 
     setMessages(prev => [...prev, userMsg]);
     setInput('');
+    setShowMentionMenu(false);
     setIsGenerating(true);
 
     const modelMsgId = (Date.now() + 1).toString();
@@ -142,7 +216,8 @@ const App: React.FC = () => {
     try {
       await sendMessageToGemini(
           userMsg.content,
-          files,
+          files, // Pass all for citation matching if needed (though service mostly uses active)
+          activeContextFiles, // The optimized subset
           (streamedText) => {
               setMessages(prev => prev.map(msg => 
                   msg.id === modelMsgId 
@@ -260,17 +335,56 @@ const App: React.FC = () => {
         </div>
 
         {/* Input Area */}
-        <div className="p-4 md:p-6 bg-gradient-to-t from-white via-white to-transparent">
-          <div className="max-w-3xl mx-auto w-full">
+        <div className="p-4 md:p-6 bg-gradient-to-t from-white via-white to-transparent relative">
+          <div className="max-w-3xl mx-auto w-full relative">
+            
+            {/* Context Indicator (Efficiency Mode) */}
+            {input.trim() && (
+                <div className="absolute -top-6 left-6 text-[10px] font-medium transition-all duration-300">
+                    {files.filter(f => input.includes(`@${f.name}`)).length > 0 ? (
+                        <span className="text-blue-600 flex items-center gap-1">
+                            <Sparkles size={10} /> Efficiency Mode: Focused on specific files
+                        </span>
+                    ) : (
+                        <span className="text-gray-400 flex items-center gap-1">
+                            <Database size={10} /> Context: All {files.length} files
+                        </span>
+                    )}
+                </div>
+            )}
+
+            {/* Mention Popup Menu */}
+            {showMentionMenu && filteredFiles.length > 0 && (
+                <div className="absolute bottom-full left-6 mb-2 w-64 bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden z-50 animate-in slide-in-from-bottom-2 fade-in duration-200">
+                    <div className="px-3 py-2 bg-gray-50 border-b border-gray-100 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                        Mention a source
+                    </div>
+                    <div className="max-h-48 overflow-y-auto p-1">
+                        {filteredFiles.map((f, i) => (
+                            <button
+                                key={f.id}
+                                onClick={() => insertMention(f.name)}
+                                className={`w-full text-left px-3 py-2 text-xs rounded-lg flex items-center gap-2 transition-colors ${i === mentionIndex ? 'bg-blue-50 text-blue-700' : 'hover:bg-gray-50 text-gray-700'}`}
+                            >
+                                <FileText size={14} className={i === mentionIndex ? 'text-blue-500' : 'text-gray-400'} />
+                                <span className="truncate">{f.name}</span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             <div className="relative flex items-center shadow-lg shadow-gray-200/50 rounded-full bg-white border border-gray-200 focus-within:ring-2 focus-within:ring-blue-100 transition-all">
                 <input
+                    ref={inputRef}
                     type="text"
                     value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
-                    placeholder={files.length === 0 ? "Add sources to start..." : "Ask a question about your documents..."}
+                    onChange={handleInputChange}
+                    onKeyDown={handleKeyDown}
+                    placeholder={files.length === 0 ? "Add sources to start..." : "Ask a question (Type '@' to reference a file)..."}
                     disabled={files.length === 0 || isGenerating}
                     className="w-full bg-transparent text-gray-800 placeholder-gray-400 rounded-full pl-6 pr-14 py-4 focus:outline-none"
+                    autoComplete="off"
                 />
                 
                 <div className="absolute right-2 top-1/2 -translate-y-1/2">
@@ -286,7 +400,7 @@ const App: React.FC = () => {
                     </button>
                 </div>
             </div>
-            <div className="text-center mt-2">
+            <div className="text-center mt-2 flex justify-center gap-4">
                  <span className="text-[10px] text-gray-400">AI can make mistakes. Please verify citations.</span>
             </div>
           </div>

@@ -2,7 +2,7 @@ import { GoogleGenAI, Chat, GenerateContentResponse } from "@google/genai";
 import { ProcessedFile } from "../types";
 
 let chatSession: Chat | null = null;
-let currentFileContextHash = "";
+let currentContextHash = "";
 
 // Robust way to get API key in browser or node environments without crashing
 const getApiKey = (): string => {
@@ -23,14 +23,22 @@ export const initializeGemini = () => {
 };
 
 const constructSystemPrompt = (files: ProcessedFile[]) => {
-  const fileContexts = files
-    .filter(f => f.status === 'ready')
+  // 1. Filter only ready files
+  const activeFiles = files.filter(f => f.status === 'ready');
+  
+  // 2. Build Context
+  const fileContexts = activeFiles
     .map(f => `=== FILE START: "${f.name}" (${f.type.toUpperCase()}) ===\n${f.content}\n=== FILE END: "${f.name}" ===`)
     .join('\n\n');
 
+  // 3. Efficiency Warning in System Prompt (for the Model)
+  const contextNote = activeFiles.length > 0 
+    ? `You have access to ${activeFiles.length} specific file(s) for this query.`
+    : "You have access to all project files.";
+
   return `
 You are ConstructLM, an advanced AI assistant for construction documentation.
-You have access to the following local project files (PDFs, Excel BOQs, Specifications).
+${contextNote}
 
 INSTRUCTIONS:
 1. Answer strictly based on the provided FILE CONTEXTS.
@@ -49,7 +57,7 @@ INSTRUCTIONS:
    - Part 3: EVIDENCE. This is the most important part. Copy the exact text or data row from the file that supports your statement. Do not just say "Page 5", tell me what text on Page 5 supports the claim.
 
 4. If a user asks about a specific file (e.g., "What's in the BOQ?"), summarize that specific file's content.
-5. If the information is not in the files, state: "I couldn't find that information in the loaded documents."
+5. If the information is not in the provided files, state: "I couldn't find that information in the active documents."
 
 CONTEXT:
 ${fileContexts}
@@ -58,7 +66,8 @@ ${fileContexts}
 
 export const sendMessageToGemini = async (
   message: string,
-  files: ProcessedFile[],
+  files: ProcessedFile[], // These are ALL files
+  activeFiles: ProcessedFile[], // These are the files specifically mentioned (or ALL if none mentioned)
   onStream: (chunk: string) => void
 ) => {
   const apiKey = getApiKey();
@@ -66,13 +75,14 @@ export const sendMessageToGemini = async (
 
   const ai = new GoogleGenAI({ apiKey });
   
-  // Re-initialize chat if file context changes (naïve approach for this demo)
-  const newContextHash = files.map(f => f.id + f.name).join(',');
+  // Create a hash to check if we need to rebuild the session (Context changed?)
+  // We include IDs of activeFiles in the hash
+  const newContextHash = activeFiles.map(f => f.id).sort().join(',');
   
-  if (!chatSession || currentFileContextHash !== newContextHash) {
-    const systemInstruction = constructSystemPrompt(files);
+  if (!chatSession || currentContextHash !== newContextHash) {
+    // We rebuild the system prompt based on the *Specific* active files to save tokens
+    const systemInstruction = constructSystemPrompt(activeFiles);
     
-    // Using gemini-2.5-flash for large context window (1M tokens) which is ideal for large documents
     chatSession = ai.chats.create({
       model: 'gemini-2.5-flash',
       config: {
@@ -80,7 +90,7 @@ export const sendMessageToGemini = async (
         temperature: 0.2, // Low temperature for high factual accuracy
       },
     });
-    currentFileContextHash = newContextHash;
+    currentContextHash = newContextHash;
   }
 
   try {
@@ -88,7 +98,6 @@ export const sendMessageToGemini = async (
     
     let fullText = "";
     for await (const chunk of responseStream) {
-        // Safe cast or access
         const c = chunk as GenerateContentResponse;
         if(c.text) {
             fullText += c.text;
