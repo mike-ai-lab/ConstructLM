@@ -1,6 +1,5 @@
-
 import { get, set } from 'idb-keyval';
-import { db, storage, auth } from './firebase';
+import { db, storage, isFirebaseInitialized } from './firebase';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { ProcessedFile, Message } from '../types';
@@ -43,7 +42,7 @@ export const loadWorkspaceLocal = async (): Promise<WorkspaceData | null> => {
 // --- CLOUD SYNC (Firebase) ---
 
 export const saveWorkspaceCloud = async (userId: string, files: ProcessedFile[], messages: Message[]) => {
-  if (!userId) return;
+  if (!userId || !isFirebaseInitialized || !db || !storage) return;
 
   try {
     // 1. Upload Files to Storage (if needed)
@@ -89,7 +88,7 @@ export const saveWorkspaceCloud = async (userId: string, files: ProcessedFile[],
 };
 
 export const loadWorkspaceCloud = async (userId: string): Promise<WorkspaceData | null> => {
-    if (!userId) return null;
+    if (!userId || !isFirebaseInitialized || !db) return null;
 
     try {
         const workspaceRef = doc(db, 'users', userId, 'workspaces', 'default');

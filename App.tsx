@@ -13,7 +13,7 @@ import { MODEL_REGISTRY, DEFAULT_MODEL_ID } from './services/modelRegistry';
 import { Send, Menu, Sparkles, X, FileText, Database, PanelLeft, PanelLeftOpen, Mic, Cpu, ChevronDown, Settings, LogIn, LogOut, RefreshCw, ShieldCheck } from 'lucide-react';
 
 // Auth & Storage
-import { auth, googleProvider } from './services/firebase';
+import { auth, googleProvider, isFirebaseInitialized } from './services/firebase';
 import { signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
 import { saveWorkspaceLocal, loadWorkspaceLocal, saveWorkspaceCloud, loadWorkspaceCloud } from './services/storageService';
 
@@ -104,8 +104,8 @@ const App: React.FC = () => {
     // 1. Load Local Data First
     loadWorkspaceLocal().then(data => {
         if (data) {
-            setFiles(data.files);
-            setMessages(data.messages);
+            setFiles(data.files || []); // Ensure array
+            setMessages(data.messages || []); // Ensure array
         } else {
              // Default welcome if no local data
              setMessages([{
@@ -117,30 +117,34 @@ const App: React.FC = () => {
         }
     });
 
-    // 2. Listen for Auth Changes
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-        setUser(currentUser);
-        if (currentUser) {
-            setIsSyncing(true);
-            try {
-                // Strategy: "Server Wins" strategy if cloud data exists, otherwise keep local.
-                const cloudData = await loadWorkspaceCloud(currentUser.uid);
-                if (cloudData) {
-                    // Simplistically prioritize cloud if it has content.
-                    if (cloudData.messages.length > 0 || cloudData.files.length > 0) {
-                        setFiles(cloudData.files);
-                        setMessages(cloudData.messages);
+    // 2. Listen for Auth Changes (Only if Firebase is safe)
+    if (isFirebaseInitialized && auth) {
+        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+            setUser(currentUser);
+            if (currentUser) {
+                setIsSyncing(true);
+                try {
+                    // Strategy: "Server Wins" strategy if cloud data exists, otherwise keep local.
+                    const cloudData = await loadWorkspaceCloud(currentUser.uid);
+                    if (cloudData) {
+                        // Simplistically prioritize cloud if it has content.
+                        if (cloudData.messages.length > 0 || cloudData.files.length > 0) {
+                            setFiles(cloudData.files);
+                            setMessages(cloudData.messages);
+                        }
                     }
+                } catch (e) {
+                    console.warn("Sync error", e);
+                } finally {
+                    setIsSyncing(false);
                 }
-            } catch (e) {
-                console.warn("Sync error", e);
-            } finally {
-                setIsSyncing(false);
             }
-        }
-    });
-
-    return () => unsubscribe();
+        });
+        return () => unsubscribe();
+    } else {
+        console.warn("Firebase not initialized, defaulting to local mode.");
+        setIsMockAuth(true); // Treat as "local" mode implicitly
+    }
   }, []);
 
   // --- AUTO SAVE ---
@@ -156,7 +160,7 @@ const App: React.FC = () => {
              saveWorkspaceLocal(files, messages);
           }
           // If signed in AND NOT mock auth, save cloud
-          if (user && !isMockAuth) {
+          if (user && !isMockAuth && isFirebaseInitialized) {
               setIsSyncing(true);
               saveWorkspaceCloud(user.uid, files, messages)
                 .catch(e => console.warn("Auto-save cloud failed", e))
@@ -171,6 +175,11 @@ const App: React.FC = () => {
 
 
   const handleSignIn = async () => {
+      if (!isFirebaseInitialized || !auth) {
+          alert("Cloud services are not available. Running in local mode.");
+          return;
+      }
+
       try {
           await signInWithPopup(auth, googleProvider);
       } catch (error: any) {
@@ -214,7 +223,7 @@ const App: React.FC = () => {
           return;
       }
       try {
-          await signOut(auth);
+          if (auth) await signOut(auth);
       } catch (error) {
           console.error("Sign Out Error", error);
       }
@@ -546,7 +555,7 @@ const App: React.FC = () => {
                       Syncing
                   </div>
               )}
-              {isMockAuth && (
+              {(isMockAuth || !isFirebaseInitialized) && (
                   <div className="flex items-center gap-1.5 text-xs text-amber-600 font-medium bg-amber-50 px-2 py-1 rounded-full border border-amber-100">
                       <ShieldCheck size={12} />
                       Local Mode
@@ -562,7 +571,7 @@ const App: React.FC = () => {
               </button>
 
               {/* User Profile / Auth */}
-              {user ? (
+              {user && isFirebaseInitialized ? (
                   <div className="flex items-center gap-2 pl-2 border-l border-gray-200">
                       {user.photoURL ? (
                           <img src={user.photoURL} alt="User" className="w-7 h-7 rounded-full border border-gray-200" />
@@ -583,7 +592,8 @@ const App: React.FC = () => {
                   <div className="flex items-center gap-2 pl-2 border-l border-gray-200">
                        <button
                           onClick={handleSignIn}
-                          className="flex items-center gap-2 px-3 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-full hover:bg-gray-700 transition-colors shadow-sm"
+                          disabled={!isFirebaseInitialized}
+                          className="flex items-center gap-2 px-3 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-full hover:bg-gray-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                        >
                            <LogIn size={14} />
                            Sign In

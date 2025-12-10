@@ -1,4 +1,3 @@
-
 import { ProcessedFile } from '../types';
 
 export const generateId = () => Math.random().toString(36).substr(2, 9);
@@ -121,8 +120,9 @@ const extractExcelText = async (file: File): Promise<string> => {
 
     workbook.SheetNames.forEach((sheetName: string) => {
       const sheet = workbook.Sheets[sheetName];
-      // blankrows: true ensures we preserve the row structure so "Row 10" in text matches Row 10 in Excel
-      const csv = window.XLSX.utils.sheet_to_csv(sheet, { blankrows: true });
+      // raw: false ensures we get the formatted strings (e.g. $1000 instead of 1000, 50% instead of 0.5)
+      // This is crucial for LLM understanding context
+      const csv = window.XLSX.utils.sheet_to_csv(sheet, { blankrows: true, raw: false });
       
       if (csv && csv.trim().length > 0) {
         fullText += `--- [Sheet: ${sheetName}] ---\n${csv}\n\n`;

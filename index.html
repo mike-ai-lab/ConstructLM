@@ -1,30 +1,53 @@
-
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ConstructLM</title>
-    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+    <script src="https://cdn.tailwindcss.com?plugins=typography" defer></script>
     
     <!-- PDF.js for parsing PDF files - Using unpkg for better CORS reliability -->
-    <script src="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js" crossorigin="anonymous" defer></script>
     <!-- PDF.js Viewer CSS for Text Layer -->
     <link rel="stylesheet" href="https://unpkg.com/pdfjs-dist@3.11.174/web/pdf_viewer.css">
     
     <script>
-      // Create a global promise that resolves when the PDF worker is ready
+      // Global Error Handler to catch loading issues
+      window.addEventListener('error', function(e) {
+        const root = document.getElementById('root');
+        if (root && (root.innerText.includes('Loading') || root.innerHTML.includes('Loading'))) {
+             console.error("Global Error Caught:", e.error);
+             root.innerHTML = `
+                <div class="flex flex-col items-center justify-center h-full p-8 text-center text-slate-600 bg-red-50">
+                    <h2 class="text-xl font-bold text-red-600 mb-2">Application Failed to Start</h2>
+                    <p class="mb-4">An error occurred while loading the application.</p>
+                    <div class="bg-white p-4 rounded border border-red-200 text-left overflow-auto max-w-2xl w-full shadow-sm">
+                        <code class="text-xs font-mono text-red-500 break-all">
+                            ${e.message}<br/>
+                            ${e.filename}:${e.lineno}
+                        </code>
+                    </div>
+                    <button onclick="window.location.reload()" class="mt-6 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors">
+                        Reload Application
+                    </button>
+                </div>
+             `;
+        }
+      });
+
+      // Handle Promise Rejections (e.g. dynamic imports)
+      window.addEventListener('unhandledrejection', function(e) {
+         console.error("Unhandled Rejection:", e.reason);
+      });
+
+      // PDF Worker Setup
       window.pdfWorkerReady = new Promise((resolve, reject) => {
         let initialized = false;
-
-        // Function to initialize worker
         function initWorker() {
             if (initialized) return;
             initialized = true;
-
             const pdfWorkerUrl = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
             
-            // 1. Try fetching to create a local Blob (Best for avoiding Cross-Origin Worker errors)
             fetch(pdfWorkerUrl)
               .then(res => {
                 if (!res.ok) throw new Error("Network response was not ok");
@@ -40,8 +63,7 @@
                 resolve();
               })
               .catch(err => {
-                console.warn("Worker fetch failed, falling back to direct URL. This might cause CORS warnings.", err);
-                // 2. Fallback: Set URL directly (Might work depending on browser security policies)
+                console.warn("Worker fetch failed, falling back to direct URL.", err);
                 if (window.pdfjsLib) {
                     window.pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
                 }
@@ -49,7 +71,6 @@
               });
         }
 
-        // Polling to wait for pdfjsLib to be defined on window
         const checkLibInterval = setInterval(() => {
           if (window.pdfjsLib) {
             clearInterval(checkLibInterval);
@@ -57,22 +78,17 @@
           }
         }, 100);
 
-        // Timeout after 15 seconds
         setTimeout(() => {
             if (!initialized) {
                 clearInterval(checkLibInterval);
-                if (!window.pdfjsLib) {
-                    console.error("PDF.js library failed to load within timeout.");
-                    // We resolve anyway so the app doesn't hang, but parsing will fail cleanly later
-                    resolve();
-                }
+                resolve(); // Resolve anyway to avoid blocking
             }
         }, 15000);
       });
     </script>
     
     <!-- SheetJS for parsing Excel files -->
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js" defer></script>
     
     <style>
       /* Custom scrollbar for better aesthetics */
@@ -100,7 +116,6 @@
         opacity: 1;
       }
       
-      /* PDF.js Text Layer Fixes */
       .textLayer {
         position: absolute;
         left: 0;
@@ -113,7 +128,6 @@
         pointer-events: none;
       }
 
-      /* Ensure text is invisible (transparent ink) but selectable */
       .textLayer span, .textLayer br {
         color: transparent !important;
         opacity: 1 !important;
@@ -123,28 +137,24 @@
         cursor: text;
         transform-origin: 0% 0%;
         pointer-events: auto;
-        /* Critical for some browsers to ensure text is truly invisible */
         -webkit-text-fill-color: transparent !important;
       }
 
-      /* Highlight selection */
       .textLayer ::selection {
         background: rgba(0, 0, 255, 0.2);
         color: transparent; 
       }
 
-      /* Resize Handle Styles */
       .resize-handle-vertical {
-        width: 1px; /* Visual width */
+        width: 1px;
         position: relative;
-        background-color: #e2e8f0; /* slate-200 */
+        background-color: #e2e8f0;
         cursor: col-resize;
         transition: background-color 0.2s;
         z-index: 50;
         flex-shrink: 0;
       }
       
-      /* Invisible hit area for easier grabbing */
       .resize-handle-vertical::after {
         content: '';
         position: absolute;
@@ -156,10 +166,9 @@
       }
 
       .resize-handle-vertical:hover, .resize-handle-vertical.active {
-        background-color: #3b82f6; /* blue-500 */
+        background-color: #3b82f6;
         width: 2px;
       }
-
     </style>
     <script type="importmap">
 {
@@ -176,8 +185,8 @@
     "firebase/firestore": "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js",
     "firebase/storage": "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js",
     "firebase/analytics": "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js",
-    "idb-keyval": "https://cdn.jsdelivr.net/npm/idb-keyval@6/dist/index.js",
-    "firebase/": "https://aistudiocdn.com/firebase@^12.6.0/"
+    "idb-keyval": "https://cdn.jsdelivr.net/npm/idb-keyval@6/+esm",
+    "firebase/": "https://esm.sh/firebase@^12.6.0/"
   }
 }
 </script>
