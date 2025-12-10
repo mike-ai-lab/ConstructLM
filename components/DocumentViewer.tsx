@@ -49,7 +49,6 @@ const findAllFuzzyMatches = (fullText: string, quote: string): { start: number, 
     if (!match) return [];
 
     // Map normalized indices back to original string indices
-    // This is computationally expensive but accurate
     let normIdx = 0;
     let startOriginal = -1;
     let endOriginal = -1;
@@ -100,7 +99,6 @@ const parseCSVLine = (text: string) => {
     
     return result.map(s => {
         let cell = s.trim();
-        // Remove surrounding quotes if they match
         if (cell.startsWith('"') && cell.endsWith('"') && cell.length >= 2) {
              cell = cell.substring(1, cell.length - 1);
         }
@@ -377,41 +375,46 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
 
 
   // --- SCROLL EFFECTS ---
-  useLayoutEffect(() => {
-      // PDF Scroll
-      if (isPdf && highlightLayerRef.current && highlightQuote) {
-          const scrollTarget = (highlightLayerRef.current as any)._scrollTarget as HTMLElement;
-          if (scrollTarget) {
-              scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              const anim = scrollTarget.animate([
-                  { transform: 'scale(1)', opacity: 0.5 },
-                  { transform: 'scale(1.5)', opacity: 1 },
-                  { transform: 'scale(1)', opacity: 0.5 }
-              ], { duration: 600, iterations: 2 });
+  useEffect(() => {
+      // Enhanced scroll with retries
+      const attemptScroll = (attempt = 1) => {
+          if (!containerRef.current) return;
+          
+          // PDF Scroll
+          if (isPdf && highlightLayerRef.current && highlightQuote) {
+              const scrollTarget = (highlightLayerRef.current as any)._scrollTarget as HTMLElement;
+              if (scrollTarget) {
+                  scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  const anim = scrollTarget.animate([
+                      { transform: 'scale(1)', opacity: 0.5 },
+                      { transform: 'scale(1.5)', opacity: 1 },
+                      { transform: 'scale(1)', opacity: 0.5 }
+                  ], { duration: 600, iterations: 2 });
+                  return; // Success
+              }
           }
-          return;
-      }
-      
-      // Excel/Text Scroll
-      const excelRow = document.querySelector('[data-highlighted="true"]');
-      if (excelRow) {
-            excelRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            excelRow.classList.remove('bg-amber-100'); 
-            excelRow.classList.add('bg-amber-300', 'transition-colors', 'duration-1000');
-            setTimeout(() => {
-                excelRow.classList.remove('bg-amber-300');
-                excelRow.classList.add('bg-amber-100');
-            }, 1000);
-      } else {
-            const targetEl = document.getElementById('active-scroll-target');
-            if (targetEl) {
-                targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                targetEl.classList.add('ring-4', 'ring-blue-400/50', 'bg-yellow-300', 'scale-105', 'transition-all', 'duration-300');
-                setTimeout(() => {
-                    targetEl.classList.remove('ring-4', 'ring-blue-400/50', 'bg-yellow-300', 'scale-105');
-                }, 1500);
-            }
-      }
+          
+          // Excel/Text Scroll
+          const target = containerRef.current.querySelector('[data-highlighted="true"]') || containerRef.current.querySelector('#active-scroll-target');
+          
+          if (target) {
+               target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+               // Visual cues
+               target.classList.remove('bg-amber-100', 'bg-blue-50'); 
+               target.classList.add('bg-yellow-300', 'transition-colors', 'duration-500');
+               setTimeout(() => {
+                   target.classList.remove('bg-yellow-300');
+                   if(target.tagName === 'TR') target.classList.add('bg-amber-100');
+                   else target.classList.add('bg-blue-100'); 
+               }, 800);
+          } else if (attempt < 10) {
+               // Retry if element not found yet (e.g. while rendering large excel)
+               setTimeout(() => attemptScroll(attempt + 1), 100);
+          }
+      };
+
+      const timer = setTimeout(() => attemptScroll(), 100);
+      return () => clearTimeout(timer);
 
   }, [pdfRenderKey, isPdf, highlightQuote, location, file, textScale]);
 
@@ -449,10 +452,11 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
       const parts = content.split(sheetRegex);
       const elements: React.ReactNode[] = [];
       
-      // 1. Parsing location string
       let targetSheetName = "";
       let targetRowStart = -1;
       let targetRowEnd = -1;
+      let targetColIndices: Set<number> = new Set();
+      let hasColumnTarget = false;
 
       if (highlightLoc) {
           const sheetMatch = highlightLoc.match(/Sheet:\s*['"]?([^,'";|]+)['"]?/i);
@@ -463,9 +467,31 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
               targetRowStart = parseInt(rowMatch[1], 10);
               targetRowEnd = rowMatch[2] ? parseInt(rowMatch[2], 10) : targetRowStart;
           }
+          
+          const colSectionMatch = highlightLoc.match(/(?:cols?|columns?)\s*[:#.]?\s*([^;\n|]*)/i);
+          if (colSectionMatch) {
+              const rawCols = colSectionMatch[1];
+              const colParts = rawCols.split(',').map(s => s.trim());
+              
+              colParts.forEach(p => {
+                  const cleanP = p.replace(/^['"]|['"]$/g, '');
+                  if (/^\d+$/.test(cleanP)) {
+                       targetColIndices.add(parseInt(cleanP, 10) - 1);
+                       hasColumnTarget = true;
+                  } else if (/^[A-Za-z]+$/.test(cleanP) && cleanP.length < 4) {
+                       let idx = 0;
+                       const upper = cleanP.toUpperCase();
+                       for (let k = 0; k < upper.length; k++) idx = idx * 26 + (upper.charCodeAt(k) - 64);
+                       targetColIndices.add(idx - 1);
+                       hasColumnTarget = true;
+                  } else {
+                       // Name based, handled inside loop
+                       hasColumnTarget = true;
+                  }
+              });
+          }
       }
 
-      // 2. Prepare fuzzy quote matching
       const normQuote = quote ? normalize(quote) : "";
       
       if (parts[0].trim()) {
@@ -480,9 +506,38 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
           const sheetName = parts[i];
           const csvContent = parts[i + 1] || "";
           
-          const rows = csvContent.trim().split('\n').map(row => parseCSVLine(row));
+          // Split by newline but handle potential blank lines correctly
+          let lines = csvContent.split('\n');
+          // Removing trailing newline if it's just from the split
+          if (lines.length > 0 && lines[lines.length - 1].trim() === '') {
+              lines.pop();
+          }
 
-          // Check if this sheet matches the location string (if provided)
+          const rows = lines.map(row => parseCSVLine(row));
+          const headers = rows[0] || [];
+
+          // Resolve Column Names to Indices for this sheet
+          const sheetTargetCols = new Set(targetColIndices);
+          if (hasColumnTarget) {
+             const colSectionMatch = highlightLoc?.match(/(?:cols?|columns?)\s*[:#.]?\s*([^;\n|]*)/i);
+             if (colSectionMatch) {
+                 const colParts = colSectionMatch[1].split(',').map(s => s.trim().replace(/^['"]|['"]$/g, ''));
+                 colParts.forEach(name => {
+                     const hIdx = headers.findIndex(h => normalize(h).includes(normalize(name)));
+                     if (hIdx !== -1) sheetTargetCols.add(hIdx);
+                 });
+             }
+          }
+
+          if (sheetTargetCols.size === 0 && quote && !targetRowStart) {
+               headers.forEach((h, idx) => {
+                   if (normalize(h) === normQuote || (h.length < 50 && normalize(h).includes(normQuote))) {
+                       sheetTargetCols.add(idx);
+                       hasColumnTarget = true;
+                   }
+               });
+          }
+
           const sheetNameMatch = targetSheetName ? sheetName.toLowerCase().includes(targetSheetName) : true;
           
           elements.push(
@@ -496,21 +551,17 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
                           <tbody className="bg-white divide-y divide-gray-100">
                               {rows.map((row, rIdx) => {
                                   const visualRowNumber = rIdx + 1;
-                                  
-                                  // --- HIGHLIGHTING LOGIC ---
                                   let isHighlightRow = false;
 
-                                  // Priority 1: Content Match (Exact or approximate in ANY cell of this row)
-                                  if (normQuote.length > 5) {
-                                      const rowText = normalize(row.join(" "));
-                                      if (rowText.includes(normQuote)) {
+                                  if (targetRowStart !== -1 && sheetNameMatch) {
+                                      if (visualRowNumber >= targetRowStart && visualRowNumber <= targetRowEnd) {
                                           isHighlightRow = true;
                                       }
                                   }
 
-                                  // Priority 2: Location Match (Fallback if no quote match found yet)
-                                  if (!isHighlightRow && targetRowStart !== -1 && sheetNameMatch) {
-                                      if (visualRowNumber >= targetRowStart && visualRowNumber <= targetRowEnd) {
+                                  if (!isHighlightRow && !hasColumnTarget && normQuote.length > 5) {
+                                      const rowText = normalize(row.join(" "));
+                                      if (rowText.includes(normQuote)) {
                                           isHighlightRow = true;
                                       }
                                   }
@@ -528,11 +579,23 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
                                         <td className={`px-2 py-2 w-8 select-none text-[10px] text-right border-r border-gray-100 bg-gray-50/50 ${isHighlightRow ? "text-amber-700 font-bold" : "text-gray-300"}`}>
                                             {visualRowNumber}
                                         </td>
-                                        {row.map((cell, cIdx) => (
-                                            <td key={cIdx} className="px-3 py-2 whitespace-nowrap border-r border-gray-100 last:border-none max-w-[300px] truncate" title={cell}>
-                                                {cell}
-                                            </td>
-                                        ))}
+                                        {row.map((cell, cIdx) => {
+                                            const isHighlightCol = sheetNameMatch && sheetTargetCols.has(cIdx);
+                                            return (
+                                                <td 
+                                                    key={cIdx} 
+                                                    data-highlighted={isHighlightCol && rIdx === 0 ? "true" : undefined}
+                                                    className={`
+                                                        px-3 py-2 whitespace-nowrap border-r border-gray-100 last:border-none max-w-[300px] truncate transition-colors
+                                                        ${isHighlightCol ? 'bg-blue-50/50 border-l border-r border-blue-100' : ''}
+                                                        ${isHighlightCol && rIdx === 0 ? 'bg-blue-100 text-blue-800 font-bold ring-2 ring-inset ring-blue-300' : ''}
+                                                    `} 
+                                                    title={cell}
+                                                >
+                                                    {cell}
+                                                </td>
+                                            );
+                                        })}
                                     </tr>
                                   );
                               })}

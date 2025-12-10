@@ -30,12 +30,13 @@ INSTRUCTIONS:
    - "The beam depth is 600mm {{citation:Structural_Drawings.pdf|Page 5|Beam Schedule B1 lists depth as 600}}"
    - "The function uses a recursive loop {{citation:utils.ts|Line 45|const recursiveLoop = (n) => ...}}"
    - "The cost of steel is $1200/ton {{citation:BOQ_Final.xlsx|Sheet: Pricing, Row 45|Structural Steel | 1200 | USD}}"
+   - "The acoustic ratings are listed in the spec {{citation:Specs.xlsx|Sheet: Data, Column: Acoustic Rating|30 dB, 32 dB, 35 dB}}"
 
 3. CRITICAL RULES FOR CITATIONS:
    - Part 1: Filename (must match exactly).
    - Part 2: Location. 
      - For PDF: Use "Page X". 
-     - For Excel: Use "Sheet: [Name], Row [Number]".
+     - For Excel: Use "Sheet: [Name], Row [Number]" OR "Sheet: [Name], Column: [Name/Letter]" if referencing a whole column.
      - For Text/Code/Markdown: Use "Line X".
    - Part 3: EVIDENCE. Copy the exact text or data row from the file.
 

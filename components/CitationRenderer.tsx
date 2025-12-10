@@ -530,6 +530,8 @@ const PdfPagePreview: React.FC<{ file: File; pageNumber: number; quote?: string 
 };
 
 const TextContextViewer: React.FC<{ file?: ProcessedFile; quote: string; location: string }> = ({ file, quote, location }) => {
+    const containerRef = useRef<HTMLDivElement>(null);
+
     // --- EXCEL PARSING & HIGHLIGHTING (Enhanced with Content Matching) ---
     const parseExcelContent = (content: string, highlightLoc?: string, highlightQuote?: string) => {
         const sheetRegex = /--- \[Sheet: (.*?)\] ---/g;
@@ -539,6 +541,8 @@ const TextContextViewer: React.FC<{ file?: ProcessedFile; quote: string; locatio
         let targetSheetName = "";
         let targetRowStart = -1;
         let targetRowEnd = -1;
+        let targetColIndices: Set<number> = new Set();
+        let hasColumnTarget = false;
 
         if (highlightLoc) {
             const sheetMatch = highlightLoc.match(/Sheet:\s*['"]?([^,'";|]+)['"]?/i);
@@ -548,6 +552,29 @@ const TextContextViewer: React.FC<{ file?: ProcessedFile; quote: string; locatio
             if (rowMatch) {
                 targetRowStart = parseInt(rowMatch[1], 10);
                 targetRowEnd = rowMatch[2] ? parseInt(rowMatch[2], 10) : targetRowStart;
+            }
+
+            // Improved Column Parsing
+            const colSectionMatch = highlightLoc.match(/(?:cols?|columns?)\s*[:#.]?\s*([^;\n|]*)/i);
+            if (colSectionMatch) {
+                const rawCols = colSectionMatch[1];
+                const colParts = rawCols.split(',').map(s => s.trim());
+                colParts.forEach(p => {
+                    const cleanP = p.replace(/^['"]|['"]$/g, '');
+                    if (/^\d+$/.test(cleanP)) {
+                        targetColIndices.add(parseInt(cleanP, 10) - 1);
+                        hasColumnTarget = true;
+                    } else if (/^[A-Za-z]+$/.test(cleanP) && cleanP.length < 4) {
+                        let idx = 0;
+                        const upper = cleanP.toUpperCase();
+                        for (let k = 0; k < upper.length; k++) idx = idx * 26 + (upper.charCodeAt(k) - 64);
+                        targetColIndices.add(idx - 1);
+                        hasColumnTarget = true;
+                    } else {
+                        // Header name matching happens in loop
+                        hasColumnTarget = true;
+                    }
+                });
             }
         }
 
@@ -565,15 +592,39 @@ const TextContextViewer: React.FC<{ file?: ProcessedFile; quote: string; locatio
             const sheetName = parts[i];
             const csvContent = parts[i + 1] || "";
             
-            const rows = csvContent.trim().split('\n').map(row => {
+            // Handle blank rows gracefully
+            let lines = csvContent.split('\n');
+            if (lines.length > 0 && lines[lines.length - 1].trim() === '') lines.pop();
+
+            const rows = lines.map(row => {
                 const matches = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
                 if (!matches && row.length > 0) return [row]; 
                 if (!matches) return [];
                 return matches.map(cell => cell.replace(/^"|"$/g, '').trim()); 
             });
 
-            // If a sheet name is specified in citation, strictly filter by it.
-            // If NOT specified, we allow matching in any sheet if the content matches.
+            // Resolve Column Names to Indices for this sheet
+            const headers = rows[0] || [];
+            const sheetTargetCols = new Set(targetColIndices);
+            if (hasColumnTarget) {
+                const colSectionMatch = highlightLoc?.match(/(?:cols?|columns?)\s*[:#.]?\s*([^;\n|]*)/i);
+                if (colSectionMatch) {
+                    const colParts = colSectionMatch[1].split(',').map(s => s.trim().replace(/^['"]|['"]$/g, ''));
+                    colParts.forEach(name => {
+                        const hIdx = headers.findIndex(h => normalize(h).includes(normalize(name)));
+                        if (hIdx !== -1) sheetTargetCols.add(hIdx);
+                    });
+                }
+            }
+            if (sheetTargetCols.size === 0 && quote && !targetRowStart) {
+                headers.forEach((h, idx) => {
+                    if (normalize(h) === normQuote || (h.length < 50 && normalize(h).includes(normQuote))) {
+                        sheetTargetCols.add(idx);
+                        hasColumnTarget = true;
+                    }
+                });
+            }
+
             const sheetNameMatch = targetSheetName ? sheetName.toLowerCase().includes(targetSheetName) : true;
 
             elements.push(
@@ -589,30 +640,23 @@ const TextContextViewer: React.FC<{ file?: ProcessedFile; quote: string; locatio
                                     const visualRowNumber = rIdx + 1;
                                     let isHighlightRow = false;
 
-                                    // Priority 1: Content Match
-                                    if (normQuote.length > 5) {
+                                    if (targetRowStart !== -1 && sheetNameMatch) {
+                                        if (visualRowNumber >= targetRowStart && visualRowNumber <= targetRowEnd) {
+                                            isHighlightRow = true;
+                                        }
+                                    }
+
+                                    if (!isHighlightRow && !hasColumnTarget && normQuote.length > 5) {
                                         const rowText = normalize(row.join(" "));
                                         if (rowText.includes(normQuote)) {
                                             isHighlightRow = true;
                                         }
                                     }
 
-                                    // Priority 2: Location Match (Fallback)
-                                    // Only if we are in the correct sheet (if sheet was specified)
-                                    if (!isHighlightRow && targetRowStart !== -1 && sheetNameMatch) {
-                                        if (visualRowNumber >= targetRowStart && visualRowNumber <= targetRowEnd) {
-                                            isHighlightRow = true;
-                                        }
-                                    }
-
-                                    // Scroll target: First matching row
-                                    const isScrollTarget = isHighlightRow && !elements.some(e => (e as any)._hasScrollTarget);
-                                    if(isScrollTarget) (elements as any)._hasScrollTarget = true; // Hack to mark first
-
                                     return (
                                         <tr 
                                             key={rIdx} 
-                                            id={isScrollTarget ? "citation-excel-row" : undefined}
+                                            data-highlighted={isHighlightRow ? "true" : "false"}
                                             className={`
                                                 ${rIdx === 0 ? "bg-gray-50 font-semibold text-gray-900" : "text-gray-700"}
                                                 ${isHighlightRow ? "bg-amber-100 ring-2 ring-inset ring-amber-400 z-10 relative scroll-mt-24" : ""}
@@ -621,11 +665,23 @@ const TextContextViewer: React.FC<{ file?: ProcessedFile; quote: string; locatio
                                             <td className={`px-2 py-1 w-6 select-none text-right border-r border-gray-100 bg-gray-50/50 ${isHighlightRow ? "text-amber-700 font-bold" : "text-gray-300"}`}>
                                                 {visualRowNumber}
                                             </td>
-                                            {row.map((cell, cIdx) => (
-                                                <td key={cIdx} className="px-2 py-1 whitespace-nowrap border-r border-gray-100 last:border-none max-w-[200px] truncate" title={cell}>
-                                                    {cell}
-                                                </td>
-                                            ))}
+                                            {row.map((cell, cIdx) => {
+                                                const isHighlightCol = sheetNameMatch && sheetTargetCols.has(cIdx);
+                                                return (
+                                                    <td 
+                                                        key={cIdx} 
+                                                        data-highlighted={isHighlightCol && rIdx === 0 ? "true" : undefined}
+                                                        className={`
+                                                            px-2 py-1 whitespace-nowrap border-r border-gray-100 last:border-none max-w-[200px] truncate
+                                                            ${isHighlightCol ? 'bg-blue-50/50 border-l border-r border-blue-100' : ''}
+                                                            ${isHighlightCol && rIdx === 0 ? 'bg-blue-100 text-blue-800 font-bold ring-2 ring-inset ring-blue-300' : ''}
+                                                        `} 
+                                                        title={cell}
+                                                    >
+                                                        {cell}
+                                                    </td>
+                                                );
+                                            })}
                                         </tr>
                                     );
                                 })}
@@ -638,17 +694,26 @@ const TextContextViewer: React.FC<{ file?: ProcessedFile; quote: string; locatio
         return elements;
     };
 
-    // Auto-scroll effect for Excel in Citation Popup
+    // Auto-scroll effect for Excel in Citation Popup with retries
     useEffect(() => {
-        if (file?.type === 'excel') {
-            const el = document.getElementById('citation-excel-row');
-            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
+        if (!containerRef.current) return;
+        
+        const attemptScroll = (attempt = 1) => {
+             const el = containerRef.current!.querySelector('[data-highlighted="true"]');
+             if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+             } else if (attempt < 5) {
+                setTimeout(() => attemptScroll(attempt + 1), 200);
+             }
+        };
+
+        const timer = setTimeout(() => attemptScroll(), 100);
+        return () => clearTimeout(timer);
     }, [file, location]);
 
     if (file?.type === 'excel') {
         return (
-            <div className="p-6">
+            <div className="p-6" ref={containerRef}>
                 {parseExcelContent(file.content, location, quote)}
             </div>
         );
