@@ -1,3 +1,4 @@
+
 export interface ProcessedFile {
   id: string;
   name: string;
@@ -21,6 +22,22 @@ export interface Message {
 export interface Citation {
   file: string;
   snippet: string;
+}
+
+export type LLMProvider = 'google' | 'openai' | 'groq' | 'anthropic';
+
+export interface ModelConfig {
+  id: string;
+  name: string;
+  provider: LLMProvider;
+  contextWindow: number;
+  apiKeyEnv: string; // The environment variable name for the key (e.g., 'GROQ_API_KEY')
+  isDeprecated?: boolean;
+  supportsImages?: boolean;
+  
+  // User-facing fields
+  description: string; // e.g. "Best for large PDFs"
+  capacityTag: 'High' | 'Medium' | 'Low'; // Simple gauge for the user
 }
 
 // Declare external library types loaded via CDN

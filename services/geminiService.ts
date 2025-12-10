@@ -1,85 +1,28 @@
-import { GoogleGenAI, GenerateContentResponse, Modality, Content } from "@google/genai";
-import { ProcessedFile, Message } from "../types";
+
+import { GoogleGenAI, Modality, Content } from "@google/genai";
+import { Message } from "../types";
 import { base64ToUint8Array } from "./audioUtils";
+import { getApiKeyForModel, MODEL_REGISTRY } from "./modelRegistry";
 
-// Robust way to get API key in browser or node environments without crashing
-export const getApiKey = (): string => {
-  try {
-    // Check if 'process' exists before accessing it to avoid ReferenceError in strict browsers
-    if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
-      return process.env.API_KEY;
-    }
-  } catch (e) {
-    console.warn("Error accessing environment variables:", e);
-  }
-  return "";
-};
-
+// Initialize simply checks if the default key is present for TTS purposes mostly
 export const initializeGemini = () => {
-    const key = getApiKey();
-    if (!key) console.warn("API Key is missing for Gemini");
-    else console.log("Gemini initialized with API Key present");
+    // We try to find the default google key
+    const googleModel = MODEL_REGISTRY.find(m => m.provider === 'google');
+    if (googleModel && getApiKeyForModel(googleModel)) {
+        console.log("Gemini Service initialized");
+    }
 };
 
-const constructSystemPrompt = (files: ProcessedFile[]) => {
-  // 1. Filter only ready files
-  const activeFiles = files.filter(f => f.status === 'ready');
-  
-  // 2. Build Context
-  const fileContexts = activeFiles
-    .map(f => `=== FILE START: "${f.name}" (${f.type.toUpperCase()}) ===\n${f.content}\n=== FILE END: "${f.name}" ===`)
-    .join('\n\n');
-
-  // 3. Efficiency Warning in System Prompt (for the Model)
-  const contextNote = activeFiles.length > 0 
-    ? `You have access to ${activeFiles.length} specific file(s) for this query.`
-    : "You have access to all project files.";
-
-  return `
-You are ConstructLM, an advanced AI assistant for construction documentation.
-${contextNote}
-
-INSTRUCTIONS:
-1. Answer strictly based on the provided FILE CONTEXTS.
-2. CITATIONS ARE MANDATORY. When you use information from a file, you MUST cite it using the strict 3-part format below.
-   
-   Format: {{citation:FileName.ext|Location Info|Verbatim Quote or Evidence}}
-   
-   Examples:
-   - "The beam depth is 600mm {{citation:Structural_Drawings.pdf|Page 5|Beam Schedule B1 lists depth as 600}}"
-   - "The function uses a recursive loop {{citation:utils.ts|Line 45|const recursiveLoop = (n) => ...}}"
-   - "The cost of steel is $1200/ton {{citation:BOQ_Final.xlsx|Sheet: Pricing, Row 45|Structural Steel | 1200 | USD}}"
-
-3. CRITICAL RULES FOR CITATIONS:
-   - Part 1: Filename (must match exactly).
-   - Part 2: Location. 
-     - For PDF: Use "Page X". 
-     - For Excel: Use "Sheet: [Name], Row [Number]".
-     - For Text/Code/Markdown: Use "Line X" (estimate the line number based on the file content provided).
-   - Part 3: EVIDENCE. Copy the exact text or data row from the file.
-
-4. If a user asks about a specific file (e.g., "What's in the BOQ?"), summarize that specific file's content.
-5. If the information is not in the provided files, state: "I couldn't find that information in the active documents."
-6. Use Markdown for formatting your response (bold, lists, headers).
-
-CONTEXT:
-${fileContexts}
-`;
-};
-
-export const sendMessageToGemini = async (
+export const streamGemini = async (
+  modelId: string,
+  apiKey: string,
   history: Message[],
   newMessage: string,
-  activeFiles: ProcessedFile[], // These are the files specifically mentioned (or ALL if none mentioned)
+  systemInstruction: string,
   onStream: (chunk: string) => void
 ) => {
-  const apiKey = getApiKey();
-  if (!apiKey) throw new Error("API Key is missing. Please check your environment configuration.");
-
   const ai = new GoogleGenAI({ apiKey });
   
-  const systemInstruction = constructSystemPrompt(activeFiles);
-
   // Construct Content objects from history
   const contents: Content[] = history
     .filter(m => !m.isStreaming && m.id !== 'intro' && !m.content.includes("Sorry, I encountered an error")) 
@@ -95,10 +38,10 @@ export const sendMessageToGemini = async (
   });
 
   try {
-    console.log(`[Gemini] Sending message with ${contents.length} turns. System Prompt Length: ${systemInstruction.length}`);
+    console.log(`[Gemini] Sending message to ${modelId}`);
     
     const responseStream = await ai.models.generateContentStream({
-      model: 'gemini-2.5-flash',
+      model: modelId,
       contents: contents,
       config: {
         systemInstruction,
@@ -110,7 +53,7 @@ export const sendMessageToGemini = async (
     for await (const chunk of responseStream) {
         if(chunk.text) {
             fullText += chunk.text;
-            onStream(fullText);
+            onStream(chunk.text); // Send simpler chunk, caller accumulates or we accumulate? The caller usually accumulates display state.
         }
     }
     console.log("[Gemini] Response complete");
@@ -121,10 +64,15 @@ export const sendMessageToGemini = async (
   }
 };
 
+// TTS remains here as it is specific to Gemini
 export const generateSpeech = async (text: string): Promise<Uint8Array | null> => {
-    console.log(`[TTS] Generating speech for: "${text.substring(0, 30)}..."`);
-    const apiKey = getApiKey();
-    if (!apiKey) throw new Error("API Key is missing.");
+    console.log(`[TTS] Generating speech...`);
+    
+    // For TTS we specifically need a Google Key. We look for the standard one.
+    const googleModel = MODEL_REGISTRY.find(m => m.provider === 'google');
+    const apiKey = googleModel ? getApiKeyForModel(googleModel) : undefined;
+    
+    if (!apiKey) throw new Error("Google API Key missing for TTS.");
 
     const ai = new GoogleGenAI({ apiKey });
     
@@ -144,10 +92,8 @@ export const generateSpeech = async (text: string): Promise<Uint8Array | null> =
 
         const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
         if (base64Audio) {
-            console.log("[TTS] Audio generated successfully");
             return base64ToUint8Array(base64Audio);
         }
-        console.warn("[TTS] No audio data in response");
         return null;
     } catch (error) {
         console.error("[TTS] Error:", error);

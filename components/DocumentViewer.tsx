@@ -19,9 +19,10 @@ interface DocumentViewerProps {
   onClose: () => void;
 }
 
+const normalize = (str: string) => str.replace(/[\s\r\n\W]+/g, '').toLowerCase();
+
 // --- Shared Matching Logic ---
 const findBestRangeInNormalizedText = (fullText: string, quote: string) => {
-    const normalize = (s: string) => s.replace(/[\s\r\n]+/g, '').toLowerCase();
     const normQuote = normalize(quote);
     const normFull = normalize(fullText);
     
@@ -29,30 +30,15 @@ const findBestRangeInNormalizedText = (fullText: string, quote: string) => {
 
     const exactIdx = normFull.indexOf(normQuote);
     if (exactIdx !== -1) return { start: exactIdx, end: exactIdx + normQuote.length };
-
-    const CHUNK_LEN = Math.min(40, Math.floor(normQuote.length / 3));
-    const head = normQuote.substring(0, CHUNK_LEN);
-    const tail = normQuote.substring(normQuote.length - CHUNK_LEN);
     
+    // Fallback: substring matching
+    const CHUNK_LEN = Math.min(20, Math.floor(normQuote.length / 2));
+    const head = normQuote.substring(0, CHUNK_LEN);
     const headIdx = normFull.indexOf(head);
+    
     if (headIdx !== -1) {
-        const searchLimit = headIdx + normQuote.length * 1.5; 
-        const tailIdx = normFull.indexOf(tail, headIdx + CHUNK_LEN);
-        
-        if (tailIdx !== -1 && tailIdx < searchLimit) {
-             return { start: headIdx, end: tailIdx + CHUNK_LEN };
-        }
-        return { start: headIdx, end: headIdx + CHUNK_LEN };
+         return { start: headIdx, end: headIdx + normQuote.length }; // Approximate end
     }
-
-    const midStart = Math.floor(normQuote.length / 2) - Math.floor(CHUNK_LEN / 2);
-    const mid = normQuote.substring(midStart, midStart + CHUNK_LEN);
-    const midIdx = normFull.indexOf(mid);
-    if (midIdx !== -1) return { start: midIdx, end: midIdx + CHUNK_LEN };
-
-    const tailIdxOnly = normFull.indexOf(tail);
-    if (tailIdxOnly !== -1) return { start: tailIdxOnly, end: tailIdxOnly + CHUNK_LEN };
-
     return null;
 };
 
@@ -62,14 +48,15 @@ const findAllFuzzyMatches = (fullText: string, quote: string): { start: number, 
     const match = findBestRangeInNormalizedText(fullText, quote);
     if (!match) return [];
 
-    const normalizeChar = (c: string) => c.toLowerCase().match(/[a-z0-9]/) ? c.toLowerCase() : '';
-    
+    // Map normalized indices back to original string indices
+    // This is computationally expensive but accurate
     let normIdx = 0;
     let startOriginal = -1;
     let endOriginal = -1;
     
     for(let i=0; i<fullText.length; i++) {
-        if (!fullText[i].match(/[\s\r\n]/)) {
+        const char = fullText[i];
+        if (/[a-zA-Z0-9]/.test(char)) {
             if (normIdx === match.start) startOriginal = i;
             if (normIdx === match.end) {
                 endOriginal = i;
@@ -79,7 +66,7 @@ const findAllFuzzyMatches = (fullText: string, quote: string): { start: number, 
         }
     }
     
-    if (endOriginal === -1 && normIdx === match.end) endOriginal = fullText.length;
+    if (endOriginal === -1 && normIdx >= match.end) endOriginal = fullText.length;
 
     if (startOriginal !== -1 && endOriginal !== -1) {
         return [{ start: startOriginal, end: endOriginal }];
@@ -255,13 +242,13 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
       if(!highlightLayerRef.current) return false;
       highlightLayerRef.current.innerHTML = ''; 
       
-      const normalize = (str: string) => str.replace(/[\s\r\n]+/g, '').toLowerCase();
-
       let fullText = "";
       const itemMap: { start: number, end: number, item: any }[] = [];
       
+      const normalizeLocal = (str: string) => str.replace(/[\s\r\n\W]+/g, '').toLowerCase();
+
       textContent.items.forEach((item: any) => {
-          const str = normalize(item.str);
+          const str = normalizeLocal(item.str);
           const start = fullText.length;
           fullText += str;
           itemMap.push({ start, end: fullText.length, item });
@@ -364,33 +351,25 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
   }, [file, citations, highlightQuote, location, isPdf, lineOffsets]);
 
 
-  // --- PDF SCROLL EFFECT ---
+  // --- SCROLL EFFECTS ---
   useLayoutEffect(() => {
-      if (!isPdf || !highlightLayerRef.current || !highlightQuote) return;
-      
-      const scrollTarget = (highlightLayerRef.current as any)._scrollTarget as HTMLElement;
-      if (scrollTarget) {
-          scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          
-          const anim = scrollTarget.animate([
-              { transform: 'scale(1)', opacity: 0.5 },
-              { transform: 'scale(1.5)', opacity: 1 },
-              { transform: 'scale(1)', opacity: 0.5 }
-          ], { duration: 600, iterations: 2 });
+      // PDF Scroll
+      if (isPdf && highlightLayerRef.current && highlightQuote) {
+          const scrollTarget = (highlightLayerRef.current as any)._scrollTarget as HTMLElement;
+          if (scrollTarget) {
+              scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              const anim = scrollTarget.animate([
+                  { transform: 'scale(1)', opacity: 0.5 },
+                  { transform: 'scale(1.5)', opacity: 1 },
+                  { transform: 'scale(1)', opacity: 0.5 }
+              ], { duration: 600, iterations: 2 });
+          }
+          return;
       }
-  }, [pdfRenderKey, isPdf, highlightQuote]);
-
-
-  // --- UNIVERSAL TEXT/EXCEL SCROLL EFFECT ---
-  useLayoutEffect(() => {
-    if (isPdf || !highlightQuote) return;
-
-    const performScroll = () => {
-        // Target the specific unique ID
-        const targetEl = document.getElementById('active-scroll-target');
-        const excelRow = document.getElementById('excel-highlight-row');
-
-        if (excelRow) {
+      
+      // Excel/Text Scroll
+      const excelRow = document.querySelector('[data-highlighted="true"]');
+      if (excelRow) {
             excelRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
             excelRow.classList.remove('bg-amber-100'); 
             excelRow.classList.add('bg-amber-300', 'transition-colors', 'duration-1000');
@@ -398,20 +377,19 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
                 excelRow.classList.remove('bg-amber-300');
                 excelRow.classList.add('bg-amber-100');
             }, 1000);
-        } else if (targetEl) {
-             targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-             targetEl.classList.add('ring-4', 'ring-blue-400/50', 'bg-yellow-300', 'scale-105', 'transition-all', 'duration-300');
-             setTimeout(() => {
-                targetEl.classList.remove('ring-4', 'ring-blue-400/50', 'bg-yellow-300', 'scale-105');
-             }, 1500);
-        }
-    };
+      } else {
+            const targetEl = document.getElementById('active-scroll-target');
+            if (targetEl) {
+                targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                targetEl.classList.add('ring-4', 'ring-blue-400/50', 'bg-yellow-300', 'scale-105', 'transition-all', 'duration-300');
+                setTimeout(() => {
+                    targetEl.classList.remove('ring-4', 'ring-blue-400/50', 'bg-yellow-300', 'scale-105');
+                }, 1500);
+            }
+      }
 
-    requestAnimationFrame(() => {
-        performScroll();
-    });
-    
-  }, [highlightQuote, location, isPdf, file, textScale]); 
+  }, [pdfRenderKey, isPdf, highlightQuote, location, file, textScale]);
+
 
   const handleMarkerClick = (marker: typeof displayMarkers[0]) => {
       if (containerRef.current) {
@@ -441,24 +419,30 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
 
   // -- Content Parsers --
 
-  const parseExcelContent = (content: string, highlightLoc?: string) => {
+  const parseExcelContent = (content: string, highlightLoc?: string, quote?: string) => {
       const sheetRegex = /--- \[Sheet: (.*?)\] ---/g;
       const parts = content.split(sheetRegex);
       const elements: React.ReactNode[] = [];
       
-      let targetSheet = "";
-      let targetRow = -1;
+      // 1. Parsing location string
+      let targetSheetName = "";
+      let targetRowStart = -1;
+      let targetRowEnd = -1;
 
       if (highlightLoc) {
-          // Robust sheet name matching (handle ' quotes)
           const sheetMatch = highlightLoc.match(/Sheet:\s*['"]?([^,'";|]+)['"]?/i);
-          if (sheetMatch) targetSheet = sheetMatch[1].trim().toLowerCase();
+          if (sheetMatch) targetSheetName = sheetMatch[1].trim().toLowerCase();
 
-          // Robust row number matching
-          const rowMatch = highlightLoc.match(/(?:Row|Line|Ln)\s*[:#.]?\s*(\d+)/i);
-          if (rowMatch) targetRow = parseInt(rowMatch[1], 10);
+          const rowMatch = highlightLoc.match(/(?:rows?|lines?|lns?)\s*[:#.]?\s*(\d+)(?:\s*[-–]\s*(\d+))?/i);
+          if (rowMatch) {
+              targetRowStart = parseInt(rowMatch[1], 10);
+              targetRowEnd = rowMatch[2] ? parseInt(rowMatch[2], 10) : targetRowStart;
+          }
       }
 
+      // 2. Prepare fuzzy quote matching
+      const normQuote = quote ? normalize(quote) : "";
+      
       if (parts[0].trim()) {
           elements.push(
               <div key="meta" className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-100 text-xs text-gray-500 font-mono whitespace-pre-wrap">
@@ -478,26 +462,43 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
               return matches.map(cell => cell.replace(/^"|"$/g, '').trim()); 
           });
 
-          // Case-insensitive check
-          const isTargetSheet = targetSheet && sheetName.toLowerCase().includes(targetSheet);
-
+          // Check if this sheet matches the location string (if provided)
+          const sheetNameMatch = targetSheetName ? sheetName.toLowerCase().includes(targetSheetName) : true;
+          
           elements.push(
               <div key={i} className="mb-8">
-                  <h4 className={`text-sm font-bold mb-2 px-1 flex items-center gap-2 ${isTargetSheet ? 'text-blue-700' : 'text-gray-700'}`}>
-                      <FileSpreadsheet size={14} className={isTargetSheet ? "text-blue-600" : "text-emerald-600"}/> 
+                  <h4 className={`text-sm font-bold mb-2 px-1 flex items-center gap-2 ${sheetNameMatch ? 'text-blue-700' : 'text-gray-700'}`}>
+                      <FileSpreadsheet size={14} className={sheetNameMatch ? "text-blue-600" : "text-emerald-600"}/> 
                       {sheetName}
                   </h4>
-                  <div className={`overflow-x-auto border rounded-lg shadow-sm ${isTargetSheet ? 'border-blue-200' : 'border-gray-200'}`}>
+                  <div className={`overflow-x-auto border rounded-lg shadow-sm ${sheetNameMatch ? 'border-blue-200' : 'border-gray-200'}`}>
                       <table className="min-w-full divide-y divide-gray-200 text-xs">
                           <tbody className="bg-white divide-y divide-gray-100">
                               {rows.map((row, rIdx) => {
                                   const visualRowNumber = rIdx + 1;
-                                  const isHighlightRow = isTargetSheet && (visualRowNumber === targetRow);
+                                  
+                                  // --- HIGHLIGHTING LOGIC ---
+                                  let isHighlightRow = false;
+
+                                  // Priority 1: Content Match (Exact or approximate in ANY cell of this row)
+                                  if (normQuote.length > 5) {
+                                      const rowText = normalize(row.join(" "));
+                                      if (rowText.includes(normQuote)) {
+                                          isHighlightRow = true;
+                                      }
+                                  }
+
+                                  // Priority 2: Location Match (Fallback if no quote match found yet)
+                                  if (!isHighlightRow && targetRowStart !== -1 && sheetNameMatch) {
+                                      if (visualRowNumber >= targetRowStart && visualRowNumber <= targetRowEnd) {
+                                          isHighlightRow = true;
+                                      }
+                                  }
 
                                   return (
                                     <tr 
                                         key={rIdx} 
-                                        id={isHighlightRow ? "excel-highlight-row" : undefined}
+                                        data-highlighted={isHighlightRow ? "true" : "false"}
                                         className={`
                                             transition-colors duration-500
                                             ${rIdx === 0 ? "bg-gray-50 font-semibold text-gray-900" : "text-gray-700 hover:bg-gray-50/50"}
@@ -526,7 +527,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
 
   const renderTextContent = () => {
       if (file.type === 'excel') {
-          return parseExcelContent(file.content, location);
+          return parseExcelContent(file.content, location, highlightQuote);
       }
       
       const content = file.content;

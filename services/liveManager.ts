@@ -1,6 +1,7 @@
+
 import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
-import { getApiKey } from "./geminiService";
 import { arrayBufferToBase64, base64ToUint8Array, decodeAudioData, LIVE_SAMPLE_RATE, INPUT_SAMPLE_RATE } from "./audioUtils";
+import { getApiKeyForModel, MODEL_REGISTRY } from "./modelRegistry";
 
 interface LiveConfig {
     onAudioOutput: (volume: number) => void;
@@ -21,10 +22,13 @@ export class LiveManager {
     private stream: MediaStream | null = null;
 
     constructor() {
-        const apiKey = getApiKey();
+        // Dynamically fetch the Google API key from the registry (Settings > LocalStorage)
+        const googleModel = MODEL_REGISTRY.find(m => m.provider === 'google');
+        const apiKey = googleModel ? getApiKeyForModel(googleModel) : undefined;
+        
         if (!apiKey) {
             console.error("[LiveManager] API Key missing!");
-            throw new Error("API Key missing");
+            throw new Error("Gemini API Key is missing. Please add it in Settings.");
         }
         this.ai = new GoogleGenAI({ apiKey });
     }
@@ -58,7 +62,6 @@ export class LiveManager {
                     onmessage: async (message: LiveServerMessage) => {
                         const base64Audio = message.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
                         if (base64Audio && this.outputContext && this.outputNode) {
-                            // console.log("[LiveManager] Received Audio Chunk"); // Commented out to reduce noise, uncomment if needed
                             const pcmData = base64ToUint8Array(base64Audio);
                             const audioBuffer = await decodeAudioData(pcmData, this.outputContext, LIVE_SAMPLE_RATE);
                             

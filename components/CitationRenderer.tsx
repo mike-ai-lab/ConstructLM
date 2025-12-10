@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { BookOpen, ChevronRight, Quote, X, Maximize2, Loader2, ZoomIn, ZoomOut, RotateCcw, Move, FileSpreadsheet } from 'lucide-react';
 import { ProcessedFile } from '../types';
@@ -10,12 +10,14 @@ interface CitationRendererProps {
   onViewDocument: (fileName: string, page?: number, quote?: string, location?: string) => void;
 }
 
-const SPLIT_REGEX = /(\{\{citation:.*?\|.*?\|.*?\}\})/g;
-const MATCH_REGEX = /\{\{citation:(.*?)\|(.*?)\|(.*?)\}\}/;
+// Updated Regex to support newlines and be more robust
+const SPLIT_REGEX = /(\{\{citation:[\s\S]*?\}\})/g;
+const MATCH_REGEX = /\{\{citation:([\s\S]*?)\|([\s\S]*?)\|([\s\S]*?)\}\}/;
+
+const normalize = (str: string) => str.replace(/[\s\r\n\W]+/g, '').toLowerCase();
 
 // --- Shared Matching Logic ---
 const findBestRangeInNormalizedText = (fullText: string, quote: string) => {
-    const normalize = (s: string) => s.replace(/[\s\r\n]+/g, '').toLowerCase();
     const normQuote = normalize(quote);
     const normFull = normalize(fullText);
     
@@ -209,19 +211,18 @@ interface CitationPortalProps {
 
 const CitationPortal: React.FC<CitationPortalProps> = ({ onClose, coords, fileName, location, quote, files, triggerRef, onOpenFull }) => {
   const popoverRef = useRef<HTMLDivElement>(null);
-  const [file, setFile] = useState<ProcessedFile | undefined>(undefined);
-  const [pdfPageNumber, setPdfPageNumber] = useState<number | null>(null);
-
-  useEffect(() => {
-    const foundFile = files.find(f => f.name === fileName);
-    setFile(foundFile);
-    if (foundFile?.type === 'pdf' && location) {
-        const pageMatch = location.match(/(?:Page|p\.?)\s*[:#.]?\s*(\d+)/i);
-        if (pageMatch) {
-            setPdfPageNumber(parseInt(pageMatch[1], 10));
-        }
-    }
-  }, [fileName, files, location]);
+  
+  // Resolve file immediately
+  const file = useMemo(() => files.find(f => f.name === fileName), [files, fileName]);
+  
+  // Resolve PDF page number
+  const pdfPageNumber = useMemo(() => {
+      if (file?.type === 'pdf' && location) {
+          const pageMatch = location.match(/(?:Page|p\.?)\s*[:#.]?\s*(\d+)/i);
+          if (pageMatch) return parseInt(pageMatch[1], 10);
+      }
+      return null;
+  }, [file, location]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -236,7 +237,7 @@ const CitationPortal: React.FC<CitationPortalProps> = ({ onClose, coords, fileNa
   useEffect(() => {
     const handleWheel = (e: WheelEvent) => {
         if (popoverRef.current && popoverRef.current.contains(e.target as Node)) {
-             // Let the specific PdfPagePreview handle prevention if needed
+             // Let the specific component handle wheel if needed
         }
     };
     window.addEventListener('wheel', handleWheel, { passive: false });
@@ -248,7 +249,6 @@ const CitationPortal: React.FC<CitationPortalProps> = ({ onClose, coords, fileNa
   return createPortal(
     <div 
       ref={popoverRef}
-      // CRITICAL Z-INDEX FIX: z-[100000] ensures it is above everything, including other portals or fixed headers
       className="fixed z-[100000] w-[500px] max-w-[90vw] bg-white text-gray-800 rounded-xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden ring-1 ring-black/10 animate-in fade-in zoom-in-95 duration-150"
       style={{ top: coords.top, left: coords.left, height: '450px' }}
     >
@@ -293,7 +293,6 @@ const CitationPortal: React.FC<CitationPortalProps> = ({ onClose, coords, fileNa
 };
 
 // --- ROBUST PDF PAN & ZOOM COMPONENT ---
-
 const PdfPagePreview: React.FC<{ file: File; pageNumber: number; quote?: string }> = ({ file, pageNumber, quote }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -308,7 +307,7 @@ const PdfPagePreview: React.FC<{ file: File; pageNumber: number; quote?: string 
     const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
     const [baseDimensions, setBaseDimensions] = useState({ w: 0, h: 0 });
 
-    const RENDER_SCALE = 2.0; // Render at high res (2x) for clarity when zoomed
+    const RENDER_SCALE = 2.0; 
 
     useEffect(() => {
         const renderPage = async () => {
@@ -328,11 +327,9 @@ const PdfPagePreview: React.FC<{ file: File; pageNumber: number; quote?: string 
 
                 if(renderTaskRef.current) try { await renderTaskRef.current.cancel(); } catch(e) {}
 
-                // Get viewport at high resolution (2.0x)
                 const viewport = page.getViewport({ scale: RENDER_SCALE });
                 setBaseDimensions({ w: viewport.width, h: viewport.height });
 
-                // Initial Fit logic
                 const containerW = containerRef.current?.clientWidth || 500;
                 let currentScale = scale;
 
@@ -384,12 +381,12 @@ const PdfPagePreview: React.FC<{ file: File; pageNumber: number; quote?: string 
         if (!highlightLayerRef.current) return null;
         highlightLayerRef.current.innerHTML = '';
         
-        const normalize = (str: string) => str.replace(/[\s\r\n]+/g, '').toLowerCase();
-
         let fullText = "";
         const itemMap: { start: number, end: number, item: any }[] = [];
+        const normalizeLocal = (str: string) => str.replace(/[\s\r\n\W]+/g, '').toLowerCase();
+
         textContent.items.forEach((item: any) => {
-            const str = normalize(item.str);
+            const str = normalizeLocal(item.str);
             const start = fullText.length;
             fullText += str;
             itemMap.push({ start, end: fullText.length, item });
@@ -407,7 +404,7 @@ const PdfPagePreview: React.FC<{ file: File; pageNumber: number; quote?: string 
 
                     const tx = window.pdfjsLib.Util.transform(viewport.transform, item.transform);
                     const fontHeight = Math.hypot(tx[2], tx[3]);
-                    const fontWidth = item.width * viewport.scale; // Visual width (scaled by RENDER_SCALE already)
+                    const fontWidth = item.width * viewport.scale; 
                     const angle = Math.atan2(tx[1], tx[0]);
                     
                     const rect = document.createElement('div');
@@ -533,22 +530,28 @@ const PdfPagePreview: React.FC<{ file: File; pageNumber: number; quote?: string 
 };
 
 const TextContextViewer: React.FC<{ file?: ProcessedFile; quote: string; location: string }> = ({ file, quote, location }) => {
-    // --- EXCEL PARSING & HIGHLIGHTING (Synced with DocumentViewer) ---
-    const parseExcelContent = (content: string, highlightLoc?: string) => {
+    // --- EXCEL PARSING & HIGHLIGHTING (Enhanced with Content Matching) ---
+    const parseExcelContent = (content: string, highlightLoc?: string, highlightQuote?: string) => {
         const sheetRegex = /--- \[Sheet: (.*?)\] ---/g;
         const parts = content.split(sheetRegex);
         const elements: React.ReactNode[] = [];
         
-        let targetSheet = "";
-        let targetRow = -1;
+        let targetSheetName = "";
+        let targetRowStart = -1;
+        let targetRowEnd = -1;
 
         if (highlightLoc) {
             const sheetMatch = highlightLoc.match(/Sheet:\s*['"]?([^,'";|]+)['"]?/i);
-            if (sheetMatch) targetSheet = sheetMatch[1].trim().toLowerCase();
+            if (sheetMatch) targetSheetName = sheetMatch[1].trim().toLowerCase();
 
-            const rowMatch = highlightLoc.match(/(?:Row|Line|Ln)\s*[:#.]?\s*(\d+)/i);
-            if (rowMatch) targetRow = parseInt(rowMatch[1], 10);
+            const rowMatch = highlightLoc.match(/(?:rows?|lines?|lns?)\s*[:#.]?\s*(\d+)(?:\s*[-–]\s*(\d+))?/i);
+            if (rowMatch) {
+                targetRowStart = parseInt(rowMatch[1], 10);
+                targetRowEnd = rowMatch[2] ? parseInt(rowMatch[2], 10) : targetRowStart;
+            }
         }
+
+        const normQuote = highlightQuote ? normalize(highlightQuote) : "";
 
         if (parts[0].trim()) {
             elements.push(
@@ -569,25 +572,47 @@ const TextContextViewer: React.FC<{ file?: ProcessedFile; quote: string; locatio
                 return matches.map(cell => cell.replace(/^"|"$/g, '').trim()); 
             });
 
-            const isTargetSheet = targetSheet && sheetName.toLowerCase().includes(targetSheet);
+            // If a sheet name is specified in citation, strictly filter by it.
+            // If NOT specified, we allow matching in any sheet if the content matches.
+            const sheetNameMatch = targetSheetName ? sheetName.toLowerCase().includes(targetSheetName) : true;
 
             elements.push(
                 <div key={i} className="mb-6">
-                    <h4 className={`text-xs font-bold mb-2 flex items-center gap-2 ${isTargetSheet ? 'text-blue-700' : 'text-gray-700'}`}>
-                        <FileSpreadsheet size={12} className={isTargetSheet ? "text-blue-600" : "text-emerald-600"}/> 
+                    <h4 className={`text-xs font-bold mb-2 flex items-center gap-2 ${sheetNameMatch ? 'text-blue-700' : 'text-gray-700'}`}>
+                        <FileSpreadsheet size={12} className={sheetNameMatch ? "text-blue-600" : "text-emerald-600"}/> 
                         {sheetName}
                     </h4>
-                    <div className={`overflow-x-auto border rounded-lg ${isTargetSheet ? 'border-blue-200' : 'border-gray-200'}`}>
+                    <div className={`overflow-x-auto border rounded-lg ${sheetNameMatch ? 'border-blue-200' : 'border-gray-200'}`}>
                         <table className="min-w-full divide-y divide-gray-200 text-[10px]">
                             <tbody className="bg-white divide-y divide-gray-100">
                                 {rows.map((row, rIdx) => {
                                     const visualRowNumber = rIdx + 1;
-                                    const isHighlightRow = isTargetSheet && (visualRowNumber === targetRow);
+                                    let isHighlightRow = false;
+
+                                    // Priority 1: Content Match
+                                    if (normQuote.length > 5) {
+                                        const rowText = normalize(row.join(" "));
+                                        if (rowText.includes(normQuote)) {
+                                            isHighlightRow = true;
+                                        }
+                                    }
+
+                                    // Priority 2: Location Match (Fallback)
+                                    // Only if we are in the correct sheet (if sheet was specified)
+                                    if (!isHighlightRow && targetRowStart !== -1 && sheetNameMatch) {
+                                        if (visualRowNumber >= targetRowStart && visualRowNumber <= targetRowEnd) {
+                                            isHighlightRow = true;
+                                        }
+                                    }
+
+                                    // Scroll target: First matching row
+                                    const isScrollTarget = isHighlightRow && !elements.some(e => (e as any)._hasScrollTarget);
+                                    if(isScrollTarget) (elements as any)._hasScrollTarget = true; // Hack to mark first
 
                                     return (
                                         <tr 
                                             key={rIdx} 
-                                            id={isHighlightRow ? "citation-excel-row" : undefined}
+                                            id={isScrollTarget ? "citation-excel-row" : undefined}
                                             className={`
                                                 ${rIdx === 0 ? "bg-gray-50 font-semibold text-gray-900" : "text-gray-700"}
                                                 ${isHighlightRow ? "bg-amber-100 ring-2 ring-inset ring-amber-400 z-10 relative scroll-mt-24" : ""}
@@ -624,7 +649,7 @@ const TextContextViewer: React.FC<{ file?: ProcessedFile; quote: string; locatio
     if (file?.type === 'excel') {
         return (
             <div className="p-6">
-                {parseExcelContent(file.content, location)}
+                {parseExcelContent(file.content, location, quote)}
             </div>
         );
     }

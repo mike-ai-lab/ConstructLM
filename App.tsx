@@ -1,12 +1,16 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+
+import React, { useState, useRef, useEffect } from 'react';
 import { ProcessedFile, Message } from './types';
 import { parseFile } from './services/fileParser';
 import FileSidebar from './components/FileSidebar';
 import MessageBubble from './components/MessageBubble';
 import DocumentViewer from './components/DocumentViewer';
 import LiveSession from './components/LiveSession';
-import { sendMessageToGemini, initializeGemini } from './services/geminiService';
-import { Send, Menu, Sparkles, X, FileText, Database, PanelLeft, PanelLeftOpen, Mic } from 'lucide-react';
+import SettingsModal from './components/SettingsModal';
+import { sendMessageToLLM } from './services/llmService';
+import { initializeGemini } from './services/geminiService';
+import { MODEL_REGISTRY, DEFAULT_MODEL_ID } from './services/modelRegistry';
+import { Send, Menu, Sparkles, X, FileText, Database, PanelLeft, PanelLeftOpen, Mic, Cpu, ChevronDown, Settings, Gauge, Info } from 'lucide-react';
 
 interface ViewState {
   fileId: string;
@@ -23,8 +27,8 @@ const MAX_VIEWER_WIDTH = 1200;
 // Helper to extract citations with consistent labeling (C1, C2...)
 const extractCitations = (messages: Message[], targetFileName: string) => {
     const citations: { id: string, label: string, quote: string, location: string }[] = [];
-    const SPLIT_REGEX = /(\{\{citation:.*?\|.*?\|.*?\}\})/g;
-    const MATCH_REGEX = /\{\{citation:(.*?)\|(.*?)\|(.*?)\}\}/;
+    const SPLIT_REGEX = /(\{\{citation:[\s\S]*?\}\})/g;
+    const MATCH_REGEX = /\{\{citation:([\s\S]*?)\|([\s\S]*?)\|([\s\S]*?)\}\}/;
 
     messages.forEach((msg, msgIdx) => {
         if (msg.role === 'model' && msg.content) {
@@ -36,7 +40,7 @@ const extractCitations = (messages: Message[], targetFileName: string) => {
                     if (fileName === targetFileName) {
                         citations.push({
                             id: `${msg.id}-${partIdx}`,
-                            label: `C${partIdx + 1}`, // Matches CitationRenderer logic
+                            label: `C${citations.length + 1}`,
                             location: match[2].trim(),
                             quote: match[3].trim()
                         });
@@ -54,7 +58,7 @@ const App: React.FC = () => {
       {
           id: 'intro',
           role: 'model',
-          content: 'Hello. I am ConstructLM. \n\nUpload your project documents (PDF, Excel) or a whole folder to begin. \n\n**Tip:** Type "@" in the chat to mention a specific file and save tokens.',
+          content: 'Hello. I am ConstructLM. \n\nUpload your project documents (PDF, Excel) or a whole folder to begin. \n\n**Tip:** Type "@" in the chat to mention a specific file and improve accuracy.',
           timestamp: Date.now()
       }
   ]);
@@ -63,6 +67,14 @@ const App: React.FC = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
+  // Model State
+  const [activeModelId, setActiveModelId] = useState<string>(DEFAULT_MODEL_ID);
+  const [showModelMenu, setShowModelMenu] = useState(false);
+  const modelMenuRef = useRef<HTMLDivElement>(null);
+
+  // Settings State
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
   // Layout State
   const [isMobile, setIsMobile] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -78,18 +90,29 @@ const App: React.FC = () => {
   // Mention State
   const [showMentionMenu, setShowMentionMenu] = useState(false);
   const [mentionQuery, setMentionQuery] = useState('');
-  const [mentionIndex, setMentionIndex] = useState(0); // For keyboard nav
+  const [mentionIndex, setMentionIndex] = useState(0); 
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Live Mode State
   const [isLiveMode, setIsLiveMode] = useState(false);
 
   useEffect(() => {
-      initializeGemini();
+      initializeGemini(); // Init TTS support if key exists
       const handleResize = () => setIsMobile(window.innerWidth < 768);
       handleResize();
       window.addEventListener('resize', handleResize);
-      return () => window.removeEventListener('resize', handleResize);
+      
+      const handleClickOutside = (event: MouseEvent) => {
+          if (modelMenuRef.current && !modelMenuRef.current.contains(event.target as Node)) {
+              setShowModelMenu(false);
+          }
+      };
+      document.addEventListener('mousedown', handleClickOutside);
+
+      return () => {
+          window.removeEventListener('resize', handleResize);
+          document.removeEventListener('mousedown', handleClickOutside);
+      };
   }, []);
 
   const scrollToBottom = () => {
@@ -107,7 +130,6 @@ const App: React.FC = () => {
         setSidebarWidth(Math.max(MIN_SIDEBAR_WIDTH, Math.min(e.clientX, MAX_SIDEBAR_WIDTH)));
       }
       if (isResizingViewer) {
-        // Calculate width from the right side of the screen
         const newWidth = window.innerWidth - e.clientX;
         setViewerWidth(Math.max(MIN_VIEWER_WIDTH, Math.min(newWidth, MAX_VIEWER_WIDTH)));
       }
@@ -117,14 +139,14 @@ const App: React.FC = () => {
       setIsResizingSidebar(false);
       setIsResizingViewer(false);
       document.body.style.cursor = 'default';
-      document.body.style.userSelect = 'auto'; // Re-enable selection
+      document.body.style.userSelect = 'auto'; 
     };
 
     if (isResizingSidebar || isResizingViewer) {
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
       document.body.style.cursor = 'col-resize';
-      document.body.style.userSelect = 'none'; // Disable selection while dragging
+      document.body.style.userSelect = 'none'; 
     }
 
     return () => {
@@ -225,7 +247,7 @@ const App: React.FC = () => {
       timestamp: Date.now(),
     };
 
-    const currentHistory = messages; // Capture current history before updating state
+    const currentHistory = messages; 
     
     setMessages(prev => [...prev, userMsg]);
     setInput('');
@@ -244,14 +266,17 @@ const App: React.FC = () => {
     setMessages(prev => [...prev, modelMsg]);
 
     try {
-      await sendMessageToGemini(
+      let accumText = "";
+      await sendMessageToLLM(
+          activeModelId,
           currentHistory,
           userMsg.content,
           activeContextFiles, 
-          (streamedText) => {
+          (chunk) => {
+              accumText += chunk; // LLM service returns raw chunks, we accumulate for display state
               setMessages(prev => prev.map(msg => 
                   msg.id === modelMsgId 
-                  ? { ...msg, content: streamedText } 
+                  ? { ...msg, content: accumText } 
                   : msg
               ));
           }
@@ -260,7 +285,7 @@ const App: React.FC = () => {
        console.error(error);
        setMessages(prev => prev.map(msg => 
             msg.id === modelMsgId 
-            ? { ...msg, content: "Sorry, I encountered an error. Please check your connection." } 
+            ? { ...msg, content: (error as Error).message || "Unknown error occurred" } 
             : msg
         ));
     } finally {
@@ -287,11 +312,15 @@ const App: React.FC = () => {
 
   const activeFile = viewState ? files.find(f => f.id === viewState.fileId) : null;
   const activeCitations = activeFile ? extractCitations(messages, activeFile.name) : [];
+  const activeModel = MODEL_REGISTRY.find(m => m.id === activeModelId) || MODEL_REGISTRY[0];
 
   return (
     <div className="flex h-screen w-full bg-white overflow-hidden text-sm relative">
       {/* Live Mode Overlay */}
       {isLiveMode && <LiveSession onClose={() => setIsLiveMode(false)} />}
+
+      {/* Settings Modal */}
+      {isSettingsOpen && <SettingsModal onClose={() => setIsSettingsOpen(false)} />}
       
       {/* Mobile Menu Button */}
       {isMobile && !isSidebarOpen && (
@@ -313,7 +342,6 @@ const App: React.FC = () => {
         style={{ width: isMobile ? '85%' : (isSidebarOpen ? sidebarWidth : 0) }}
       >
         <div className="h-full flex flex-col relative w-full">
-            {/* Mobile Close */}
             {isMobile && (
                 <button 
                     onClick={() => setIsSidebarOpen(false)}
@@ -322,8 +350,6 @@ const App: React.FC = () => {
                     <X size={20} />
                 </button>
             )}
-            
-            {/* Hide content when collapsed to prevent squishing during transition */}
             <div className={`flex flex-col h-full w-full ${!isSidebarOpen && !isMobile ? 'hidden' : 'block'}`}>
                  <FileSidebar 
                     files={files} 
@@ -335,7 +361,6 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      {/* Resize Handle: Left */}
       {!isMobile && isSidebarOpen && (
           <div 
             className={`resize-handle-vertical ${isResizingSidebar ? 'active' : ''}`}
@@ -360,10 +385,65 @@ const App: React.FC = () => {
              <div className="bg-gradient-to-tr from-blue-600 to-indigo-500 p-1.5 rounded-lg shadow-sm">
                 <Sparkles size={16} className="text-white" />
              </div>
-             <h1 className="font-semibold text-gray-800 text-lg tracking-tight">ConstructLM</h1>
+             <h1 className="font-semibold text-gray-800 text-lg tracking-tight mr-4">ConstructLM</h1>
+             
+             {/* MODEL SELECTOR */}
+             <div className="relative" ref={modelMenuRef}>
+                 <button 
+                    onClick={() => setShowModelMenu(!showModelMenu)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100/80 hover:bg-gray-200/80 rounded-full text-xs font-medium text-gray-700 transition-colors border border-transparent hover:border-gray-200"
+                 >
+                     <Cpu size={14} className={activeModel.provider === 'google' ? 'text-blue-500' : 'text-orange-500'} />
+                     <span className="max-w-[120px] truncate">{activeModel.name}</span>
+                     <ChevronDown size={12} className="text-gray-400" />
+                 </button>
+                 
+                 {showModelMenu && (
+                     <div className="absolute top-full left-0 mt-2 w-72 bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden z-50 animate-in slide-in-from-top-2 fade-in duration-200">
+                         <div className="px-3 py-2 bg-gray-50 border-b border-gray-100 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                             Select Model
+                         </div>
+                         <div className="max-h-[400px] overflow-y-auto p-1 space-y-0.5">
+                             {MODEL_REGISTRY.map(model => (
+                                 <button
+                                     key={model.id}
+                                     onClick={() => { setActiveModelId(model.id); setShowModelMenu(false); }}
+                                     disabled={model.isDeprecated}
+                                     className={`w-full text-left px-3 py-2.5 rounded-lg transition-colors flex flex-col gap-1 group ${activeModelId === model.id ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
+                                 >
+                                     <div className="flex items-center justify-between w-full">
+                                         <div className="flex items-center gap-2">
+                                            <div className={`w-2 h-2 rounded-full ${model.provider === 'google' ? 'bg-blue-500' : model.provider === 'openai' ? 'bg-green-500' : 'bg-orange-500'}`} />
+                                            <span className={`text-sm font-medium ${activeModelId === model.id ? 'text-blue-700' : 'text-gray-700'} ${model.isDeprecated ? 'line-through opacity-50' : ''}`}>{model.name}</span>
+                                         </div>
+                                         <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${
+                                            model.capacityTag === 'High' ? 'bg-green-100 text-green-700' : 
+                                            model.capacityTag === 'Medium' ? 'bg-yellow-100 text-yellow-700' : 
+                                            'bg-red-50 text-red-500'
+                                         }`}>
+                                             {model.capacityTag === 'High' ? 'High Capacity' : 'Limited'}
+                                         </span>
+                                     </div>
+                                     <span className="text-[10px] text-gray-400 pl-4">{model.description}</span>
+                                 </button>
+                             ))}
+                         </div>
+                     </div>
+                 )}
+             </div>
           </div>
-          <div className="text-xs text-gray-400 font-medium hidden sm:block">
-              Research Assistant
+          
+          <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setIsSettingsOpen(true)}
+                className="p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 rounded-full transition-colors"
+                title="Settings"
+              >
+                  <Settings size={18} />
+              </button>
+              <div className="text-xs text-gray-400 font-medium hidden sm:block">
+                  Research Assistant
+              </div>
           </div>
         </header>
 
@@ -423,14 +503,16 @@ const App: React.FC = () => {
             )}
 
             <div className="relative flex items-center shadow-lg shadow-gray-200/50 rounded-full bg-white border border-gray-200 focus-within:ring-2 focus-within:ring-blue-100 transition-all">
-                {/* Live Mic Button */}
-                <button 
-                    onClick={() => setIsLiveMode(true)}
-                    className="absolute left-2 p-2 rounded-full text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                    title="Start Live Conversation"
-                >
-                    <Mic size={20} />
-                </button>
+                {/* Live Mic Button - Only for Gemini for now as backend streaming is Gemini specific */}
+                {activeModel.provider === 'google' && (
+                    <button 
+                        onClick={() => setIsLiveMode(true)}
+                        className="absolute left-2 p-2 rounded-full text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                        title="Start Live Conversation"
+                    >
+                        <Mic size={20} />
+                    </button>
+                )}
 
                 <input
                     ref={inputRef}
@@ -438,9 +520,9 @@ const App: React.FC = () => {
                     value={input}
                     onChange={handleInputChange}
                     onKeyDown={handleKeyDown}
-                    placeholder={files.length === 0 ? "Add sources to start..." : "Ask a question (Type '@' to reference a file)..."}
+                    placeholder={files.length === 0 ? "Add sources to start..." : `Ask ${activeModel.name}... (Type '@' to reference a file)`}
                     disabled={files.length === 0 || isGenerating}
-                    className="w-full bg-transparent text-gray-800 placeholder-gray-400 rounded-full pl-12 pr-14 py-4 focus:outline-none"
+                    className={`w-full bg-transparent text-gray-800 placeholder-gray-400 rounded-full ${activeModel.provider === 'google' ? 'pl-12' : 'pl-6'} pr-14 py-4 focus:outline-none`}
                     autoComplete="off"
                 />
                 
@@ -464,7 +546,6 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      {/* Resize Handle: Right (Only if Viewer is open) */}
       {!isMobile && activeFile && (
           <div 
             className={`resize-handle-vertical ${isResizingViewer ? 'active' : ''}`}
