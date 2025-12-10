@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, Save, Key, ShieldCheck, AlertCircle, CheckCircle, Loader2, Play } from 'lucide-react';
+import { X, Save, Key, ShieldCheck, CheckCircle, Loader2, Play, AlertCircle } from 'lucide-react';
 import { saveApiKey, getStoredApiKey } from '../services/modelRegistry';
 
 interface SettingsModalProps {
@@ -10,6 +10,7 @@ interface SettingsModalProps {
 type Provider = 'google' | 'openai' | 'groq';
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
+    // API Keys State
     const [keys, setKeys] = useState({
         google: '',
         openai: '',
@@ -45,7 +46,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
 
         try {
             if (provider === 'google') {
-                // Test Google Gemini
                 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -54,55 +54,26 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                         generationConfig: { maxOutputTokens: 1 }
                     })
                 });
-                
-                if (!response.ok) {
-                    const err = await response.json().catch(() => ({}));
-                    throw new Error(err.error?.message || `Error ${response.status}`);
-                }
+                if (!response.ok) throw new Error(`Error ${response.status}`);
             } 
             else if (provider === 'groq') {
-                // Test Groq
                 const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
                     method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${key}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        model: 'llama-3.1-8b-instant',
-                        messages: [{ role: 'user', content: 'Hi' }],
-                        max_tokens: 1
-                    })
+                    headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ model: 'llama-3.1-8b-instant', messages: [{ role: 'user', content: 'Hi' }], max_tokens: 1 })
                 });
-
-                if (!response.ok) {
-                    const err = await response.json().catch(() => ({}));
-                    throw new Error(err.error?.message || `Error ${response.status}`);
-                }
+                if (!response.ok) throw new Error(`Error ${response.status}`);
             }
             else if (provider === 'openai') {
-                // Test OpenAI
                 const response = await fetch('https://api.openai.com/v1/chat/completions', {
                     method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${key}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        model: 'gpt-4o-mini',
-                        messages: [{ role: 'user', content: 'Hi' }],
-                        max_tokens: 1
-                    })
+                    headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'user', content: 'Hi' }], max_tokens: 1 })
                 });
-
-                if (!response.ok) {
-                    const err = await response.json().catch(() => ({}));
-                    throw new Error(err.error?.message || `Error ${response.status}`);
-                }
+                if (!response.ok) throw new Error(`Error ${response.status}`);
             }
 
             setTestResults(prev => ({ ...prev, [provider]: { success: true, message: "Valid Key" } }));
-
         } catch (error: any) {
             setTestResults(prev => ({ ...prev, [provider]: { success: false, message: error.message || "Connection failed" } }));
         } finally {
@@ -111,6 +82,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
     };
 
     const handleSave = () => {
+        // Save API Keys
         saveApiKey('API_KEY', keys.google);
         saveApiKey('OPENAI_API_KEY', keys.openai);
         saveApiKey('GROQ_API_KEY', keys.groq);
@@ -122,7 +94,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
         }, 800);
     };
 
-    const renderInput = (label: string, provider: Provider, placeholder: string, desc: string) => (
+    const renderApiInput = (label: string, provider: Provider, placeholder: string, desc: string) => (
         <div className="space-y-1.5">
             <div className="flex justify-between items-center">
                 <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">{label}</label>
@@ -139,7 +111,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                     value={keys[provider]}
                     onChange={e => {
                         setKeys({...keys, [provider]: e.target.value});
-                        setTestResults(prev => ({ ...prev, [provider]: null })); // Reset test on change
+                        setTestResults(prev => ({ ...prev, [provider]: null }));
                     }}
                     placeholder={placeholder}
                     className={`flex-1 px-3 py-2 bg-gray-50 border rounded-lg text-sm focus:outline-none focus:ring-2 transition-all ${testResults[provider]?.success === false ? 'border-red-300 focus:ring-red-200' : 'border-gray-200 focus:ring-blue-500/20 focus:border-blue-500'}`}
@@ -166,7 +138,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                         <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
                             <Key size={18} />
                         </div>
-                        <h2 className="font-semibold text-gray-800">API Configuration</h2>
+                        <h2 className="font-semibold text-gray-800">Configuration</h2>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full text-gray-500 transition-colors">
                         <X size={18} />
@@ -174,23 +146,22 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                 </div>
 
                 {/* Content */}
-                <div className="p-6 overflow-y-auto space-y-6">
+                <div className="p-6 overflow-y-auto space-y-6 flex-1">
                     <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 flex gap-3">
                         <ShieldCheck size={18} className="text-blue-600 flex-shrink-0 mt-0.5" />
                         <p className="text-xs text-blue-800 leading-relaxed">
-                            Your API keys are stored securely in your browser's local storage. You can verify them before saving to ensure a smooth experience.
+                            API Keys are stored locally on your device.
                         </p>
                     </div>
-
                     <div className="space-y-4">
-                        {renderInput('Google Gemini API Key', 'google', 'AIzaSy...', 'Required for Gemini models and Text-to-Speech (Free Tier available).')}
-                        {renderInput('Groq API Key', 'groq', 'gsk_...', 'Required for Llama 3 and Gemma 2 models (Free Tier available).')}
-                        {renderInput('OpenAI API Key', 'openai', 'sk-...', 'Required for GPT-4o models (Paid).')}
+                        {renderApiInput('Google Gemini', 'google', 'AIzaSy...', 'Required for Gemini models & TTS.')}
+                        {renderApiInput('Groq', 'groq', 'gsk_...', 'Required for Llama 3 models.')}
+                        {renderApiInput('OpenAI', 'openai', 'sk-...', 'Required for GPT-4o models.')}
                     </div>
                 </div>
 
                 {/* Footer */}
-                <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex justify-end gap-3">
+                <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex justify-end gap-3 flex-shrink-0">
                     <button 
                         onClick={onClose}
                         className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-200/50 rounded-lg transition-colors"
@@ -207,7 +178,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                         {showSuccess ? (
                             <>Saved!</>
                         ) : (
-                            <><Save size={16} /> Save Configuration</>
+                            <><Save size={16} /> Save & Apply</>
                         )}
                     </button>
                 </div>

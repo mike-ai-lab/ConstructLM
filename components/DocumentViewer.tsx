@@ -83,6 +83,31 @@ const getLineOffsets = (text: string) => {
     return offsets;
 };
 
+// Robust CSV Line Parser
+const parseCSVLine = (text: string) => {
+    const result: string[] = [];
+    let start = 0;
+    let inQuotes = false;
+    for (let i = 0; i < text.length; i++) {
+        if (text[i] === '"') {
+            inQuotes = !inQuotes;
+        } else if (text[i] === ',' && !inQuotes) {
+            result.push(text.substring(start, i));
+            start = i + 1;
+        }
+    }
+    result.push(text.substring(start));
+    
+    return result.map(s => {
+        let cell = s.trim();
+        // Remove surrounding quotes if they match
+        if (cell.startsWith('"') && cell.endsWith('"') && cell.length >= 2) {
+             cell = cell.substring(1, cell.length - 1);
+        }
+        return cell.replace(/""/g, '"');
+    });
+};
+
 const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, highlightQuote, location, citations = [], onClose }) => {
   const isPdf = file.type === 'pdf';
   
@@ -455,12 +480,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
           const sheetName = parts[i];
           const csvContent = parts[i + 1] || "";
           
-          const rows = csvContent.trim().split('\n').map(row => {
-              const matches = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
-              if (!matches && row.length > 0) return [row]; 
-              if (!matches) return [];
-              return matches.map(cell => cell.replace(/^"|"$/g, '').trim()); 
-          });
+          const rows = csvContent.trim().split('\n').map(row => parseCSVLine(row));
 
           // Check if this sheet matches the location string (if provided)
           const sheetNameMatch = targetSheetName ? sheetName.toLowerCase().includes(targetSheetName) : true;
