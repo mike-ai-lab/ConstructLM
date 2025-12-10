@@ -233,10 +233,14 @@ const CitationPortal: React.FC<CitationPortalProps> = ({ onClose, coords, fileNa
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [onClose]);
 
+  // Trap wheel event to prevent body scroll while zooming inside popover
   useEffect(() => {
     const handleWheel = (e: WheelEvent) => {
         if (popoverRef.current && popoverRef.current.contains(e.target as Node)) {
-             // Let the specific PdfPagePreview handle prevention
+             // Let the specific PdfPagePreview handle prevention if needed, 
+             // but generally we want to stop propagation to body if we are scrolling the internal area.
+             // e.stopPropagation(); 
+             // (Logic moved to PdfPagePreview for smarter handling)
         }
     };
     window.addEventListener('wheel', handleWheel, { passive: false });
@@ -248,8 +252,7 @@ const CitationPortal: React.FC<CitationPortalProps> = ({ onClose, coords, fileNa
   return createPortal(
     <div 
       ref={popoverRef}
-      // CRITICAL Z-INDEX FIX: z-[99999] ensures it is above everything
-      className="fixed z-[99999] w-[500px] max-w-[90vw] bg-white text-gray-800 rounded-xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden ring-1 ring-black/10 animate-in fade-in zoom-in-95 duration-150"
+      className="fixed z-[9999] w-[500px] max-w-[90vw] bg-white text-gray-800 rounded-xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden ring-1 ring-black/10 animate-in fade-in zoom-in-95 duration-150"
       style={{ top: coords.top, left: coords.left, height: '450px' }}
     >
       {/* Header */}
@@ -302,13 +305,13 @@ const PdfPagePreview: React.FC<{ file: File; pageNumber: number; quote?: string 
     const renderTaskRef = useRef<any>(null);
 
     // Zoom & Pan State
-    const [scale, setScale] = useState(0.5); 
+    const [scale, setScale] = useState(0.5); // Start zoomed out to fit
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const [isDragging, setIsDragging] = useState(false);
     const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
     const [baseDimensions, setBaseDimensions] = useState({ w: 0, h: 0 });
 
-    const RENDER_SCALE = 2.0; // Render at high res (2x) for clarity when zoomed
+    const RENDER_SCALE = 2.0; // Render at high res for clarity when zoomed
 
     useEffect(() => {
         const renderPage = async () => {
@@ -334,9 +337,6 @@ const PdfPagePreview: React.FC<{ file: File; pageNumber: number; quote?: string 
 
                 // Initial fit logic
                 const containerW = containerRef.current?.clientWidth || 500;
-                // We want the INITIAL view to fit the width of the container.
-                // viewport.width is the 2x width.
-                // So if container is 500px, and viewport is 2000px, scale should be 0.25
                 const initialScale = (containerW - 40) / viewport.width; 
                 setScale(initialScale);
                 setPosition({ x: 20, y: 20 }); // Centered padding
@@ -388,6 +388,7 @@ const PdfPagePreview: React.FC<{ file: File; pageNumber: number; quote?: string 
         const match = findBestRangeInNormalizedText(fullText, quote);
 
         if (match) {
+            // Scroll to center of match logic could go here, but we default to full page view
             const matchRects: {x:number, y:number}[] = [];
 
             itemMap.forEach(({ start, end, item }) => {
@@ -417,6 +418,15 @@ const PdfPagePreview: React.FC<{ file: File; pageNumber: number; quote?: string 
                     highlightLayerRef.current?.appendChild(rect);
                 }
             });
+            
+            // Auto-pan to highlight if it exists
+            if (matchRects.length > 0) {
+                 const avgY = matchRects.reduce((sum, r) => sum + r.y, 0) / matchRects.length;
+                 // Center the view vertically on the highlight roughly
+                 const containerH = containerRef.current?.clientHeight || 400;
+                 const targetY = -avgY * scale + (containerH / 2);
+                 // We don't apply this immediately to avoid jarring jumps, but could be added as a "Focus" button
+            }
         }
     };
 
