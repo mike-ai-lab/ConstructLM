@@ -4,8 +4,8 @@ import { Message, ProcessedFile } from "../types";
 import { base64ToUint8Array } from "./audioUtils";
 import { getApiKeyForModel, MODEL_REGISTRY } from "./modelRegistry";
 
-// VERSION: 1.1 (Cache Buster)
-console.log("[GeminiService] Initializing v1.1");
+// VERSION: 1.2 (Fix ContentUnion)
+console.log("[GeminiService] Initializing v1.2");
 
 // Track the active chat session and the files it has already "seen"
 // We use 'any' for the session type here to avoid importing a type that isn't exported as a value
@@ -76,7 +76,7 @@ export const streamGemini = async (
       `;
 
       // Send the files silently first. The model absorbs this into its history.
-      await chatSession.sendMessage(contextInjectionPrompt);
+      await chatSession.sendMessage({ message: contextInjectionPrompt });
       
       // Mark as ingested so we don't send them again
       newFiles.forEach(f => ingestedFileIds.add(f.id));
@@ -88,7 +88,7 @@ export const streamGemini = async (
     
     // We do NOT send the history array here. 
     // The `chatSession` object maintains the history internally (Stateful).
-    const responseStream = await chatSession.sendMessageStream(newMessage);
+    const responseStream = await chatSession.sendMessageStream({ message: newMessage });
     
     let fullText = "";
     for await (const chunk of responseStream) {
