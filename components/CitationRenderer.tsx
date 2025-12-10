@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { BookOpen, ChevronRight, Quote, X, Maximize2, Loader2 } from 'lucide-react';
+import { BookOpen, ChevronRight, Quote, X, Maximize2, Loader2, ZoomIn, ZoomOut, RotateCcw, Move } from 'lucide-react';
 import { ProcessedFile } from '../types';
 
 interface CitationRendererProps {
@@ -11,6 +12,39 @@ interface CitationRendererProps {
 
 const SPLIT_REGEX = /(\{\{citation:.*?\|.*?\|.*?\}\})/g;
 const MATCH_REGEX = /\{\{citation:(.*?)\|(.*?)\|(.*?)\}\}/;
+
+// --- Shared Matching Logic ---
+const findBestRangeInNormalizedText = (fullText: string, quote: string) => {
+    const normalize = (s: string) => s.replace(/[\s\r\n]+/g, '').toLowerCase();
+    const normQuote = normalize(quote);
+    const normFull = normalize(fullText);
+    
+    if (normQuote.length < 5) return null;
+
+    const exactIdx = normFull.indexOf(normQuote);
+    if (exactIdx !== -1) return { start: exactIdx, end: exactIdx + normQuote.length };
+
+    const CHUNK_LEN = Math.min(40, Math.floor(normQuote.length / 3));
+    const head = normQuote.substring(0, CHUNK_LEN);
+    const headIdx = normFull.indexOf(head);
+    if (headIdx !== -1) {
+        const searchLimit = headIdx + normQuote.length * 1.5; 
+        const tail = normQuote.substring(normQuote.length - CHUNK_LEN);
+        const tailIdx = normFull.indexOf(tail, headIdx + CHUNK_LEN);
+        
+        if (tailIdx !== -1 && tailIdx < searchLimit) {
+             return { start: headIdx, end: tailIdx + CHUNK_LEN };
+        }
+        return { start: headIdx, end: headIdx + CHUNK_LEN };
+    }
+
+    const midStart = Math.floor(normQuote.length / 2) - Math.floor(CHUNK_LEN / 2);
+    const mid = normQuote.substring(midStart, midStart + CHUNK_LEN);
+    const midIdx = normFull.indexOf(mid);
+    if (midIdx !== -1) return { start: midIdx, end: midIdx + CHUNK_LEN };
+
+    return null;
+};
 
 // --- MARKDOWN PARSER ---
 const parseInline = (text: string): React.ReactNode[] => {
@@ -113,12 +147,13 @@ const CitationChip: React.FC<CitationChipProps> = ({ index, fileName, location, 
     if (!isOpen && triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
       const viewportHeight = window.innerHeight;
-      const POPOVER_EST_HEIGHT = 400; 
+      const POPOVER_EST_HEIGHT = 500; 
       let top = rect.bottom + 8;
+      // Flip up if near bottom
       if (top + POPOVER_EST_HEIGHT > viewportHeight) {
           top = Math.max(16, rect.top - POPOVER_EST_HEIGHT - 8);
       }
-      setCoords({ top, left: Math.max(16, rect.left - 20) });
+      setCoords({ top, left: Math.max(16, Math.min(rect.left - 20, window.innerWidth - 480)) });
     }
     setIsOpen(!isOpen);
   };
@@ -149,7 +184,7 @@ const CitationChip: React.FC<CitationChipProps> = ({ index, fileName, location, 
           onOpenFull={() => {
               let page = 1;
               if (location) {
-                const pageMatch = location.match(/Page\s*(\d+)/i);
+                const pageMatch = location.match(/(?:Page|p\.?)\s*[:#.]?\s*(\d+)/i);
                 if (pageMatch) page = parseInt(pageMatch[1], 10);
               }
               onViewDocument(fileName, page, quote, location);
@@ -181,7 +216,7 @@ const CitationPortal: React.FC<CitationPortalProps> = ({ onClose, coords, fileNa
     const foundFile = files.find(f => f.name === fileName);
     setFile(foundFile);
     if (foundFile?.type === 'pdf' && location) {
-        const pageMatch = location.match(/Page\s*(\d+)/i);
+        const pageMatch = location.match(/(?:Page|p\.?)\s*[:#.]?\s*(\d+)/i);
         if (pageMatch) {
             setPdfPageNumber(parseInt(pageMatch[1], 10));
         }
@@ -200,7 +235,9 @@ const CitationPortal: React.FC<CitationPortalProps> = ({ onClose, coords, fileNa
 
   useEffect(() => {
     const handleWheel = (e: WheelEvent) => {
-        if (popoverRef.current && popoverRef.current.contains(e.target as Node)) e.stopPropagation(); 
+        if (popoverRef.current && popoverRef.current.contains(e.target as Node)) {
+             // Let the specific PdfPagePreview handle prevention
+        }
     };
     window.addEventListener('wheel', handleWheel, { passive: false });
     return () => window.removeEventListener('wheel', handleWheel);
@@ -211,16 +248,18 @@ const CitationPortal: React.FC<CitationPortalProps> = ({ onClose, coords, fileNa
   return createPortal(
     <div 
       ref={popoverRef}
-      className="fixed z-[9999] w-[450px] max-w-[90vw] bg-white text-gray-800 rounded-xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden ring-1 ring-black/10 animate-in fade-in zoom-in-95 duration-150"
-      style={{ top: coords.top, left: Math.min(coords.left, window.innerWidth - 460), maxHeight: '80vh' }}
+      // CRITICAL Z-INDEX FIX: z-[99999] ensures it is above everything
+      className="fixed z-[99999] w-[500px] max-w-[90vw] bg-white text-gray-800 rounded-xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden ring-1 ring-black/10 animate-in fade-in zoom-in-95 duration-150"
+      style={{ top: coords.top, left: coords.left, height: '450px' }}
     >
-      <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
+      {/* Header */}
+      <div className="bg-gray-50 px-4 py-2 border-b border-gray-200 flex items-center justify-between flex-shrink-0 z-20 relative">
         <div className="flex items-center gap-2 overflow-hidden">
           <BookOpen size={16} className="text-blue-600 flex-shrink-0" />
           <div className="flex flex-col min-w-0">
-              <span className="font-semibold text-sm text-gray-800 truncate" title={fileName}>{fileName}</span>
+              <span className="font-semibold text-sm text-gray-800 truncate max-w-[200px]" title={fileName}>{fileName}</span>
               <span className="text-[10px] text-gray-500 uppercase flex items-center gap-1">
-                 {isPdfMode ? 'Preview' : 'Extracted Text'} <ChevronRight size={10} /> {location}
+                 {isPdfMode ? 'PDF Preview' : 'Extracted Text'} <ChevronRight size={10} /> {location}
               </span>
           </div>
         </div>
@@ -229,13 +268,23 @@ const CitationPortal: React.FC<CitationPortalProps> = ({ onClose, coords, fileNa
             <button onClick={onClose} className="text-gray-400 hover:text-gray-700 p-1.5 rounded-full hover:bg-gray-200 transition-colors"><X size={16} /></button>
         </div>
       </div>
-      <div className="bg-slate-100 overflow-y-auto relative min-h-[200px] flex-1">
-        {isPdfMode && file?.fileHandle ? <PdfPagePreview file={file.fileHandle} pageNumber={pdfPageNumber} quote={quote} /> : <TextContextViewer file={file} quote={quote} location={location} />}
+      
+      {/* Content Area */}
+      <div className="bg-slate-100 relative flex-1 overflow-hidden w-full h-full">
+        {isPdfMode && file?.fileHandle ? (
+            <PdfPagePreview file={file.fileHandle} pageNumber={pdfPageNumber} quote={quote} />
+        ) : (
+            <div className="overflow-y-auto h-full custom-scrollbar">
+                <TextContextViewer file={file} quote={quote} location={location} />
+            </div>
+        )}
       </div>
-      <div className="bg-white px-4 py-3 border-t border-gray-200 text-xs text-gray-600 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+
+      {/* Footer Quote */}
+      <div className="bg-white px-4 py-3 border-t border-gray-200 text-xs text-gray-600 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-20 relative">
         <div className="flex gap-2">
             <Quote size={14} className="text-blue-400 flex-shrink-0 mt-0.5" />
-            <p className="italic leading-relaxed">"{quote}"</p>
+            <p className="italic leading-relaxed line-clamp-2">"{quote}"</p>
         </div>
       </div>
     </div>,
@@ -243,20 +292,31 @@ const CitationPortal: React.FC<CitationPortalProps> = ({ onClose, coords, fileNa
   );
 };
 
+// --- ROBUST PDF PAN & ZOOM COMPONENT ---
+
 const PdfPagePreview: React.FC<{ file: File; pageNumber: number; quote?: string }> = ({ file, pageNumber, quote }) => {
+    const containerRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const highlightLayerRef = useRef<HTMLDivElement>(null);
     const [loading, setLoading] = useState(true);
     const renderTaskRef = useRef<any>(null);
 
+    // Zoom & Pan State
+    const [scale, setScale] = useState(0.5); 
+    const [position, setPosition] = useState({ x: 0, y: 0 });
+    const [isDragging, setIsDragging] = useState(false);
+    const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+    const [baseDimensions, setBaseDimensions] = useState({ w: 0, h: 0 });
+
+    const RENDER_SCALE = 2.0; // Render at high res (2x) for clarity when zoomed
+
     useEffect(() => {
         const renderPage = async () => {
             try {
-                console.log(`[CitationPreview] Rendering Page ${pageNumber}`);
                 setLoading(true);
                 const arrayBuffer = await file.arrayBuffer();
                 if(window.pdfWorkerReady) await window.pdfWorkerReady;
-                if(!window.pdfjsLib) { console.warn("[CitationPreview] PDF Lib missing"); return; }
+                if(!window.pdfjsLib) return;
 
                 const pdf = await window.pdfjsLib.getDocument({ 
                     data: new Uint8Array(arrayBuffer),
@@ -268,17 +328,26 @@ const PdfPagePreview: React.FC<{ file: File; pageNumber: number; quote?: string 
 
                 if(renderTaskRef.current) try { await renderTaskRef.current.cancel(); } catch(e) {}
 
-                const viewportUnscaled = page.getViewport({ scale: 1.0 });
-                const scale = 450 / viewportUnscaled.width; 
-                const viewport = page.getViewport({ scale });
+                // Get viewport at high resolution (2.0x)
+                const viewport = page.getViewport({ scale: RENDER_SCALE });
+                setBaseDimensions({ w: viewport.width, h: viewport.height });
+
+                // Initial fit logic
+                const containerW = containerRef.current?.clientWidth || 500;
+                // We want the INITIAL view to fit the width of the container.
+                // viewport.width is the 2x width.
+                // So if container is 500px, and viewport is 2000px, scale should be 0.25
+                const initialScale = (containerW - 40) / viewport.width; 
+                setScale(initialScale);
+                setPosition({ x: 20, y: 20 }); // Centered padding
 
                 const canvas = canvasRef.current;
                 if (!canvas) return;
                 const context = canvas.getContext('2d');
                 if (!context) return;
 
-                canvas.height = viewport.height;
                 canvas.width = viewport.width;
+                canvas.height = viewport.height;
                 canvas.style.width = `${viewport.width}px`;
                 canvas.style.height = `${viewport.height}px`;
 
@@ -305,9 +374,7 @@ const PdfPagePreview: React.FC<{ file: File; pageNumber: number; quote?: string 
         if (!highlightLayerRef.current) return;
         highlightLayerRef.current.innerHTML = '';
         
-        const normalize = (str: string) => str.replace(/\s+/g, '').toLowerCase();
-        const normQuote = normalize(quote);
-        if (!normQuote || normQuote.length < 3) return;
+        const normalize = (str: string) => str.replace(/[\s\r\n]+/g, '').toLowerCase();
 
         let fullText = "";
         const itemMap: { start: number, end: number, item: any }[] = [];
@@ -318,25 +385,28 @@ const PdfPagePreview: React.FC<{ file: File; pageNumber: number; quote?: string 
             itemMap.push({ start, end: fullText.length, item });
         });
 
-        const matchIndex = fullText.indexOf(normQuote);
+        const match = findBestRangeInNormalizedText(fullText, quote);
 
-        if (matchIndex !== -1) {
-            const matchEnd = matchIndex + normQuote.length;
+        if (match) {
+            const matchRects: {x:number, y:number}[] = [];
+
             itemMap.forEach(({ start, end, item }) => {
-                if (Math.max(start, matchIndex) < Math.min(end, matchEnd)) {
+                if (Math.max(start, match.start) < Math.min(end, match.end)) {
                     if (!window.pdfjsLib.Util) return;
 
                     const tx = window.pdfjsLib.Util.transform(viewport.transform, item.transform);
                     const fontHeight = Math.hypot(tx[2], tx[3]);
-                    const fontWidth = item.width * viewport.scale; // Fix: Use viewport scale directly
+                    const fontWidth = item.width * viewport.scale; // Visual width (scaled by RENDER_SCALE already)
                     const angle = Math.atan2(tx[1], tx[0]);
                     
+                    matchRects.push({ x: tx[4], y: tx[5] });
+
                     const rect = document.createElement('div');
                     Object.assign(rect.style, {
                         position: 'absolute',
                         left: `${tx[4]}px`,
                         top: `${tx[5] - fontHeight}px`,
-                        width: `${fontWidth}px`,
+                        width: `${Math.abs(fontWidth)}px`,
                         height: `${fontHeight}px`,
                         backgroundColor: 'rgba(255, 235, 59, 0.4)',
                         mixBlendMode: 'multiply',
@@ -347,20 +417,104 @@ const PdfPagePreview: React.FC<{ file: File; pageNumber: number; quote?: string 
                     highlightLayerRef.current?.appendChild(rect);
                 }
             });
-            setTimeout(() => {
-                highlightLayerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }, 300);
-        } else {
-             console.warn("[CitationPreview] Quote not found in text content");
         }
     };
 
+    // --- PAN & ZOOM HANDLERS ---
+
+    const handleWheel = useCallback((e: React.WheelEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const zoomSensitivity = 0.001;
+        const delta = -e.deltaY * zoomSensitivity;
+        const newScale = Math.min(Math.max(0.1, scale + delta), 4); // Clamp zoom
+
+        // Zoom towards mouse pointer
+        const rect = containerRef.current?.getBoundingClientRect();
+        if (!rect) return;
+
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        // Calculate offset based on scale change to keep mouse point stable
+        const scaleRatio = newScale / scale;
+        const newX = mouseX - (mouseX - position.x) * scaleRatio;
+        const newY = mouseY - (mouseY - position.y) * scaleRatio;
+
+        setScale(newScale);
+        setPosition({ x: newX, y: newY });
+    }, [scale, position]);
+
+    const handleMouseDown = (e: React.MouseEvent) => {
+        setIsDragging(true);
+        setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
+        containerRef.current?.style.setProperty('cursor', 'grabbing');
+    };
+
+    const handleMouseMove = (e: React.MouseEvent) => {
+        if (!isDragging) return;
+        e.preventDefault();
+        setPosition({
+            x: e.clientX - dragStart.x,
+            y: e.clientY - dragStart.y
+        });
+    };
+
+    const handleMouseUp = () => {
+        setIsDragging(false);
+        containerRef.current?.style.setProperty('cursor', 'grab');
+    };
+
+    const resetView = () => {
+         const containerW = containerRef.current?.clientWidth || 500;
+         // Reset to fit width
+         const initialScale = baseDimensions.w > 0 ? (containerW - 40) / baseDimensions.w : 0.5;
+         setScale(initialScale);
+         setPosition({ x: 20, y: 20 });
+    };
+
     return (
-        <div className="flex flex-col items-center justify-start min-h-full w-full bg-gray-500/10 pb-4 relative overflow-auto custom-scrollbar">
-            {loading && <div className="absolute inset-0 flex items-center justify-center z-20"><Loader2 size={20} className="animate-spin text-gray-500" /></div>}
-            <div className={`relative shadow-lg bg-white mt-4 ${loading ? 'opacity-0' : 'opacity-100'} transition-opacity`}>
-                 <canvas ref={canvasRef} className="block" />
-                 <div ref={highlightLayerRef} className="absolute inset-0 pointer-events-none z-10" />
+        <div className="flex flex-col h-full w-full bg-gray-500/10 relative overflow-hidden">
+             {/* Toolbar Overlay */}
+             <div className="absolute top-4 right-4 z-30 flex flex-col gap-2 bg-white/90 backdrop-blur shadow-md border border-gray-200 rounded-lg p-1.5">
+                 <button onClick={() => setScale(s => Math.min(s * 1.2, 4))} className="p-1.5 hover:bg-gray-100 rounded text-gray-700" title="Zoom In"><ZoomIn size={16} /></button>
+                 <button onClick={() => setScale(s => Math.max(s / 1.2, 0.1))} className="p-1.5 hover:bg-gray-100 rounded text-gray-700" title="Zoom Out"><ZoomOut size={16} /></button>
+                 <button onClick={resetView} className="p-1.5 hover:bg-gray-100 rounded text-gray-700" title="Reset View"><RotateCcw size={16} /></button>
+             </div>
+             
+             {/* Hint Overlay */}
+             <div className="absolute top-4 left-4 z-30 pointer-events-none opacity-50 text-[10px] bg-black/50 text-white px-2 py-1 rounded-full flex items-center gap-1">
+                 <Move size={10} /> Scroll to Zoom • Drag to Pan
+             </div>
+
+            {loading && <div className="absolute inset-0 flex items-center justify-center z-20"><Loader2 size={24} className="animate-spin text-gray-500" /></div>}
+            
+            {/* Viewport Container */}
+            <div 
+                ref={containerRef}
+                className="w-full h-full overflow-hidden relative cursor-grab active:cursor-grabbing touch-none"
+                onWheel={handleWheel}
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}
+            >
+                <div 
+                    className={`origin-top-left transition-transform duration-75 ease-out ${loading ? 'opacity-0' : 'opacity-100'}`}
+                    style={{ 
+                        transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
+                        width: baseDimensions.w,
+                        height: baseDimensions.h,
+                        // Force hardware acceleration
+                        willChange: 'transform'
+                    }}
+                >
+                     <div className="relative shadow-xl bg-white">
+                        <canvas ref={canvasRef} className="block" />
+                        <div ref={highlightLayerRef} className="absolute inset-0 pointer-events-none z-10" />
+                     </div>
+                </div>
             </div>
         </div>
     );
@@ -368,10 +522,18 @@ const PdfPagePreview: React.FC<{ file: File; pageNumber: number; quote?: string 
 
 const TextContextViewer: React.FC<{ file?: ProcessedFile; quote: string; location: string }> = ({ file, quote, location }) => {
     return (
-        <div className="p-4 space-y-4">
-            <div className="text-sm leading-relaxed text-gray-700 bg-white p-4 rounded-lg border border-gray-200 font-serif shadow-sm">
-                 <div className="mb-2 text-[10px] text-blue-600 font-bold uppercase tracking-wider">{location || "Excerpt"}</div>
-                <span className="bg-yellow-100 text-gray-800 p-1 rounded italic">"{quote}"</span>
+        <div className="p-6 space-y-4">
+            <div className="text-sm leading-relaxed text-gray-700 bg-white p-6 rounded-lg border border-gray-200 font-serif shadow-sm">
+                 <div className="mb-4 pb-2 border-b border-gray-100 text-xs text-blue-600 font-bold uppercase tracking-wider flex items-center gap-2">
+                    <Quote size={12} />
+                    {location || "Excerpt"}
+                 </div>
+                <span className="bg-yellow-100 text-gray-900 px-1 py-0.5 rounded box-decoration-clone">
+                    "{quote}"
+                </span>
+            </div>
+            <div className="text-xs text-gray-400 text-center italic">
+                (Text-only view. Open full document for context.)
             </div>
         </div>
     );

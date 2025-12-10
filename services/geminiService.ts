@@ -1,9 +1,6 @@
-import { GoogleGenAI, Chat, GenerateContentResponse, Modality } from "@google/genai";
-import { ProcessedFile } from "../types";
+import { GoogleGenAI, GenerateContentResponse, Modality, Content } from "@google/genai";
+import { ProcessedFile, Message } from "../types";
 import { base64ToUint8Array } from "./audioUtils";
-
-let chatSession: Chat | null = null;
-let currentContextHash = "";
 
 // Robust way to get API key in browser or node environments without crashing
 export const getApiKey = (): string => {
@@ -71,8 +68,8 @@ ${fileContexts}
 };
 
 export const sendMessageToGemini = async (
-  message: string,
-  files: ProcessedFile[], // These are ALL files
+  history: Message[],
+  newMessage: string,
   activeFiles: ProcessedFile[], // These are the files specifically mentioned (or ALL if none mentioned)
   onStream: (chunk: string) => void
 ) => {
@@ -81,32 +78,38 @@ export const sendMessageToGemini = async (
 
   const ai = new GoogleGenAI({ apiKey });
   
-  // Create a hash to check if we need to rebuild the session (Context changed?)
-  const newContextHash = activeFiles.map(f => f.id).sort().join(',');
-  
-  if (!chatSession || currentContextHash !== newContextHash) {
-    console.log(`[Gemini] Rebuilding session (Context changed or new session). Active files: ${activeFiles.length}`);
-    const systemInstruction = constructSystemPrompt(activeFiles);
-    
-    chatSession = ai.chats.create({
-      model: 'gemini-2.5-flash',
-      config: {
-        systemInstruction,
-        temperature: 0.2, // Low temperature for high factual accuracy
-      },
-    });
-    currentContextHash = newContextHash;
-  }
+  const systemInstruction = constructSystemPrompt(activeFiles);
+
+  // Construct Content objects from history
+  const contents: Content[] = history
+    .filter(m => !m.isStreaming && m.id !== 'intro' && !m.content.includes("Sorry, I encountered an error")) 
+    .map(m => ({
+        role: m.role,
+        parts: [{ text: m.content }]
+    }));
+
+  // Append new message
+  contents.push({
+      role: 'user',
+      parts: [{ text: newMessage }]
+  });
 
   try {
-    console.log(`[Gemini] Sending message: "${message.substring(0, 50)}..."`);
-    const responseStream = await chatSession.sendMessageStream({ message });
+    console.log(`[Gemini] Sending message with ${contents.length} turns. System Prompt Length: ${systemInstruction.length}`);
+    
+    const responseStream = await ai.models.generateContentStream({
+      model: 'gemini-2.5-flash',
+      contents: contents,
+      config: {
+        systemInstruction,
+        temperature: 0.2,
+      },
+    });
     
     let fullText = "";
     for await (const chunk of responseStream) {
-        const c = chunk as GenerateContentResponse;
-        if(c.text) {
-            fullText += c.text;
+        if(chunk.text) {
+            fullText += chunk.text;
             onStream(fullText);
         }
     }

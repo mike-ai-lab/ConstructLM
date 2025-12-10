@@ -225,6 +225,8 @@ const App: React.FC = () => {
       timestamp: Date.now(),
     };
 
+    const currentHistory = messages; // Capture current history before updating state
+    
     setMessages(prev => [...prev, userMsg]);
     setInput('');
     setShowMentionMenu(false);
@@ -243,8 +245,8 @@ const App: React.FC = () => {
 
     try {
       await sendMessageToGemini(
+          currentHistory,
           userMsg.content,
-          files, 
           activeContextFiles, 
           (streamedText) => {
               setMessages(prev => prev.map(msg => 
