@@ -20,7 +20,6 @@ interface DocumentViewerProps {
 }
 
 // --- Shared Matching Logic ---
-// Matches text even if the middle is slightly different (hallucinated) or whitespace varies
 const findBestRangeInNormalizedText = (fullText: string, quote: string) => {
     const normalize = (s: string) => s.replace(/[\s\r\n]+/g, '').toLowerCase();
     const normQuote = normalize(quote);
@@ -28,55 +27,41 @@ const findBestRangeInNormalizedText = (fullText: string, quote: string) => {
     
     if (normQuote.length < 5) return null;
 
-    // 1. Exact Match
     const exactIdx = normFull.indexOf(normQuote);
     if (exactIdx !== -1) return { start: exactIdx, end: exactIdx + normQuote.length };
 
-    // 2. Head & Tail Heuristic (The "Bookend" Strategy)
-    // If the start and end of the quote exist, assume the middle is the target
     const CHUNK_LEN = Math.min(40, Math.floor(normQuote.length / 3));
     const head = normQuote.substring(0, CHUNK_LEN);
     const tail = normQuote.substring(normQuote.length - CHUNK_LEN);
     
     const headIdx = normFull.indexOf(head);
     if (headIdx !== -1) {
-        // Look for tail AFTER the head
-        // Allow up to 50% expansion in length (model hallucinations often add words)
         const searchLimit = headIdx + normQuote.length * 1.5; 
         const tailIdx = normFull.indexOf(tail, headIdx + CHUNK_LEN);
         
         if (tailIdx !== -1 && tailIdx < searchLimit) {
              return { start: headIdx, end: tailIdx + CHUNK_LEN };
         }
-        
-        // Fallback: Just highlight the head if tail is missing
         return { start: headIdx, end: headIdx + CHUNK_LEN };
     }
 
-    // 3. Middle Fallback (if start is hallucinated/wrong)
     const midStart = Math.floor(normQuote.length / 2) - Math.floor(CHUNK_LEN / 2);
     const mid = normQuote.substring(midStart, midStart + CHUNK_LEN);
     const midIdx = normFull.indexOf(mid);
     if (midIdx !== -1) return { start: midIdx, end: midIdx + CHUNK_LEN };
 
-    // 4. Tail Fallback
     const tailIdxOnly = normFull.indexOf(tail);
     if (tailIdxOnly !== -1) return { start: tailIdxOnly, end: tailIdxOnly + CHUNK_LEN };
 
     return null;
 };
 
-// --- Text/Excel Fuzzy Matching ---
-// Maps normalized indices back to original string indices
 const findAllFuzzyMatches = (fullText: string, quote: string): { start: number, end: number }[] => {
     if (!quote || !fullText) return [];
     
-    // Use the robust matcher on normalized strings
     const match = findBestRangeInNormalizedText(fullText, quote);
     if (!match) return [];
 
-    // Map back to original indices
-    // This is expensive but necessary for preserving whitespace in Text/Excel views
     const normalizeChar = (c: string) => c.toLowerCase().match(/[a-z0-9]/) ? c.toLowerCase() : '';
     
     let normIdx = 0;
@@ -94,7 +79,6 @@ const findAllFuzzyMatches = (fullText: string, quote: string): { start: number, 
         }
     }
     
-    // Edge case for end index if it matches until end of string
     if (endOriginal === -1 && normIdx === match.end) endOriginal = fullText.length;
 
     if (startOriginal !== -1 && endOriginal !== -1) {
@@ -120,14 +104,13 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
   const [pageNumber, setPageNumber] = useState(initialPage);
   const [numPages, setNumPages] = useState(0);
   const [pdfScale, setPdfScale] = useState<number | null>(null);
-  const [pdfRenderKey, setPdfRenderKey] = useState(0); // Force re-scroll after render
+  const [pdfRenderKey, setPdfRenderKey] = useState(0); 
   
   // Text/Universal State
   const [loading, setLoading] = useState(isPdf);
   const [textScale, setTextScale] = useState(1.0);
   const [notFound, setNotFound] = useState(false);
   
-  // Computed Markers with Visual Stacking logic
   const [displayMarkers, setDisplayMarkers] = useState<{ label: string, topPercent: number, quote: string, isActive: boolean, location: string, zIndex: number }[]>([]);
 
   // Refs
@@ -137,12 +120,10 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
   const containerRef = useRef<HTMLDivElement>(null);
   const renderTaskRef = useRef<any>(null);
 
-  // Reset page when file changes
   useEffect(() => {
       setPageNumber(initialPage);
   }, [file.id, initialPage]);
 
-  // Helper: Get Line Offsets
   const lineOffsets = useMemo(() => {
     if (isPdf || file.type === 'excel') return [];
     return getLineOffsets(file.content);
@@ -188,13 +169,12 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
     return () => { isMounted = false; };
   }, [file, isPdf]);
 
-  // Initial Scale (PDF)
   useEffect(() => {
     if (!isPdf || !pdfDocument || !containerRef.current) return;
 
     const setupView = async () => {
         try {
-            const page = await pdfDocument.getPage(pageNumber); // Use current pageNumber
+            const page = await pdfDocument.getPage(pageNumber);
             const viewport = page.getViewport({ scale: 1.0 });
             const containerWidth = containerRef.current?.clientWidth || 800;
             const idealScale = (containerWidth - 64) / viewport.width;
@@ -204,9 +184,8 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
         }
     };
     setupView();
-  }, [pdfDocument, pageNumber, isPdf]); // Re-calc scale if page changes? No, usually stable, but safer.
+  }, [pdfDocument, pageNumber, isPdf]);
 
-  // Render Page (PDF)
   useEffect(() => {
     if (!isPdf || !pdfDocument || !canvasRef.current || !textLayerRef.current || pdfScale === null) return;
 
@@ -237,7 +216,6 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
         renderTaskRef.current = renderTask;
         await renderTask.promise;
 
-        // Render Text Layer
         const textContent = await page.getTextContent();
         const textLayerDiv = textLayerRef.current;
         if (textLayerDiv) {
@@ -260,7 +238,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
         }
 
         setLoading(false);
-        setPdfRenderKey(k => k + 1); // Signal render complete
+        setPdfRenderKey(k => k + 1);
       } catch (error: any) {
         if (error.name !== 'RenderingCancelledException') {
             console.error("[DocumentViewer] Render error:", error);
@@ -282,7 +260,6 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
       let fullText = "";
       const itemMap: { start: number, end: number, item: any }[] = [];
       
-      // Build normalized map of the whole page
       textContent.items.forEach((item: any) => {
           const str = normalize(item.str);
           const start = fullText.length;
@@ -290,14 +267,12 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
           itemMap.push({ start, end: fullText.length, item });
       });
 
-      // Use the robust fuzzy matcher
       const match = findBestRangeInNormalizedText(fullText, quote);
       
       if (match) {
           let firstMatchElement: HTMLElement | null = null;
           
           itemMap.forEach(({ start, end, item }) => {
-             // Check for overlap
              if (Math.max(start, match.start) < Math.min(end, match.end)) {
                  try {
                      if (!window.pdfjsLib.Util) return;
@@ -336,7 +311,6 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
       return false;
   };
 
-  // --- Calculate Markers for Text Files ---
   useEffect(() => {
     if (isPdf || file.type === 'excel') {
          setDisplayMarkers([]); 
@@ -371,7 +345,6 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
         }
     });
 
-    // Handle Visual Overlap
     rawMarkers.sort((a, b) => a.topPercent - b.topPercent);
     const finalMarkers = rawMarkers.map((marker, i) => {
         let adjustment = 0;
@@ -392,7 +365,6 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
 
 
   // --- PDF SCROLL EFFECT ---
-  // Triggered via pdfRenderKey
   useLayoutEffect(() => {
       if (!isPdf || !highlightLayerRef.current || !highlightQuote) return;
       
@@ -400,7 +372,6 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
       if (scrollTarget) {
           scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
           
-          // Flash effect for PDF highlight
           const anim = scrollTarget.animate([
               { transform: 'scale(1)', opacity: 0.5 },
               { transform: 'scale(1.5)', opacity: 1 },
@@ -415,6 +386,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
     if (isPdf || !highlightQuote) return;
 
     const performScroll = () => {
+        // Target the specific unique ID
         const targetEl = document.getElementById('active-scroll-target');
         const excelRow = document.getElementById('excel-highlight-row');
 
@@ -435,10 +407,8 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
         }
     };
 
-    // Use RAF for layout stability
     requestAnimationFrame(() => {
         performScroll();
-        requestAnimationFrame(performScroll);
     });
     
   }, [highlightQuote, location, isPdf, file, textScale]); 
@@ -480,9 +450,11 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
       let targetRow = -1;
 
       if (highlightLoc) {
+          // Robust sheet name matching (handle ' quotes)
           const sheetMatch = highlightLoc.match(/Sheet:\s*['"]?([^,'";|]+)['"]?/i);
           if (sheetMatch) targetSheet = sheetMatch[1].trim().toLowerCase();
 
+          // Robust row number matching
           const rowMatch = highlightLoc.match(/(?:Row|Line|Ln)\s*[:#.]?\s*(\d+)/i);
           if (rowMatch) targetRow = parseInt(rowMatch[1], 10);
       }
@@ -506,6 +478,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
               return matches.map(cell => cell.replace(/^"|"$/g, '').trim()); 
           });
 
+          // Case-insensitive check
           const isTargetSheet = targetSheet && sheetName.toLowerCase().includes(targetSheet);
 
           elements.push(
@@ -528,7 +501,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
                                         className={`
                                             transition-colors duration-500
                                             ${rIdx === 0 ? "bg-gray-50 font-semibold text-gray-900" : "text-gray-700 hover:bg-gray-50/50"}
-                                            ${isHighlightRow ? "bg-amber-100 ring-2 ring-inset ring-amber-400 z-10 relative" : ""}
+                                            ${isHighlightRow ? "bg-amber-100 ring-2 ring-inset ring-amber-400 z-10 relative scroll-mt-20" : ""}
                                         `}
                                     >
                                         <td className={`px-2 py-2 w-8 select-none text-[10px] text-right border-r border-gray-100 bg-gray-50/50 ${isHighlightRow ? "text-amber-700 font-bold" : "text-gray-300"}`}>
@@ -561,7 +534,6 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
           return <pre className="font-mono text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">{content}</pre>;
       }
 
-      // Multi-match Rendering
       const matches = findAllFuzzyMatches(content, highlightQuote);
       
       if (matches.length === 0) {
@@ -606,7 +578,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
               <mark 
                 key={i} 
                 id={isTarget ? "active-scroll-target" : undefined}
-                className={`text-highlight-match bg-yellow-200 text-gray-900 rounded px-0.5 font-bold border-b-2 border-yellow-400 ${isTarget ? 'ring-2 ring-red-500 ring-offset-1 z-10 relative' : ''}`}
+                className={`text-highlight-match bg-yellow-200 text-gray-900 rounded px-0.5 font-bold border-b-2 border-yellow-400 ${isTarget ? 'ring-2 ring-red-500 ring-offset-1 z-10 relative scroll-mt-20' : ''}`}
               >
                   {content.substring(match.start, match.end)}
               </mark>
@@ -621,7 +593,6 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
 
   return (
     <div className="flex flex-col h-full w-full bg-[#f8f9fa] border-l border-gray-200">
-      {/* Header */}
       <div className="flex-none h-14 bg-white border-b border-gray-200 px-4 flex items-center justify-between shadow-sm z-20">
         <div className="flex items-center gap-3 overflow-hidden">
             <div className={`p-1.5 rounded ${file.type === 'pdf' ? 'bg-rose-50 text-rose-500' : file.type === 'excel' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-500'}`}>
@@ -640,7 +611,6 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
         </div>
         
         <div className="flex items-center gap-3">
-             {/* Not Found Indicator */}
              {notFound && isPdf && (
                  <span className="flex items-center gap-1 text-[10px] text-amber-600 bg-amber-50 px-2 py-1 rounded border border-amber-200">
                      <AlertTriangle size={10} />
@@ -660,10 +630,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
         </div>
       </div>
 
-      {/* Viewport & Markers */}
       <div className="flex-1 relative overflow-hidden flex">
-          
-          {/* Scrollable Content */}
           <div ref={containerRef} className="flex-1 overflow-auto relative flex justify-center custom-scrollbar bg-gray-100/50">
             {isPdf && (
                 <div className="p-8">
@@ -694,7 +661,6 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
             )}
           </div>
 
-          {/* Marker Bar (Right Side) */}
           {!isPdf && displayMarkers.length > 0 && (
              <div className="w-4 bg-gray-100 border-l border-gray-200 relative flex-shrink-0 z-10 select-none">
                  {displayMarkers.map((marker, i) => (

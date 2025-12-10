@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { BookOpen, ChevronRight, Quote, X, Maximize2, Loader2, ZoomIn, ZoomOut, RotateCcw, Move } from 'lucide-react';
+import { BookOpen, ChevronRight, Quote, X, Maximize2, Loader2, ZoomIn, ZoomOut, RotateCcw, Move, FileSpreadsheet } from 'lucide-react';
 import { ProcessedFile } from '../types';
 
 interface CitationRendererProps {
@@ -233,14 +233,10 @@ const CitationPortal: React.FC<CitationPortalProps> = ({ onClose, coords, fileNa
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [onClose]);
 
-  // Trap wheel event to prevent body scroll while zooming inside popover
   useEffect(() => {
     const handleWheel = (e: WheelEvent) => {
         if (popoverRef.current && popoverRef.current.contains(e.target as Node)) {
-             // Let the specific PdfPagePreview handle prevention if needed, 
-             // but generally we want to stop propagation to body if we are scrolling the internal area.
-             // e.stopPropagation(); 
-             // (Logic moved to PdfPagePreview for smarter handling)
+             // Let the specific PdfPagePreview handle prevention if needed
         }
     };
     window.addEventListener('wheel', handleWheel, { passive: false });
@@ -252,7 +248,8 @@ const CitationPortal: React.FC<CitationPortalProps> = ({ onClose, coords, fileNa
   return createPortal(
     <div 
       ref={popoverRef}
-      className="fixed z-[9999] w-[500px] max-w-[90vw] bg-white text-gray-800 rounded-xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden ring-1 ring-black/10 animate-in fade-in zoom-in-95 duration-150"
+      // CRITICAL Z-INDEX FIX: z-[100000] ensures it is above everything, including other portals or fixed headers
+      className="fixed z-[100000] w-[500px] max-w-[90vw] bg-white text-gray-800 rounded-xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden ring-1 ring-black/10 animate-in fade-in zoom-in-95 duration-150"
       style={{ top: coords.top, left: coords.left, height: '450px' }}
     >
       {/* Header */}
@@ -305,13 +302,13 @@ const PdfPagePreview: React.FC<{ file: File; pageNumber: number; quote?: string 
     const renderTaskRef = useRef<any>(null);
 
     // Zoom & Pan State
-    const [scale, setScale] = useState(0.5); // Start zoomed out to fit
+    const [scale, setScale] = useState(0.5); 
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const [isDragging, setIsDragging] = useState(false);
     const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
     const [baseDimensions, setBaseDimensions] = useState({ w: 0, h: 0 });
 
-    const RENDER_SCALE = 2.0; // Render at high res for clarity when zoomed
+    const RENDER_SCALE = 2.0; // Render at high res (2x) for clarity when zoomed
 
     useEffect(() => {
         const renderPage = async () => {
@@ -335,11 +332,16 @@ const PdfPagePreview: React.FC<{ file: File; pageNumber: number; quote?: string 
                 const viewport = page.getViewport({ scale: RENDER_SCALE });
                 setBaseDimensions({ w: viewport.width, h: viewport.height });
 
-                // Initial fit logic
+                // Initial Fit logic
                 const containerW = containerRef.current?.clientWidth || 500;
-                const initialScale = (containerW - 40) / viewport.width; 
-                setScale(initialScale);
-                setPosition({ x: 20, y: 20 }); // Centered padding
+                let currentScale = scale;
+
+                if (scale === 0.5 && position.x === 0) {
+                     const initialScale = (containerW - 40) / viewport.width; 
+                     currentScale = initialScale;
+                     setScale(initialScale);
+                     setPosition({ x: 20, y: 20 });
+                }
 
                 const canvas = canvasRef.current;
                 if (!canvas) return;
@@ -357,7 +359,15 @@ const PdfPagePreview: React.FC<{ file: File; pageNumber: number; quote?: string 
 
                 if (quote) {
                     const textContent = await page.getTextContent();
-                    renderHighlights(textContent, viewport, quote);
+                    const bounds = renderHighlights(textContent, viewport, quote);
+                    if (bounds) {
+                        const containerH = containerRef.current?.clientHeight || 400;
+                        const centerX = (bounds.minX + bounds.maxX) / 2;
+                        const centerY = (bounds.minY + bounds.maxY) / 2;
+                        const newX = (containerW / 2) - (centerX * currentScale);
+                        const newY = (containerH / 2) - (centerY * currentScale);
+                        setPosition({ x: newX, y: newY });
+                    }
                 }
 
             } catch (err: any) {
@@ -370,8 +380,8 @@ const PdfPagePreview: React.FC<{ file: File; pageNumber: number; quote?: string 
         return () => { if(renderTaskRef.current) renderTaskRef.current.cancel(); };
     }, [file, pageNumber, quote]);
 
-    const renderHighlights = (textContent: any, viewport: any, quote: string) => {
-        if (!highlightLayerRef.current) return;
+    const renderHighlights = (textContent: any, viewport: any, quote: string): { minX: number, minY: number, maxX: number, maxY: number } | null => {
+        if (!highlightLayerRef.current) return null;
         highlightLayerRef.current.innerHTML = '';
         
         const normalize = (str: string) => str.replace(/[\s\r\n]+/g, '').toLowerCase();
@@ -388,8 +398,8 @@ const PdfPagePreview: React.FC<{ file: File; pageNumber: number; quote?: string 
         const match = findBestRangeInNormalizedText(fullText, quote);
 
         if (match) {
-            // Scroll to center of match logic could go here, but we default to full page view
-            const matchRects: {x:number, y:number}[] = [];
+            let found = false;
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
 
             itemMap.forEach(({ start, end, item }) => {
                 if (Math.max(start, match.start) < Math.min(end, match.end)) {
@@ -400,8 +410,6 @@ const PdfPagePreview: React.FC<{ file: File; pageNumber: number; quote?: string 
                     const fontWidth = item.width * viewport.scale; // Visual width (scaled by RENDER_SCALE already)
                     const angle = Math.atan2(tx[1], tx[0]);
                     
-                    matchRects.push({ x: tx[4], y: tx[5] });
-
                     const rect = document.createElement('div');
                     Object.assign(rect.style, {
                         position: 'absolute',
@@ -416,38 +424,34 @@ const PdfPagePreview: React.FC<{ file: File; pageNumber: number; quote?: string 
                         transformOrigin: '0% 100%'
                     });
                     highlightLayerRef.current?.appendChild(rect);
+
+                    minX = Math.min(minX, tx[4]);
+                    minY = Math.min(minY, tx[5] - fontHeight);
+                    maxX = Math.max(maxX, tx[4] + Math.abs(fontWidth));
+                    maxY = Math.max(maxY, tx[5]);
+                    found = true;
                 }
             });
-            
-            // Auto-pan to highlight if it exists
-            if (matchRects.length > 0) {
-                 const avgY = matchRects.reduce((sum, r) => sum + r.y, 0) / matchRects.length;
-                 // Center the view vertically on the highlight roughly
-                 const containerH = containerRef.current?.clientHeight || 400;
-                 const targetY = -avgY * scale + (containerH / 2);
-                 // We don't apply this immediately to avoid jarring jumps, but could be added as a "Focus" button
-            }
+            if(found) return { minX, minY, maxX, maxY };
         }
+        return null;
     };
 
     // --- PAN & ZOOM HANDLERS ---
-
     const handleWheel = useCallback((e: React.WheelEvent) => {
         e.preventDefault();
         e.stopPropagation();
 
         const zoomSensitivity = 0.001;
         const delta = -e.deltaY * zoomSensitivity;
-        const newScale = Math.min(Math.max(0.1, scale + delta), 4); // Clamp zoom
+        const newScale = Math.min(Math.max(0.1, scale + delta), 4);
 
-        // Zoom towards mouse pointer
         const rect = containerRef.current?.getBoundingClientRect();
         if (!rect) return;
 
         const mouseX = e.clientX - rect.left;
         const mouseY = e.clientY - rect.top;
 
-        // Calculate offset based on scale change to keep mouse point stable
         const scaleRatio = newScale / scale;
         const newX = mouseX - (mouseX - position.x) * scaleRatio;
         const newY = mouseY - (mouseY - position.y) * scaleRatio;
@@ -478,7 +482,6 @@ const PdfPagePreview: React.FC<{ file: File; pageNumber: number; quote?: string 
 
     const resetView = () => {
          const containerW = containerRef.current?.clientWidth || 500;
-         // Reset to fit width
          const initialScale = baseDimensions.w > 0 ? (containerW - 40) / baseDimensions.w : 0.5;
          setScale(initialScale);
          setPosition({ x: 20, y: 20 });
@@ -516,7 +519,6 @@ const PdfPagePreview: React.FC<{ file: File; pageNumber: number; quote?: string 
                         transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
                         width: baseDimensions.w,
                         height: baseDimensions.h,
-                        // Force hardware acceleration
                         willChange: 'transform'
                     }}
                 >
@@ -531,6 +533,102 @@ const PdfPagePreview: React.FC<{ file: File; pageNumber: number; quote?: string 
 };
 
 const TextContextViewer: React.FC<{ file?: ProcessedFile; quote: string; location: string }> = ({ file, quote, location }) => {
+    // --- EXCEL PARSING & HIGHLIGHTING (Synced with DocumentViewer) ---
+    const parseExcelContent = (content: string, highlightLoc?: string) => {
+        const sheetRegex = /--- \[Sheet: (.*?)\] ---/g;
+        const parts = content.split(sheetRegex);
+        const elements: React.ReactNode[] = [];
+        
+        let targetSheet = "";
+        let targetRow = -1;
+
+        if (highlightLoc) {
+            const sheetMatch = highlightLoc.match(/Sheet:\s*['"]?([^,'";|]+)['"]?/i);
+            if (sheetMatch) targetSheet = sheetMatch[1].trim().toLowerCase();
+
+            const rowMatch = highlightLoc.match(/(?:Row|Line|Ln)\s*[:#.]?\s*(\d+)/i);
+            if (rowMatch) targetRow = parseInt(rowMatch[1], 10);
+        }
+
+        if (parts[0].trim()) {
+            elements.push(
+                <div key="meta" className="mb-4 p-3 bg-gray-50 rounded border border-gray-100 text-xs text-gray-500 font-mono">
+                    {parts[0].trim()}
+                </div>
+            );
+        }
+
+        for (let i = 1; i < parts.length; i += 2) {
+            const sheetName = parts[i];
+            const csvContent = parts[i + 1] || "";
+            
+            const rows = csvContent.trim().split('\n').map(row => {
+                const matches = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
+                if (!matches && row.length > 0) return [row]; 
+                if (!matches) return [];
+                return matches.map(cell => cell.replace(/^"|"$/g, '').trim()); 
+            });
+
+            const isTargetSheet = targetSheet && sheetName.toLowerCase().includes(targetSheet);
+
+            elements.push(
+                <div key={i} className="mb-6">
+                    <h4 className={`text-xs font-bold mb-2 flex items-center gap-2 ${isTargetSheet ? 'text-blue-700' : 'text-gray-700'}`}>
+                        <FileSpreadsheet size={12} className={isTargetSheet ? "text-blue-600" : "text-emerald-600"}/> 
+                        {sheetName}
+                    </h4>
+                    <div className={`overflow-x-auto border rounded-lg ${isTargetSheet ? 'border-blue-200' : 'border-gray-200'}`}>
+                        <table className="min-w-full divide-y divide-gray-200 text-[10px]">
+                            <tbody className="bg-white divide-y divide-gray-100">
+                                {rows.map((row, rIdx) => {
+                                    const visualRowNumber = rIdx + 1;
+                                    const isHighlightRow = isTargetSheet && (visualRowNumber === targetRow);
+
+                                    return (
+                                        <tr 
+                                            key={rIdx} 
+                                            id={isHighlightRow ? "citation-excel-row" : undefined}
+                                            className={`
+                                                ${rIdx === 0 ? "bg-gray-50 font-semibold text-gray-900" : "text-gray-700"}
+                                                ${isHighlightRow ? "bg-amber-100 ring-2 ring-inset ring-amber-400 z-10 relative scroll-mt-24" : ""}
+                                            `}
+                                        >
+                                            <td className={`px-2 py-1 w-6 select-none text-right border-r border-gray-100 bg-gray-50/50 ${isHighlightRow ? "text-amber-700 font-bold" : "text-gray-300"}`}>
+                                                {visualRowNumber}
+                                            </td>
+                                            {row.map((cell, cIdx) => (
+                                                <td key={cIdx} className="px-2 py-1 whitespace-nowrap border-r border-gray-100 last:border-none max-w-[200px] truncate" title={cell}>
+                                                    {cell}
+                                                </td>
+                                            ))}
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            );
+        }
+        return elements;
+    };
+
+    // Auto-scroll effect for Excel in Citation Popup
+    useEffect(() => {
+        if (file?.type === 'excel') {
+            const el = document.getElementById('citation-excel-row');
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }, [file, location]);
+
+    if (file?.type === 'excel') {
+        return (
+            <div className="p-6">
+                {parseExcelContent(file.content, location)}
+            </div>
+        );
+    }
+
     return (
         <div className="p-6 space-y-4">
             <div className="text-sm leading-relaxed text-gray-700 bg-white p-6 rounded-lg border border-gray-200 font-serif shadow-sm">
@@ -541,9 +639,6 @@ const TextContextViewer: React.FC<{ file?: ProcessedFile; quote: string; locatio
                 <span className="bg-yellow-100 text-gray-900 px-1 py-0.5 rounded box-decoration-clone">
                     "{quote}"
                 </span>
-            </div>
-            <div className="text-xs text-gray-400 text-center italic">
-                (Text-only view. Open full document for context.)
             </div>
         </div>
     );
