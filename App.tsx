@@ -1,21 +1,14 @@
-
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { ProcessedFile, Message } from './types';
 import { parseFile } from './services/fileParser';
 import FileSidebar from './components/FileSidebar';
 import MessageBubble from './components/MessageBubble';
 import DocumentViewer from './components/DocumentViewer';
 import LiveSession from './components/LiveSession';
-import SettingsModal from './components/SettingsModal';
+import { sendMessageToGemini, initializeGemini, cancelCurrentRequest } from './services/geminiService';
 import { sendMessageToLLM } from './services/llmService';
-import { initializeGemini } from './services/geminiService';
 import { MODEL_REGISTRY, DEFAULT_MODEL_ID } from './services/modelRegistry';
-import { Send, Menu, Sparkles, X, FileText, Database, PanelLeft, PanelLeftOpen, Mic, Cpu, ChevronDown, Settings, LogIn, LogOut, RefreshCw, ShieldCheck } from 'lucide-react';
-
-// Auth & Storage
-import { auth, googleProvider } from './services/firebase';
-import { signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
-import { saveWorkspaceLocal, loadWorkspaceLocal, saveWorkspaceCloud, loadWorkspaceCloud } from './services/storageService';
+import { Send, Menu, Sparkles, X, FileText, Database, PanelLeft, PanelLeftOpen, Mic, Cpu, ChevronDown } from 'lucide-react';
 
 interface ViewState {
   fileId: string;
@@ -29,22 +22,23 @@ const MAX_SIDEBAR_WIDTH = 500;
 const MIN_VIEWER_WIDTH = 400;
 const MAX_VIEWER_WIDTH = 1200;
 
+// Helper to extract citations with consistent labeling (C1, C2...)
 const extractCitations = (messages: Message[], targetFileName: string) => {
     const citations: { id: string, label: string, quote: string, location: string }[] = [];
-    const SPLIT_REGEX = /(\{\{citation:[\s\S]*?\}\})/g;
-    const MATCH_REGEX = /\{\{citation:([\s\S]*?)\|([\s\S]*?)\|([\s\S]*?)\}\}/;
+    const SPLIT_REGEX = /(\\{\\{citation:.*?\\|.*?\\|.*?\\}\\})/g;
+    const MATCH_REGEX = /\\{\\{citation:(.*?)\\|(.*?)\\|(.*?)\\}\\}/;
 
     messages.forEach((msg, msgIdx) => {
         if (msg.role === 'model' && msg.content) {
             const parts = msg.content.split(SPLIT_REGEX);
             parts.forEach((part, partIdx) => {
                 const match = part.match(MATCH_REGEX);
-                if (match) {
+                if (match && match[1] && match[2] && match[3]) {
                     const fileName = match[1].trim();
                     if (fileName === targetFileName) {
                         citations.push({
                             id: `${msg.id}-${partIdx}`,
-                            label: `C${citations.length + 1}`,
+                            label: `C${partIdx + 1}`,
                             location: match[2].trim(),
                             quote: match[3].trim()
                         });
@@ -58,23 +52,23 @@ const extractCitations = (messages: Message[], targetFileName: string) => {
 
 const App: React.FC = () => {
   const [files, setFiles] = useState<ProcessedFile[]>([]);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>([
+      {
+          id: 'intro',
+          role: 'model',
+          content: 'Hello. I am ConstructLM. \\n\\nUpload your project documents (PDF, Excel) or a whole folder to begin. \\n\\n**Tip:** Type \"@\" in the chat to mention a specific file and save tokens.',
+          timestamp: Date.now()
+      }
+  ]);
   const [input, setInput] = useState('');
   const [isProcessingFiles, setIsProcessingFiles] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
-  // Model State
-  const [activeModelId, setActiveModelId] = useState<string>(DEFAULT_MODEL_ID);
-  const [showModelMenu, setShowModelMenu] = useState(false);
-  const modelMenuRef = useRef<HTMLDivElement>(null);
-
-  // Settings State
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-
   // Layout State
   const [isMobile, setIsMobile] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  
   const [sidebarWidth, setSidebarWidth] = useState(320);
   const [viewerWidth, setViewerWidth] = useState(600);
   const [isResizingSidebar, setIsResizingSidebar] = useState(false);
@@ -86,155 +80,34 @@ const App: React.FC = () => {
   // Mention State
   const [showMentionMenu, setShowMentionMenu] = useState(false);
   const [mentionQuery, setMentionQuery] = useState('');
-  const [mentionIndex, setMentionIndex] = useState(0); 
+  const [mentionIndex, setMentionIndex] = useState(0); // For keyboard nav
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Live Mode State
   const [isLiveMode, setIsLiveMode] = useState(false);
 
-  // Auth & Sync State
-  const [user, setUser] = useState<User | null>(null);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [isMockAuth, setIsMockAuth] = useState(false);
-
-  // --- INITIALIZATION & AUTH ---
-  useEffect(() => {
-    initializeGemini();
-    
-    // 1. Load Local Data First
-    loadWorkspaceLocal().then(data => {
-        if (data) {
-            setFiles(data.files);
-            setMessages(data.messages);
-        } else {
-             // Default welcome if no local data
-             setMessages([{
-                id: 'intro',
-                role: 'model',
-                content: 'Hello. I am ConstructLM. \n\nUpload your project documents (PDF, Excel) or a whole folder to begin. \n\n**Tip:** Type "@" in the chat to mention a specific file and improve accuracy.',
-                timestamp: Date.now()
-            }]);
-        }
-    });
-
-    // 2. Listen for Auth Changes
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-        setUser(currentUser);
-        if (currentUser) {
-            setIsSyncing(true);
-            try {
-                // Strategy: "Server Wins" strategy if cloud data exists, otherwise keep local.
-                const cloudData = await loadWorkspaceCloud(currentUser.uid);
-                if (cloudData) {
-                    // Simplistically prioritize cloud if it has content.
-                    if (cloudData.messages.length > 0 || cloudData.files.length > 0) {
-                        setFiles(cloudData.files);
-                        setMessages(cloudData.messages);
-                    }
-                }
-            } catch (e) {
-                console.warn("Sync error", e);
-            } finally {
-                setIsSyncing(false);
-            }
-        }
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  // --- AUTO SAVE ---
-  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Model State
+  const [activeModelId, setActiveModelId] = useState<string>(DEFAULT_MODEL_ID);
+  const [showModelMenu, setShowModelMenu] = useState(false);
+  const modelMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-      // Debounced Save
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      
-      saveTimeoutRef.current = setTimeout(() => {
-          // Always save local
-          if (files.length > 0 || messages.length > 1) {
-             saveWorkspaceLocal(files, messages);
-          }
-          // If signed in AND NOT mock auth, save cloud
-          if (user && !isMockAuth) {
-              setIsSyncing(true);
-              saveWorkspaceCloud(user.uid, files, messages)
-                .catch(e => console.warn("Auto-save cloud failed", e))
-                .finally(() => setIsSyncing(false));
-          }
-      }, 2000); // Wait 2s after last change
-
-      return () => {
-          if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      };
-  }, [files, messages, user, isMockAuth]);
-
-
-  const handleSignIn = async () => {
-      try {
-          await signInWithPopup(auth, googleProvider);
-      } catch (error: any) {
-          console.error("Sign In Error:", error);
-          const errorCode = error?.code || "";
-          const errorMessage = error?.message || JSON.stringify(error);
-          
-          const isDomainError = 
-              errorCode === 'auth/unauthorized-domain' || 
-              errorMessage.includes('unauthorized-domain') ||
-              errorMessage.includes('unauthorized domain');
-
-          if (isDomainError) {
-              // Graceful Fallback for Unauthorized Domains (Local Mode)
-              console.warn("Domain not authorized for Firebase Auth. Switching to Local Guest Mode.");
-              const mockUser: any = {
-                  uid: 'local-guest',
-                  displayName: 'Guest (Local)',
-                  email: null,
-                  photoURL: null,
-                  isAnonymous: true,
-                  emailVerified: false
-              };
-              setUser(mockUser);
-              setIsMockAuth(true);
-              return;
-          }
-
-          if (errorCode === 'auth/configuration-not-found' || errorCode === 'auth/operation-not-allowed') {
-              alert("Google Sign-In is NOT enabled in your Firebase Console.\n\nGo to Authentication -> Sign-in method -> Enable Google.");
-          } else {
-              alert(`Sign In Failed: ${errorMessage}`);
-          }
-      }
-  };
-
-  const handleSignOut = async () => {
-      if (isMockAuth) {
-          setUser(null);
-          setIsMockAuth(false);
-          return;
-      }
-      try {
-          await signOut(auth);
-      } catch (error) {
-          console.error("Sign Out Error", error);
-      }
-  };
-
-  // --- NORMAL APP LOGIC ---
-
-  useEffect(() => {
+      initializeGemini();
       const handleResize = () => setIsMobile(window.innerWidth < 768);
       handleResize();
       window.addEventListener('resize', handleResize);
+      
       const handleClickOutside = (event: MouseEvent) => {
           if (modelMenuRef.current && !modelMenuRef.current.contains(event.target as Node)) {
               setShowModelMenu(false);
           }
       };
       document.addEventListener('mousedown', handleClickOutside);
+      
       return () => {
-          window.removeEventListener('resize', handleResize);
-          document.removeEventListener('mousedown', handleClickOutside);
+        window.removeEventListener('resize', handleResize);
+        document.removeEventListener('mousedown', handleClickOutside);
+        cancelCurrentRequest();
       };
   }, []);
 
@@ -246,28 +119,33 @@ const App: React.FC = () => {
     scrollToBottom();
   }, [messages]);
 
+  // Resizing Logic
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (isResizingSidebar) {
         setSidebarWidth(Math.max(MIN_SIDEBAR_WIDTH, Math.min(e.clientX, MAX_SIDEBAR_WIDTH)));
       }
       if (isResizingViewer) {
+        // Calculate width from the right side of the screen
         const newWidth = window.innerWidth - e.clientX;
         setViewerWidth(Math.max(MIN_VIEWER_WIDTH, Math.min(newWidth, MAX_VIEWER_WIDTH)));
       }
     };
+
     const handleMouseUp = () => {
       setIsResizingSidebar(false);
       setIsResizingViewer(false);
       document.body.style.cursor = 'default';
-      document.body.style.userSelect = 'auto'; 
+      document.body.style.userSelect = 'auto'; // Re-enable selection
     };
+
     if (isResizingSidebar || isResizingViewer) {
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
       document.body.style.cursor = 'col-resize';
-      document.body.style.userSelect = 'none'; 
+      document.body.style.userSelect = 'none'; // Disable selection while dragging
     }
+
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
@@ -277,12 +155,14 @@ const App: React.FC = () => {
   const handleFileUpload = async (fileList: FileList) => {
     setIsProcessingFiles(true);
     const newFiles: ProcessedFile[] = [];
+
     for (let i = 0; i < fileList.length; i++) {
       const file = fileList[i];
       if (files.some(f => f.name === file.name)) continue;
       const processed = await parseFile(file);
       newFiles.push(processed);
     }
+
     setFiles(prev => [...prev, ...newFiles]);
     setIsProcessingFiles(false);
   };
@@ -292,11 +172,14 @@ const App: React.FC = () => {
     if (viewState?.fileId === id) setViewState(null);
   };
 
+  // --- Mention Logic ---
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setInput(val);
+
     const cursor = e.target.selectionStart || 0;
     const lastAt = val.lastIndexOf('@', cursor - 1);
+    
     if (lastAt !== -1) {
         const query = val.slice(lastAt + 1, cursor);
         if (!query.includes(' ')) {
@@ -339,17 +222,20 @@ const App: React.FC = () => {
           }
           return;
       }
+
       if (e.key === 'Enter' && !e.shiftKey) {
           e.preventDefault();
           handleSendMessage();
       }
   };
 
+
+  // --- Sending Logic ---
   const handleSendMessage = async () => {
     if (!input.trim() || isGenerating) return;
 
     const mentionedFiles = files.filter(f => input.includes(`@${f.name}`));
-    const activeContextFiles = mentionedFiles.length > 0 ? mentionedFiles : files;
+    const activeContextFiles = mentionedFiles.length > 0 ? mentionedFiles : files.slice(0, 3); // Max 3 files
 
     const userMsg: Message = {
       id: Date.now().toString(),
@@ -358,7 +244,7 @@ const App: React.FC = () => {
       timestamp: Date.now(),
     };
 
-    const currentHistory = messages; 
+    const currentHistory = messages; // Capture current history before updating state
     
     setMessages(prev => [...prev, userMsg]);
     setInput('');
@@ -384,7 +270,14 @@ const App: React.FC = () => {
           userMsg.content,
           activeContextFiles, 
           (chunk) => {
-              accumText += chunk; 
+              // Handle both chunk-based (Groq) and full-text (Gemini) streaming
+              if (typeof chunk === 'string' && chunk.length < accumText.length + 100) {
+                  // Chunk-based streaming
+                  accumText += chunk;
+              } else {
+                  // Full-text streaming
+                  accumText = chunk;
+              }
               setMessages(prev => prev.map(msg => 
                   msg.id === modelMsgId 
                   ? { ...msg, content: accumText } 
@@ -392,11 +285,15 @@ const App: React.FC = () => {
               ));
           }
       );
-    } catch (error) {
+    } catch (error: any) {
        console.error(error);
+       const errorMsg = error?.message?.includes('overloaded') 
+         ? "⚠️ Gemini is overloaded. Wait 30 seconds before trying again."
+         : "❌ Request failed. Try with fewer files or shorter message.";
+       
        setMessages(prev => prev.map(msg => 
             msg.id === modelMsgId 
-            ? { ...msg, content: (error as Error).message || "Unknown error occurred" } 
+            ? { ...msg, content: errorMsg } 
             : msg
         ));
     } finally {
@@ -427,9 +324,10 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen w-full bg-white overflow-hidden text-sm relative">
+      {/* Live Mode Overlay */}
       {isLiveMode && <LiveSession onClose={() => setIsLiveMode(false)} />}
-      {isSettingsOpen && <SettingsModal onClose={() => setIsSettingsOpen(false)} />}
       
+      {/* Mobile Menu Button */}
       {isMobile && !isSidebarOpen && (
           <button 
             onClick={() => setIsSidebarOpen(true)}
@@ -449,6 +347,7 @@ const App: React.FC = () => {
         style={{ width: isMobile ? '85%' : (isSidebarOpen ? sidebarWidth : 0) }}
       >
         <div className="h-full flex flex-col relative w-full">
+            {/* Mobile Close */}
             {isMobile && (
                 <button 
                     onClick={() => setIsSidebarOpen(false)}
@@ -457,6 +356,8 @@ const App: React.FC = () => {
                     <X size={20} />
                 </button>
             )}
+            
+            {/* Hide content when collapsed to prevent squishing during transition */}
             <div className={`flex flex-col h-full w-full ${!isSidebarOpen && !isMobile ? 'hidden' : 'block'}`}>
                  <FileSidebar 
                     files={files} 
@@ -468,6 +369,7 @@ const App: React.FC = () => {
         </div>
       </div>
 
+      {/* Resize Handle: Left */}
       {!isMobile && isSidebarOpen && (
           <div 
             className={`resize-handle-vertical ${isResizingSidebar ? 'active' : ''}`}
@@ -477,6 +379,7 @@ const App: React.FC = () => {
 
       {/* --- MIDDLE CHAT AREA --- */}
       <div className="flex-1 flex flex-col min-w-0 h-full relative bg-white transition-all duration-300">
+        {/* Header */}
         <header className="h-14 flex-none border-b border-gray-100 flex items-center justify-between px-6 bg-white/80 backdrop-blur-sm z-10">
           <div className="flex items-center gap-2">
              {!isMobile && (
@@ -537,59 +440,8 @@ const App: React.FC = () => {
                  )}
              </div>
           </div>
-          
-          <div className="flex items-center gap-3">
-              {/* Sync Status */}
-              {isSyncing && !isMockAuth && (
-                  <div className="flex items-center gap-1.5 text-xs text-blue-600 font-medium bg-blue-50 px-2 py-1 rounded-full animate-pulse">
-                      <RefreshCw size={12} className="animate-spin" />
-                      Syncing
-                  </div>
-              )}
-              {isMockAuth && (
-                  <div className="flex items-center gap-1.5 text-xs text-amber-600 font-medium bg-amber-50 px-2 py-1 rounded-full border border-amber-100">
-                      <ShieldCheck size={12} />
-                      Local Mode
-                  </div>
-              )}
-
-              <button 
-                onClick={() => setIsSettingsOpen(true)}
-                className="p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 rounded-full transition-colors"
-                title="Settings"
-              >
-                  <Settings size={18} />
-              </button>
-
-              {/* User Profile / Auth */}
-              {user ? (
-                  <div className="flex items-center gap-2 pl-2 border-l border-gray-200">
-                      {user.photoURL ? (
-                          <img src={user.photoURL} alt="User" className="w-7 h-7 rounded-full border border-gray-200" />
-                      ) : (
-                          <div className="w-7 h-7 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs">
-                              {user.isAnonymous ? 'G' : (user.email?.[0]?.toUpperCase() || 'U')}
-                          </div>
-                      )}
-                      <button 
-                        onClick={handleSignOut}
-                        className="p-2 text-gray-400 hover:bg-red-50 hover:text-red-500 rounded-full transition-colors"
-                        title="Sign Out"
-                      >
-                          <LogOut size={18} />
-                      </button>
-                  </div>
-              ) : (
-                  <div className="flex items-center gap-2 pl-2 border-l border-gray-200">
-                       <button
-                          onClick={handleSignIn}
-                          className="flex items-center gap-2 px-3 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-full hover:bg-gray-700 transition-colors shadow-sm"
-                       >
-                           <LogIn size={14} />
-                           Sign In
-                       </button>
-                  </div>
-              )}
+          <div className="text-xs text-gray-400 font-medium hidden sm:block">
+              {files.length > 3 && <span className="text-orange-500">⚠️ Using first 3 files only</span>}
           </div>
         </header>
 
@@ -612,6 +464,7 @@ const App: React.FC = () => {
         <div className="p-4 md:p-6 bg-gradient-to-t from-white via-white to-transparent relative">
           <div className="max-w-3xl mx-auto w-full relative">
             
+            {/* Context Indicator (Efficiency Mode) */}
             {input.trim() && (
                 <div className="absolute -top-6 left-6 text-[10px] font-medium transition-all duration-300">
                     {files.filter(f => input.includes(`@${f.name}`)).length > 0 ? (
@@ -626,6 +479,7 @@ const App: React.FC = () => {
                 </div>
             )}
 
+            {/* Mention Popup Menu */}
             {showMentionMenu && filteredFiles.length > 0 && (
                 <div className="absolute bottom-full left-6 mb-2 w-64 bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden z-50 animate-in slide-in-from-bottom-2 fade-in duration-200">
                     <div className="px-3 py-2 bg-gray-50 border-b border-gray-100 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
@@ -647,15 +501,14 @@ const App: React.FC = () => {
             )}
 
             <div className="relative flex items-center shadow-lg shadow-gray-200/50 rounded-full bg-white border border-gray-200 focus-within:ring-2 focus-within:ring-blue-100 transition-all">
-                {activeModel.provider === 'google' && (
-                    <button 
-                        onClick={() => setIsLiveMode(true)}
-                        className="absolute left-2 p-2 rounded-full text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                        title="Start Live Conversation"
-                    >
-                        <Mic size={20} />
-                    </button>
-                )}
+                {/* Live Mic Button */}
+                <button 
+                    onClick={() => setIsLiveMode(true)}
+                    className="absolute left-2 p-2 rounded-full text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                    title="Start Live Conversation"
+                >
+                    <Mic size={20} />
+                </button>
 
                 <input
                     ref={inputRef}
@@ -665,7 +518,7 @@ const App: React.FC = () => {
                     onKeyDown={handleKeyDown}
                     placeholder={files.length === 0 ? "Add sources to start..." : `Ask ${activeModel.name}... (Type '@' to reference a file)`}
                     disabled={files.length === 0 || isGenerating}
-                    className={`w-full bg-transparent text-gray-800 placeholder-gray-400 rounded-full ${activeModel.provider === 'google' ? 'pl-12' : 'pl-6'} pr-14 py-4 focus:outline-none`}
+                    className="w-full bg-transparent text-gray-800 placeholder-gray-400 rounded-full pl-12 pr-14 py-4 focus:outline-none"
                     autoComplete="off"
                 />
                 
@@ -689,6 +542,7 @@ const App: React.FC = () => {
         </div>
       </div>
 
+      {/* Resize Handle: Right (Only if Viewer is open) */}
       {!isMobile && activeFile && (
           <div 
             className={`resize-handle-vertical ${isResizingViewer ? 'active' : ''}`}
@@ -696,6 +550,7 @@ const App: React.FC = () => {
           />
       )}
 
+      {/* --- RIGHT DOCUMENT VIEWER --- */}
       {activeFile && (
           <div 
             className={`
@@ -712,7 +567,7 @@ const App: React.FC = () => {
                 initialPage={viewState?.page} 
                 highlightQuote={viewState?.quote}
                 location={viewState?.location}
-                citations={activeCitations} 
+                citations={activeCitations} // Pass all citations for this file
                 onClose={() => setViewState(null)}
               />
           </div>

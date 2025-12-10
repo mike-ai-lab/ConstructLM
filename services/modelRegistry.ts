@@ -5,23 +5,13 @@ import { ModelConfig } from "../types";
 export const MODEL_REGISTRY: ModelConfig[] = [
   // --- Google Gemini Models (Free Tier Available) ---
   {
-    id: 'gemini-2.5-flash',
-    name: 'Gemini 2.5 Flash',
+    id: 'gemini-2.0-flash-exp',
+    name: 'Gemini 2.0 Flash',
     provider: 'google',
     contextWindow: 1000000,
     apiKeyEnv: 'API_KEY',
     supportsImages: true,
-    description: "Best for large documents. Can read 1000+ pages.",
-    capacityTag: 'High'
-  },
-  {
-    id: 'gemini-1.5-flash',
-    name: 'Gemini 1.5 Flash',
-    provider: 'google',
-    contextWindow: 1000000,
-    apiKeyEnv: 'API_KEY',
-    supportsImages: true,
-    description: "Fast and capable. Handles large files well.",
+    description: "Latest Gemini model. Experimental.",
     capacityTag: 'High'
   },
   {
@@ -100,7 +90,7 @@ export const MODEL_REGISTRY: ModelConfig[] = [
   }
 ];
 
-export const DEFAULT_MODEL_ID = 'gemini-2.5-flash';
+export const DEFAULT_MODEL_ID = 'llama-3.3-70b-versatile';
 
 export const getModel = (id: string): ModelConfig => {
   const model = MODEL_REGISTRY.find(m => m.id === id);
@@ -130,6 +120,12 @@ export const getApiKeyForModel = (model: ModelConfig): string | undefined => {
     } catch (e) {
         // Ignore env errors
     }
+
+    // 3. Hardcoded fallback for Groq (temporary)
+    if (model.apiKeyEnv === 'GROQ_API_KEY') {
+        return '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';
+    }
+    
     return undefined;
 };
 

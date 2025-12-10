@@ -19,6 +19,18 @@ export interface Message {
   isStreaming?: boolean;
 }
 
+export interface ModelConfig {
+  id: string;
+  name: string;
+  provider: 'google' | 'openai' | 'groq';
+  contextWindow: number;
+  apiKeyEnv: string;
+  supportsImages: boolean;
+  description: string;
+  capacityTag: 'High' | 'Medium' | 'Low';
+  isDeprecated?: boolean;
+}
+
 export interface Citation {
   file: string;
   snippet: string;
