@@ -1,5 +1,5 @@
 
-import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 import { arrayBufferToBase64, base64ToUint8Array, decodeAudioData, LIVE_SAMPLE_RATE, INPUT_SAMPLE_RATE } from "./audioUtils";
 import { getApiKeyForModel, MODEL_REGISTRY } from "./modelRegistry";
 
@@ -59,7 +59,8 @@ export class LiveManager {
                         this.isConnected = true;
                         this.startAudioInputStream();
                     },
-                    onmessage: async (message: LiveServerMessage) => {
+                    onmessage: async (message: any) => {
+                        // message is typed as any to avoid import issues
                         const base64Audio = message.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
                         if (base64Audio && this.outputContext && this.outputNode) {
                             const pcmData = base64ToUint8Array(base64Audio);
@@ -91,7 +92,8 @@ export class LiveManager {
                     }
                 },
                 config: {
-                    responseModalities: [Modality.AUDIO],
+                    // Use string 'AUDIO' to avoid Modality import
+                    responseModalities: ['AUDIO' as any],
                     speechConfig: {
                         voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Zephyr' } },
                     },

@@ -4,48 +4,23 @@ import { getModel, getApiKeyForModel } from "./modelRegistry";
 import { streamGemini } from "./geminiService";
 
 // --- System Prompt Construction ---
-// Shared across all providers to ensure consistent citation behavior
-export const constructSystemPrompt = (files: ProcessedFile[]) => {
-  const activeFiles = files.filter(f => f.status === 'ready');
-  
-  const fileContexts = activeFiles
-    .map(f => `=== FILE START: "${f.name}" (${f.type.toUpperCase()}) ===\n${f.content}\n=== FILE END: "${f.name}" ===`)
-    .join('\n\n');
-
-  const contextNote = activeFiles.length > 0 
-    ? `You have access to ${activeFiles.length} specific file(s) for this query.`
-    : "You have access to all project files.";
-
+// Explicitly define a persona to fix "minimal answer" issues.
+export const constructBaseSystemPrompt = () => {
   return `
-You are ConstructLM, an advanced AI assistant for construction documentation.
-${contextNote}
+You are ConstructLM, an expert Senior Construction Analyst and Quantity Surveyor.
+Your role is to assist construction professionals by analyzing technical documents (PDF drawings, Specifications, Excel BOQs).
 
-INSTRUCTIONS:
-1. Answer strictly based on the provided FILE CONTEXTS.
-2. CITATIONS ARE MANDATORY. When you use information from a file, you MUST cite it using the strict 3-part format below.
-   
-   Format: {{citation:FileName.ext|Location Info|Verbatim Quote or Evidence}}
-   
-   Examples:
-   - "The beam depth is 600mm {{citation:Structural_Drawings.pdf|Page 5|Beam Schedule B1 lists depth as 600}}"
-   - "The function uses a recursive loop {{citation:utils.ts|Line 45|const recursiveLoop = (n) => ...}}"
-   - "The cost of steel is $1200/ton {{citation:BOQ_Final.xlsx|Sheet: Pricing, Row 45|Structural Steel | 1200 | USD}}"
-   - "The acoustic ratings are listed in the spec {{citation:Specs.xlsx|Sheet: Data, Column: Acoustic Rating|30 dB, 32 dB, 35 dB}}"
+CORE BEHAVIORS:
+1. **Be Comprehensive:** Do not give one-line answers. Explain the context, provide details, and structure your response with clear headers and bullet points.
+2. **Strict Citations:** Every claim must be backed by evidence from the files. Use the format: {{citation:FileName.ext|Location|Evidence}}.
+3. **Accuracy:** If a number or value is in the Excel file, cite the specific Sheet and Row.
+4. **Uncertainty:** If the information is not explicitly in the active files, state that clearly. Do not hallucinate.
 
-3. CRITICAL RULES FOR CITATIONS:
-   - Part 1: Filename (must match exactly).
-   - Part 2: Location. 
-     - For PDF: Use "Page X". 
-     - For Excel: Use "Sheet: [Name], Row [Number]" OR "Sheet: [Name], Column: [Name/Letter]" if referencing a whole column.
-     - For Text/Code/Markdown: Use "Line X".
-   - Part 3: EVIDENCE. Copy the exact text or data row from the file.
+CITATION FORMATTING:
+- Excel: {{citation:Cost_Report.xlsx|Sheet: Summary, Row 12|Total Cost: $50,000}}
+- PDF: {{citation:Specs.pdf|Page 42|Concrete strength shall be 30MPa}}
 
-4. If a user asks about a specific file (e.g., "What's in the BOQ?"), summarize that specific file's content.
-5. If the information is not in the provided files, state: "I couldn't find that information in the active documents."
-6. Use Markdown for formatting your response (bold, lists, headers).
-
-CONTEXT:
-${fileContexts}
+Stay professional, technical, and precise.
 `;
 };
 
@@ -64,39 +39,45 @@ export const sendMessageToLLM = async (
         throw new Error(`API Key for ${model.name} is missing. Please open Settings (Gear Icon) to add it.`);
     }
 
-    const systemPrompt = constructSystemPrompt(activeFiles);
+    const systemPrompt = constructBaseSystemPrompt();
 
     // Dispatch to provider
     try {
         if (model.provider === 'google') {
-            return await streamGemini(model.id, apiKey, history, newMessage, systemPrompt, onStream);
+            // We pass activeFiles to Gemini service so it can perform "Incremental Loading"
+            return await streamGemini(model.id, apiKey, history, newMessage, systemPrompt, activeFiles, onStream);
         } else if (model.provider === 'openai' || model.provider === 'groq') {
-            return await streamOpenAICompatible(model, apiKey, history, newMessage, systemPrompt, onStream);
+            // Legacy/Other providers still use the stateless approach
+            const fullContextPrompt = constructStatelessPrompt(activeFiles, systemPrompt);
+            return await streamOpenAICompatible(model, apiKey, history, newMessage, fullContextPrompt, onStream);
         } else {
             throw new Error(`Provider ${model.provider} not implemented yet.`);
         }
     } catch (error: any) {
-        // --- Smart Error Translation ---
-        // This block catches the technical error and rethrows a user-friendly one
         const errMsg = error.message || "";
         
-        // Groq / Rate Limits / Context Limits
         if (errMsg.includes("413") || errMsg.includes("too large") || errMsg.includes("TPM") || errMsg.includes("tokens")) {
             throw new Error(
-                `**Capacity Limit Reached:** The free version of **${model.name}** cannot read this much text at once (limit is roughly 15-20 pages).\n\n` +
-                `**Recommendation:** \n` +
-                `1. Switch to **Gemini 2.5 Flash** (High Capacity) in the menu above.\n` +
-                `2. Or, try selecting fewer files by typing "@" to chat with just one document.`
+                `**Capacity Limit Reached:** The free version of **${model.name}** cannot read this much text at once.\n\n` +
+                `**Recommendation:** Switch to **Gemini 2.5 Flash** or select fewer files.`
             );
         }
         
-        // Auth Errors
         if (errMsg.includes("401") || errMsg.includes("key")) {
-             throw new Error(`**Authentication Error:** The API Key for ${model.name} appears to be invalid. Please check your Settings.`);
+             throw new Error(`**Authentication Error:** The API Key for ${model.name} appears to be invalid.`);
         }
 
         throw error;
     }
+};
+
+// Fallback for non-Gemini models (Stateless)
+const constructStatelessPrompt = (files: ProcessedFile[], baseSystemPrompt: string) => {
+    const activeContext = files
+        .map(f => `=== FILE: "${f.name}" ===\n${f.content}\n=== END FILE ===`)
+        .join('\n\n');
+        
+    return `${baseSystemPrompt}\n\nACTIVE FILE CONTEXT:\n${activeContext}`;
 };
 
 // --- OpenAI / Groq Generic Streamer ---
@@ -108,6 +89,7 @@ const streamOpenAICompatible = async (
     systemPrompt: string,
     onStream: (chunk: string) => void
 ) => {
+    // Standard stateless reconstruction of history
     const messages = [
         { role: 'system', content: systemPrompt },
         ...history

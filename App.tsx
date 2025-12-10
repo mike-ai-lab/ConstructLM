@@ -10,12 +10,9 @@ import SettingsModal from './components/SettingsModal';
 import { sendMessageToLLM } from './services/llmService';
 import { initializeGemini } from './services/geminiService';
 import { MODEL_REGISTRY, DEFAULT_MODEL_ID } from './services/modelRegistry';
-import { Send, Menu, Sparkles, X, FileText, Database, PanelLeft, PanelLeftOpen, Mic, Cpu, ChevronDown, Settings, LogIn, LogOut, RefreshCw, ShieldCheck } from 'lucide-react';
+import { Send, Menu, Sparkles, X, FileText, Database, PanelLeft, PanelLeftOpen, Mic, Cpu, ChevronDown, Settings, ShieldCheck } from 'lucide-react';
 
-// Auth & Storage
-import { auth, googleProvider, isFirebaseInitialized } from './services/firebase';
-import { signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
-import { saveWorkspaceLocal, loadWorkspaceLocal, saveWorkspaceCloud, loadWorkspaceCloud } from './services/storageService';
+import { saveWorkspaceLocal, loadWorkspaceLocal } from './services/storageService';
 
 interface ViewState {
   fileId: string;
@@ -92,22 +89,16 @@ const App: React.FC = () => {
   // Live Mode State
   const [isLiveMode, setIsLiveMode] = useState(false);
 
-  // Auth & Sync State
-  const [user, setUser] = useState<User | null>(null);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [isMockAuth, setIsMockAuth] = useState(false);
-
-  // --- INITIALIZATION & AUTH ---
+  // --- INITIALIZATION ---
   useEffect(() => {
     initializeGemini();
     
-    // 1. Load Local Data First
+    // Load Local Data
     loadWorkspaceLocal().then(data => {
         if (data) {
-            setFiles(data.files || []); // Ensure array
-            setMessages(data.messages || []); // Ensure array
+            setFiles(data.files || []); 
+            setMessages(data.messages || []); 
         } else {
-             // Default welcome if no local data
              setMessages([{
                 id: 'intro',
                 role: 'model',
@@ -116,118 +107,25 @@ const App: React.FC = () => {
             }]);
         }
     });
-
-    // 2. Listen for Auth Changes (Only if Firebase is safe)
-    if (isFirebaseInitialized && auth) {
-        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-            setUser(currentUser);
-            if (currentUser) {
-                setIsSyncing(true);
-                try {
-                    // Strategy: "Server Wins" strategy if cloud data exists, otherwise keep local.
-                    const cloudData = await loadWorkspaceCloud(currentUser.uid);
-                    if (cloudData) {
-                        // Simplistically prioritize cloud if it has content.
-                        if (cloudData.messages.length > 0 || cloudData.files.length > 0) {
-                            setFiles(cloudData.files);
-                            setMessages(cloudData.messages);
-                        }
-                    }
-                } catch (e) {
-                    console.warn("Sync error", e);
-                } finally {
-                    setIsSyncing(false);
-                }
-            }
-        });
-        return () => unsubscribe();
-    } else {
-        console.warn("Firebase not initialized, defaulting to local mode.");
-        setIsMockAuth(true); // Treat as "local" mode implicitly
-    }
   }, []);
 
   // --- AUTO SAVE ---
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-      // Debounced Save
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       
       saveTimeoutRef.current = setTimeout(() => {
-          // Always save local
           if (files.length > 0 || messages.length > 1) {
              saveWorkspaceLocal(files, messages);
           }
-          // If signed in AND NOT mock auth, save cloud
-          if (user && !isMockAuth && isFirebaseInitialized) {
-              setIsSyncing(true);
-              saveWorkspaceCloud(user.uid, files, messages)
-                .catch(e => console.warn("Auto-save cloud failed", e))
-                .finally(() => setIsSyncing(false));
-          }
-      }, 2000); // Wait 2s after last change
+      }, 2000); 
 
       return () => {
           if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       };
-  }, [files, messages, user, isMockAuth]);
+  }, [files, messages]);
 
-
-  const handleSignIn = async () => {
-      if (!isFirebaseInitialized || !auth) {
-          alert("Cloud services are not available. Running in local mode.");
-          return;
-      }
-
-      try {
-          await signInWithPopup(auth, googleProvider);
-      } catch (error: any) {
-          console.error("Sign In Error:", error);
-          const errorCode = error?.code || "";
-          const errorMessage = error?.message || JSON.stringify(error);
-          
-          const isDomainError = 
-              errorCode === 'auth/unauthorized-domain' || 
-              errorMessage.includes('unauthorized-domain') ||
-              errorMessage.includes('unauthorized domain');
-
-          if (isDomainError) {
-              // Graceful Fallback for Unauthorized Domains (Local Mode)
-              console.warn("Domain not authorized for Firebase Auth. Switching to Local Guest Mode.");
-              const mockUser: any = {
-                  uid: 'local-guest',
-                  displayName: 'Guest (Local)',
-                  email: null,
-                  photoURL: null,
-                  isAnonymous: true,
-                  emailVerified: false
-              };
-              setUser(mockUser);
-              setIsMockAuth(true);
-              return;
-          }
-
-          if (errorCode === 'auth/configuration-not-found' || errorCode === 'auth/operation-not-allowed') {
-              alert("Google Sign-In is NOT enabled in your Firebase Console.\n\nGo to Authentication -> Sign-in method -> Enable Google.");
-          } else {
-              alert(`Sign In Failed: ${errorMessage}`);
-          }
-      }
-  };
-
-  const handleSignOut = async () => {
-      if (isMockAuth) {
-          setUser(null);
-          setIsMockAuth(false);
-          return;
-      }
-      try {
-          if (auth) await signOut(auth);
-      } catch (error) {
-          console.error("Sign Out Error", error);
-      }
-  };
 
   // --- NORMAL APP LOGIC ---
 
@@ -548,19 +446,10 @@ const App: React.FC = () => {
           </div>
           
           <div className="flex items-center gap-3">
-              {/* Sync Status */}
-              {isSyncing && !isMockAuth && (
-                  <div className="flex items-center gap-1.5 text-xs text-blue-600 font-medium bg-blue-50 px-2 py-1 rounded-full animate-pulse">
-                      <RefreshCw size={12} className="animate-spin" />
-                      Syncing
-                  </div>
-              )}
-              {(isMockAuth || !isFirebaseInitialized) && (
-                  <div className="flex items-center gap-1.5 text-xs text-amber-600 font-medium bg-amber-50 px-2 py-1 rounded-full border border-amber-100">
-                      <ShieldCheck size={12} />
-                      Local Mode
-                  </div>
-              )}
+              <div className="flex items-center gap-1.5 text-xs text-amber-600 font-medium bg-amber-50 px-2 py-1 rounded-full border border-amber-100">
+                  <ShieldCheck size={12} />
+                  Local Mode
+              </div>
 
               <button 
                 onClick={() => setIsSettingsOpen(true)}
@@ -569,37 +458,6 @@ const App: React.FC = () => {
               >
                   <Settings size={18} />
               </button>
-
-              {/* User Profile / Auth */}
-              {user && isFirebaseInitialized ? (
-                  <div className="flex items-center gap-2 pl-2 border-l border-gray-200">
-                      {user.photoURL ? (
-                          <img src={user.photoURL} alt="User" className="w-7 h-7 rounded-full border border-gray-200" />
-                      ) : (
-                          <div className="w-7 h-7 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs">
-                              {user.isAnonymous ? 'G' : (user.email?.[0]?.toUpperCase() || 'U')}
-                          </div>
-                      )}
-                      <button 
-                        onClick={handleSignOut}
-                        className="p-2 text-gray-400 hover:bg-red-50 hover:text-red-500 rounded-full transition-colors"
-                        title="Sign Out"
-                      >
-                          <LogOut size={18} />
-                      </button>
-                  </div>
-              ) : (
-                  <div className="flex items-center gap-2 pl-2 border-l border-gray-200">
-                       <button
-                          onClick={handleSignIn}
-                          disabled={!isFirebaseInitialized}
-                          className="flex items-center gap-2 px-3 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-full hover:bg-gray-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                       >
-                           <LogIn size={14} />
-                           Sign In
-                       </button>
-                  </div>
-              )}
           </div>
         </header>
 

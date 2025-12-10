@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { ProcessedFile } from '../types';
 import { ChevronLeft, ChevronRight, X, ZoomIn, ZoomOut, FileText, FileSpreadsheet, File as FileIcon, AlertTriangle } from 'lucide-react';
@@ -364,7 +365,8 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
       const target = containerRef.current.querySelector('#scroll-target-primary') || containerRef.current.querySelector('[data-highlighted="true"]');
       
       if (target) {
-           target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+           // Using inline: 'nearest' to avoid horizontal jumping/centering
+           target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
            // Visual Flash
            target.classList.remove('bg-amber-100', 'bg-blue-50'); 
            target.classList.add('bg-yellow-300', 'transition-colors', 'duration-500');
@@ -527,17 +529,25 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
           }
       }
 
-      // 2. Token Matching Helper
-      const quoteTokens = quote ? quote.toLowerCase().split(/[\W_]+/).filter(t => t.length > 2) : [];
-      const isTokenMatch = (rowCells: string[]) => {
-          if (quoteTokens.length === 0) return false;
-          const rowStr = rowCells.join(" ").toLowerCase();
-          const hits = quoteTokens.filter(t => rowStr.includes(t)).length;
-          return hits / quoteTokens.length > 0.7;
-      };
-
+      // 2. Exact & Strict Fuzzy Matching Helper
+      // The previous bag-of-words approach was too loose.
       const normQuote = quote ? normalize(quote) : "";
       
+      const isCellMatch = (rowCells: string[]) => {
+          if (!normQuote || normQuote.length < 3) return false;
+
+          for (const cell of rowCells) {
+              const normCell = normalize(cell);
+              // Exact match
+              if (normCell === normQuote) return true;
+              // Strict Substring (if quote is long enough)
+              if (normCell.includes(normQuote)) return true;
+              // Reverse substring (if cell is long description)
+              if (normQuote.includes(normCell) && normCell.length > 5) return true;
+          }
+          return false;
+      };
+
       if (parts[0].trim()) {
           elements.push(
               <div key="meta" className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-100 text-xs text-gray-500 font-mono whitespace-pre-wrap">
@@ -575,7 +585,8 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
           // Fallback: search quote in headers if no row/col specified
           if (sheetTargetCols.size === 0 && quote && targetRowStart === -1) {
                headers.forEach((h, idx) => {
-                   if (normalize(h) === normQuote || (h.length > 3 && normalize(h).includes(normQuote))) {
+                   const normH = normalize(h);
+                   if (normH === normQuote || (normH.length > 3 && normH.includes(normQuote))) {
                        sheetTargetCols.add(idx);
                        hasColumnTarget = true;
                    }
@@ -601,16 +612,16 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
                                       const visualRowNumber = rIdx + 1;
                                       let isHighlightRow = false;
 
-                                      // 1. Explicit Row Number Match (Either via Row directive or Cell Ref)
+                                      // 1. Explicit Row Number Match (Priority)
                                       if (targetRowStart !== -1 && sheetNameMatch) {
                                           if (visualRowNumber >= targetRowStart && visualRowNumber <= targetRowEnd) {
                                               isHighlightRow = true;
                                           }
                                       }
 
-                                      // 2. Fallback: Fuzzy Text Match (only if not explicitly excluded by row numbers)
+                                      // 2. Strict Content Match (Fallback if no row specified)
                                       if (!isHighlightRow && !hasColumnTarget && quote && targetRowStart === -1) {
-                                          if (isTokenMatch(row)) {
+                                          if (isCellMatch(row)) {
                                               isHighlightRow = true;
                                           }
                                       }
@@ -637,8 +648,16 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
                                             </td>
                                             {row.map((cell, cIdx) => {
                                                 const isHighlightCol = sheetNameMatch && sheetTargetCols.has(cIdx);
-                                                // Strong highlight if intersecting row and col
-                                                const isIntersection = isHighlightRow && isHighlightCol;
+                                                // Strong highlight if intersecting row and col OR if explicit strict text match in this cell
+                                                let isTargetCell = isHighlightRow && isHighlightCol;
+                                                
+                                                // Specific cell text highlight even without column target
+                                                if (isHighlightRow && !hasColumnTarget && normQuote.length > 2) {
+                                                    const normCell = normalize(cell);
+                                                    if (normCell.includes(normQuote) || normQuote.includes(normCell)) {
+                                                        isTargetCell = true;
+                                                    }
+                                                }
 
                                                 return (
                                                     <td 
@@ -647,7 +666,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
                                                         className={`
                                                             px-3 py-2 whitespace-nowrap border-r border-gray-100 last:border-none max-w-[300px] truncate transition-colors
                                                             ${isHighlightCol ? 'bg-blue-50/50 border-l border-r border-blue-100' : ''}
-                                                            ${isIntersection ? '!bg-blue-200 !text-blue-900 font-bold ring-1 ring-inset ring-blue-400' : ''}
+                                                            ${isTargetCell ? '!bg-blue-200 !text-blue-900 font-bold ring-1 ring-inset ring-blue-400' : ''}
                                                             ${isHighlightCol && rIdx === 0 ? 'bg-blue-100 text-blue-800 font-bold ring-2 ring-inset ring-blue-300' : ''}
                                                         `} 
                                                         title={cell}

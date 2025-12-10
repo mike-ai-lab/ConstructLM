@@ -567,7 +567,8 @@ const TextContextViewer: React.FC<{ file?: ProcessedFile; quote: string; locatio
         const el = containerRef.current.querySelector('#scroll-target-primary') || containerRef.current.querySelector('[data-highlighted="true"]');
         
         if (el) {
-            el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+            // Using inline: 'nearest' to prevent unwanted horizontal centering of the Excel view
+            el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
             scrollAttempts.current = 0; // Reset
         } else if (scrollAttempts.current < 10) {
             // DOM might not be ready (especially for large Excel tables)
