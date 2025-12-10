@@ -4,8 +4,9 @@ import { parseFile } from './services/fileParser';
 import FileSidebar from './components/FileSidebar';
 import MessageBubble from './components/MessageBubble';
 import DocumentViewer from './components/DocumentViewer';
+import LiveSession from './components/LiveSession';
 import { sendMessageToGemini, initializeGemini } from './services/geminiService';
-import { Send, Menu, Sparkles, X, AtSign, FileText, Database, PanelLeft, PanelLeftOpen } from 'lucide-react';
+import { Send, Menu, Sparkles, X, FileText, Database, PanelLeft, PanelLeftOpen, Mic } from 'lucide-react';
 
 interface ViewState {
   fileId: string;
@@ -51,6 +52,9 @@ const App: React.FC = () => {
   const [mentionQuery, setMentionQuery] = useState('');
   const [mentionIndex, setMentionIndex] = useState(0); // For keyboard nav
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Live Mode State
+  const [isLiveMode, setIsLiveMode] = useState(false);
 
   useEffect(() => {
       initializeGemini();
@@ -254,7 +258,10 @@ const App: React.FC = () => {
   const activeFile = viewState ? files.find(f => f.id === viewState.fileId) : null;
 
   return (
-    <div className="flex h-screen w-full bg-white overflow-hidden text-sm">
+    <div className="flex h-screen w-full bg-white overflow-hidden text-sm relative">
+      {/* Live Mode Overlay */}
+      {isLiveMode && <LiveSession onClose={() => setIsLiveMode(false)} />}
+      
       {/* Mobile Menu Button */}
       {isMobile && !isSidebarOpen && (
           <button 
@@ -385,6 +392,15 @@ const App: React.FC = () => {
             )}
 
             <div className="relative flex items-center shadow-lg shadow-gray-200/50 rounded-full bg-white border border-gray-200 focus-within:ring-2 focus-within:ring-blue-100 transition-all">
+                {/* Live Mic Button */}
+                <button 
+                    onClick={() => setIsLiveMode(true)}
+                    className="absolute left-2 p-2 rounded-full text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                    title="Start Live Conversation"
+                >
+                    <Mic size={20} />
+                </button>
+
                 <input
                     ref={inputRef}
                     type="text"
@@ -393,7 +409,7 @@ const App: React.FC = () => {
                     onKeyDown={handleKeyDown}
                     placeholder={files.length === 0 ? "Add sources to start..." : "Ask a question (Type '@' to reference a file)..."}
                     disabled={files.length === 0 || isGenerating}
-                    className="w-full bg-transparent text-gray-800 placeholder-gray-400 rounded-full pl-6 pr-14 py-4 focus:outline-none"
+                    className="w-full bg-transparent text-gray-800 placeholder-gray-400 rounded-full pl-12 pr-14 py-4 focus:outline-none"
                     autoComplete="off"
                 />
                 

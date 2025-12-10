@@ -1,11 +1,12 @@
-import { GoogleGenAI, Chat, GenerateContentResponse } from "@google/genai";
+import { GoogleGenAI, Chat, GenerateContentResponse, Modality } from "@google/genai";
 import { ProcessedFile } from "../types";
+import { base64ToUint8Array } from "./audioUtils";
 
 let chatSession: Chat | null = null;
 let currentContextHash = "";
 
 // Robust way to get API key in browser or node environments without crashing
-const getApiKey = (): string => {
+export const getApiKey = (): string => {
   try {
     // Check if 'process' exists before accessing it to avoid ReferenceError in strict browsers
     if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
@@ -20,6 +21,7 @@ const getApiKey = (): string => {
 export const initializeGemini = () => {
     const key = getApiKey();
     if (!key) console.warn("API Key is missing for Gemini");
+    else console.log("Gemini initialized with API Key present");
 };
 
 const constructSystemPrompt = (files: ProcessedFile[]) => {
@@ -79,11 +81,10 @@ export const sendMessageToGemini = async (
   const ai = new GoogleGenAI({ apiKey });
   
   // Create a hash to check if we need to rebuild the session (Context changed?)
-  // We include IDs of activeFiles in the hash
   const newContextHash = activeFiles.map(f => f.id).sort().join(',');
   
   if (!chatSession || currentContextHash !== newContextHash) {
-    // We rebuild the system prompt based on the *Specific* active files to save tokens
+    console.log(`[Gemini] Rebuilding session (Context changed or new session). Active files: ${activeFiles.length}`);
     const systemInstruction = constructSystemPrompt(activeFiles);
     
     chatSession = ai.chats.create({
@@ -97,6 +98,7 @@ export const sendMessageToGemini = async (
   }
 
   try {
+    console.log(`[Gemini] Sending message: "${message.substring(0, 50)}..."`);
     const responseStream = await chatSession.sendMessageStream({ message });
     
     let fullText = "";
@@ -107,9 +109,44 @@ export const sendMessageToGemini = async (
             onStream(fullText);
         }
     }
+    console.log("[Gemini] Response complete");
     return fullText;
   } catch (error) {
-    console.error("Gemini API Error:", error);
+    console.error("[Gemini] API Error:", error);
     throw error;
   }
+};
+
+export const generateSpeech = async (text: string): Promise<Uint8Array | null> => {
+    console.log(`[TTS] Generating speech for: "${text.substring(0, 30)}..."`);
+    const apiKey = getApiKey();
+    if (!apiKey) throw new Error("API Key is missing.");
+
+    const ai = new GoogleGenAI({ apiKey });
+    
+    try {
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash-preview-tts",
+            contents: [{ parts: [{ text }] }],
+            config: {
+                responseModalities: [Modality.AUDIO],
+                speechConfig: {
+                    voiceConfig: {
+                        prebuiltVoiceConfig: { voiceName: 'Kore' }, 
+                    },
+                },
+            },
+        });
+
+        const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+        if (base64Audio) {
+            console.log("[TTS] Audio generated successfully");
+            return base64ToUint8Array(base64Audio);
+        }
+        console.warn("[TTS] No audio data in response");
+        return null;
+    } catch (error) {
+        console.error("[TTS] Error:", error);
+        throw error;
+    }
 };

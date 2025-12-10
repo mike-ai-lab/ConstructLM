@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import { Message, ProcessedFile } from '../types';
-import { Sparkles, User, Cpu } from 'lucide-react';
+import { Sparkles, User, Volume2, Loader2, StopCircle } from 'lucide-react';
 import CitationRenderer from './CitationRenderer';
+import { generateSpeech } from '../services/geminiService';
+import { decodeAudioData } from '../services/audioUtils';
 
 interface MessageBubbleProps {
   message: Message;
@@ -11,6 +13,46 @@ interface MessageBubbleProps {
 
 const MessageBubble: React.FC<MessageBubbleProps> = ({ message, files, onViewDocument }) => {
   const isUser = message.role === 'user';
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isLoadingAudio, setIsLoadingAudio] = useState(false);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const sourceRef = useRef<AudioBufferSourceNode | null>(null);
+
+  const handlePlayAudio = async () => {
+      if (isPlaying) {
+          sourceRef.current?.stop();
+          setIsPlaying(false);
+          return;
+      }
+
+      try {
+          setIsLoadingAudio(true);
+          const pcmData = await generateSpeech(message.content);
+          
+          if (pcmData) {
+               if (!audioContextRef.current) {
+                   audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+               }
+               const ctx = audioContextRef.current;
+               if (ctx.state === 'suspended') await ctx.resume();
+
+               const audioBuffer = await decodeAudioData(pcmData, ctx, 24000);
+               
+               const source = ctx.createBufferSource();
+               source.buffer = audioBuffer;
+               source.connect(ctx.destination);
+               source.onended = () => setIsPlaying(false);
+               
+               sourceRef.current = source;
+               source.start();
+               setIsPlaying(true);
+          }
+      } catch (e) {
+          console.error("Failed to play audio", e);
+      } finally {
+          setIsLoadingAudio(false);
+      }
+  };
 
   return (
     <div className={`flex w-full mb-8 ${isUser ? 'justify-end' : 'justify-start'}`}>
@@ -28,6 +70,16 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, files, onViewDoc
              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                  {isUser ? 'You' : 'ConstructLM'}
              </span>
+             {!isUser && !message.isStreaming && (
+                 <button 
+                    onClick={handlePlayAudio}
+                    disabled={isLoadingAudio}
+                    className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-blue-600 transition-colors"
+                    title="Read Aloud"
+                 >
+                    {isLoadingAudio ? <Loader2 size={12} className="animate-spin" /> : (isPlaying ? <StopCircle size={12} /> : <Volume2 size={12} />)}
+                 </button>
+             )}
           </div>
           
           <div className={`

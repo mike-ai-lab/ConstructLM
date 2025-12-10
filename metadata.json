@@ -1,5 +1,7 @@
 {
   "name": "ConstructLM",
   "description": "A local AI assistant for construction documentation. Analyze PDFs and Excel files with NotebookLM-style citations using Gemini.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [
+    "microphone"
+  ]
 }

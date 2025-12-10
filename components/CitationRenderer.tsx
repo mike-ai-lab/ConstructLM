@@ -14,15 +14,11 @@ const MATCH_REGEX = /\{\{citation:(.*?)\|(.*?)\|(.*?)\}\}/;
 
 // --- MARKDOWN PARSER ---
 const parseInline = (text: string): React.ReactNode[] => {
-  // 1. Split by Bold (**text**)
   const parts = text.split(/(\*\*.*?\*\*)/g);
   return parts.map((part, index) => {
     if (part.startsWith('**') && part.endsWith('**')) {
       return <strong key={index} className="font-semibold text-gray-900">{part.slice(2, -2)}</strong>;
     }
-    
-    // 2. Split by Italic (*text* or _text_) - simplistic check
-    // We strictly check for *text* where text doesn't start with space to avoid confusing with lists if inline
     const italicParts = part.split(/(\*[^\s].*?\*)/g);
     return italicParts.map((sub, subIdx) => {
        if (sub.startsWith('*') && sub.endsWith('*') && sub.length > 2) {
@@ -35,18 +31,13 @@ const parseInline = (text: string): React.ReactNode[] => {
 
 const SimpleMarkdown: React.FC<{ text: string }> = ({ text }) => {
   const lines = text.split('\n');
-  
   return (
     <div className="space-y-1.5 text-gray-700">
       {lines.map((line, i) => {
         const trimmed = line.trim();
-        if (!trimmed) return <div key={i} className="h-2" />; // Paragraph break
-
-        // Headers
+        if (!trimmed) return <div key={i} className="h-2" />;
         if (trimmed.startsWith('### ')) return <h3 key={i} className="text-sm font-bold text-gray-900 mt-3 mb-1">{parseInline(trimmed.slice(4))}</h3>;
         if (trimmed.startsWith('## ')) return <h2 key={i} className="text-base font-bold text-gray-900 mt-4 mb-2">{parseInline(trimmed.slice(3))}</h2>;
-        
-        // Lists (Unordered)
         if (trimmed.match(/^[-*]\s/)) {
             return (
                 <div key={i} className="flex gap-2 ml-1 relative pl-3">
@@ -55,8 +46,6 @@ const SimpleMarkdown: React.FC<{ text: string }> = ({ text }) => {
                 </div>
             );
         }
-        
-        // Lists (Ordered)
         if (trimmed.match(/^\d+\.\s/)) {
             const match = trimmed.match(/^(\d+)\.\s/);
             const num = match ? match[1] : '1';
@@ -67,32 +56,15 @@ const SimpleMarkdown: React.FC<{ text: string }> = ({ text }) => {
                 </div>
             );
         }
-
-        // Standard Paragraph
         return <div key={i} className="leading-relaxed">{parseInline(line)}</div>;
       })}
     </div>
   );
 };
-// -----------------------
 
 const CitationRenderer: React.FC<CitationRendererProps> = ({ text, files, onViewDocument }) => {
   if (!text) return null;
-  
-  // We need to preserve the order of text blocks and citations
-  // Split the entire text by the citation regex
   const rawParts = text.split(SPLIT_REGEX);
-  
-  // We will build a list of React Nodes
-  // Consecutive text parts should be joined to form proper markdown blocks, 
-  // but citations break the flow. However, typically citations are inline.
-  // The SimpleMarkdown parses blocks.
-  
-  // Strategy:
-  // 1. Identify parts: TEXT | CITATION | TEXT | CITATION
-  // 2. Render TEXT via Markdown. 
-  //    Issue: Markdown usually expects block integrity. If a bold starts in part 1 and ends in part 3, splitting breaks it.
-  //    Assumption: The LLM generates citations mostly at ends of sentences or clauses, not inside bold tags.
   
   return (
     <div className="text-sm">
@@ -114,11 +86,7 @@ const CitationRenderer: React.FC<CitationRendererProps> = ({ text, files, onView
             />
           );
         } else {
-            // It's text. Only render if not empty.
             if (!part) return null;
-            // Use span for inline flow if it's short/inline, but our Markdown parser is block based.
-            // For true inline mixing, we'd need a more complex AST.
-            // For now, let's treat chunks as markdown blocks.
             return <div key={index} className="inline"><SimpleMarkdown text={part} /></div>;
         }
       })}
@@ -146,16 +114,11 @@ const CitationChip: React.FC<CitationChipProps> = ({ index, fileName, location, 
       const rect = triggerRef.current.getBoundingClientRect();
       const viewportHeight = window.innerHeight;
       const POPOVER_EST_HEIGHT = 400; 
-      
       let top = rect.bottom + 8;
       if (top + POPOVER_EST_HEIGHT > viewportHeight) {
           top = Math.max(16, rect.top - POPOVER_EST_HEIGHT - 8);
       }
-
-      setCoords({
-        top: top,
-        left: Math.max(16, rect.left - 20) 
-      });
+      setCoords({ top, left: Math.max(16, rect.left - 20) });
     }
     setIsOpen(!isOpen);
   };
@@ -171,12 +134,9 @@ const CitationChip: React.FC<CitationChipProps> = ({ index, fileName, location, 
             : 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 hover:border-blue-300'
           }`}
       >
-        <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] ${isOpen ? 'bg-blue-200' : 'bg-blue-200'}`}>
-            C{index + 1}
-        </span>
+        <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] ${isOpen ? 'bg-blue-200' : 'bg-blue-200'}`}>C{index + 1}</span>
         <span className="max-w-[80px] truncate">{fileName}</span>
       </span>
-
       {isOpen && (
         <CitationPortal 
           onClose={() => setIsOpen(false)}
@@ -212,9 +172,7 @@ interface CitationPortalProps {
   onOpenFull: () => void;
 }
 
-const CitationPortal: React.FC<CitationPortalProps> = ({ 
-  onClose, coords, fileName, location, quote, files, triggerRef, onOpenFull
-}) => {
+const CitationPortal: React.FC<CitationPortalProps> = ({ onClose, coords, fileName, location, quote, files, triggerRef, onOpenFull }) => {
   const popoverRef = useRef<HTMLDivElement>(null);
   const [file, setFile] = useState<ProcessedFile | undefined>(undefined);
   const [pdfPageNumber, setPdfPageNumber] = useState<number | null>(null);
@@ -232,12 +190,7 @@ const CitationPortal: React.FC<CitationPortalProps> = ({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        popoverRef.current && 
-        !popoverRef.current.contains(event.target as Node) &&
-        triggerRef.current &&
-        !triggerRef.current.contains(event.target as Node)
-      ) {
+      if (popoverRef.current && !popoverRef.current.contains(event.target as Node) && triggerRef.current && !triggerRef.current.contains(event.target as Node)) {
         onClose();
       }
     };
@@ -247,9 +200,7 @@ const CitationPortal: React.FC<CitationPortalProps> = ({
 
   useEffect(() => {
     const handleWheel = (e: WheelEvent) => {
-        if (popoverRef.current && popoverRef.current.contains(e.target as Node)) {
-            e.stopPropagation(); 
-        }
+        if (popoverRef.current && popoverRef.current.contains(e.target as Node)) e.stopPropagation(); 
     };
     window.addEventListener('wheel', handleWheel, { passive: false });
     return () => window.removeEventListener('wheel', handleWheel);
@@ -261,11 +212,7 @@ const CitationPortal: React.FC<CitationPortalProps> = ({
     <div 
       ref={popoverRef}
       className="fixed z-[9999] w-[450px] max-w-[90vw] bg-white text-gray-800 rounded-xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden ring-1 ring-black/10 animate-in fade-in zoom-in-95 duration-150"
-      style={{ 
-         top: coords.top,
-         left: Math.min(coords.left, window.innerWidth - 460),
-         maxHeight: '80vh'
-      }}
+      style={{ top: coords.top, left: Math.min(coords.left, window.innerWidth - 460), maxHeight: '80vh' }}
     >
       <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2 overflow-hidden">
@@ -278,31 +225,13 @@ const CitationPortal: React.FC<CitationPortalProps> = ({
           </div>
         </div>
         <div className="flex items-center gap-1">
-            <button 
-              onClick={onOpenFull}
-              className="text-blue-600 hover:text-blue-800 p-1.5 rounded-full hover:bg-blue-50 transition-colors flex items-center gap-1 text-xs font-medium"
-              title="Open Full Document"
-            >
-              <Maximize2 size={14} />
-              <span className="hidden sm:inline">Open</span>
-            </button>
-            <button 
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-700 p-1.5 rounded-full hover:bg-gray-200 transition-colors"
-            >
-              <X size={16} />
-            </button>
+            <button onClick={onOpenFull} className="text-blue-600 hover:text-blue-800 p-1.5 rounded-full hover:bg-blue-50 transition-colors flex items-center gap-1 text-xs font-medium" title="Open Full Document"><Maximize2 size={14} /><span className="hidden sm:inline">Open</span></button>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-700 p-1.5 rounded-full hover:bg-gray-200 transition-colors"><X size={16} /></button>
         </div>
       </div>
-
       <div className="bg-slate-100 overflow-y-auto relative min-h-[200px] flex-1">
-        {isPdfMode && file?.fileHandle ? (
-             <PdfPagePreview file={file.fileHandle} pageNumber={pdfPageNumber} />
-        ) : (
-             <TextContextViewer file={file} quote={quote} location={location} />
-        )}
+        {isPdfMode && file?.fileHandle ? <PdfPagePreview file={file.fileHandle} pageNumber={pdfPageNumber} quote={quote} /> : <TextContextViewer file={file} quote={quote} location={location} />}
       </div>
-      
       <div className="bg-white px-4 py-3 border-t border-gray-200 text-xs text-gray-600 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
         <div className="flex gap-2">
             <Quote size={14} className="text-blue-400 flex-shrink-0 mt-0.5" />
@@ -314,19 +243,20 @@ const CitationPortal: React.FC<CitationPortalProps> = ({
   );
 };
 
-// Simplified Preview (Canvas Only) for the Popover
-const PdfPagePreview: React.FC<{ file: File; pageNumber: number }> = ({ file, pageNumber }) => {
+const PdfPagePreview: React.FC<{ file: File; pageNumber: number; quote?: string }> = ({ file, pageNumber, quote }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const highlightLayerRef = useRef<HTMLDivElement>(null);
     const [loading, setLoading] = useState(true);
     const renderTaskRef = useRef<any>(null);
 
     useEffect(() => {
         const renderPage = async () => {
             try {
+                console.log(`[CitationPreview] Rendering Page ${pageNumber}`);
                 setLoading(true);
                 const arrayBuffer = await file.arrayBuffer();
                 if(window.pdfWorkerReady) await window.pdfWorkerReady;
-                if(!window.pdfjsLib) return;
+                if(!window.pdfjsLib) { console.warn("[CitationPreview] PDF Lib missing"); return; }
 
                 const pdf = await window.pdfjsLib.getDocument({ 
                     data: new Uint8Array(arrayBuffer),
@@ -336,9 +266,7 @@ const PdfPagePreview: React.FC<{ file: File; pageNumber: number }> = ({ file, pa
                 
                 const page = await pdf.getPage(pageNumber);
 
-                if(renderTaskRef.current) {
-                    try { await renderTaskRef.current.cancel(); } catch(e) {}
-                }
+                if(renderTaskRef.current) try { await renderTaskRef.current.cancel(); } catch(e) {}
 
                 const viewportUnscaled = page.getViewport({ scale: 1.0 });
                 const scale = 450 / viewportUnscaled.width; 
@@ -351,31 +279,89 @@ const PdfPagePreview: React.FC<{ file: File; pageNumber: number }> = ({ file, pa
 
                 canvas.height = viewport.height;
                 canvas.width = viewport.width;
+                canvas.style.width = `${viewport.width}px`;
+                canvas.style.height = `${viewport.height}px`;
 
                 const renderTask = page.render({ canvasContext: context, viewport });
                 renderTaskRef.current = renderTask;
                 await renderTask.promise;
-            } catch (err: any) {
-                if(err?.name !== 'RenderingCancelledException') {
-                    console.error(err);
+
+                if (quote) {
+                    const textContent = await page.getTextContent();
+                    renderHighlights(textContent, viewport, quote);
                 }
+
+            } catch (err: any) {
+                if(err?.name !== 'RenderingCancelledException') console.error("[CitationPreview] Error:", err);
             } finally {
                 setLoading(false);
             }
         };
         renderPage();
+        return () => { if(renderTaskRef.current) renderTaskRef.current.cancel(); };
+    }, [file, pageNumber, quote]);
+
+    const renderHighlights = (textContent: any, viewport: any, quote: string) => {
+        if (!highlightLayerRef.current) return;
+        highlightLayerRef.current.innerHTML = '';
         
-        return () => {
-             if(renderTaskRef.current) {
-                 renderTaskRef.current.cancel();
-             }
-        };
-    }, [file, pageNumber]);
+        const normalize = (str: string) => str.replace(/\s+/g, '').toLowerCase();
+        const normQuote = normalize(quote);
+        if (!normQuote || normQuote.length < 3) return;
+
+        let fullText = "";
+        const itemMap: { start: number, end: number, item: any }[] = [];
+        textContent.items.forEach((item: any) => {
+            const str = normalize(item.str);
+            const start = fullText.length;
+            fullText += str;
+            itemMap.push({ start, end: fullText.length, item });
+        });
+
+        const matchIndex = fullText.indexOf(normQuote);
+
+        if (matchIndex !== -1) {
+            const matchEnd = matchIndex + normQuote.length;
+            itemMap.forEach(({ start, end, item }) => {
+                if (Math.max(start, matchIndex) < Math.min(end, matchEnd)) {
+                    if (!window.pdfjsLib.Util) return;
+
+                    const tx = window.pdfjsLib.Util.transform(viewport.transform, item.transform);
+                    const fontHeight = Math.hypot(tx[2], tx[3]);
+                    const fontWidth = item.width * viewport.scale; // Fix: Use viewport scale directly
+                    const angle = Math.atan2(tx[1], tx[0]);
+                    
+                    const rect = document.createElement('div');
+                    Object.assign(rect.style, {
+                        position: 'absolute',
+                        left: `${tx[4]}px`,
+                        top: `${tx[5] - fontHeight}px`,
+                        width: `${fontWidth}px`,
+                        height: `${fontHeight}px`,
+                        backgroundColor: 'rgba(255, 235, 59, 0.4)',
+                        mixBlendMode: 'multiply',
+                        pointerEvents: 'none',
+                        transform: `rotate(${angle}rad)`,
+                        transformOrigin: '0% 100%'
+                    });
+                    highlightLayerRef.current?.appendChild(rect);
+                }
+            });
+            setTimeout(() => {
+                highlightLayerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 300);
+        } else {
+             console.warn("[CitationPreview] Quote not found in text content");
+        }
+    };
 
     return (
-        <div className="flex flex-col items-center justify-start min-h-full w-full bg-gray-500/10 pb-4">
-            {loading && <div className="p-8"><Loader2 size={20} className="animate-spin text-gray-500" /></div>}
-            <canvas ref={canvasRef} className={`shadow-lg bg-white mt-4 ${loading ? 'opacity-0' : 'opacity-100'}`} style={{ maxWidth: '95%' }} />
+        <div className="flex flex-col items-center justify-start min-h-full w-full bg-gray-500/10 pb-4 relative overflow-auto custom-scrollbar">
+            {loading && <div className="absolute inset-0 flex items-center justify-center z-20"><Loader2 size={20} className="animate-spin text-gray-500" /></div>}
+            <div className={`relative shadow-lg bg-white mt-4 ${loading ? 'opacity-0' : 'opacity-100'} transition-opacity`}>
+                 <canvas ref={canvasRef} className="block" />
+                 <div ref={highlightLayerRef} className="absolute inset-0 pointer-events-none z-10" />
+            </div>
         </div>
     );
 };

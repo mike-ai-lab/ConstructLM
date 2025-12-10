@@ -39,8 +39,12 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
     
     let isMounted = true;
     const loadPdf = async () => {
-      if (!file.fileHandle || !window.pdfjsLib) return;
+      if (!file.fileHandle || !window.pdfjsLib) {
+          console.warn("[DocumentViewer] Missing file handle or PDF.js library");
+          return;
+      }
       try {
+        console.log(`[DocumentViewer] Loading PDF: ${file.name}`);
         setLoading(true);
         setPdfDocument(null);
         setPdfScale(null);
@@ -55,11 +59,12 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
         }).promise;
         
         if (isMounted) {
+            console.log(`[DocumentViewer] PDF Loaded. Pages: ${pdf.numPages}`);
             setPdfDocument(pdf);
             setNumPages(pdf.numPages);
         }
       } catch (error) {
-        console.error("Error loading PDF:", error);
+        console.error("[DocumentViewer] Error loading PDF:", error);
         if (isMounted) setLoading(false);
       }
     };
@@ -80,6 +85,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
             const idealScale = (containerWidth - 64) / viewport.width;
             setPdfScale(Math.max(0.6, Math.min(idealScale, 1.5)));
         } catch (e) {
+            console.error("[DocumentViewer] Error setting up view:", e);
             setPdfScale(1.0);
         }
     };
@@ -92,6 +98,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
 
     const renderPage = async () => {
       try {
+        console.log(`[DocumentViewer] Rendering page ${pageNumber} at scale ${pdfScale}`);
         setLoading(true);
         const page = await pdfDocument.getPage(pageNumber);
         const outputScale = window.devicePixelRatio || 1;
@@ -139,7 +146,10 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
 
         setLoading(false);
       } catch (error: any) {
-        if (error.name !== 'RenderingCancelledException') setLoading(false);
+        if (error.name !== 'RenderingCancelledException') {
+            console.error("[DocumentViewer] Render error:", error);
+            setLoading(false);
+        }
       }
     };
 
@@ -148,14 +158,26 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
   }, [pageNumber, pdfScale, pdfDocument, highlightQuote, isPdf]);
 
   const renderHighlights = (textContent: any, viewport: any, quote: string) => {
-      if(!highlightLayerRef.current) return;
+      console.groupCollapsed("[PDF HIGHLIGHT DEBUG]");
+      
+      if(!highlightLayerRef.current) {
+          console.groupEnd();
+          return;
+      }
       highlightLayerRef.current.innerHTML = ''; 
+      
       const normalize = (str: string) => str.replace(/\s+/g, '').toLowerCase();
       const normQuote = normalize(quote);
-      if (!normQuote || normQuote.length < 5) return;
+      
+      if (!normQuote || normQuote.length < 5) {
+          console.warn("Quote too short or empty after normalization");
+          console.groupEnd();
+          return;
+      }
 
       let fullText = "";
       const itemMap: { start: number, end: number, item: any }[] = [];
+      
       textContent.items.forEach((item: any) => {
           const str = normalize(item.str);
           const start = fullText.length;
@@ -164,36 +186,62 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
       });
 
       const matchIndex = fullText.indexOf(normQuote);
+
       if (matchIndex !== -1) {
           const matchEnd = matchIndex + normQuote.length;
           let firstMatchElement: HTMLElement | null = null;
+          let count = 0;
+          
           itemMap.forEach(({ start, end, item }) => {
-             if (start < matchEnd && end > matchIndex) {
-                 const tx = window.pdfjsLib.Util.transform(viewport.transform, item.transform);
-                 const fontHeight = Math.hypot(tx[2], tx[3]);
-                 const fontWidth = item.width ? item.width * (pdfScale || 1) : (fontHeight * item.str.length * 0.5);
+             if (Math.max(start, matchIndex) < Math.min(end, matchEnd)) {
+                 try {
+                     // Check if Util exists
+                     if (!window.pdfjsLib.Util) return;
 
-                 const rect = document.createElement('div');
-                 Object.assign(rect.style, {
-                     position: 'absolute',
-                     left: `${tx[4]}px`,
-                     top: `${tx[5] - fontHeight}px`,
-                     width: `${Math.abs(fontWidth)}px`,
-                     height: `${fontHeight}px`,
-                     backgroundColor: 'rgba(255, 215, 0, 0.3)',
-                     mixBlendMode: 'multiply',
-                     pointerEvents: 'none',
-                     borderBottom: '2px solid rgba(255, 180, 0, 0.8)'
-                 });
-                 
-                 highlightLayerRef.current?.appendChild(rect);
-                 if (!firstMatchElement) firstMatchElement = rect;
+                     const tx = window.pdfjsLib.Util.transform(viewport.transform, item.transform);
+                     const fontHeight = Math.hypot(tx[2], tx[3]);
+                     
+                     // FIX: Use viewport.scale directly. item.width is in User Space Units.
+                     // The previous logic multiplied by scaleX (from matrix) which effectively squared the scaling factor.
+                     const fontWidth = item.width * viewport.scale;
+                     
+                     // Calculate rotation
+                     const angle = Math.atan2(tx[1], tx[0]);
+
+                     const rect = document.createElement('div');
+                     Object.assign(rect.style, {
+                         position: 'absolute',
+                         left: `${tx[4]}px`,
+                         top: `${tx[5] - fontHeight}px`,
+                         width: `${Math.abs(fontWidth)}px`,
+                         height: `${fontHeight}px`,
+                         backgroundColor: 'rgba(255, 235, 59, 0.4)', // Material Yellow
+                         mixBlendMode: 'multiply',
+                         pointerEvents: 'none',
+                         transform: `rotate(${angle}rad)`,
+                         transformOrigin: '0% 100%'
+                     });
+                     
+                     highlightLayerRef.current?.appendChild(rect);
+                     if (!firstMatchElement) firstMatchElement = rect;
+                     count++;
+                 } catch (err) {
+                     console.error("Error creating highlight rect:", err);
+                 }
              }
           });
+          console.log(`Created ${count} highlight rectangles`);
+          
           if (firstMatchElement) {
-              setTimeout(() => (firstMatchElement as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'center' }), 300);
+              requestAnimationFrame(() => {
+                 setTimeout(() => {
+                     console.log("Scrolling to highlight...");
+                     (firstMatchElement as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'center' });
+                 }, 100);
+              });
           }
       }
+      console.groupEnd();
   };
 
   // --- TEXT/EXCEL LOGIC ---
@@ -201,17 +249,14 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
   useEffect(() => {
     if (!isPdf) {
         const tryScroll = () => {
-            // Priority 1: Check for Excel Row Highlight
             const rowEl = document.getElementById('excel-highlight-row');
             if (rowEl) {
                 rowEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                // Add a temporary flash effect
                 rowEl.classList.add('bg-amber-200');
                 setTimeout(() => rowEl.classList.remove('bg-amber-200'), 1000);
                 return true;
             }
 
-            // Priority 2: Check for Text Match Highlight
             if (highlightQuote) {
                 const textEl = document.getElementById('text-highlight-match');
                 if (textEl) {
@@ -222,10 +267,9 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
             return false;
         };
         
-        // Try immediately and after a short delay to allow render
         if (!tryScroll()) {
             setTimeout(tryScroll, 100);
-            setTimeout(tryScroll, 500); // Retry later for large docs
+            setTimeout(tryScroll, 500); 
         }
     }
   }, [highlightQuote, location, isPdf, file]);
@@ -252,28 +296,21 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
   // -- Custom Content Rendering --
 
   const parseExcelContent = (content: string, highlightLoc?: string) => {
-      // Split by sheet headers defined in fileParser.ts: --- [Sheet: SheetName] ---
       const sheetRegex = /--- \[Sheet: (.*?)\] ---/g;
       const parts = content.split(sheetRegex);
-      
       const elements: React.ReactNode[] = [];
       
-      // Parse Location for Highlight info
       let targetSheet = "";
       let targetRow = -1;
 
       if (highlightLoc) {
-          // Robust extraction: matches "Sheet: SheetName" or "Sheet: 'SheetName'"
-          // Stops at the comma or pipe or end of string
           const sheetMatch = highlightLoc.match(/Sheet:\s*['"]?([^,'";|]+)['"]?/i);
           if (sheetMatch) targetSheet = sheetMatch[1].trim().toLowerCase();
 
-          // Regex handles "Row 45", "Row: 45", "Line #45" case insensitive
           const rowMatch = highlightLoc.match(/(?:Row|Line)\s*[:#.]?\s*(\d+)/i);
           if (rowMatch) targetRow = parseInt(rowMatch[1], 10);
       }
 
-      // Metadata (first part before first match)
       if (parts[0].trim()) {
           elements.push(
               <div key="meta" className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-100 text-xs text-gray-500 font-mono whitespace-pre-wrap">
@@ -282,23 +319,17 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
           );
       }
 
-      // Loop matches: odd indices are sheet names, even indices are content
       for (let i = 1; i < parts.length; i += 2) {
           const sheetName = parts[i];
           const csvContent = parts[i + 1] || "";
           
           const rows = csvContent.trim().split('\n').map(row => {
-              // Regex to split CSV by comma BUT ignore commas inside quotes
-              // This is critical for keeping cell structure intact
               const matches = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
-              
-              if (!matches && row.length > 0) return [row]; // Fallback if regex fails but row exists
+              if (!matches && row.length > 0) return [row]; 
               if (!matches) return [];
-
-              return matches.map(cell => cell.replace(/^"|"$/g, '').trim()); // Clean quotes
+              return matches.map(cell => cell.replace(/^"|"$/g, '').trim()); 
           });
 
-          // Fuzzy match sheet name
           const isTargetSheet = targetSheet && sheetName.toLowerCase().includes(targetSheet);
 
           elements.push(
@@ -311,7 +342,6 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
                       <table className="min-w-full divide-y divide-gray-200 text-xs">
                           <tbody className="bg-white divide-y divide-gray-100">
                               {rows.map((row, rIdx) => {
-                                  // Heuristic: LLMs usually count rows starting at 1. The loop is 0-indexed.
                                   const visualRowNumber = rIdx + 1;
                                   const isHighlightRow = isTargetSheet && (visualRowNumber === targetRow);
 
@@ -325,7 +355,6 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
                                             ${isHighlightRow ? "bg-amber-100 ring-2 ring-inset ring-amber-400 z-10 relative" : ""}
                                         `}
                                     >
-                                        {/* Row Number Column */}
                                         <td className={`px-2 py-2 w-8 select-none text-[10px] text-right border-r border-gray-100 bg-gray-50/50 ${isHighlightRow ? "text-amber-700 font-bold" : "text-gray-300"}`}>
                                             {visualRowNumber}
                                         </td>
@@ -351,7 +380,6 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
           return parseExcelContent(file.content, location);
       }
       
-      // Default plain text rendering with highlight support
       const content = file.content;
       if (!highlightQuote) {
           return (
@@ -410,29 +438,13 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
 
       {/* Viewport */}
       <div ref={containerRef} className="flex-1 overflow-auto relative flex justify-center custom-scrollbar bg-gray-100/50">
-         
-         {/* PDF Render */}
          {isPdf && (
              <div className="p-8">
-                 {/* Nav Overlay */}
                  <div className="fixed bottom-6 z-40 bg-white/90 backdrop-blur border border-gray-200 shadow-lg rounded-full px-4 py-2 flex items-center gap-4 left-1/2 -translate-x-1/2 transform transition-opacity duration-300 opacity-0 hover:opacity-100 group-hover:opacity-100">
-                    <button 
-                        onClick={() => setPageNumber(p => Math.max(1, p - 1))}
-                        disabled={pageNumber <= 1}
-                        className="p-1 hover:text-blue-600 disabled:opacity-30"
-                    >
-                        <ChevronLeft size={20} />
-                    </button>
+                    <button onClick={() => setPageNumber(p => Math.max(1, p - 1))} disabled={pageNumber <= 1} className="p-1 hover:text-blue-600 disabled:opacity-30"><ChevronLeft size={20} /></button>
                     <span className="text-xs font-medium tabular-nums">{pageNumber} / {numPages}</span>
-                    <button 
-                        onClick={() => setPageNumber(p => Math.min(numPages, p + 1))}
-                        disabled={pageNumber >= numPages}
-                        className="p-1 hover:text-blue-600 disabled:opacity-30"
-                    >
-                        <ChevronRight size={20} />
-                    </button>
+                    <button onClick={() => setPageNumber(p => Math.min(numPages, p + 1))} disabled={pageNumber >= numPages} className="p-1 hover:text-blue-600 disabled:opacity-30"><ChevronRight size={20} /></button>
                  </div>
-
                  {loading && pdfScale === null && (
                      <div className="absolute inset-0 flex items-center justify-center z-30">
                         <div className="flex flex-col items-center gap-3">
@@ -441,7 +453,6 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
                         </div>
                      </div>
                  )}
-                 
                  <div className="relative shadow-xl ring-1 ring-black/5 bg-white transition-opacity duration-200 origin-top" style={{ width: 'fit-content', height: 'fit-content', opacity: loading ? 0.6 : 1 }}>
                     <canvas ref={canvasRef} className="block" />
                     <div ref={highlightLayerRef} className="absolute inset-0 pointer-events-none z-10" />
@@ -449,16 +460,9 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
                  </div>
              </div>
          )}
-
-         {/* Text/Excel Render */}
          {!isPdf && (
-             <div 
-                className="bg-white shadow-sm border border-gray-200 w-full max-w-5xl min-h-full mx-auto my-8"
-                style={{ fontSize: `${textScale * 0.875}rem` }}
-             >
-                <div className="p-12">
-                    {renderTextContent()}
-                </div>
+             <div className="bg-white shadow-sm border border-gray-200 w-full max-w-5xl min-h-full mx-auto my-8" style={{ fontSize: `${textScale * 0.875}rem` }}>
+                <div className="p-12">{renderTextContent()}</div>
              </div>
          )}
       </div>
