@@ -1,16 +1,76 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useLayoutEffect, useMemo } from 'react';
 import { ProcessedFile } from '../types';
 import { ChevronLeft, ChevronRight, X, ZoomIn, ZoomOut, FileText, FileSpreadsheet, File as FileIcon } from 'lucide-react';
+
+interface CitationMarker {
+    id: string;
+    label: string;
+    quote: string;
+    location: string;
+}
 
 interface DocumentViewerProps {
   file: ProcessedFile;
   initialPage?: number;
   highlightQuote?: string;
   location?: string;
+  citations?: CitationMarker[];
   onClose: () => void;
 }
 
-const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, highlightQuote, location, onClose }) => {
+// Robust fuzzy matching that finds ALL occurrences
+const findAllFuzzyMatches = (fullText: string, quote: string): { start: number, end: number }[] => {
+    if (!quote || !fullText) return [];
+    
+    const cleanQuote = quote.trim();
+    if (cleanQuote.length === 0) return [];
+
+    const matches: { start: number, end: number }[] = [];
+
+    // 1. Regex Match (Handles varied whitespace/newlines between words) - High Precision
+    try {
+        const escaped = cleanQuote.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        // Allow any whitespace sequence (newlines, spaces, tabs) where the quote has whitespace
+        const pattern = escaped.replace(/\s+/g, '[\\s\\r\\n]+');
+        const regex = new RegExp(pattern, 'gim');
+        
+        let match;
+        while ((match = regex.exec(fullText)) !== null) {
+            matches.push({ start: match.index, end: match.index + match[0].length });
+        }
+    } catch (e) {
+        // Regex failed (e.g. invalid chars), fall through
+    }
+    
+    if (matches.length > 0) return matches;
+
+    // 2. Fallback: Simple Case-Insensitive Substring Search - Robustness
+    const lowerText = fullText.toLowerCase();
+    const lowerQuote = cleanQuote.toLowerCase();
+    
+    let pos = 0;
+    while (pos < lowerText.length) {
+        const idx = lowerText.indexOf(lowerQuote, pos);
+        if (idx === -1) break;
+        
+        matches.push({ start: idx, end: idx + cleanQuote.length });
+        // Important: Advance past the current match to avoid overlapping matches of the same text
+        // (e.g. "nana" in "nanana") which corrupts the rendering logic
+        pos = idx + cleanQuote.length; 
+    }
+    
+    return matches;
+};
+
+const getLineOffsets = (text: string) => {
+    const offsets = [0];
+    for (let i = 0; i < text.length; i++) {
+        if (text[i] === '\n') offsets.push(i + 1);
+    }
+    return offsets;
+};
+
+const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, highlightQuote, location, citations = [], onClose }) => {
   const isPdf = file.type === 'pdf';
   
   // PDF State
@@ -22,6 +82,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
   // Text/Universal State
   const [loading, setLoading] = useState(isPdf);
   const [textScale, setTextScale] = useState(1.0);
+  const [markers, setMarkers] = useState<{ label: string, topPercent: number, quote: string, isActive: boolean, location: string }[]>([]);
 
   // Refs
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -29,6 +90,12 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
   const highlightLayerRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const renderTaskRef = useRef<any>(null);
+
+  // Helper: Get Line Offsets
+  const lineOffsets = useMemo(() => {
+    if (isPdf || file.type === 'excel') return [];
+    return getLineOffsets(file.content);
+  }, [file.content, isPdf, file.type]);
 
   // --- PDF LOGIC ---
   useEffect(() => {
@@ -98,7 +165,6 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
 
     const renderPage = async () => {
       try {
-        console.log(`[DocumentViewer] Rendering page ${pageNumber} at scale ${pdfScale}`);
         setLoading(true);
         const page = await pdfDocument.getPage(pageNumber);
         const outputScale = window.devicePixelRatio || 1;
@@ -158,22 +224,12 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
   }, [pageNumber, pdfScale, pdfDocument, highlightQuote, isPdf]);
 
   const renderHighlights = (textContent: any, viewport: any, quote: string) => {
-      console.groupCollapsed("[PDF HIGHLIGHT DEBUG]");
-      
-      if(!highlightLayerRef.current) {
-          console.groupEnd();
-          return;
-      }
+      if(!highlightLayerRef.current) return;
       highlightLayerRef.current.innerHTML = ''; 
       
       const normalize = (str: string) => str.replace(/\s+/g, '').toLowerCase();
       const normQuote = normalize(quote);
-      
-      if (!normQuote || normQuote.length < 5) {
-          console.warn("Quote too short or empty after normalization");
-          console.groupEnd();
-          return;
-      }
+      if (!normQuote || normQuote.length < 3) return;
 
       let fullText = "";
       const itemMap: { start: number, end: number, item: any }[] = [];
@@ -185,27 +241,22 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
           itemMap.push({ start, end: fullText.length, item });
       });
 
-      const matchIndex = fullText.indexOf(normQuote);
+      let searchIndex = 0;
+      let count = 0;
+      let firstMatchElement: HTMLElement | null = null;
 
-      if (matchIndex !== -1) {
+      while (true) {
+          const matchIndex = fullText.indexOf(normQuote, searchIndex);
+          if (matchIndex === -1) break;
           const matchEnd = matchIndex + normQuote.length;
-          let firstMatchElement: HTMLElement | null = null;
-          let count = 0;
           
           itemMap.forEach(({ start, end, item }) => {
              if (Math.max(start, matchIndex) < Math.min(end, matchEnd)) {
                  try {
-                     // Check if Util exists
                      if (!window.pdfjsLib.Util) return;
-
                      const tx = window.pdfjsLib.Util.transform(viewport.transform, item.transform);
                      const fontHeight = Math.hypot(tx[2], tx[3]);
-                     
-                     // FIX: Use viewport.scale directly. item.width is in User Space Units.
-                     // The previous logic multiplied by scaleX (from matrix) which effectively squared the scaling factor.
                      const fontWidth = item.width * viewport.scale;
-                     
-                     // Calculate rotation
                      const angle = Math.atan2(tx[1], tx[0]);
 
                      const rect = document.createElement('div');
@@ -215,64 +266,117 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
                          top: `${tx[5] - fontHeight}px`,
                          width: `${Math.abs(fontWidth)}px`,
                          height: `${fontHeight}px`,
-                         backgroundColor: 'rgba(255, 235, 59, 0.4)', // Material Yellow
+                         backgroundColor: 'rgba(255, 235, 59, 0.4)',
                          mixBlendMode: 'multiply',
                          pointerEvents: 'none',
                          transform: `rotate(${angle}rad)`,
                          transformOrigin: '0% 100%'
                      });
-                     
                      highlightLayerRef.current?.appendChild(rect);
                      if (!firstMatchElement) firstMatchElement = rect;
                      count++;
-                 } catch (err) {
-                     console.error("Error creating highlight rect:", err);
-                 }
+                 } catch (err) { console.error("Error creating highlight rect:", err); }
              }
           });
-          console.log(`Created ${count} highlight rectangles`);
-          
-          if (firstMatchElement) {
-              requestAnimationFrame(() => {
-                 setTimeout(() => {
-                     console.log("Scrolling to highlight...");
-                     (firstMatchElement as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'center' });
-                 }, 100);
-              });
-          }
+          searchIndex = matchIndex + 1;
       }
-      console.groupEnd();
+      
+      if (firstMatchElement) {
+          setTimeout(() => {
+              (firstMatchElement as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 100);
+      }
   };
 
-  // --- TEXT/EXCEL LOGIC ---
-  
+  // --- Calculate Markers for Text Files ---
   useEffect(() => {
-    if (!isPdf) {
-        const tryScroll = () => {
-            const rowEl = document.getElementById('excel-highlight-row');
-            if (rowEl) {
-                rowEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                rowEl.classList.add('bg-amber-200');
-                setTimeout(() => rowEl.classList.remove('bg-amber-200'), 1000);
-                return true;
+    if (isPdf || file.type === 'excel') {
+         setMarkers([]); 
+         return; 
+    }
+
+    const newMarkers: typeof markers = [];
+    citations?.forEach(cit => {
+        if (!cit.quote) return;
+        const matches = findAllFuzzyMatches(file.content, cit.quote);
+        if (matches.length > 0) {
+            let bestMatch = matches[0];
+            
+            // Try to find best match based on location (Line X)
+            const lineMatch = cit.location.match(/(?:Line|Lines|Row|Rows)\s*[:#.]?\s*(\d+)/i);
+            if (lineMatch && lineOffsets.length > 0) {
+                const lineNum = parseInt(lineMatch[1], 10);
+                const targetIndex = lineOffsets[Math.min(lineNum - 1, lineOffsets.length - 1)];
+                
+                // Find match with start index closest to targetIndex
+                bestMatch = matches.reduce((prev, curr) => {
+                    return (Math.abs(curr.start - targetIndex) < Math.abs(prev.start - targetIndex)) ? curr : prev;
+                });
             }
 
-            if (highlightQuote) {
-                const textEl = document.getElementById('text-highlight-match');
-                if (textEl) {
-                    textEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    return true;
-                }
-            }
-            return false;
-        };
-        
-        if (!tryScroll()) {
-            setTimeout(tryScroll, 100);
-            setTimeout(tryScroll, 500); 
+            const percent = (bestMatch.start / file.content.length) * 100;
+            newMarkers.push({
+                label: cit.label,
+                quote: cit.quote,
+                location: cit.location,
+                topPercent: percent,
+                isActive: cit.quote === highlightQuote && cit.location === location
+            });
         }
-    }
-  }, [highlightQuote, location, isPdf, file]);
+    });
+    setMarkers(newMarkers);
+  }, [file, citations, highlightQuote, location, isPdf, lineOffsets]);
+
+
+  // --- UNIVERSAL SCROLL/HIGHLIGHT EFFECT ---
+  useEffect(() => {
+    if (isPdf || !highlightQuote) return;
+
+    // Single reliable scroll attempt logic with retries for render timing
+    const performScroll = () => {
+        if (!containerRef.current) return;
+
+        const targetEl = document.getElementById('active-scroll-target');
+        const excelRow = document.getElementById('excel-highlight-row');
+
+        if (excelRow) {
+            // Excel scroll
+            excelRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            excelRow.classList.remove('bg-amber-100'); // Reset potential previous state logic conflict
+            excelRow.classList.add('bg-amber-300', 'transition-colors', 'duration-1000');
+            setTimeout(() => {
+                excelRow.classList.remove('bg-amber-300');
+                excelRow.classList.add('bg-amber-100');
+            }, 2000);
+        } else if (targetEl) {
+             // Text scroll
+             targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+             
+             // Add flash effect for visibility
+             targetEl.classList.add('ring-4', 'ring-blue-400/50', 'bg-yellow-300', 'scale-105', 'transition-all', 'duration-300');
+             setTimeout(() => {
+                targetEl.classList.remove('ring-4', 'ring-blue-400/50', 'bg-yellow-300', 'scale-105');
+             }, 1500);
+        }
+    };
+
+    // Execute scroll slightly after render to ensure DOM is ready
+    const t1 = setTimeout(performScroll, 50);
+    const t2 = setTimeout(performScroll, 300); // Backup attempt
+
+    return () => {
+        clearTimeout(t1);
+        clearTimeout(t2);
+    };
+  }, [highlightQuote, location, isPdf, file, textScale]); // textScale dependency ensures we scroll after zoom
+
+  const handleMarkerClick = (marker: typeof markers[0]) => {
+      if (containerRef.current) {
+          const scrollHeight = containerRef.current.scrollHeight;
+          const targetTop = (marker.topPercent / 100) * scrollHeight;
+          containerRef.current.scrollTo({ top: targetTop - (containerRef.current.clientHeight / 2), behavior: 'smooth' });
+      }
+  };
 
   const getFileIcon = () => {
       if (file.type === 'pdf') return <FileText size={18} />;
@@ -280,7 +384,6 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
       return <FileIcon size={18} />;
   }
 
-  // Common Zoom Handlers
   const handleZoomOut = () => {
       if (isPdf) setPdfScale(s => Math.max(0.5, (s || 1) - 0.2));
       else setTextScale(s => Math.max(0.5, s - 0.1));
@@ -293,7 +396,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
   
   const currentScaleDisplay = isPdf ? (pdfScale || 1) : textScale;
 
-  // -- Custom Content Rendering --
+  // -- Content Parsers --
 
   const parseExcelContent = (content: string, highlightLoc?: string) => {
       const sheetRegex = /--- \[Sheet: (.*?)\] ---/g;
@@ -388,17 +491,74 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
               </pre>
           );
       }
+
+      // Multi-match Rendering
+      const matches = findAllFuzzyMatches(content, highlightQuote);
       
-      const escapeRegExp = (string: string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const parts = content.split(new RegExp(`(${escapeRegExp(highlightQuote)})`, 'gi'));
+      if (matches.length === 0) {
+           return (
+              <pre className="font-mono text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">
+                  {content}
+              </pre>
+          );
+      }
+
+      matches.sort((a, b) => a.start - b.start);
       
+      // Determine the specific match index that corresponds to the requested location
+      let targetMatchIndex = -1;
+      if (location) {
+          const lineMatch = location.match(/(?:Line|Lines|Row|Rows)\s*[:#.]?\s*(\d+)/i);
+          if (lineMatch && lineOffsets.length > 0) {
+             const lineNum = parseInt(lineMatch[1], 10);
+             const targetOffset = lineOffsets[Math.min(lineNum - 1, lineOffsets.length - 1)];
+             
+             // Find match closest to this offset
+             let minDiff = Infinity;
+             matches.forEach((m, idx) => {
+                 const diff = Math.abs(m.start - targetOffset);
+                 if (diff < minDiff) {
+                     minDiff = diff;
+                     targetMatchIndex = idx;
+                 }
+             });
+          } else {
+             targetMatchIndex = 0;
+          }
+      } else {
+          targetMatchIndex = 0;
+      }
+
+      const elements: React.ReactNode[] = [];
+      let lastIndex = 0;
+
+      matches.forEach((match, i) => {
+          // Safety check: Avoid overlapping rendering which corrupts text view
+          if (match.start < lastIndex) return;
+
+          if (match.start > lastIndex) {
+              elements.push(content.substring(lastIndex, match.start));
+          }
+          const isTarget = i === targetMatchIndex;
+          elements.push(
+              <mark 
+                key={i} 
+                id={isTarget ? "active-scroll-target" : undefined}
+                className={`text-highlight-match bg-yellow-200 text-gray-900 rounded px-0.5 font-bold border-b-2 border-yellow-400 ${isTarget ? 'ring-2 ring-red-500 ring-offset-1' : ''}`}
+              >
+                  {content.substring(match.start, match.end)}
+              </mark>
+          );
+          lastIndex = match.end;
+      });
+
+      if (lastIndex < content.length) {
+          elements.push(content.substring(lastIndex));
+      }
+
       return (
           <pre className="font-mono text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">
-              {parts.map((part, i) => 
-                  part.toLowerCase() === highlightQuote.toLowerCase() 
-                  ? <mark key={i} id="text-highlight-match" className="bg-yellow-200 text-gray-900 rounded px-0.5 font-bold border-b-2 border-yellow-400">{part}</mark>
-                  : part
-              )}
+              {elements}
           </pre>
       );
   };
@@ -436,35 +596,66 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
         </div>
       </div>
 
-      {/* Viewport */}
-      <div ref={containerRef} className="flex-1 overflow-auto relative flex justify-center custom-scrollbar bg-gray-100/50">
-         {isPdf && (
-             <div className="p-8">
-                 <div className="fixed bottom-6 z-40 bg-white/90 backdrop-blur border border-gray-200 shadow-lg rounded-full px-4 py-2 flex items-center gap-4 left-1/2 -translate-x-1/2 transform transition-opacity duration-300 opacity-0 hover:opacity-100 group-hover:opacity-100">
-                    <button onClick={() => setPageNumber(p => Math.max(1, p - 1))} disabled={pageNumber <= 1} className="p-1 hover:text-blue-600 disabled:opacity-30"><ChevronLeft size={20} /></button>
-                    <span className="text-xs font-medium tabular-nums">{pageNumber} / {numPages}</span>
-                    <button onClick={() => setPageNumber(p => Math.min(numPages, p + 1))} disabled={pageNumber >= numPages} className="p-1 hover:text-blue-600 disabled:opacity-30"><ChevronRight size={20} /></button>
-                 </div>
-                 {loading && pdfScale === null && (
-                     <div className="absolute inset-0 flex items-center justify-center z-30">
-                        <div className="flex flex-col items-center gap-3">
-                           <div className="w-8 h-8 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
-                           <span className="text-xs font-medium text-gray-500">Rendering...</span>
+      {/* Viewport & Markers */}
+      <div className="flex-1 relative overflow-hidden flex">
+          
+          {/* Scrollable Content */}
+          <div ref={containerRef} className="flex-1 overflow-auto relative flex justify-center custom-scrollbar bg-gray-100/50">
+            {isPdf && (
+                <div className="p-8">
+                    <div className="fixed bottom-6 z-40 bg-white/90 backdrop-blur border border-gray-200 shadow-lg rounded-full px-4 py-2 flex items-center gap-4 left-1/2 -translate-x-1/2 transform transition-opacity duration-300 opacity-0 hover:opacity-100 group-hover:opacity-100">
+                        <button onClick={() => setPageNumber(p => Math.max(1, p - 1))} disabled={pageNumber <= 1} className="p-1 hover:text-blue-600 disabled:opacity-30"><ChevronLeft size={20} /></button>
+                        <span className="text-xs font-medium tabular-nums">{pageNumber} / {numPages}</span>
+                        <button onClick={() => setPageNumber(p => Math.min(numPages, p + 1))} disabled={pageNumber >= numPages} className="p-1 hover:text-blue-600 disabled:opacity-30"><ChevronRight size={20} /></button>
+                    </div>
+                    {loading && pdfScale === null && (
+                        <div className="absolute inset-0 flex items-center justify-center z-30">
+                            <div className="flex flex-col items-center gap-3">
+                            <div className="w-8 h-8 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
+                            <span className="text-xs font-medium text-gray-500">Rendering...</span>
+                            </div>
                         </div>
+                    )}
+                    <div className="relative shadow-xl ring-1 ring-black/5 bg-white transition-opacity duration-200 origin-top" style={{ width: 'fit-content', height: 'fit-content', opacity: loading ? 0.6 : 1 }}>
+                        <canvas ref={canvasRef} className="block" />
+                        <div ref={highlightLayerRef} className="absolute inset-0 pointer-events-none z-10" />
+                        <div ref={textLayerRef} className="textLayer absolute inset-0" />
+                    </div>
+                </div>
+            )}
+            {!isPdf && (
+                <div className="bg-white shadow-sm border border-gray-200 w-full max-w-5xl min-h-full mx-auto my-8" style={{ fontSize: `${textScale * 0.875}rem` }}>
+                    <div className="p-12">{renderTextContent()}</div>
+                </div>
+            )}
+          </div>
+
+          {/* Marker Bar (Right Side) - Visible only for Text/Code files currently */}
+          {!isPdf && markers.length > 0 && (
+             <div className="w-4 bg-gray-100 border-l border-gray-200 relative flex-shrink-0 z-10 select-none">
+                 {markers.map((marker, i) => (
+                     <div 
+                        key={i}
+                        onClick={() => handleMarkerClick(marker)}
+                        className={`absolute left-0 right-0 h-1.5 cursor-pointer hover:h-2 transition-all ${marker.isActive ? 'bg-blue-600 z-20 ring-1 ring-white' : 'bg-yellow-400 z-10'}`}
+                        style={{ top: `${marker.topPercent}%` }}
+                        title={`${marker.label}: ${marker.quote.substring(0, 50)}...`}
+                     >
                      </div>
-                 )}
-                 <div className="relative shadow-xl ring-1 ring-black/5 bg-white transition-opacity duration-200 origin-top" style={{ width: 'fit-content', height: 'fit-content', opacity: loading ? 0.6 : 1 }}>
-                    <canvas ref={canvasRef} className="block" />
-                    <div ref={highlightLayerRef} className="absolute inset-0 pointer-events-none z-10" />
-                    <div ref={textLayerRef} className="textLayer absolute inset-0" />
-                 </div>
+                 ))}
+                 {/* Labels Layer (prevent overlapping roughly) */}
+                 {markers.map((marker, i) => (
+                    <div 
+                        key={`label-${i}`}
+                        className={`absolute right-full mr-1 text-[9px] font-bold px-1 rounded cursor-pointer transition-opacity opacity-0 hover:opacity-100 ${marker.isActive ? 'bg-blue-600 text-white opacity-100 shadow-sm' : 'bg-gray-700 text-white'}`}
+                        style={{ top: `${marker.topPercent}%`, transform: 'translateY(-50%)' }}
+                        onClick={() => handleMarkerClick(marker)}
+                    >
+                        {marker.label}
+                    </div>
+                 ))}
              </div>
-         )}
-         {!isPdf && (
-             <div className="bg-white shadow-sm border border-gray-200 w-full max-w-5xl min-h-full mx-auto my-8" style={{ fontSize: `${textScale * 0.875}rem` }}>
-                <div className="p-12">{renderTextContent()}</div>
-             </div>
-         )}
+          )}
       </div>
     </div>
   );

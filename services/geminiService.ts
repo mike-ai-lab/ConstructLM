@@ -50,14 +50,15 @@ INSTRUCTIONS:
    
    Examples:
    - "The beam depth is 600mm {{citation:Structural_Drawings.pdf|Page 5|Beam Schedule B1 lists depth as 600}}"
-   - "The concrete grade is M35 {{citation:Specs_v2.pdf|Page 12, Section 4.1|Grade of concrete shall be M35 for all substructures}}"
+   - "The function uses a recursive loop {{citation:utils.ts|Line 45|const recursiveLoop = (n) => ...}}"
    - "The cost of steel is $1200/ton {{citation:BOQ_Final.xlsx|Sheet: Pricing, Row 45|Structural Steel | 1200 | USD}}"
 
 3. CRITICAL RULES FOR CITATIONS:
    - Part 1: Filename (must match exactly).
    - Part 2: Location. 
      - For PDF: Use "Page X". 
-     - For Excel: YOU MUST SPECIFY THE SHEET AND ROW NUMBER. Format: "Sheet: [Name], Row [Number]". Example: "Sheet: Details, Row 15".
+     - For Excel: Use "Sheet: [Name], Row [Number]".
+     - For Text/Code/Markdown: Use "Line X" (estimate the line number based on the file content provided).
    - Part 3: EVIDENCE. Copy the exact text or data row from the file.
 
 4. If a user asks about a specific file (e.g., "What's in the BOQ?"), summarize that specific file's content.

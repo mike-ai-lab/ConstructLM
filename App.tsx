@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { ProcessedFile, Message } from './types';
 import { parseFile } from './services/fileParser';
 import FileSidebar from './components/FileSidebar';
@@ -19,6 +19,34 @@ const MIN_SIDEBAR_WIDTH = 260;
 const MAX_SIDEBAR_WIDTH = 500;
 const MIN_VIEWER_WIDTH = 400;
 const MAX_VIEWER_WIDTH = 1200;
+
+// Helper to extract citations with consistent labeling (C1, C2...)
+const extractCitations = (messages: Message[], targetFileName: string) => {
+    const citations: { id: string, label: string, quote: string, location: string }[] = [];
+    const SPLIT_REGEX = /(\{\{citation:.*?\|.*?\|.*?\}\})/g;
+    const MATCH_REGEX = /\{\{citation:(.*?)\|(.*?)\|(.*?)\}\}/;
+
+    messages.forEach((msg, msgIdx) => {
+        if (msg.role === 'model' && msg.content) {
+            const parts = msg.content.split(SPLIT_REGEX);
+            parts.forEach((part, partIdx) => {
+                const match = part.match(MATCH_REGEX);
+                if (match) {
+                    const fileName = match[1].trim();
+                    if (fileName === targetFileName) {
+                        citations.push({
+                            id: `${msg.id}-${partIdx}`,
+                            label: `C${partIdx + 1}`, // Matches CitationRenderer logic
+                            location: match[2].trim(),
+                            quote: match[3].trim()
+                        });
+                    }
+                }
+            });
+        }
+    });
+    return citations;
+};
 
 const App: React.FC = () => {
   const [files, setFiles] = useState<ProcessedFile[]>([]);
@@ -256,6 +284,7 @@ const App: React.FC = () => {
   };
 
   const activeFile = viewState ? files.find(f => f.id === viewState.fileId) : null;
+  const activeCitations = activeFile ? extractCitations(messages, activeFile.name) : [];
 
   return (
     <div className="flex h-screen w-full bg-white overflow-hidden text-sm relative">
@@ -458,6 +487,7 @@ const App: React.FC = () => {
                 initialPage={viewState?.page} 
                 highlightQuote={viewState?.quote}
                 location={viewState?.location}
+                citations={activeCitations} // Pass all citations for this file
                 onClose={() => setViewState(null)}
               />
           </div>
