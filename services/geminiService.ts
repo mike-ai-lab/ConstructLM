@@ -20,7 +20,9 @@ export const initializeGemini = () => {
     }
 };
 
-const getClient = (apiKey: string) => new GoogleGenAI({ apiKey });
+const getClient = (apiKey: string) => {
+  return new GoogleGenAI({ apiKey });
+};
 
 // Reset session (e.g. when changing models or clearing chat)
 export const resetGeminiSession = () => {
@@ -36,7 +38,7 @@ export const streamGemini = async (
   history: Message[],
   newMessage: string,
   systemInstruction: string,
-  activeFiles: ProcessedFile[], // Files to check for incremental loading
+  activeFiles: ProcessedFile[],
   onStream: (chunk: string) => void
 ) => {
   const ai = getClient(apiKey);
@@ -48,7 +50,7 @@ export const streamGemini = async (
           model: modelId,
           config: {
               systemInstruction,
-              temperature: 0.2, // Low temp for factual accuracy
+              temperature: 0.2
           }
       });
       currentModelId = modelId;
@@ -101,6 +103,12 @@ export const streamGemini = async (
     return fullText;
   } catch (error) {
     console.error("[Gemini] API Error:", error);
+    
+    // Check for quota exhaustion
+    if ((error as any).status === 429 || (error as any).message?.includes("quota")) {
+        throw new Error("Gemini quota exhausted. Try: 1) Switch to Groq models, 2) Use gemini-1.5-flash, or 3) Wait 24hrs for quota reset.");
+    }
+    
     // If context becomes invalid or too large, auto-reset the session for the next turn
     if ((error as any).message?.includes("token") || (error as any).status === 400) {
         console.warn("[Gemini] Context error detected. Resetting session.");
@@ -121,17 +129,16 @@ export const generateSpeech = async (text: string): Promise<Uint8Array | null> =
     
     try {
         const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash-preview-tts",
+            model: "gemini-2.0-flash",
             contents: [{ parts: [{ text }] }],
             config: {
-                // Use string literal 'AUDIO' to avoid importing Modality enum which might cause load issues
                 responseModalities: ['AUDIO' as any], 
                 speechConfig: {
                     voiceConfig: {
                         prebuiltVoiceConfig: { voiceName: 'Kore' }, 
                     },
                 },
-            },
+            }
         });
 
         const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;

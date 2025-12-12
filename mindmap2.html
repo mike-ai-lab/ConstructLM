@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BOQ Interactive Mind Map Pro</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            /* Deep Sky Depth Background */
+            background: radial-gradient(circle at 50% 50%, #1a2a6c, #b21f1f, #fdbb2d); 
+            background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+            color: white;
+        }
+
+        #tree-container {
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* Node Styling */
+        .node rect {
+            fill: #1a1a1a; /* Dark Card Background */
+            stroke-width: 2px;
+            rx: 6; /* Rounded corners */
+            ry: 6;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            filter: drop-shadow(3px 3px 5px rgba(0,0,0,0.6));
+        }
+
+        .node rect:hover {
+            fill: #333;
+            stroke-width: 3px;
+        }
+
+        .node text {
+            font: 13px sans-serif;
+            fill: #fff;
+            font-weight: 500;
+            pointer-events: none;
+            alignment-baseline: middle;
+        }
+
+        /* Link Styling */
+        .link {
+            fill: none;
+            stroke-width: 2.5px;
+            stroke-opacity: 0.8;
+            transition: all 0.5s ease;
+        }
+
+        /* Custom Scrollbar for aesthetics */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #111; }
+        ::-webkit-scrollbar-thumb { background: #555; border-radius: 4px; }
+
+        /* HUD Controls */
+        .hud {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #00d2ff;
+            pointer-events: none;
+            max-width: 300px;
+        }
+        .hud h3 { margin: 0 0 5px 0; font-size: 16px; color: #fff; }
+        .hud p { margin: 0; font-size: 12px; color: #aaa; line-height: 1.4; }
+
+    </style>
+</head>
+<body>
+
+<div class="hud">
+    <h3>Project Navigation</h3>
+    <p>Tap nodes to Expand/Fold.</p>
+    <p>Pinch or Scroll to Zoom.</p>
+    <p>Drag background to Pan.</p>
+</div>
+
+<div id="tree-container"></div>
+
+<script>
+    // --- 1. DATA STRUCTURE ---
+    const treeData = {
+        "name": "BOQ MASTER MAP",
+        "branchColor": "#FFFFFF", // Root Color
+        "children": [
+            {
+                "name": "Project Summary",
+                "branchColor": "#FFD700", // Gold
+                "children": [
+                    { "name": "Total Items: 354" },
+                    { "name": "BWB Items: 167" },
+                    { "name": "KAL Items: 98" },
+                    { "name": "Total Quantity: 1285" }
+                ]
+            },
+            {
+                "name": "BWB Door Types",
+                "branchColor": "#00d2ff", // Cyan
+                "children": [
+                    {
+                        "name": "Glazed Exterior",
+                        "children": [
+                            {
+                                "name": "Properties",
+                                "children": [
+                                    {"name": "EXT-01: 2000x2100mm (32dB)"},
+                                    {"name": "EXT-02: 3000x2400mm (32dB)"},
+                                    {"name": "EXT-03: 1000x2400mm (Fire/Acoustic)"},
+                                    {"name": "EXT-04: Wood Finish"}
+                                ]
+                            },
+                            {
+                                "name": "Locations",
+                                "children": [
+                                    {"name": "Entrance / Office"},
+                                    {"name": "Courtyard"},
+                                    {"name": "Terrace"},
+                                    {"name": "Circulation"}
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "name": "Glazed Interior",
+                        "children": [
+                            {"name": "INT-C: 60min Fire (Metal/Alu)"},
+                            {"name": "INT-02: 60min Fire (Metal/Alu)"},
+                            {"name": "INT-03: 90min Fire (Metal)"}
+                        ]
+                    },
+                    {
+                        "name": "Metal Interior",
+                        "children": [
+                            {"name": "INT-01: 35dB Acoustic"},
+                            {"name": "INT-S-01: 90min Fire Option"},
+                            {"name": "INT-S-02: Flush Door"}
+                        ]
+                    }
+                ]
+            },
+            {
+                "name": "Windows",
+                "branchColor": "#ff512f", // Orange/Red
+                "children": [
+                    {
+                        "name": "Aluminum Windows",
+                        "children": [
+                            {"name": "W-01 (700x1100)"},
+                            {"name": "W-04 WC (1100x500)"},
+                            {"name": "W-03 (1600x2000)"},
+                            {"name": "W-02 (1100x2000)"}
+                        ]
+                    },
+                    {
+                        "name": "External Windows",
+                        "children": [
+                            { "name": "Fly Mesh / Wood Shutters" },
+                            { "name": "Types: A-A-W, B-B-W" },
+                            { "name": "Special: Fixed/Vent/Low-E" }
+                        ]
+                    }
+                ]
+            },
+            {
+                "name": "Panjas & Partitions",
+                "branchColor": "#da22ff", // Purple
+                "children": [
+                    {
+                        "name": "Frameless Glass",
+                        "children": [
+                            {"name": "Type: P-G-1/2/3"},
+                            {"name": "Loc: Service Areas"}
+                        ]
+                    },
+                    {
+                        "name": "BWB Glazed Panja",
+                        "children": [
+                            {"name": "EXT-P-3 (Acoustic)"},
+                            {"name": "EXT-P-4 (Triangular)"}
+                        ]
+                    },
+                    {
+                        "name": "KAL Opening Panja",
+                        "children": [
+                            {"name": "Types: KA-01 to OP-03"},
+                            {"name": "Feat: Carved Doors"}
+                        ]
+                    }
+                ]
+            },
+            {
+                "name": "Roller Shutters",
+                "branchColor": "#56ab2f", // Green
+                "children": [
+                    { "name": "EXT-S1 (4000x3000 Security)" },
+                    { "name": "EXT-S2 (6000x3650 Security)" },
+                    { "name": "KAL Type S1 (2650x3300)" }
+                ]
+            },
+            {
+                "name": "Specs & Materials",
+                "branchColor": "#f857a6", // Pink
+                "children": [
+                    { "name": "Materials: Glass, Alu, Wood" },
+                    { "name": "Fire Rating: 60-90 mins" },
+                    { "name": "Acoustic: 35dB - 60dB" }
+                ]
+            }
+        ]
+    };
+
+    // --- 2. CONFIGURATION ---
+    const margin = {top: 20, right: 120, bottom: 20, left: 120};
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    
+    // Increased node size ensures boxes don't overlap vertically
+    const dx = 50; // Vertical spacing
+    const dy = 250; // Horizontal spacing (link length)
+    
+    let i = 0;
+    let root = d3.hierarchy(treeData, d => d.children);
+    
+    // Set initial positions
+    root.x0 = height / 2;
+    root.y0 = 0;
+
+    // Helper: Assign colors down the tree
+    // If a node doesn't have a color, it inherits from parent
+    root.descendants().forEach(d => {
+        if(d.data.branchColor) {
+            d.color = d.data.branchColor;
+        } else if (d.parent && d.parent.color) {
+            d.color = d.parent.color;
+        } else {
+            d.color = "#ccc"; // Fallback
+        }
+    });
+
+    // Create SVG
+    const svg = d3.select("#tree-container").append("svg")
+        .attr("width", width)
+        .attr("height", height)
+        .attr("viewBox", [-margin.left, -margin.top, width, dx])
+        .style("font", "12px sans-serif")
+        .style("user-select", "none")
+        .call(d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            }));
+
+    const g = svg.append("g")
+        .attr("transform", `translate(${margin.left},${margin.top})`);
+
+    const linkGroup = g.append("g").attr("fill", "none").attr("stroke-width", 2.5);
+    const nodeGroup = g.append("g").attr("cursor", "pointer").attr("pointer-events", "all");
+
+    // Collapse all except root
+    root.children.forEach(collapse);
+    update(root);
+
+    function collapse(d) {
+        if (d.children) {
+            d._children = d.children;
+            d._children.forEach(collapse);
+            d.children = null;
+        }
+    }
+
+    function update(source) {
+        const duration = 500;
+
+        // Compute the new tree layout.
+        const tree = d3.tree().nodeSize([dx, dy]);
+        const rootNode = tree(root);
+
+        // Get lists of nodes and links
+        let nodes = rootNode.descendants();
+        let links = rootNode.links();
+
+        // Normalize depth (fixed width columns)
+        nodes.forEach(d => { d.y = d.depth * 280; });
+
+        // --- NODES ---
+        const node = nodeGroup.selectAll("g.node")
+            .data(nodes, d => d.id || (d.id = ++i));
+
+        const nodeEnter = node.enter().append("g")
+            .attr("class", "node")
+            .attr("transform", d => `translate(${source.y0},${source.x0})`)
+            .on("click", (event, d) => {
+                // Toggle children
+                if (d.children) {
+                    d._children = d.children;
+                    d.children = null;
+                } else {
+                    d.children = d._children;
+                    d._children = null;
+                }
+                update(d);
+            });
+
+        // 1. Add Rectangle (Background Card)
+        nodeEnter.append("rect")
+            .attr("x", -10)
+            .attr("y", -20)
+            .attr("width", 0) // Animate width later
+            .attr("height", 40)
+            .attr("stroke", d => d.color) // Border color = Branch color
+            .style("fill-opacity", 1); // Solid bg
+
+        // 2. Add Text
+        nodeEnter.append("text")
+            .attr("dy", "0.35em")
+            .attr("x", 10)
+            .text(d => d.data.name)
+            .attr("fill", "white")
+            .style("opacity", 0)
+            .each(function(d) {
+                // Calculate width based on text
+                d.bbox = this.getBBox();
+            });
+
+        // Transition nodes to new position
+        const nodeUpdate = node.merge(nodeEnter).transition().duration(duration)
+            .attr("transform", d => `translate(${d.y},${d.x})`);
+
+        // Update Rect Size based on Text length + Padding
+        nodeUpdate.select("rect")
+            .attr("width", d => d.bbox.width + 40) // Text width + padding
+            .attr("height", 36)
+            .attr("y", -18)
+            .attr("x", -5) // Slight offset for pill shape
+            .attr("stroke", d => d.color);
+
+        // Fade in Text
+        nodeUpdate.select("text")
+            .style("opacity", 1);
+
+        // Exit nodes
+        const nodeExit = node.exit().transition().duration(duration)
+            .attr("transform", d => `translate(${source.y},${source.x})`)
+            .remove();
+
+        nodeExit.select("rect").attr("width", 0);
+        nodeExit.select("text").style("opacity", 0);
+
+        // --- LINKS ---
+        const link = linkGroup.selectAll("path")
+            .data(links, d => d.target.id);
+
+        const linkEnter = link.enter().append("path")
+            .attr("class", "link")
+            .attr("stroke", d => d.target.color) // Link color matches Child
+            .attr("d", d => {
+                const o = {x: source.x0, y: source.y0};
+                return diagonal(o, o);
+            });
+
+        // Transition links
+        link.merge(linkEnter).transition().duration(duration)
+            .attr("d", d => diagonal(d.source, d.target));
+
+        // Exit links
+        link.exit().transition().duration(duration)
+            .attr("d", d => {
+                const o = {x: source.x, y: source.y};
+                return diagonal(o, o);
+            })
+            .remove();
+
+        // Stash old positions
+        nodes.forEach(d => {
+            d.x0 = d.x;
+            d.y0 = d.y;
+        });
+
+        function diagonal(s, d) {
+            // Draw a Bezier curve
+            // Note: s.y + rectWidth is better, but simple s.y works with the gap
+            return `M ${s.y} ${s.x}
+                    C ${(s.y + d.y) / 2} ${s.x},
+                      ${(s.y + d.y) / 2} ${d.x},
+                      ${d.y} ${d.x}`;
+        }
+    }
+
+    // Window Resize Support
+    window.addEventListener("resize", () => {
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        svg.attr("width", w).attr("height", h);
+    });
+
+</script>
+</body>
+</html>

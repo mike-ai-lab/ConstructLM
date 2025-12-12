@@ -1,0 +1,31 @@
+CONSTRUCTION SPECIFICATIONS - PROJECT ALPHA
+
+1. CONCRETE SPECIFICATIONS
+   - Grade: M25 for foundations, M30 for columns
+   - Cement: OPC 53 grade conforming to IS 12269
+   - Aggregate: 20mm and 10mm graded as per IS 383
+   - Water cement ratio: 0.45 maximum
+   - Minimum curing period: 28 days
+
+2. STEEL REINFORCEMENT
+   - Grade: Fe 500 TMT bars conforming to IS 1786
+   - Minimum cover: 40mm for foundations, 25mm for beams
+   - Lap length: 40 times bar diameter
+   - All bars to be rust-free and straight
+
+3. BRICK WORK
+   - Bricks: First class burnt clay bricks
+   - Mortar: Cement sand mortar 1:6 ratio
+   - Joints: 10-12mm thick, properly filled
+   - Curing: Minimum 7 days after completion
+
+4. FINISHING WORKS
+   - Plastering: 12mm thick cement sand plaster 1:4
+   - Painting: Two coats of primer plus two coats of emulsion
+   - Flooring: Vitrified tiles 600x600mm with 2mm joints
+
+5. QUALITY CONTROL
+   - All materials to be tested before use
+   - Concrete cube testing every 50 cum
+   - Steel testing for every 10 tons
+   - Regular supervision by qualified engineer

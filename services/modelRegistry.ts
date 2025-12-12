@@ -1,17 +1,18 @@
 
 import { ModelConfig } from "../types";
+import { LOCAL_MODELS, updateLocalModelsStatus } from "./localModelService";
 
 // Registry of currently supported models
 export const MODEL_REGISTRY: ModelConfig[] = [
   // --- Google Gemini Models (Free Tier Available) ---
   {
-    id: 'gemini-2.5-flash',
-    name: 'Gemini 2.5 Flash',
+    id: 'gemini-2.0-flash',
+    name: 'Gemini 2.0 Flash',
     provider: 'google',
     contextWindow: 1000000,
     apiKeyEnv: 'API_KEY',
     supportsImages: true,
-    description: "Best for large documents. Can read 1000+ pages.",
+    description: "Latest Gemini model. Best for large documents. Can read 1000+ pages.",
     capacityTag: 'High'
   },
   {
@@ -21,17 +22,7 @@ export const MODEL_REGISTRY: ModelConfig[] = [
     contextWindow: 1000000,
     apiKeyEnv: 'API_KEY',
     supportsImages: true,
-    description: "Fast and capable. Handles large files well.",
-    capacityTag: 'High'
-  },
-  {
-    id: 'gemini-1.5-pro',
-    name: 'Gemini 1.5 Pro',
-    provider: 'google',
-    contextWindow: 2000000,
-    apiKeyEnv: 'API_KEY',
-    supportsImages: true,
-    description: "Smartest reasoning for complex construction queries.",
+    description: "Previous generation. Best for large documents. Can read 1000+ pages.",
     capacityTag: 'High'
   },
   
@@ -100,10 +91,30 @@ export const MODEL_REGISTRY: ModelConfig[] = [
   }
 ];
 
-export const DEFAULT_MODEL_ID = 'gemini-2.5-flash';
+export const DEFAULT_MODEL_ID = 'gemini-2.0-flash';
+
+/**
+ * Get all available models (online + local)
+ */
+export const getAllModels = (): ModelConfig[] => {
+  return [...MODEL_REGISTRY, ...LOCAL_MODELS];
+};
+
+/**
+ * Initialize local models (checks availability)
+ */
+export const initializeLocalModels = async () => {
+  try {
+    const updatedLocalModels = await updateLocalModelsStatus();
+    console.log('[Models] Local models initialized:', updatedLocalModels);
+  } catch (error) {
+    console.warn('[Models] Failed to initialize local models:', error);
+  }
+};
 
 export const getModel = (id: string): ModelConfig => {
-  const model = MODEL_REGISTRY.find(m => m.id === id);
+  const allModels = getAllModels();
+  const model = allModels.find(m => m.id === id);
   if (!model) {
     console.warn(`Model ${id} not found in registry. Falling back to default.`);
     return MODEL_REGISTRY.find(m => m.id === DEFAULT_MODEL_ID)!;

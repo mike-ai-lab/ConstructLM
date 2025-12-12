@@ -1,0 +1,21 @@
+--- [Sheet: BOQ_Items] ---
+Item Code,Description,Unit,Quantity,Rate,Amount
+H.01,Excavation for foundation,Cum,150,250,37500
+H.02,Plain cement concrete 1:4:8,Cum,45,3500,157500
+H.03,Reinforced cement concrete 1:2:4,Cum,85,4200,357000
+H.04,Brick work in cement mortar 1:6,Cum,120,2800,336000
+H.05,Plastering with cement mortar 1:4,Sqm,450,180,81000
+H.06,Painting with emulsion paint,Sqm,380,65,24700
+H.07,Steel reinforcement bars,Kg,2500,55,137500
+H.08,Formwork for concrete,Sqm,320,150,48000
+H.09,Waterproofing membrane,Sqm,180,220,39600
+H.10,Electrical conduit installation,Mtr,250,85,21250
+
+--- [Sheet: Materials] ---
+Material,Supplier,Unit Rate,Available Stock
+Cement,ABC Suppliers,450,500 bags
+Steel Bars,XYZ Steel,55000,25 tons
+Bricks,Local Kiln,8,50000 nos
+Sand,River Sand Co,1200,100 cum
+Aggregate,Stone Crusher,1800,80 cum
+Paint,Color Works,2500,200 ltrs

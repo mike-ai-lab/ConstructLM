@@ -1,24 +1,7 @@
 import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
 import { resolve } from 'path'
 
 export default defineConfig({
-  plugins: [react()],
-  base: './',
-  build: {
-    outDir: 'dist',
-    emptyOutDir: true,
-  },
-  server: {
-    port: 5173,
-  },
-  define: {
-    global: 'globalThis',
-  },
-})
-
-// Electron build config
-export const electronConfig = defineConfig({
   build: {
     outDir: 'dist-electron',
     lib: {

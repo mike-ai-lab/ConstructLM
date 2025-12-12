@@ -88,8 +88,33 @@
       });
     </script>
     
-    <!-- SheetJS for parsing Excel files -->
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js" defer></script>
+    <!-- SheetJS for parsing Excel files with timeout fallback -->
+    <script>
+      // SheetJS with timeout and fallback
+      (function() {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js';
+        script.defer = true;
+        script.onerror = function() {
+          console.warn('SheetJS CDN failed to load. Excel parsing may be unavailable.');
+          window.XLSX = null;
+        };
+        
+        // Timeout after 15 seconds
+        const timeout = setTimeout(() => {
+          if (!window.XLSX) {
+            console.warn('SheetJS CDN timeout (15s). Excel parsing may be unavailable.');
+          }
+        }, 15000);
+        
+        script.onload = function() {
+          clearTimeout(timeout);
+          console.log('SheetJS loaded successfully');
+        };
+        
+        document.head.appendChild(script);
+      })();
+    </script>
     
     <style>
       /* Custom scrollbar for better aesthetics */

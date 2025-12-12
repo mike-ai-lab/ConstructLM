@@ -3,16 +3,29 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ProcessedFile, Message } from './types';
 import { parseFile } from './services/fileParser';
 import FileSidebar from './components/FileSidebar';
+import ChatSidebar from './components/ChatSidebar';
 import MessageBubble from './components/MessageBubble';
 import DocumentViewer from './components/DocumentViewer';
 import LiveSession from './components/LiveSession';
 import SettingsModal from './components/SettingsModal';
+import DataManager from './components/DataManager';
 import { sendMessageToLLM } from './services/llmService';
 import { initializeGemini } from './services/geminiService';
 import { MODEL_REGISTRY, DEFAULT_MODEL_ID } from './services/modelRegistry';
-import { Send, Menu, Sparkles, X, FileText, Database, PanelLeft, PanelLeftOpen, Mic, Cpu, ChevronDown, Settings, ShieldCheck } from 'lucide-react';
+import { ragService } from './services/ragService';
+import { Send, Menu, Sparkles, X, FileText, Database, PanelLeft, PanelLeftOpen, Mic, Cpu, ChevronDown, Settings, ShieldCheck, MessageSquare, Plus } from 'lucide-react';
 
-import { saveWorkspaceLocal, loadWorkspaceLocal } from './services/storageService';
+import { saveWorkspaceLocal, loadWorkspaceLocal, getLastActiveModel } from './services/storageService';
+import { 
+  createChatSession, 
+  updateChatSession, 
+  getAllChatSessions, 
+  deleteChatSession, 
+  getChatSession,
+  getActiveChatId,
+  setActiveChatId,
+  ChatListItem 
+} from './services/chatHistoryService';
 
 interface ViewState {
   fileId: string;
@@ -68,6 +81,7 @@ const App: React.FC = () => {
 
   // Settings State
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isDataManagerOpen, setIsDataManagerOpen] = useState(false);
 
   // Layout State
   const [isMobile, setIsMobile] = useState(false);
@@ -89,42 +103,83 @@ const App: React.FC = () => {
   // Live Mode State
   const [isLiveMode, setIsLiveMode] = useState(false);
 
+  // Chat History State
+  const [chatHistory, setChatHistory] = useState<ChatListItem[]>([]);
+  const [activeChatId, setActiveChatIdState] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'history' | 'sources'>('sources');
+
   // --- INITIALIZATION ---
   useEffect(() => {
     initializeGemini();
     
-    // Load Local Data
-    loadWorkspaceLocal().then(data => {
-        if (data) {
-            setFiles(data.files || []); 
-            setMessages(data.messages || []); 
-        } else {
-             setMessages([{
-                id: 'intro',
-                role: 'model',
-                content: 'Hello. I am ConstructLM. \n\nUpload your project documents (PDF, Excel) or a whole folder to begin. \n\n**Tip:** Type "@" in the chat to mention a specific file and improve accuracy.',
-                timestamp: Date.now()
-            }]);
+    // Initialize RAG service
+    ragService.loadIndex();
+    
+    // Load chat history and active chat
+    const loadChatData = async () => {
+      const history = await getAllChatSessions();
+      setChatHistory(history);
+      
+      const activeId = await getActiveChatId();
+      if (activeId) {
+        const activeChat = await getChatSession(activeId);
+        if (activeChat) {
+          setActiveChatIdState(activeId);
+          setFiles(activeChat.files);
+          setMessages(activeChat.messages);
+          setActiveModelId(activeChat.modelId);
+          return;
         }
-    });
+      }
+      
+      // Fallback to legacy data or default
+      loadWorkspaceLocal().then(data => {
+        if (data) {
+          setFiles(data.files || []); 
+          setMessages(data.messages || []); 
+        } else {
+          setMessages([{
+            id: 'intro',
+            role: 'model',
+            content: 'Hello. I am ConstructLM. \n\nUpload your project documents (PDF, Excel) or a whole folder to begin. \n\n**Tip:** Type "@" in the chat to mention a specific file and improve accuracy.',
+            timestamp: Date.now()
+          }]);
+        }
+      });
+    };
+    
+    loadChatData();
   }, []);
 
   // --- AUTO SAVE ---
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      
-      saveTimeoutRef.current = setTimeout(() => {
-          if (files.length > 0 || messages.length > 1) {
-             saveWorkspaceLocal(files, messages);
-          }
-      }, 2000); 
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    
+    saveTimeoutRef.current = setTimeout(() => {
+      if (messages.length > 1) {
+        if (activeChatId) {
+          updateChatSession(activeChatId, messages, files);
+        } else if (messages.some(m => m.role === 'user')) {
+          // Create new chat session if user has sent a message
+          createChatSession(messages, files, activeModelId).then(session => {
+            setActiveChatIdState(session.id);
+            refreshChatHistory();
+          });
+        }
+      }
+    }, 2000); 
 
-      return () => {
-          if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      };
-  }, [files, messages]);
+    return () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    };
+  }, [files, messages, activeChatId, activeModelId]);
+
+  const refreshChatHistory = async () => {
+    const history = await getAllChatSessions();
+    setChatHistory(history);
+  };
 
 
   // --- NORMAL APP LOGIC ---
@@ -190,11 +245,12 @@ const App: React.FC = () => {
       const processed = await parseFile(file);
       newFiles.push(processed);
     }
-    setFiles(prev => [...prev, ...newFiles]);
+    const updatedFiles = [...files, ...newFiles];
+    setFiles(updatedFiles);
     setIsProcessingFiles(false);
   };
 
-  const handleRemoveFile = (id: string) => {
+  const handleRemoveFile = async (id: string) => {
     setFiles(prev => prev.filter(f => f.id !== id));
     if (viewState?.fileId === id) setViewState(null);
   };
@@ -313,6 +369,67 @@ const App: React.FC = () => {
             ? { ...msg, isStreaming: false } 
             : msg
         ));
+        
+        // Auto-save after message completion
+        setTimeout(() => {
+          if (activeChatId) {
+            updateChatSession(activeChatId, [...messages, userMsg, { ...modelMsg, content: accumText, isStreaming: false }], files);
+          }
+        }, 1000);
+    }
+  };
+
+  const handleNewChat = async () => {
+    setMessages([{
+      id: 'intro',
+      role: 'model',
+      content: 'Hello. I am ConstructLM. \n\nUpload your project documents (PDF, Excel) or a whole folder to begin. \n\n**Tip:** Type "@" in the chat to mention a specific file and improve accuracy.',
+      timestamp: Date.now()
+    }]);
+    setFiles([]);
+    setActiveChatIdState(null);
+    await setActiveChatId(null);
+    setViewState(null);
+  };
+
+  const handleSelectChat = async (chatItem: ChatListItem) => {
+    const chat = await getChatSession(chatItem.id);
+    if (chat) {
+      setMessages(chat.messages);
+      setFiles(chat.files);
+      setActiveModelId(chat.modelId);
+      setActiveChatIdState(chat.id);
+      await setActiveChatId(chat.id);
+      setViewState(null);
+    }
+  };
+
+  const handleDeleteChat = async (chatId: string) => {
+    await deleteChatSession(chatId);
+    if (activeChatId === chatId) {
+      handleNewChat();
+    }
+    refreshChatHistory();
+  };
+
+  const loadTestFile = async (fileName: string, type: 'excel' | 'text') => {
+    try {
+      const response = await fetch(`/${fileName}`);
+      const content = await response.text();
+      
+      const testFile: ProcessedFile = {
+        id: Date.now().toString(),
+        name: fileName,
+        type: type,
+        size: content.length,
+        content: content,
+        status: 'ready',
+        fileHandle: null
+      };
+      
+      setFiles(prev => [...prev.filter(f => f.name !== fileName), testFile]);
+    } catch (error) {
+      console.error('Failed to load test file:', error);
     }
   };
 
@@ -336,6 +453,7 @@ const App: React.FC = () => {
     <div className="flex h-screen w-full bg-white overflow-hidden text-sm relative">
       {isLiveMode && <LiveSession onClose={() => setIsLiveMode(false)} />}
       {isSettingsOpen && <SettingsModal onClose={() => setIsSettingsOpen(false)} />}
+      {isDataManagerOpen && <DataManager files={files} onClose={() => setIsDataManagerOpen(false)} />}
       
       {isMobile && !isSidebarOpen && (
           <button 
@@ -349,28 +467,109 @@ const App: React.FC = () => {
       {/* --- LEFT SIDEBAR --- */}
       <div 
         className={`
-            fixed md:relative z-40 h-full bg-[#fcfcfc] flex flex-col transition-all duration-300 ease-in-out border-r border-gray-200 md:border-r-0
+            fixed md:relative z-40 h-full bg-white flex flex-col transition-all duration-300 ease-in-out border-r border-gray-200
             ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
             ${!isSidebarOpen && !isMobile ? 'md:w-0 md:opacity-0 md:overflow-hidden' : ''}
         `}
         style={{ width: isMobile ? '85%' : (isSidebarOpen ? sidebarWidth : 0) }}
       >
         <div className="h-full flex flex-col relative w-full">
-            {isMobile && (
+            <div className="p-4 flex items-center justify-between border-b border-gray-200">
+                <h2 className="text-xl font-bold text-indigo-600">Context Console</h2>
+                {isMobile && (
+                    <button 
+                        onClick={() => setIsSidebarOpen(false)}
+                        className="p-1 text-gray-500 hover:text-gray-800 rounded-full"
+                    >
+                        <X size={20} />
+                    </button>
+                )}
+            </div>
+
+            {/* Tabs */}
+            <div className="flex border-b border-gray-200">
                 <button 
-                    onClick={() => setIsSidebarOpen(false)}
-                    className="absolute top-3 right-3 p-1 text-gray-400"
+                    onClick={() => setActiveTab('history')}
+                    className={`w-1/2 py-2 text-sm font-medium text-center transition duration-150 ease-in-out border-b-2 ${
+                        activeTab === 'history' 
+                            ? 'border-indigo-600 text-indigo-600' 
+                            : 'border-transparent text-gray-500 hover:text-gray-600'
+                    }`}
                 >
-                    <X size={20} />
+                    History
                 </button>
-            )}
-            <div className={`flex flex-col h-full w-full ${!isSidebarOpen && !isMobile ? 'hidden' : 'block'}`}>
-                 <FileSidebar 
-                    files={files} 
-                    onUpload={handleFileUpload} 
-                    onRemove={handleRemoveFile}
-                    isProcessing={isProcessingFiles}
-                />
+                <button 
+                    onClick={() => setActiveTab('sources')}
+                    className={`w-1/2 py-2 text-sm font-medium text-center transition duration-150 ease-in-out border-b-2 ${
+                        activeTab === 'sources' 
+                            ? 'border-indigo-600 text-indigo-600' 
+                            : 'border-transparent text-gray-500 hover:text-gray-600'
+                    }`}
+                >
+                    Sources
+                </button>
+            </div>
+
+            {/* Panel Content */}
+            <div className="flex-1 overflow-hidden">
+                {activeTab === 'history' ? (
+                    <div className="p-4 h-full overflow-y-auto">
+                        <div className="mb-4">
+                            <button
+                                onClick={handleNewChat}
+                                className="w-full flex items-center gap-2 px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                            >
+                                <Plus size={16} />
+                                New Chat
+                            </button>
+                        </div>
+                        
+                        <h3 className="text-lg font-semibold mb-3">Recent Sessions</h3>
+                        <div className="space-y-2">
+                            {chatHistory.map(chat => (
+                                <div
+                                    key={chat.id}
+                                    className={`group p-3 rounded-lg cursor-pointer transition-colors border ${
+                                        activeChatId === chat.id 
+                                            ? 'bg-indigo-50 border-indigo-200 text-indigo-700' 
+                                            : 'bg-white border-gray-200 hover:bg-gray-50'
+                                    }`}
+                                    onClick={() => handleSelectChat(chat)}
+                                >
+                                    <div className="flex items-start justify-between">
+                                        <div className="flex-1 min-w-0">
+                                            <p className="font-semibold text-sm truncate">{chat.title}</p>
+                                            <p className="text-xs text-gray-500 mt-1">
+                                                {new Date(chat.updatedAt).toLocaleDateString()}
+                                            </p>
+                                        </div>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDeleteChat(chat.id);
+                                            }}
+                                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 hover:text-red-600 rounded transition-all"
+                                        >
+                                            <X size={12} />
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                            {chatHistory.length === 0 && (
+                                <p className="text-center text-gray-400 mt-6">No chat history yet</p>
+                            )}
+                        </div>
+                    </div>
+                ) : (
+                    <div className={`flex flex-col h-full w-full ${!isSidebarOpen && !isMobile ? 'hidden' : 'block'}`}>
+                        <FileSidebar 
+                            files={files} 
+                            onUpload={handleFileUpload} 
+                            onRemove={handleRemoveFile}
+                            isProcessing={isProcessingFiles}
+                        />
+                    </div>
+                )}
             </div>
         </div>
       </div>
@@ -399,6 +598,13 @@ const App: React.FC = () => {
                 <Sparkles size={16} className="text-white" />
              </div>
              <h1 className="font-semibold text-gray-800 text-lg tracking-tight mr-4">ConstructLM</h1>
+             
+             {activeChatId && (
+                 <div className="flex items-center gap-2 text-xs text-gray-500">
+                     <MessageSquare size={14} />
+                     <span>Active Session</span>
+                 </div>
+             )}
              
              <div className="relative" ref={modelMenuRef}>
                  <button 
@@ -451,6 +657,31 @@ const App: React.FC = () => {
                   Local Mode
               </div>
 
+              <div className="flex gap-2">
+                  <button 
+                    onClick={() => loadTestFile('test-boq.csv', 'excel')}
+                    className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded hover:bg-blue-200 transition-colors"
+                    title="Load Test BOQ"
+                  >
+                      📊
+                  </button>
+                  <button 
+                    onClick={() => loadTestFile('test-specs.txt', 'text')}
+                    className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded hover:bg-green-200 transition-colors"
+                    title="Load Test Specs"
+                  >
+                      📋
+                  </button>
+              </div>
+
+              <button 
+                onClick={() => setIsDataManagerOpen(true)}
+                className="p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 rounded-full transition-colors"
+                title="Data Manager"
+              >
+                  <Database size={18} />
+              </button>
+              
               <button 
                 onClick={() => setIsSettingsOpen(true)}
                 className="p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 rounded-full transition-colors"
@@ -477,7 +708,7 @@ const App: React.FC = () => {
         </div>
 
         {/* Input Area */}
-        <div className="p-4 md:p-6 bg-gradient-to-t from-white via-white to-transparent relative">
+        <div className="p-4 md:p-6 bg-white border-t border-gray-100 relative">
           <div className="max-w-3xl mx-auto w-full relative">
             
             {input.trim() && (
@@ -550,9 +781,7 @@ const App: React.FC = () => {
                     </button>
                 </div>
             </div>
-            <div className="text-center mt-2 flex justify-center gap-4">
-                 <span className="text-[10px] text-gray-400">AI can make mistakes. Please verify citations.</span>
-            </div>
+
           </div>
         </div>
       </div>

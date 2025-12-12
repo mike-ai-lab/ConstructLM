@@ -3,10 +3,14 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "electron:dev": "concurrently \"vite\" \"vite build --config electron.vite.config.ts --watch\" \"wait-on dist-electron/main.js && electron .\"",
+    "electron:build": "vite build && vite build --config electron.vite.config.ts && electron-builder",
+    "electron:pack": "vite build && vite build --config electron.vite.config.ts && electron-builder --dir"
   },
   "dependencies": {
     "@google/genai": "^1.31.0",
@@ -19,6 +23,29 @@
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",
     "typescript": "~5.8.2",
-    "vite": "^6.2.0"
+    "vite": "^6.2.0",
+    "electron-builder": "^25.0.0",
+    "concurrently": "^9.0.0",
+    "wait-on": "^8.0.0"
+  },
+  "build": {
+    "appId": "com.constructlm.app",
+    "productName": "ConstructLM",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "target": "dmg"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
   }
 }

@@ -1,0 +1,237 @@
+ cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation
+(anonymous) @ ?plugins=typography:66
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent:1  Failed to load resource: the server responded with a status of 400 ()
+geminiService.ts:143 [TTS] Error: ApiError: {"error":{"code":400,"message":"API key not valid. Please pass a valid API key.","status":"INVALID_ARGUMENT","details":[{"@type":"type.googleapis.com/google.rpc.ErrorInfo","reason":"API_KEY_INVALID","domain":"googleapis.com","metadata":{"service":"generativelanguage.googleapis.com"}},{"@type":"type.googleapis.com/google.rpc.LocalizedMessage","locale":"en-US","message":"API key not valid. Please pass a valid API key."}]}}
+    at throwErrorIfNotOK (@google_genai.js?v=b57649b2:10413:24)
+    at async @google_genai.js?v=b57649b2:10148:7
+    at async Models.generateContent (@google_genai.js?v=b57649b2:11237:16)
+    at async generateSpeech (geminiService.ts:123:26)
+    at async handlePlayAudio (MessageBubble.tsx:30:27)
+generateSpeech @ geminiService.ts:143
+MessageBubble.tsx:51 Failed to play audio ApiError: {"error":{"code":400,"message":"API key not valid. Please pass a valid API key.","status":"INVALID_ARGUMENT","details":[{"@type":"type.googleapis.com/google.rpc.ErrorInfo","reason":"API_KEY_INVALID","domain":"googleapis.com","metadata":{"service":"generativelanguage.googleapis.com"}},{"@type":"type.googleapis.com/google.rpc.LocalizedMessage","locale":"en-US","message":"API key not valid. Please pass a valid API key."}]}}
+    at throwErrorIfNotOK (@google_genai.js?v=b57649b2:10413:24)
+    at async @google_genai.js?v=b57649b2:10148:7
+    at async Models.generateContent (@google_genai.js?v=b57649b2:11237:16)
+    at async generateSpeech (geminiService.ts:123:26)
+    at async handlePlayAudio (MessageBubble.tsx:30:27)
+handlePlayAudio @ MessageBubble.tsx:51
+generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent:1  Failed to load resource: the server responded with a status of 400 ()
+geminiService.ts:143 [TTS] Error: ApiError: {"error":{"code":400,"message":"API key not valid. Please pass a valid API key.","status":"INVALID_ARGUMENT","details":[{"@type":"type.googleapis.com/google.rpc.ErrorInfo","reason":"API_KEY_INVALID","domain":"googleapis.com","metadata":{"service":"generativelanguage.googleapis.com"}},{"@type":"type.googleapis.com/google.rpc.LocalizedMessage","locale":"en-US","message":"API key not valid. Please pass a valid API key."}]}}
+    at throwErrorIfNotOK (@google_genai.js?v=b57649b2:10413:24)
+    at async @google_genai.js?v=b57649b2:10148:7
+    at async Models.generateContent (@google_genai.js?v=b57649b2:11237:16)
+    at async generateSpeech (geminiService.ts:123:26)
+    at async handlePlayAudio (MessageBubble.tsx:30:27)
+generateSpeech @ geminiService.ts:143
+MessageBubble.tsx:51 Failed to play audio ApiError: {"error":{"code":400,"message":"API key not valid. Please pass a valid API key.","status":"INVALID_ARGUMENT","details":[{"@type":"type.googleapis.com/google.rpc.ErrorInfo","reason":"API_KEY_INVALID","domain":"googleapis.com","metadata":{"service":"generativelanguage.googleapis.com"}},{"@type":"type.googleapis.com/google.rpc.LocalizedMessage","locale":"en-US","message":"API key not valid. Please pass a valid API key."}]}}
+    at throwErrorIfNotOK (@google_genai.js?v=b57649b2:10413:24)
+    at async @google_genai.js?v=b57649b2:10148:7
+    at async Models.generateContent (@google_genai.js?v=b57649b2:11237:16)
+    at async generateSpeech (geminiService.ts:123:26)
+    at async handlePlayAudio (MessageBubble.tsx:30:27)
+handlePlayAudio @ MessageBubble.tsx:51
+generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent:1  Failed to load resource: the server responded with a status of 400 ()
+geminiService.ts:143 [TTS] Error: ApiError: {"error":{"code":400,"message":"API key not valid. Please pass a valid API key.","status":"INVALID_ARGUMENT","details":[{"@type":"type.googleapis.com/google.rpc.ErrorInfo","reason":"API_KEY_INVALID","domain":"googleapis.com","metadata":{"service":"generativelanguage.googleapis.com"}},{"@type":"type.googleapis.com/google.rpc.LocalizedMessage","locale":"en-US","message":"API key not valid. Please pass a valid API key."}]}}
+    at throwErrorIfNotOK (@google_genai.js?v=b57649b2:10413:24)
+    at async @google_genai.js?v=b57649b2:10148:7
+    at async Models.generateContent (@google_genai.js?v=b57649b2:11237:16)
+    at async generateSpeech (geminiService.ts:123:26)
+    at async handlePlayAudio (MessageBubble.tsx:30:27)
+generateSpeech @ geminiService.ts:143
+MessageBubble.tsx:51 Failed to play audio ApiError: {"error":{"code":400,"message":"API key not valid. Please pass a valid API key.","status":"INVALID_ARGUMENT","details":[{"@type":"type.googleapis.com/google.rpc.ErrorInfo","reason":"API_KEY_INVALID","domain":"googleapis.com","metadata":{"service":"generativelanguage.googleapis.com"}},{"@type":"type.googleapis.com/google.rpc.LocalizedMessage","locale":"en-US","message":"API key not valid. Please pass a valid API key."}]}}
+    at throwErrorIfNotOK (@google_genai.js?v=b57649b2:10413:24)
+    at async @google_genai.js?v=b57649b2:10148:7
+    at async Models.generateContent (@google_genai.js?v=b57649b2:11237:16)
+    at async generateSpeech (geminiService.ts:123:26)
+    at async handlePlayAudio (MessageBubble.tsx:30:27)
+handlePlayAudio @ MessageBubble.tsx:51
+generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent:1  Failed to load resource: the server responded with a status of 400 ()
+geminiService.ts:143 [TTS] Error: ApiError: {"error":{"code":400,"message":"API key not valid. Please pass a valid API key.","status":"INVALID_ARGUMENT","details":[{"@type":"type.googleapis.com/google.rpc.ErrorInfo","reason":"API_KEY_INVALID","domain":"googleapis.com","metadata":{"service":"generativelanguage.googleapis.com"}},{"@type":"type.googleapis.com/google.rpc.LocalizedMessage","locale":"en-US","message":"API key not valid. Please pass a valid API key."}]}}
+    at throwErrorIfNotOK (@google_genai.js?v=b57649b2:10413:24)
+    at async @google_genai.js?v=b57649b2:10148:7
+    at async Models.generateContent (@google_genai.js?v=b57649b2:11237:16)
+    at async generateSpeech (geminiService.ts:123:26)
+    at async handlePlayAudio (MessageBubble.tsx:30:27)
+generateSpeech @ geminiService.ts:143
+MessageBubble.tsx:51 Failed to play audio ApiError: {"error":{"code":400,"message":"API key not valid. Please pass a valid API key.","status":"INVALID_ARGUMENT","details":[{"@type":"type.googleapis.com/google.rpc.ErrorInfo","reason":"API_KEY_INVALID","domain":"googleapis.com","metadata":{"service":"generativelanguage.googleapis.com"}},{"@type":"type.googleapis.com/google.rpc.LocalizedMessage","locale":"en-US","message":"API key not valid. Please pass a valid API key."}]}}
+    at throwErrorIfNotOK (@google_genai.js?v=b57649b2:10413:24)
+    at async @google_genai.js?v=b57649b2:10148:7
+    at async Models.generateContent (@google_genai.js?v=b57649b2:11237:16)
+    at async generateSpeech (geminiService.ts:123:26)
+    at async handlePlayAudio (MessageBubble.tsx:30:27)
+handlePlayAudio @ MessageBubble.tsx:51
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+react-dom_client.js?v=853df05e:2704 Unable to preventDefault inside passive event listener invocation.
+preventDefault @ react-dom_client.js?v=853df05e:2704
+:3000/api/groq/openai/v1/chat/completions:1  Failed to load resource: the server responded with a status of 400 (Bad Request)
+llmService.ts:205 [groq] Error: Error: API Error 400: Please reduce the length of the messages or completion.
+    at streamOpenAICompatible (llmService.ts:170:19)
+    at async sendMessageToLLM (llmService.ts:92:20)
+    at async handleSendMessage (App.tsx:288:7)
+streamOpenAICompatible @ llmService.ts:205
+App.tsx:303 Error: API Error 400: Please reduce the length of the messages or completion.
+    at streamOpenAICompatible (llmService.ts:170:19)
+    at async sendMessageToLLM (llmService.ts:92:20)
+    at async handleSendMessage (App.tsx:288:7)
+handleSendMessage @ App.tsx:303
+react-dom_client.js?v=853df05e:3529 Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+getRootForUpdatedFiber @ react-dom_client.js?v=853df05e:3529
+react-dom_client.js?v=853df05e:3529 Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+getRootForUpdatedFiber @ react-dom_client.js?v=853df05e:3529
+react-dom_client.js?v=853df05e:3529 Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+getRootForUpdatedFiber @ react-dom_client.js?v=853df05e:3529
+react-dom_client.js?v=853df05e:3529 Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+getRootForUpdatedFiber @ react-dom_client.js?v=853df05e:3529

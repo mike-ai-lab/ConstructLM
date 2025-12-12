@@ -365,8 +365,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
       const target = containerRef.current.querySelector('#scroll-target-primary') || containerRef.current.querySelector('[data-highlighted="true"]');
       
       if (target) {
-           // Using inline: 'nearest' to avoid horizontal jumping/centering
-           target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+           target.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
            // Visual Flash
            target.classList.remove('bg-amber-100', 'bg-blue-50'); 
            target.classList.add('bg-yellow-300', 'transition-colors', 'duration-500');
@@ -438,7 +437,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
       if (containerRef.current) {
           const scrollHeight = containerRef.current.scrollHeight;
           const targetTop = (marker.topPercent / 100) * scrollHeight;
-          containerRef.current.scrollTo({ top: targetTop - (containerRef.current.clientHeight / 2), behavior: 'smooth' });
+          containerRef.current.scrollTo({ top: targetTop - 100, behavior: 'smooth' });
       }
   };
 

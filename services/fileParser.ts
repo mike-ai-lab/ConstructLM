@@ -115,6 +115,9 @@ const extractExcelText = async (file: File): Promise<string> => {
     const arrayBuffer = await file.arrayBuffer();
     if (!window.XLSX) throw new Error("SheetJS library not loaded");
 
+    // Yield to UI thread before heavy parsing
+    await new Promise(resolve => setTimeout(resolve, 0));
+    
     const workbook = window.XLSX.read(arrayBuffer, { type: 'array' });
     let fullText = `[METADATA: Excel Workbook "${file.name}", Sheets: ${workbook.SheetNames.join(', ')}]\n\n`;
 

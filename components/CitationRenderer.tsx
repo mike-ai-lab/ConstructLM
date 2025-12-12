@@ -158,10 +158,23 @@ const CitationChip: React.FC<CitationChipProps> = ({ index, fileName, location, 
 
   const handleToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!isOpen && triggerRef.current) {
+    
+    // If already open, trigger the action directly instead of closing
+    if (isOpen) {
+      let page = 1;
+      if (location) {
+        const pageMatch = location.match(/(?:Page|p\.?)\s*[:#.]?\s*(\d+)/i);
+        if (pageMatch) page = parseInt(pageMatch[1], 10);
+      }
+      onViewDocument(fileName, page, quote, location);
+      return;
+    }
+
+    // Open the citation window
+    if (triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
       const viewportHeight = window.innerHeight;
-      const POPOVER_EST_HEIGHT = 450; 
+      const POPOVER_EST_HEIGHT = 380; 
       let top = rect.bottom + 8;
       // Flip up if near bottom
       if (top + POPOVER_EST_HEIGHT > viewportHeight) {
@@ -171,7 +184,12 @@ const CitationChip: React.FC<CitationChipProps> = ({ index, fileName, location, 
       const left = Math.max(16, Math.min(rect.left - 20, window.innerWidth - 520));
       setCoords({ top, left });
     }
-    setIsOpen(!isOpen);
+    setIsOpen(true);
+  };
+
+  const handleDoubleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsOpen(true);
   };
 
   return (
@@ -179,14 +197,11 @@ const CitationChip: React.FC<CitationChipProps> = ({ index, fileName, location, 
       <span 
         ref={triggerRef}
         onClick={handleToggle}
-        className={`relative inline-flex items-center gap-1 px-1.5 py-0.5 ml-1 align-middle text-[10px] font-bold rounded border transition-colors shadow-sm cursor-pointer select-none
-          ${isOpen 
-            ? 'bg-blue-100 border-blue-300 text-blue-800' 
-            : 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 hover:border-blue-300'
-          }`}
+        onDoubleClick={handleDoubleClick}
+        className="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-blue-600 rounded-full cursor-pointer select-none hover:bg-blue-700 transition-colors shadow-sm"
+        title={`Citation ${index + 1}: ${fileName} - ${location}`}
       >
-        <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] ${isOpen ? 'bg-blue-200' : 'bg-blue-200'}`}>C{index + 1}</span>
-        <span className="max-w-[80px] truncate">{fileName}</span>
+        {index + 1}
       </span>
       {isOpen && (
         <CitationPortal 
@@ -225,6 +240,9 @@ interface CitationPortalProps {
 
 const CitationPortal: React.FC<CitationPortalProps> = ({ onClose, coords, fileName, location, quote, files, triggerRef, onOpenFull }) => {
   const popoverRef = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState(coords);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   
   const file = useMemo(() => files.find(f => f.name === fileName), [files, fileName]);
   
@@ -257,28 +275,62 @@ const CitationPortal: React.FC<CitationPortalProps> = ({ onClose, coords, fileNa
     return () => window.removeEventListener('wheel', handleWheel);
   }, []);
 
+  const handleHeaderMouseDown = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest('button')) return; // Don't drag if clicking buttons
+    setIsDragging(true);
+    setDragOffset({
+      x: e.clientX - position.left,
+      y: e.clientY - position.top
+    });
+  };
+
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      setPosition({
+        left: e.clientX - dragOffset.x,
+        top: e.clientY - dragOffset.y
+      });
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging, dragOffset]);
+
   const isPdfMode = file?.type === 'pdf' && pdfPageNumber !== null;
 
   return createPortal(
     <div 
       ref={popoverRef}
       className="fixed z-[100000] w-[500px] max-w-[90vw] bg-white text-gray-800 rounded-xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden ring-1 ring-black/10 animate-in fade-in zoom-in-95 duration-150"
-      style={{ top: coords.top, left: coords.left, height: '450px' }}
+      style={{ top: position.top, left: position.left, height: '380px' }}
     >
-      {/* Header */}
-      <div className="bg-gray-50 px-4 py-2 border-b border-gray-200 flex items-center justify-between flex-shrink-0 z-20 relative">
+      {/* Header - Draggable */}
+      <div 
+        className="bg-gray-50 px-3 py-1.5 border-b border-gray-200 flex items-center justify-between flex-shrink-0 z-20 relative cursor-move hover:bg-gray-100 transition-colors"
+        onMouseDown={handleHeaderMouseDown}
+      >
         <div className="flex items-center gap-2 overflow-hidden">
-          <BookOpen size={16} className="text-blue-600 flex-shrink-0" />
+          <BookOpen size={14} className="text-blue-600 flex-shrink-0" />
           <div className="flex flex-col min-w-0">
-              <span className="font-semibold text-sm text-gray-800 truncate max-w-[200px]" title={fileName}>{fileName}</span>
-              <span className="text-[10px] text-gray-500 uppercase flex items-center gap-1">
-                 {isPdfMode ? 'PDF Preview' : 'Extracted Text'} <ChevronRight size={10} /> {location}
+              <span className="font-semibold text-xs text-gray-800 truncate max-w-[200px]" title={fileName}>{fileName}</span>
+              <span className="text-[9px] text-gray-500 uppercase flex items-center gap-1">
+                 {isPdfMode ? 'PDF' : 'Text'} <ChevronRight size={9} /> {location}
               </span>
           </div>
         </div>
-        <div className="flex items-center gap-1">
-            <button onClick={onOpenFull} className="text-blue-600 hover:text-blue-800 p-1.5 rounded-full hover:bg-blue-50 transition-colors flex items-center gap-1 text-xs font-medium" title="Open Full Document"><Maximize2 size={14} /><span className="hidden sm:inline">Open</span></button>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-700 p-1.5 rounded-full hover:bg-gray-200 transition-colors"><X size={16} /></button>
+        <div className="flex items-center gap-0.5" onMouseDown={(e) => e.stopPropagation()}>
+            <button onClick={onOpenFull} className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50 transition-colors flex items-center gap-1 text-[10px] font-medium" title="Open Full Document"><Maximize2 size={12} /></button>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-700 p-1 rounded hover:bg-gray-200 transition-colors"><X size={14} /></button>
         </div>
       </div>
       
@@ -567,8 +619,7 @@ const TextContextViewer: React.FC<{ file?: ProcessedFile; quote: string; locatio
         const el = containerRef.current.querySelector('#scroll-target-primary') || containerRef.current.querySelector('[data-highlighted="true"]');
         
         if (el) {
-            // Using inline: 'nearest' to prevent unwanted horizontal centering of the Excel view
-            el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+            el.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
             scrollAttempts.current = 0; // Reset
         } else if (scrollAttempts.current < 10) {
             // DOM might not be ready (especially for large Excel tables)
@@ -722,16 +773,19 @@ const TextContextViewer: React.FC<{ file?: ProcessedFile; quote: string; locatio
                             <table className="min-w-full divide-y divide-gray-200 text-[10px]">
                                 <tbody className="bg-white divide-y divide-gray-100">
                                     {rows.map((row, rIdx) => {
+                                        const isHeaderRow = rIdx === 0;
                                         const visualRowNumber = rIdx + 1;
                                         let isHighlightRow = false;
 
-                                        if (targetRowStart !== -1 && sheetNameMatch) {
+                                        // Only highlight data rows, not the header
+                                        // targetRowStart/End are 1-indexed from location string, visualRowNumber is 1-indexed
+                                        if (!isHeaderRow && targetRowStart !== -1 && sheetNameMatch) {
                                             if (visualRowNumber >= targetRowStart && visualRowNumber <= targetRowEnd) {
                                                 isHighlightRow = true;
                                             }
                                         }
 
-                                        if (!isHighlightRow && !hasColumnTarget && quote && targetRowStart === -1) {
+                                        if (!isHighlightRow && !hasColumnTarget && quote && targetRowStart === -1 && !isHeaderRow) {
                                             if (isTokenMatch(row)) {
                                                 isHighlightRow = true;
                                             }
@@ -748,25 +802,27 @@ const TextContextViewer: React.FC<{ file?: ProcessedFile; quote: string; locatio
                                                 key={rIdx} 
                                                 id={rowId}
                                                 data-highlighted={isHighlightRow ? "true" : "false"}
-                                                className={`
-                                                    ${rIdx === 0 ? "bg-gray-50 font-semibold text-gray-900" : "text-gray-700"}
-                                                    ${isHighlightRow ? "bg-amber-100 ring-2 ring-inset ring-amber-400 z-10 relative" : ""}
-                                                `}
+                                                className={`relative transition-colors duration-200`}
+                                                style={{
+                                                    backgroundColor: isHighlightRow ? '#FFFF4C' : 'transparent'
+                                                }}
                                             >
-                                                <td className={`px-2 py-1 w-6 select-none text-right border-r border-gray-100 bg-gray-50/50 ${isHighlightRow ? "text-amber-700 font-bold" : "text-gray-300"}`}>
+                                                <td className={`px-2 py-1 w-6 select-none text-right border-r border-gray-100 bg-gray-50/50 font-medium relative z-10 ${isHighlightRow ? "text-gray-900" : "text-gray-400"}`}>
                                                     {visualRowNumber}
                                                 </td>
                                                 {row.map((cell, cIdx) => {
-                                                    const isHighlightCol = sheetNameMatch && sheetTargetCols.has(cIdx);
+                                                    const isHighlightCol = sheetNameMatch && sheetTargetCols.has(cIdx) && !isHeaderRow;
+                                                    const isCellHighlight = isHighlightRow && isHighlightCol;
                                                     return (
                                                         <td 
                                                             key={cIdx} 
-                                                            data-highlighted={isHighlightCol && rIdx === 0 ? "true" : undefined}
-                                                            className={`
-                                                                px-2 py-1 whitespace-nowrap border-r border-gray-100 last:border-none max-w-[200px] truncate
-                                                                ${isHighlightCol ? 'bg-blue-50/50 border-l border-r border-blue-100' : ''}
-                                                                ${isHighlightCol && rIdx === 0 ? 'bg-blue-100 text-blue-800 font-bold ring-2 ring-inset ring-blue-300' : ''}
-                                                            `} 
+                                                            data-highlighted={isCellHighlight ? "true" : undefined}
+                                                            className={`px-2 py-1 whitespace-nowrap border-r border-gray-100 last:border-none max-w-[200px] truncate relative z-10 transition-all duration-200`}
+                                                            style={{
+                                                                backgroundColor: isCellHighlight ? '#3aa2ff' : (isHighlightRow ? '#FFFF4C' : 'transparent'),
+                                                                color: isCellHighlight ? '#ffffff' : (isHeaderRow ? '#111827' : '#374151'),
+                                                                fontWeight: isCellHighlight ? '700' : 'normal'
+                                                            }}
                                                             title={cell}
                                                         >
                                                             {cell}
