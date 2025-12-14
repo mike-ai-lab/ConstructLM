@@ -1,0 +1,167 @@
+gemini-1.5-flash
+
+The "BWB_DOORS_WINDOWS_SUMMARY.pdf" document provides a detailed schedule of various doors, windows, and openings for the BWB building.
+1. Glazed Doors:
+  Non Fire Rated Glazed Doors:
+  EXT-C1: Double leaf, 2400mm
+ (W) x 3400mm 
+ (H), 35 dB 
+ acoustic rating, with overhead fix panel and clear tempered glass 
+. 5 units 
+ located in Circulation 
+.
+  EXT-C2: Double leaf, 2000mm
+ (W) x 3200mm 
+ (H), 32 dB 
+ acoustic rating, with overhead fix panel and clear tempered glass 
+. 1 unit 
+ for Terrace 
+.
+  EXT-C3: Single leaf, 1800mm
+ (W) x 3000mm 
+ (H), 32 dB 
+ acoustic rating, with overhead fix panel and clear tempered glass 
+. 1 unit 
+ for General areas 
+.
+  EXT-D1, D2, D3, D4, H4A, H4B, H5: Double leaf doors
+ with clear tempered glass, overhead fix panel, and external timber shutter in NAJDI design 
+. Quantities range from 1 
+ to 19 
+, with widths from 1900mm 
+ to 2800mm 
+ and heights from 2900mm 
+ to 4000mm 
+. Acoustic ratings are 32 dB 
+, 35 dB 
+, or various 
+.
+2. Wooden Solid Doors:
+  Non Fire Rated Wooden Solid Doors:
+  EXT-A1, A2, A3: Single leaf doors
+ with NAJDI design 
+. Quantities from 2 
+ to 6 
+, widths from 900mm 
+ to 1200mm 
+, and heights from 2200mm 
+ to 3200mm 
+.
+  EXT-B1, B2, J: Double leaf doors
+ with NAJDI design 
+. Quantities from 1 
+ to 2 
+, widths from 2000mm 
+ to 2700mm 
+, and heights from 2750mm 
+ to 3200mm 
+.
+  Fire Rated Wooden Solid Doors:
+  EXT-H1, H2, H3: Double leaf doors
+ with NAJDI design 
+. Quantities from 1 
+ to 2 
+, widths from 2200mm 
+ to 6000mm 
+, and heights from 4000mm 
+ to 5500mm 
+.
+  EXT-A2: Single leaf, 1100mm
+ (W) x 2200mm 
+ (H), Fire Rated 
+. 4 units 
+.
+  EXT-A4: Single leaf, 1100mm
+ (W) x 2300mm 
+ (H), 1 Hour Fire Rated 
+, 45 dB 
+ acoustic rating. 1 unit 
+.
+  EXT-B1: Double leaf, 2500mm
+ (W) x 3200mm 
+ (H), 1 Hour Fire Rated 
+. 1 unit 
+.
+3. Overhead Coiling Metal Doors:
+  EXT-I1, I2, I3: Non Fire Rated
+ overhead coiling metal doors 
+. 1 unit 
+ each, located in B2 Service Yard - Circulation 
+. Widths range from 4200mm 
+ to 9350mm 
+ and heights from 3000mm 
+ to 5525mm 
+. Two units (EXT-I2, EXT-I3) are security controllable 
+.
+4. Hollow Metal Doors:
+  Non Fire Rated Hollow Metal Doors:
+  INT-A1b, A1c, A3a, A3b, C, F, G: Single or double leaf
+ hollow metal doors 
+. Quantities from 1 
+ to 4 
+, widths from 800mm 
+ to 1800mm 
+, and heights from 2000mm 
+ to 2200mm 
+. Acoustic ratings are 30 dB 
+ or various 
+.
+  Fire Rated Hollow Metal Doors:
+  INT-B1, B2, B3, C, F, G, A1, A1a, A1b, A1c: Single or double leaf
+ hollow metal doors 
+. Fire ratings include Fire Rated 
+, 1 Hour Fire Rated 
+, and 1.5 Hour Fire Rated 
+. Quantities range from 0 
+ (for INT-A1) to 16 
+. Widths from 1000mm 
+ to 2500mm 
+ and heights from 2000mm 
+ to 3000mm 
+.
+5. Opening Furjat:
+  NP-01 to NP-08: These are openings of type "Opening Furjat"
+ with no specified fire rating 
+. Quantities range from 4 
+ to 186 
+. Dimensions vary significantly, e.g., 310mm 
+ (W) x 270mm 
+ (H) for NP-01 
+ and 4235mm 
+ (W) x 3270mm 
+ (H) for NP-08 
+.
+6. Fixed Glass Windows:
+  W-01, W-02, W-04, W-05, W-06, W-07, W-09, W-14, W-15: Fixed clear glass windows with aluminum frames
+. Quantities from 1 
+ to 60 
+. Dimensions vary, e.g., W-02 is 300mm 
+ (W) x 1800mm 
+ (H) 
+, while W-09 is 1100mm 
+ (W) x 2400mm 
+ (H) 
+. Some types have various sub-types 
+.
+  W-11, W-12, W-13: Fixed clear glass windows with aluminum frames
+ and solid wood leaves with NAJDI pattern 
+. Quantities from 1 
+ to 27 
+.
+7. Hinged Glass Windows:
+  W-03, W-08, W-10: Hinged clear glass windows with aluminum frames
+. Quantities from 6 
+ to 76 
+. Dimensions vary, e.g., W-03 is 900mm 
+ (W) x 1300mm 
+ (H) 
+.
+8. Frameless Store Fronts:
+  P01, P02, P03: Single leaf frameless store front glazing systems
+ with a 32 dB 
+ acoustic rating. 1 unit 
+ each, located at the Entrance 
+. Widths range from 1642mm 
+ to 3888mm 
+, all with a height of 2700mm 
+.

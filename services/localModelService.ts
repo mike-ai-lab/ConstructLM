@@ -71,7 +71,7 @@ export const checkOllamaConnection = async (): Promise<boolean> => {
     clearTimeout(timeoutId);
     return response.ok;
   } catch (error) {
-    console.warn('[Ollama] Connection check failed:', error);
+    // Silent fail - don't log errors when Ollama is not running
     return false;
   }
 };
@@ -96,7 +96,7 @@ export const getAvailableOllamaModels = async (): Promise<string[]> => {
     const data = await response.json();
     return data.models?.map((m: any) => m.name) || [];
   } catch (error) {
-    console.warn('[Ollama] Failed to fetch models:', error);
+    // Silent fail - don't log errors when Ollama is not running
     return [];
   }
 };

@@ -10,6 +10,10 @@ export const parseFile = async (file: File): Promise<ProcessedFile> => {
     fileType = 'pdf';
   } else if (fileName.match(/\.(xlsx|xls|csv)$/)) {
     fileType = 'excel';
+  } else if (fileName.match(/\.(png|jpg|jpeg|gif|bmp|webp)$/)) {
+    fileType = 'image';
+  } else if (fileName.match(/\.(doc|docx|ppt|pptx|txt|md|json|xml|html)$/)) {
+    fileType = 'document';
   }
 
   let content = '';
@@ -20,6 +24,10 @@ export const parseFile = async (file: File): Promise<ProcessedFile> => {
       content = await extractPdfText(file);
     } else if (fileType === 'excel') {
       content = await extractExcelText(file);
+    } else if (fileType === 'image') {
+      content = await extractImageInfo(file);
+    } else if (fileType === 'document') {
+      content = await extractDocumentText(file);
     } else {
       // Fallback for text files or explicitly supported 'other' formats
       if (fileName.match(/\.(txt|md|json|xml|html|js|ts|css|py|java|c|cpp|h|cs)$/)) {
@@ -111,16 +119,25 @@ const extractPdfText = async (file: File): Promise<string> => {
 };
 
 const extractExcelText = async (file: File): Promise<string> => {
+  // Wait for library to load
+  let attempts = 0;
+  while (!(window as any).XLSX && attempts < 50) {
+    await new Promise(resolve => setTimeout(resolve, 100));
+    attempts++;
+  }
+  
+  if (!(window as any).XLSX) {
+    throw new Error("SheetJS library failed to load. Please refresh the page.");
+  }
+
   try {
     const arrayBuffer = await file.arrayBuffer();
-    if (!window.XLSX) throw new Error("SheetJS library not loaded");
-
-    const workbook = window.XLSX.read(arrayBuffer, { type: 'array' });
+    const workbook = (window as any).XLSX.read(arrayBuffer, { type: 'array' });
     let fullText = `[METADATA: Excel Workbook "${file.name}", Sheets: ${workbook.SheetNames.join(', ')}]\n\n`;
 
     workbook.SheetNames.forEach((sheetName: string) => {
       const sheet = workbook.Sheets[sheetName];
-      const csv = window.XLSX.utils.sheet_to_csv(sheet, { blankrows: false });
+      const csv = (window as any).XLSX.utils.sheet_to_csv(sheet, { blankrows: false });
       
       if (csv && csv.trim().length > 0) {
         fullText += `--- [Sheet: ${sheetName}] ---\n${csv}\n\n`;
@@ -131,7 +148,82 @@ const extractExcelText = async (file: File): Promise<string> => {
 
     return fullText;
   } catch (e) {
-    console.error("Excel Parsing failed details:", e);
+    console.error("Excel Parsing failed:", e);
     throw new Error("Failed to parse Excel structure.");
+  }
+};
+
+const extractImageInfo = async (file: File): Promise<string> => {
+  try {
+    // Create image element to get dimensions
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    
+    return new Promise((resolve) => {
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const sizeKB = Math.round(file.size / 1024);
+        const content = `[METADATA: Image File "${file.name}"]\n` +
+                      `Type: ${file.type || 'Unknown'}\n` +
+                      `Dimensions: ${img.width} x ${img.height} pixels\n` +
+                      `Size: ${sizeKB} KB\n\n` +
+                      `[IMAGE CONTENT: This is an image file that can be viewed but not processed as text. ` +
+                      `You can ask questions about this image and I'll help analyze it based on the filename and metadata.]`;
+        resolve(content);
+      };
+      
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        const sizeKB = Math.round(file.size / 1024);
+        const content = `[METADATA: Image File "${file.name}"]\n` +
+                      `Type: ${file.type || 'Unknown'}\n` +
+                      `Size: ${sizeKB} KB\n\n` +
+                      `[IMAGE CONTENT: This is an image file. Unable to read dimensions.]`;
+        resolve(content);
+      };
+      
+      img.src = url;
+    });
+  } catch (e) {
+    console.error("Image processing failed:", e);
+    const sizeKB = Math.round(file.size / 1024);
+    return `[METADATA: Image File "${file.name}"]\n` +
+           `Size: ${sizeKB} KB\n\n` +
+           `[IMAGE CONTENT: This is an image file.]`;
+  }
+};
+
+const extractDocumentText = async (file: File): Promise<string> => {
+  const fileName = file.name.toLowerCase();
+  
+  try {
+    // Handle text-based documents
+    if (fileName.match(/\.(txt|md|json|xml|html)$/)) {
+      const text = await file.text();
+      return `[METADATA: Document "${file.name}"]\n\n${text}`;
+    }
+    
+    // For binary documents (doc, docx, ppt, pptx), provide metadata only
+    const sizeKB = Math.round(file.size / 1024);
+    let docType = 'Document';
+    
+    if (fileName.match(/\.(doc|docx)$/)) {
+      docType = 'Word Document';
+    } else if (fileName.match(/\.(ppt|pptx)$/)) {
+      docType = 'PowerPoint Presentation';
+    }
+    
+    return `[METADATA: ${docType} "${file.name}"]\n` +
+           `Type: ${file.type || 'Unknown'}\n` +
+           `Size: ${sizeKB} KB\n\n` +
+           `[DOCUMENT CONTENT: This is a ${docType.toLowerCase()} file. ` +
+           `While I cannot extract the full text content, I can help you with questions about this document ` +
+           `based on its filename and type. Consider converting to PDF or plain text for full content analysis.]`;
+  } catch (e) {
+    console.error("Document processing failed:", e);
+    const sizeKB = Math.round(file.size / 1024);
+    return `[METADATA: Document "${file.name}"]\n` +
+           `Size: ${sizeKB} KB\n\n` +
+           `[DOCUMENT CONTENT: Unable to process this document.]`;
   }
 };

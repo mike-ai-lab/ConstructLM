@@ -1,0 +1,15 @@
+{
+  "version": "1.0",
+  "servers": [
+    {
+      "id": "local-tools",
+      "name": "Local MCP Tools",
+      "description": "Local MCP server for extending Amazon Q",
+      "command": "node",
+      "args": [],
+      "env": {},
+      "cwd": "C:\\Users\\Administrator\\ConstructLM-1"
+    }
+  ],
+  "tools": []
+}

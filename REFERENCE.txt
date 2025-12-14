@@ -1,0 +1,22 @@
+| Model ID                                      | Owner         | Active | Max Input (~words) | Max Output (~words) |
+| --------------------------------------------- | ------------- | ------ | ------------------ | ------------------- |
+| moonshotai/kimi-k2-instruct-0905              | Moonshot AI   | Yes    | ~196,608           | ~12,288             |
+| qwen/qwen3-32b                                | Alibaba Cloud | Yes    | ~98,304            | ~30,720             |
+| llama-3.1-8b-instant                          | Meta          | Yes    | ~98,304            | ~98,304             |
+| meta-llama/llama-4-scout-17b-16e-instruct     | Meta          | Yes    | ~98,304            | ~6,144              |
+| meta-llama/llama-4-maverick-17b-128e-instruct | Meta          | Yes    | ~98,304            | ~6,144              |
+| openai/gpt-oss-120b                           | OpenAI        | Yes    | ~98,304            | ~49,152             |
+| openai/gpt-oss-safeguard-20b                  | OpenAI        | Yes    | ~98,304            | ~49,152             |
+| llama-3.3-70b-versatile                       | Meta          | Yes    | ~98,304            | ~24,576             |
+| groq/compound                                 | Groq          | Yes    | ~98,304            | ~6,144              |
+| groq/compound-mini                            | Groq          | Yes    | ~98,304            | ~6,144              |
+| openai/gpt-oss-20b                            | OpenAI        | Yes    | ~98,304            | ~49,152             |
+| moonshotai/kimi-k2-instruct                   | Moonshot AI   | Yes    | ~98,304            | ~12,288             |
+| meta-llama/llama-guard-4-12b                  | Meta          | Yes    | ~98,304            | ~768                |
+| playai-tts-arabic                             | PlayAI        | Yes    | ~6,144             | ~6,144              |
+| playai-tts                                    | PlayAI        | Yes    | ~6,144             | ~6,144              |
+| allam-2-7b                                    | SDAIA         | Yes    | ~3,072             | ~3,072              |
+| meta-llama/llama-prompt-guard-2-86m           | Meta          | Yes    | ~384               | ~384                |
+| meta-llama/llama-prompt-guard-2-22m           | Meta          | Yes    | ~384               | ~384                |
+| whisper-large-v3                              | OpenAI        | Yes    | ~336               | ~336                |
+| whisper-large-v3-turbo                        | OpenAI        | Yes    | ~336               | ~336                |

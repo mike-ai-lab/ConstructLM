@@ -1,7 +1,7 @@
 export interface ProcessedFile {
   id: string;
   name: string;
-  type: 'pdf' | 'excel' | 'other';
+  type: 'pdf' | 'excel' | 'image' | 'document' | 'other';
   content: string;
   size: number;
   status: 'processing' | 'ready' | 'error';
@@ -16,11 +16,33 @@ export interface Message {
   content: string;
   timestamp: number;
   isStreaming?: boolean;
+  modelId?: string;
+  usage?: {
+    inputTokens: number;
+    outputTokens: number;
+    totalTokens: number;
+  };
 }
 
 export interface Citation {
   file: string;
   snippet: string;
+}
+
+export interface ModelConfig {
+  id: string;
+  name: string;
+  provider: 'google' | 'groq' | 'openai' | 'local';
+  contextWindow: number;
+  apiKeyEnv: string;
+  supportsImages: boolean;
+  description: string;
+  capacityTag: 'Low' | 'Medium' | 'High';
+  maxInputWords?: number;
+  maxOutputWords?: number;
+  supportsFilesApi?: boolean;
+  isLocal?: boolean;
+  isAvailable?: boolean;
 }
 
 // Declare external library types loaded via CDN

@@ -3,23 +3,41 @@ import { ProcessedFile, Message } from "../types";
 const constructSystemPrompt = (files: ProcessedFile[]) => {
   const activeFiles = files.filter(f => f.status === 'ready');
   
+  if (activeFiles.length === 0) {
+    return `You are ConstructLM, an intelligent AI assistant.
+
+You are helpful, knowledgeable, and provide clear, comprehensive responses.
+You can assist with construction, engineering, general questions, and any other topics.
+
+RESPONSE STYLE:
+- Be clear, helpful, and engaging
+- Provide thorough, well-structured responses
+- Use bullet points and formatting when appropriate
+- Be conversational yet professional`;
+  }
+  
   const fileContexts = activeFiles
-    .map(f => {
-      const content = f.content.length > 1500 ? f.content.substring(0, 1500) + '...[truncated]' : f.content;
-      return `=== ${f.name} ===\n${content}`;
-    })
+    .map(f => `=== FILE: "${f.name}" ===\n${f.content}\n=== END FILE ===`)
     .join('\n\n');
 
-  return `You are ConstructLM, a construction documentation AI assistant.
+  return `You are ConstructLM, a construction documentation assistant.
 
-Answer based on provided files. Use citations: {{citation:FileName.ext|Location|Quote}}
+CITATION RULES:
+1. ALWAYS cite immediately after each fact: Total items: 258 {{citation:file.xlsx|Sheet: Summary, Row 4|258}}
+2. Use format: {{citation:filename|location|key_data}}
+3. Excel format: {{citation:file.xlsx|Sheet: Name, Row X|exact_cell_value}}
+4. PDF format: {{citation:file.pdf|Page X|exact_text_snippet}}
+5. Place citations RIGHT AFTER the data, not at sentence end
+6. Use concise quotes (2-5 words max)
+7. Cite frequently but avoid duplicates
 
-Examples:
-- "Beam depth is 600mm {{citation:Structural.pdf|Page 5|Beam B1: 600mm}}"
-- "Steel cost $1200/ton {{citation:BOQ.xlsx|Sheet: Pricing, Row 45|Steel | 1200}}"
+RESPONSE STYLE:
+- Be precise and factual
+- Use bullet points and structure
+- Keep under 150 lines
+- No repetitive content
 
-For Excel: Always specify "Sheet: [Name], Row [Number]".
-
+FILES:
 ${fileContexts}`;
 };
 
@@ -37,7 +55,7 @@ export const sendMessageToGroq = async (
     { role: 'system', content: systemInstruction },
     ...history
       .filter(m => !m.isStreaming && m.id !== 'intro' && m.content?.trim())
-      .slice(-3)
+      .slice(-5)
       .map(m => ({ role: m.role === 'model' ? 'assistant' : 'user', content: m.content })),
     { role: 'user', content: newMessage }
   ];
@@ -52,8 +70,8 @@ export const sendMessageToGroq = async (
       model: modelId,
       messages,
       stream: true,
-      max_tokens: 1024,
-      temperature: 0.1,
+      max_tokens: 2048,
+      temperature: activeFiles.length > 0 ? 0.1 : 0.7,
     }),
   });
 

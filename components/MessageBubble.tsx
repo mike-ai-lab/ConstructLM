@@ -67,8 +67,8 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, files, onViewDoc
         {/* Content */}
         <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
           <div className="flex items-center gap-2 mb-1.5 opacity-0 group-hover:opacity-100 transition-opacity px-1">
-             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                 {isUser ? 'You' : 'ConstructLM'}
+             <span className="text-[10px] font-bold text-black uppercase tracking-widest">
+                 {isUser ? 'You' : (message.modelId || 'AI')}
              </span>
              {!isUser && !message.isStreaming && (
                  <button 
@@ -85,8 +85,8 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, files, onViewDoc
           <div className={`
              relative px-5 py-3.5 text-sm leading-7 rounded-2xl shadow-sm
              ${isUser 
-                ? 'bg-[#f1f5f9] text-gray-800 rounded-tr-sm' 
-                : 'bg-white border border-gray-100 text-gray-800 rounded-tl-sm'
+                ? 'bg-[#f1f5f9] text-black rounded-tr-sm' 
+                : 'bg-white border border-gray-100 text-black rounded-tl-sm'
              }
           `}>
             {message.isStreaming && !isUser && (
@@ -95,7 +95,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, files, onViewDoc
                  </div>
              )}
              
-            <div className="whitespace-pre-wrap font-normal">
+            <div className="whitespace-pre-wrap font-normal message-content" data-highlightable="true">
               {isUser ? (
                   <div>{message.content}</div>
               ) : (
@@ -107,6 +107,15 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, files, onViewDoc
               )}
             </div>
           </div>
+          
+          {/* Token Usage Stats */}
+          {!isUser && message.usage && (
+            <div className="text-[9px] text-gray-500 mt-1.5 px-1 flex gap-3">
+              <span>In: {message.usage.inputTokens.toLocaleString()} tokens</span>
+              <span>Out: {message.usage.outputTokens.toLocaleString()} tokens</span>
+              <span className="font-semibold">Total: {message.usage.totalTokens.toLocaleString()}</span>
+            </div>
+          )}
         </div>
       </div>
     </div>

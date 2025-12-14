@@ -39,8 +39,9 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
     
     let isMounted = true;
     const loadPdf = async () => {
-      if (!file.fileHandle || !window.pdfjsLib) {
+      if (!file.fileHandle || !(file.fileHandle instanceof File) || !window.pdfjsLib) {
           console.warn("[DocumentViewer] Missing file handle or PDF.js library");
+          setLoading(false);
           return;
       }
       try {
@@ -51,7 +52,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
 
         if (window.pdfWorkerReady) await window.pdfWorkerReady;
 
-        const arrayBuffer = await file.fileHandle.arrayBuffer();
+        const arrayBuffer = await (file.fileHandle as File).arrayBuffer();
         const pdf = await window.pdfjsLib.getDocument({ 
             data: new Uint8Array(arrayBuffer),
             cMapUrl: 'https://unpkg.com/pdfjs-dist@3.11.174/cmaps/',
@@ -158,22 +159,13 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
   }, [pageNumber, pdfScale, pdfDocument, highlightQuote, isPdf]);
 
   const renderHighlights = (textContent: any, viewport: any, quote: string) => {
-      console.groupCollapsed("[PDF HIGHLIGHT DEBUG]");
-      
-      if(!highlightLayerRef.current) {
-          console.groupEnd();
-          return;
-      }
+      if(!highlightLayerRef.current) return;
       highlightLayerRef.current.innerHTML = ''; 
       
       const normalize = (str: string) => str.replace(/\s+/g, '').toLowerCase();
       const normQuote = normalize(quote);
       
-      if (!normQuote || normQuote.length < 5) {
-          console.warn("Quote too short or empty after normalization");
-          console.groupEnd();
-          return;
-      }
+      if (!normQuote || normQuote.length < 3) return;
 
       let fullText = "";
       const itemMap: { start: number, end: number, item: any }[] = [];
@@ -190,22 +182,15 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
       if (matchIndex !== -1) {
           const matchEnd = matchIndex + normQuote.length;
           let firstMatchElement: HTMLElement | null = null;
-          let count = 0;
           
           itemMap.forEach(({ start, end, item }) => {
              if (Math.max(start, matchIndex) < Math.min(end, matchEnd)) {
                  try {
-                     // Check if Util exists
-                     if (!window.pdfjsLib.Util) return;
+                     if (!window.pdfjsLib?.Util) return;
 
                      const tx = window.pdfjsLib.Util.transform(viewport.transform, item.transform);
                      const fontHeight = Math.hypot(tx[2], tx[3]);
-                     
-                     // FIX: Use viewport.scale directly. item.width is in User Space Units.
-                     // The previous logic multiplied by scaleX (from matrix) which effectively squared the scaling factor.
                      const fontWidth = item.width * viewport.scale;
-                     
-                     // Calculate rotation
                      const angle = Math.atan2(tx[1], tx[0]);
 
                      const rect = document.createElement('div');
@@ -215,7 +200,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
                          top: `${tx[5] - fontHeight}px`,
                          width: `${Math.abs(fontWidth)}px`,
                          height: `${fontHeight}px`,
-                         backgroundColor: 'rgba(255, 235, 59, 0.4)', // Material Yellow
+                         backgroundColor: 'rgba(255, 235, 59, 0.5)',
                          mixBlendMode: 'multiply',
                          pointerEvents: 'none',
                          transform: `rotate(${angle}rad)`,
@@ -224,24 +209,16 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
                      
                      highlightLayerRef.current?.appendChild(rect);
                      if (!firstMatchElement) firstMatchElement = rect;
-                     count++;
-                 } catch (err) {
-                     console.error("Error creating highlight rect:", err);
-                 }
+                 } catch (err) {}
              }
           });
-          console.log(`Created ${count} highlight rectangles`);
           
           if (firstMatchElement) {
-              requestAnimationFrame(() => {
-                 setTimeout(() => {
-                     console.log("Scrolling to highlight...");
-                     (firstMatchElement as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'center' });
-                 }, 100);
-              });
+              setTimeout(() => {
+                  firstMatchElement?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }, 100);
           }
       }
-      console.groupEnd();
   };
 
   // --- TEXT/EXCEL LOGIC ---
@@ -380,6 +357,10 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
           return parseExcelContent(file.content, location);
       }
       
+      if (file.type === 'image') {
+          return <ImageViewer file={file} />;
+      }
+      
       const content = file.content;
       if (!highlightQuote) {
           return (
@@ -403,10 +384,46 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
       );
   };
 
+  const ImageViewer: React.FC<{ file: ProcessedFile }> = ({ file }) => {
+    const [isEnlarged, setIsEnlarged] = useState(false);
+    const imageUrl = file.fileHandle instanceof File ? URL.createObjectURL(file.fileHandle) : '';
+
+    if (!imageUrl) {
+      return <div className="text-center text-gray-500 p-8">Image not available</div>;
+    }
+
+    return (
+      <>
+        <div className="flex items-center justify-center p-8">
+          <img
+            src={imageUrl}
+            alt={file.name}
+            className="max-w-full h-auto rounded-lg shadow-lg cursor-pointer hover:opacity-90 transition-opacity"
+            style={{ maxHeight: '400px' }}
+            onClick={() => setIsEnlarged(true)}
+          />
+        </div>
+        {isEnlarged && (
+          <div
+            className="fixed inset-0 z-[10000] bg-black/90 flex items-center justify-center p-4 cursor-pointer"
+            onClick={() => setIsEnlarged(false)}
+          >
+            <img
+              src={imageUrl}
+              alt={file.name}
+              className="max-w-full max-h-full object-contain"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+        )}
+      </>
+    );
+  };
+
   return (
-    <div className="flex flex-col h-full w-full bg-[#f8f9fa] border-l border-gray-200">
+    <div className="flex flex-col h-full w-full bg-slate-50 border-l-2 border-slate-300">
       {/* Header */}
-      <div className="flex-none h-14 bg-white border-b border-gray-200 px-4 flex items-center justify-between shadow-sm z-20">
+      <div className="flex-none h-14 bg-slate-100 border-b-2 border-slate-300 px-4 flex items-center justify-between shadow-sm z-20">
         <div className="flex items-center gap-3 overflow-hidden">
             <div className={`p-1.5 rounded ${file.type === 'pdf' ? 'bg-rose-50 text-rose-500' : file.type === 'excel' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-500'}`}>
                 {getFileIcon()}
@@ -437,13 +454,13 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
       </div>
 
       {/* Viewport */}
-      <div ref={containerRef} className="flex-1 overflow-auto relative flex justify-center custom-scrollbar bg-gray-100/50">
+      <div ref={containerRef} className="flex-1 overflow-auto relative flex custom-scrollbar bg-gray-100/50" style={{ justifyContent: 'unset' }}>
          {isPdf && (
              <div className="p-8">
-                 <div className="fixed bottom-6 z-40 bg-white/90 backdrop-blur border border-gray-200 shadow-lg rounded-full px-4 py-2 flex items-center gap-4 left-1/2 -translate-x-1/2 transform transition-opacity duration-300 opacity-0 hover:opacity-100 group-hover:opacity-100">
-                    <button onClick={() => setPageNumber(p => Math.max(1, p - 1))} disabled={pageNumber <= 1} className="p-1 hover:text-blue-600 disabled:opacity-30"><ChevronLeft size={20} /></button>
-                    <span className="text-xs font-medium tabular-nums">{pageNumber} / {numPages}</span>
-                    <button onClick={() => setPageNumber(p => Math.min(numPages, p + 1))} disabled={pageNumber >= numPages} className="p-1 hover:text-blue-600 disabled:opacity-30"><ChevronRight size={20} /></button>
+                 <div className="fixed bottom-6 z-20 bg-white/90 backdrop-blur border border-gray-200 shadow-lg rounded-full px-4 py-2 flex items-center gap-4 left-1/2 -translate-x-1/2 transform transition-opacity duration-300 opacity-0 hover:opacity-100 group-hover:opacity-100 pointer-events-none">
+                    <button onClick={() => setPageNumber(p => Math.max(1, p - 1))} disabled={pageNumber <= 1} className="p-1 hover:text-blue-600 disabled:opacity-30 pointer-events-auto"><ChevronLeft size={20} /></button>
+                    <span className="text-xs font-medium tabular-nums pointer-events-none">{pageNumber} / {numPages}</span>
+                    <button onClick={() => setPageNumber(p => Math.min(numPages, p + 1))} disabled={pageNumber >= numPages} className="p-1 hover:text-blue-600 disabled:opacity-30 pointer-events-auto"><ChevronRight size={20} /></button>
                  </div>
                  {loading && pdfScale === null && (
                      <div className="absolute inset-0 flex items-center justify-center z-30">
@@ -453,7 +470,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
                         </div>
                      </div>
                  )}
-                 <div className="relative shadow-xl ring-1 ring-black/5 bg-white transition-opacity duration-200 origin-top" style={{ width: 'fit-content', height: 'fit-content', opacity: loading ? 0.6 : 1 }}>
+                 <div className="relative isolate shadow-xl ring-1 ring-black/5 bg-white transition-opacity duration-200 origin-top" style={{ width: 'fit-content', height: 'fit-content', opacity: loading ? 0.6 : 1 }}>
                     <canvas ref={canvasRef} className="block" />
                     <div ref={highlightLayerRef} className="absolute inset-0 pointer-events-none z-10" />
                     <div ref={textLayerRef} className="textLayer absolute inset-0" />

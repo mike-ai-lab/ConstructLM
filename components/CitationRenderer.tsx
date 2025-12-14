@@ -31,35 +31,77 @@ const parseInline = (text: string): React.ReactNode[] => {
 
 const SimpleMarkdown: React.FC<{ text: string }> = ({ text }) => {
   const lines = text.split('\n');
-  return (
-    <div className="space-y-1.5 text-gray-700">
-      {lines.map((line, i) => {
-        const trimmed = line.trim();
-        if (!trimmed) return <div key={i} className="h-2" />;
-        if (trimmed.startsWith('### ')) return <h3 key={i} className="text-sm font-bold text-gray-900 mt-3 mb-1">{parseInline(trimmed.slice(4))}</h3>;
-        if (trimmed.startsWith('## ')) return <h2 key={i} className="text-base font-bold text-gray-900 mt-4 mb-2">{parseInline(trimmed.slice(3))}</h2>;
-        if (trimmed.match(/^[-*]\s/)) {
-            return (
-                <div key={i} className="flex gap-2 ml-1 relative pl-3">
-                    <span className="absolute left-0 top-1.5 w-1 h-1 bg-gray-400 rounded-full"></span>
-                    <span className="leading-relaxed">{parseInline(trimmed.replace(/^[-*]\s/, ''))}</span>
-                </div>
-            );
-        }
-        if (trimmed.match(/^\d+\.\s/)) {
-            const match = trimmed.match(/^(\d+)\.\s/);
-            const num = match ? match[1] : '1';
-            return (
-                <div key={i} className="flex gap-2 ml-1">
-                    <span className="font-mono text-xs text-gray-500 mt-0.5 min-w-[1.2em]">{num}.</span>
-                    <span className="leading-relaxed">{parseInline(trimmed.replace(/^\d+\.\s/, ''))}</span>
-                </div>
-            );
-        }
-        return <div key={i} className="leading-relaxed">{parseInline(line)}</div>;
-      })}
-    </div>
-  );
+  const elements: React.ReactNode[] = [];
+  let i = 0;
+  
+  while (i < lines.length) {
+    const trimmed = lines[i].trim();
+    
+    // Table detection
+    if (trimmed.startsWith('|') && i + 1 < lines.length && lines[i + 1].trim().match(/^\|[-:\s|]+\|$/)) {
+      const tableLines = [lines[i]];
+      let j = i + 1;
+      while (j < lines.length && lines[j].trim().startsWith('|')) {
+        tableLines.push(lines[j]);
+        j++;
+      }
+      elements.push(
+        <div key={i} className="overflow-x-auto my-3">
+          <table className="min-w-full border-collapse border border-gray-300 text-xs">
+            <thead className="bg-gray-100">
+              <tr>
+                {tableLines[0].split('|').filter(c => c.trim()).map((cell, idx) => (
+                  <th key={idx} className="border border-gray-300 px-2 py-1 text-left font-semibold">{cell.trim()}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {tableLines.slice(2).map((row, rowIdx) => (
+                <tr key={rowIdx} className="hover:bg-gray-50">
+                  {row.split('|').filter(c => c.trim()).map((cell, cellIdx) => (
+                    <td key={cellIdx} className="border border-gray-300 px-2 py-1">{cell.trim()}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+      i = j;
+      continue;
+    }
+    
+    if (!trimmed) { elements.push(<div key={i} className="h-2" />); i++; continue; }
+    if (trimmed.startsWith('---')) { elements.push(<hr key={i} className="my-3 border-gray-300" />); i++; continue; }
+    if (trimmed.startsWith('### ')) { elements.push(<h3 key={i} className="text-sm font-bold text-gray-900 mt-3 mb-1">{parseInline(trimmed.slice(4))}</h3>); i++; continue; }
+    if (trimmed.startsWith('## ')) { elements.push(<h2 key={i} className="text-base font-bold text-gray-900 mt-4 mb-2">{parseInline(trimmed.slice(3))}</h2>); i++; continue; }
+    if (trimmed.match(/^[-*]\s/)) {
+      elements.push(
+        <div key={i} className="flex gap-2 ml-1 relative pl-3">
+          <span className="absolute left-0 top-1.5 w-1 h-1 bg-gray-400 rounded-full"></span>
+          <span className="leading-relaxed">{parseInline(trimmed.replace(/^[-*]\s/, ''))}</span>
+        </div>
+      );
+      i++;
+      continue;
+    }
+    if (trimmed.match(/^\d+\.\s/)) {
+      const match = trimmed.match(/^(\d+)\.\s/);
+      const num = match ? match[1] : '1';
+      elements.push(
+        <div key={i} className="flex gap-2 ml-1">
+          <span className="font-mono text-xs text-gray-500 mt-0.5 min-w-[1.2em]">{num}.</span>
+          <span className="leading-relaxed">{parseInline(trimmed.replace(/^\d+\.\s/, ''))}</span>
+        </div>
+      );
+      i++;
+      continue;
+    }
+    elements.push(<div key={i} className="leading-relaxed">{parseInline(lines[i])}</div>);
+    i++;
+  }
+  
+  return <div className="space-y-1.5 text-gray-700">{elements}</div>;
 };
 
 const CitationRenderer: React.FC<CitationRendererProps> = ({ text, files, onViewDocument }) => {
@@ -112,13 +154,24 @@ const CitationChip: React.FC<CitationChipProps> = ({ index, fileName, location, 
     e.stopPropagation();
     if (!isOpen && triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
-      const viewportHeight = window.innerHeight;
-      const POPOVER_EST_HEIGHT = 400; 
+      const vh = window.innerHeight;
+      const vw = window.innerWidth;
+      const popupHeight = Math.min(vh * 0.7, 500);
+      const popupWidth = 450;
+      
       let top = rect.bottom + 8;
-      if (top + POPOVER_EST_HEIGHT > viewportHeight) {
-          top = Math.max(16, rect.top - POPOVER_EST_HEIGHT - 8);
+      let left = rect.left - 20;
+      
+      if (top + popupHeight > vh - 20) {
+        top = Math.max(20, rect.top - popupHeight - 8);
       }
-      setCoords({ top, left: Math.max(16, rect.left - 20) });
+      if (left + popupWidth > vw - 20) {
+        left = vw - popupWidth - 20;
+      }
+      left = Math.max(20, left);
+      top = Math.max(20, top);
+      
+      setCoords({ top, left });
     }
     setIsOpen(!isOpen);
   };
@@ -198,45 +251,32 @@ const CitationPortal: React.FC<CitationPortalProps> = ({ onClose, coords, fileNa
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [onClose]);
 
-  useEffect(() => {
-    const handleWheel = (e: WheelEvent) => {
-        if (popoverRef.current && popoverRef.current.contains(e.target as Node)) e.stopPropagation(); 
-    };
-    window.addEventListener('wheel', handleWheel, { passive: false });
-    return () => window.removeEventListener('wheel', handleWheel);
-  }, []);
+
 
   const isPdfMode = file?.type === 'pdf' && pdfPageNumber !== null;
 
   return createPortal(
     <div 
       ref={popoverRef}
-      className="fixed z-[9999] w-[450px] max-w-[90vw] bg-white text-gray-800 rounded-xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden ring-1 ring-black/10 animate-in fade-in zoom-in-95 duration-150"
-      style={{ top: coords.top, left: Math.min(coords.left, window.innerWidth - 460), maxHeight: '80vh' }}
+      className="fixed z-[9999] w-[450px] max-w-[90vw] bg-white text-gray-800 rounded-lg shadow-2xl border border-gray-200 flex flex-col overflow-hidden animate-in fade-in duration-150"
+      style={{ top: coords.top, left: coords.left, maxHeight: 'min(70vh, 500px)' }}
     >
-      <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
-        <div className="flex items-center gap-2 overflow-hidden">
-          <BookOpen size={16} className="text-blue-600 flex-shrink-0" />
-          <div className="flex flex-col min-w-0">
-              <span className="font-semibold text-sm text-gray-800 truncate" title={fileName}>{fileName}</span>
-              <span className="text-[10px] text-gray-500 uppercase flex items-center gap-1">
-                 {isPdfMode ? 'Preview' : 'Extracted Text'} <ChevronRight size={10} /> {location}
-              </span>
-          </div>
+      <div className="bg-gray-50 px-3 py-1.5 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
+        <div className="flex items-center gap-1.5 overflow-hidden min-w-0">
+          <BookOpen size={12} className="text-blue-600 flex-shrink-0" />
+          <span className="font-medium text-xs text-gray-800 truncate" title={fileName}>{fileName}</span>
+          <span className="text-[9px] text-gray-400">• {location}</span>
         </div>
-        <div className="flex items-center gap-1">
-            <button onClick={onOpenFull} className="text-blue-600 hover:text-blue-800 p-1.5 rounded-full hover:bg-blue-50 transition-colors flex items-center gap-1 text-xs font-medium" title="Open Full Document"><Maximize2 size={14} /><span className="hidden sm:inline">Open</span></button>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-700 p-1.5 rounded-full hover:bg-gray-200 transition-colors"><X size={16} /></button>
+        <div className="flex items-center gap-0.5 flex-shrink-0">
+            <button onClick={onOpenFull} className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50" title="Open Full"><Maximize2 size={12} /></button>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-700 p-1 rounded hover:bg-gray-100"><X size={12} /></button>
         </div>
       </div>
-      <div className="bg-slate-100 overflow-y-auto relative min-h-[200px] flex-1">
+      <div className="bg-slate-100 overflow-hidden relative flex-1">
         {isPdfMode && file?.fileHandle ? <PdfPagePreview file={file.fileHandle} pageNumber={pdfPageNumber} quote={quote} /> : <TextContextViewer file={file} quote={quote} location={location} />}
       </div>
-      <div className="bg-white px-4 py-3 border-t border-gray-200 text-xs text-gray-600 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-        <div className="flex gap-2">
-            <Quote size={14} className="text-blue-400 flex-shrink-0 mt-0.5" />
-            <p className="italic leading-relaxed">"{quote}"</p>
-        </div>
+      <div className="bg-white px-2 py-1.5 border-t border-gray-200 flex-shrink-0">
+        <p className="text-[10px] text-gray-600 italic line-clamp-2">"{quote}"</p>
       </div>
     </div>,
     document.body
@@ -246,7 +286,12 @@ const CitationPortal: React.FC<CitationPortalProps> = ({ onClose, coords, fileNa
 const PdfPagePreview: React.FC<{ file: File; pageNumber: number; quote?: string }> = ({ file, pageNumber, quote }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const highlightLayerRef = useRef<HTMLDivElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
     const [loading, setLoading] = useState(true);
+    const [scale, setScale] = useState(1);
+    const [pan, setPan] = useState({ x: 0, y: 0 });
+    const [isPanning, setIsPanning] = useState(false);
+    const [panStart, setPanStart] = useState({ x: 0, y: 0 });
     const renderTaskRef = useRef<any>(null);
 
     useEffect(() => {
@@ -269,8 +314,8 @@ const PdfPagePreview: React.FC<{ file: File; pageNumber: number; quote?: string 
                 if(renderTaskRef.current) try { await renderTaskRef.current.cancel(); } catch(e) {}
 
                 const viewportUnscaled = page.getViewport({ scale: 1.0 });
-                const scale = 450 / viewportUnscaled.width; 
-                const viewport = page.getViewport({ scale });
+                const baseScale = 420 / viewportUnscaled.width;
+                const viewport = page.getViewport({ scale: baseScale * 5 });
 
                 const canvas = canvasRef.current;
                 if (!canvas) return;
@@ -301,6 +346,31 @@ const PdfPagePreview: React.FC<{ file: File; pageNumber: number; quote?: string 
         return () => { if(renderTaskRef.current) renderTaskRef.current.cancel(); };
     }, [file, pageNumber, quote]);
 
+    const handleWheel = (e: React.WheelEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const delta = e.deltaY > 0 ? -0.1 : 0.1;
+        setScale(prev => Math.max(0.5, Math.min(3, prev + delta)));
+    };
+
+    const handleMouseDown = (e: React.MouseEvent) => {
+        if (e.button === 0) {
+            e.preventDefault();
+            setIsPanning(true);
+            setPanStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+        }
+    };
+
+    const handleMouseMove = (e: React.MouseEvent) => {
+        if (isPanning) {
+            setPan({ x: e.clientX - panStart.x, y: e.clientY - panStart.y });
+        }
+    };
+
+    const handleMouseUp = () => {
+        setIsPanning(false);
+    };
+
     const renderHighlights = (textContent: any, viewport: any, quote: string) => {
         if (!highlightLayerRef.current) return;
         highlightLayerRef.current.innerHTML = '';
@@ -328,7 +398,7 @@ const PdfPagePreview: React.FC<{ file: File; pageNumber: number; quote?: string 
 
                     const tx = window.pdfjsLib.Util.transform(viewport.transform, item.transform);
                     const fontHeight = Math.hypot(tx[2], tx[3]);
-                    const fontWidth = item.width * viewport.scale; // Fix: Use viewport scale directly
+                    const fontWidth = item.width * viewport.scale;
                     const angle = Math.atan2(tx[1], tx[0]);
                     
                     const rect = document.createElement('div');
@@ -347,21 +417,38 @@ const PdfPagePreview: React.FC<{ file: File; pageNumber: number; quote?: string 
                     highlightLayerRef.current?.appendChild(rect);
                 }
             });
-            setTimeout(() => {
-                highlightLayerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }, 300);
         } else {
              console.warn("[CitationPreview] Quote not found in text content");
         }
     };
 
     return (
-        <div className="flex flex-col items-center justify-start min-h-full w-full bg-gray-500/10 pb-4 relative overflow-auto custom-scrollbar">
+        <div 
+            ref={containerRef}
+            className="flex items-center justify-center min-h-full w-full bg-gray-500/10 relative overflow-hidden"
+            onWheel={handleWheel}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+            style={{ cursor: isPanning ? 'grabbing' : 'grab' }}
+        >
             {loading && <div className="absolute inset-0 flex items-center justify-center z-20"><Loader2 size={20} className="animate-spin text-gray-500" /></div>}
-            <div className={`relative shadow-lg bg-white mt-4 ${loading ? 'opacity-0' : 'opacity-100'} transition-opacity`}>
+            <div 
+                className={`relative shadow-lg bg-white ${loading ? 'opacity-0' : 'opacity-100'}`}
+                style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`, transformOrigin: 'center center' }}
+            >
                  <canvas ref={canvasRef} className="block" />
                  <div ref={highlightLayerRef} className="absolute inset-0 pointer-events-none z-10" />
             </div>
+            {scale !== 1 && (
+                <button 
+                    onClick={() => { setScale(1); setPan({ x: 0, y: 0 }); }}
+                    className="absolute bottom-4 right-4 bg-white/90 hover:bg-white text-gray-700 px-3 py-1.5 rounded-lg shadow-lg text-xs font-medium border border-gray-200 transition-all z-30"
+                >
+                    Reset View
+                </button>
+            )}
         </div>
     );
 };

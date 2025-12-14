@@ -71,7 +71,16 @@
     </script>
     
     <!-- SheetJS for parsing Excel files -->
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js" onerror="loadSheetJSFallback()"></script>
+    <script>
+      function loadSheetJSFallback() {
+        console.warn('Primary SheetJS CDN failed, trying fallback...');
+        const script = document.createElement('script');
+        script.src = 'https://unpkg.com/xlsx@0.20.1/dist/xlsx.full.min.js';
+        script.onerror = () => console.error('All SheetJS CDNs failed to load');
+        document.head.appendChild(script);
+      }
+    </script>
     
     <style>
       /* Custom scrollbar for better aesthetics */
@@ -159,7 +168,127 @@
         width: 2px;
       }
 
+      /* Citation Panel Highlight Improvements */
+      .highlight-layer {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        pointer-events: none;
+        z-index: -1; /* Behind text */
+      }
+      
+      .highlight-rect {
+        position: absolute;
+        pointer-events: none;
+        border-radius: 2px;
+        transition: opacity 0.2s ease;
+      }
+      
+      .highlight-primary {
+        background-color: rgba(255, 193, 7, 0.4);
+        border: 1px solid rgba(255, 193, 7, 0.6);
+        box-shadow: 0 0 0 1px rgba(255, 193, 7, 0.2);
+      }
+      
+      .highlight-secondary {
+        background-color: rgba(33, 150, 243, 0.2);
+        border: 1px solid rgba(33, 150, 243, 0.3);
+      }
+
+      /* Drag and Drop Animations */
+      .drag-overlay {
+        animation: fadeIn 0.2s ease-out;
+      }
+      
+      @keyframes fadeIn {
+        from { opacity: 0; transform: scale(0.95); }
+        to { opacity: 1; transform: scale(1); }
+      }
+      
+      .drag-drop-zone {
+        transition: all 0.2s ease;
+      }
+      
+      .drag-drop-zone.drag-over {
+        border-color: #3b82f6;
+        background-color: rgba(59, 130, 246, 0.05);
+      }
+
+      /* Drawing and Highlighting Styles */
+      #drawing-overlay {
+        pointer-events: none;
+        user-select: none;
+      }
+      
+      .drawing-highlight {
+        transition: background-color 0.2s ease;
+        border-radius: 2px;
+        position: relative;
+      }
+      
+      .drawing-highlight:hover {
+        filter: brightness(0.9);
+      }
+      
+      /* Cursor styles for drawing tools */
+      body.drawing-mode-highlighter {
+        cursor: text !important;
+      }
+      
+      body.drawing-mode-pen {
+        cursor: crosshair !important;
+      }
+      
+      body.drawing-mode-pen * {
+        cursor: crosshair !important;
+      }
+      
+      /* Prevent text selection when drawing */
+      body.drawing-active {
+        user-select: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+      }
+      
+      /* Drawing toolbar animations */
+      .drawing-toolbar {
+        animation: slideInFromRight 0.3s ease-out;
+      }
+      
+      @keyframes slideInFromRight {
+        from {
+          opacity: 0;
+          transform: translateX(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+      
+      /* Color picker animations */
+      .color-picker-enter {
+        animation: scaleIn 0.2s ease-out;
+      }
+      
+      @keyframes scaleIn {
+        from {
+          opacity: 0;
+          transform: scale(0.9);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
     </style>
+    <!-- html2canvas for screenshots -->
+    <script src="https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    
     <script type="importmap">
 {
   "imports": {
@@ -169,7 +298,8 @@
     "react/": "https://aistudiocdn.com/react@^19.2.1/",
     "react": "https://aistudiocdn.com/react@^19.2.1",
     "lucide-react": "https://aistudiocdn.com/lucide-react@^0.556.0",
-    "react-dom": "https://aistudiocdn.com/react-dom@^19.2.1"
+    "react-dom": "https://aistudiocdn.com/react-dom@^19.2.1",
+    "html2canvas": "https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js"
   }
 }
 </script>

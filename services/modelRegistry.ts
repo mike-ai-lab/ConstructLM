@@ -6,13 +6,16 @@ import { LOCAL_MODELS, updateLocalModelsStatus } from "./localModelService";
 export const MODEL_REGISTRY: ModelConfig[] = [
   // --- Google Gemini Models (Free Tier Available) ---
   {
-    id: 'gemini-2.0-flash',
+    id: 'gemini-2.0-flash-exp',
     name: 'Gemini 2.0 Flash',
     provider: 'google',
     contextWindow: 1000000,
     apiKeyEnv: 'API_KEY',
     supportsImages: true,
-    description: "Latest Gemini model. Best for large documents. Can read 1000+ pages.",
+    supportsFilesApi: true,
+    maxInputWords: 750000,
+    maxOutputWords: 8192,
+    description: "Balanced performance for large documents.",
     capacityTag: 'High'
   },
   {
@@ -22,50 +25,144 @@ export const MODEL_REGISTRY: ModelConfig[] = [
     contextWindow: 1000000,
     apiKeyEnv: 'API_KEY',
     supportsImages: true,
-    description: "Previous generation. Best for large documents. Can read 1000+ pages.",
+    maxInputWords: 750000,
+    maxOutputWords: 8192,
+    description: "Previous generation. Best for large documents.",
     capacityTag: 'High'
   },
   
-  // --- Groq Models (Free/Freemium - High Performance) ---
+  // --- Groq Models (Verified Working) ---
   {
     id: 'llama-3.3-70b-versatile',
-    name: 'Llama 3.3 70B (Groq)',
+    name: 'Llama 3.3 70B Versatile',
     provider: 'groq',
-    contextWindow: 128000,
+    contextWindow: 131072,
     apiKeyEnv: 'GROQ_API_KEY',
     supportsImages: false,
-    description: "Very smart, but free plan limited to ~20 pages at once.",
-    capacityTag: 'Medium'
+    maxInputWords: 98304,
+    maxOutputWords: 24576,
+    description: "Very smart, large context window.",
+    capacityTag: 'High'
   },
   {
     id: 'llama-3.1-8b-instant',
-    name: 'Llama 3.1 8B (Groq)',
+    name: 'Llama 3.1 8B Instant',
     provider: 'groq',
-    contextWindow: 128000,
+    contextWindow: 131072,
     apiKeyEnv: 'GROQ_API_KEY',
     supportsImages: false,
-    description: "Extremely fast. Good for quick summaries of small files.",
-    capacityTag: 'Medium'
+    maxInputWords: 98304,
+    maxOutputWords: 98304,
+    description: "Extremely fast. Good for quick summaries.",
+    capacityTag: 'High'
   },
   {
-    id: 'gemma2-9b-it',
-    name: 'Gemma 2 9B (Groq)',
+    id: 'qwen/qwen3-32b',
+    name: 'Qwen 3 32B',
     provider: 'groq',
-    contextWindow: 8192,
+    contextWindow: 131072,
     apiKeyEnv: 'GROQ_API_KEY',
     supportsImages: false,
-    description: "Google's open model. Strict size limits on free plan.",
+    maxInputWords: 98304,
+    maxOutputWords: 30720,
+    description: "Alibaba's powerful model with large output.",
+    capacityTag: 'High'
+  },
+  {
+    id: 'meta-llama/llama-4-scout-17b-16e-instruct',
+    name: 'Llama 4 Scout 17B',
+    provider: 'groq',
+    contextWindow: 131072,
+    apiKeyEnv: 'GROQ_API_KEY',
+    supportsImages: false,
+    maxInputWords: 98304,
+    maxOutputWords: 6144,
+    description: "Meta's Llama 4 scout variant.",
+    capacityTag: 'High'
+  },
+  {
+    id: 'meta-llama/llama-4-maverick-17b-128e-instruct',
+    name: 'Llama 4 Maverick 17B',
+    provider: 'groq',
+    contextWindow: 131072,
+    apiKeyEnv: 'GROQ_API_KEY',
+    supportsImages: false,
+    maxInputWords: 98304,
+    maxOutputWords: 6144,
+    description: "Meta's Llama 4 maverick variant.",
+    capacityTag: 'High'
+  },
+  {
+    id: 'openai/gpt-oss-120b',
+    name: 'GPT OSS 120B',
+    provider: 'groq',
+    contextWindow: 131072,
+    apiKeyEnv: 'GROQ_API_KEY',
+    supportsImages: false,
+    maxInputWords: 98304,
+    maxOutputWords: 49152,
+    description: "OpenAI's open source large model.",
+    capacityTag: 'High'
+  },
+  {
+    id: 'openai/gpt-oss-safeguard-20b',
+    name: 'GPT OSS Safeguard 20B',
+    provider: 'groq',
+    contextWindow: 131072,
+    apiKeyEnv: 'GROQ_API_KEY',
+    supportsImages: false,
+    maxInputWords: 98304,
+    maxOutputWords: 49152,
+    description: "OpenAI's safeguard model.",
+    capacityTag: 'High'
+  },
+  {
+    id: 'openai/gpt-oss-20b',
+    name: 'GPT OSS 20B',
+    provider: 'groq',
+    contextWindow: 131072,
+    apiKeyEnv: 'GROQ_API_KEY',
+    supportsImages: false,
+    maxInputWords: 98304,
+    maxOutputWords: 49152,
+    description: "OpenAI's compact open source model.",
+    capacityTag: 'High'
+  },
+  {
+    id: 'meta-llama/llama-guard-4-12b',
+    name: 'Llama Guard 4 12B',
+    provider: 'groq',
+    contextWindow: 131072,
+    apiKeyEnv: 'GROQ_API_KEY',
+    supportsImages: false,
+    maxInputWords: 98304,
+    maxOutputWords: 768,
+    description: "Meta's safety-focused model.",
+    capacityTag: 'High'
+  },
+  {
+    id: 'meta-llama/llama-prompt-guard-2-86m',
+    name: 'Llama Prompt Guard 86M',
+    provider: 'groq',
+    contextWindow: 512,
+    apiKeyEnv: 'GROQ_API_KEY',
+    supportsImages: false,
+    maxInputWords: 384,
+    maxOutputWords: 384,
+    description: "Meta's prompt safety guard.",
     capacityTag: 'Low'
   },
   {
-    id: 'mixtral-8x7b-32768',
-    name: 'Mixtral 8x7B (Groq)',
+    id: 'meta-llama/llama-prompt-guard-2-22m',
+    name: 'Llama Prompt Guard 22M',
     provider: 'groq',
-    contextWindow: 32768,
+    contextWindow: 512,
     apiKeyEnv: 'GROQ_API_KEY',
     supportsImages: false,
-    description: "Good balance of speed and smarts.",
-    capacityTag: 'Medium'
+    maxInputWords: 384,
+    maxOutputWords: 384,
+    description: "Meta's compact prompt guard.",
+    capacityTag: 'Low'
   },
 
   // --- OpenAI Models (Paid) ---
@@ -76,8 +173,10 @@ export const MODEL_REGISTRY: ModelConfig[] = [
     contextWindow: 128000,
     apiKeyEnv: 'OPENAI_API_KEY',
     supportsImages: true,
+    maxInputWords: 96000,
+    maxOutputWords: 16384,
     description: "Industry standard intelligence. Paid account required.",
-    capacityTag: 'Medium'
+    capacityTag: 'High'
   },
   {
     id: 'gpt-4o-mini',
@@ -86,12 +185,14 @@ export const MODEL_REGISTRY: ModelConfig[] = [
     contextWindow: 128000,
     apiKeyEnv: 'OPENAI_API_KEY',
     supportsImages: true,
+    maxInputWords: 96000,
+    maxOutputWords: 16384,
     description: "Cost-effective and fast.",
-    capacityTag: 'Medium'
+    capacityTag: 'High'
   }
 ];
 
-export const DEFAULT_MODEL_ID = 'gemini-2.0-flash';
+export const DEFAULT_MODEL_ID = 'gemini-2.0-flash-exp';
 
 /**
  * Get all available models (online + local)
@@ -102,13 +203,16 @@ export const getAllModels = (): ModelConfig[] => {
 
 /**
  * Initialize local models (checks availability)
+ * NOTE: This is now manual-only. Call from Settings to avoid startup errors.
  */
 export const initializeLocalModels = async () => {
   try {
     const updatedLocalModels = await updateLocalModelsStatus();
     console.log('[Models] Local models initialized:', updatedLocalModels);
+    return updatedLocalModels;
   } catch (error) {
     console.warn('[Models] Failed to initialize local models:', error);
+    return [];
   }
 };
 

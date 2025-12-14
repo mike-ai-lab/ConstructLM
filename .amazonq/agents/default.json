@@ -1,0 +1,25 @@
+{
+  "editor.codeActionsOnSave": {},
+  "editor.dropIntoEditor.preferences": [],
+  "amazonQ.workspaceIndexIgnoreFilePatterns": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/.git/**",
+    "**/build/**",
+    "**/.cache/**"
+  ],
+  "amazonQ.workspaceContext.enabled": false,
+  "amazonQ.localIndexing.enabled": false,
+  "amazonQ.codeAnalysis.enabled": false,
+  "amazonQ.mcp.enabled": false,
+  "amazonQ.allowFeatureDevelopmentToRunCodeAndTests": {
+    "enabled": false
+  },
+  "amazonQ.suppressPrompts": {
+    "amazonQChatDisclaimer": true
+  },
+  "name": "q_ide_default",
+  "prompt": "",
+  "toolAliases": {},
+  "useLegacyMcpJson": true
+}

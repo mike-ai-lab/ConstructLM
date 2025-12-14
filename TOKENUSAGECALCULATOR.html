@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulated AI Token Calculator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f9;
+        }
+        .container {
+            max-width: 600px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        input[type="file"] {
+            margin-bottom: 20px;
+        }
+        .results {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #e9ecef;
+        }
+        .warning {
+            color: #cc0000;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Simulated File Token Calculator</h2>
+    <p>Upload your PDF, Excel, or CSV file to see a **simulated** token count.</p>
+    
+    <input type="file" id="fileInput" accept=".pdf,.csv,.xls,.xlsx" multiple>
+    
+    <div class="results" id="results">
+        Please upload a file to begin the simulation.
+    </div>
+    
+    <p class="warning">
+        **⚠️ IMPORTANT NOTE:** This tool runs entirely in your browser and uses a basic character count heuristic (simulated at $\frac{\text{Character Count}}{4}$) which is **NOT** an accurate or official AI token count. True tokenization requires specialized backend processing.
+    </p>
+</div>
+
+<script>
+    document.getElementById('fileInput').addEventListener('change', handleFileSelect);
+
+    function handleFileSelect(event) {
+        const files = event.target.files;
+        const resultsDiv = document.getElementById('results');
+        resultsDiv.innerHTML = ''; // Clear previous results
+
+        if (files.length === 0) {
+            resultsDiv.innerHTML = 'Please upload a file to begin the simulation.';
+            return;
+        }
+
+        let outputHTML = '<h3>Calculation Results</h3>';
+        
+        // Process each uploaded file
+        Array.from(files).forEach(file => {
+            const fileName = file.name;
+            const fileSizeKB = (file.size / 1024).toFixed(2);
+            
+            // --- SIMULATION LOGIC ---
+            // Token count is simulated based on file size.
+            // A typical rule of thumb is 1 token $\approx$ 4 characters.
+            // Assuming 1 character $\approx$ 1 byte for simplicity.
+            const characterCount = file.size; // Using file size in bytes as character count approximation
+            const simulatedTokens = Math.ceil(characterCount / 4); 
+            // ------------------------
+
+            outputHTML += `
+                <p>
+                    <strong>File:</strong> ${fileName} (${fileSizeKB} KB)<br>
+                    <strong>Simulated Token Count:</strong> ${simulatedTokens.toLocaleString()} tokens
+                </p>
+            `;
+        });
+        
+        resultsDiv.innerHTML = outputHTML;
+    }
+</script>
+
+</body>
+</html>

@@ -25,94 +25,97 @@ export const initializeGemini = () => {
 };
 
 const constructSystemPrompt = (files: ProcessedFile[]) => {
-  // 1. Filter only ready files
   const activeFiles = files.filter(f => f.status === 'ready');
   
-  // 2. Build Context
+  if (activeFiles.length === 0) {
+    return `You are ConstructLM, an intelligent AI assistant.
+
+You are helpful, knowledgeable, and provide clear, comprehensive responses.
+You can assist with construction, engineering, general questions, and any other topics.
+
+RESPONSE STYLE:
+- Be clear, helpful, and engaging
+- Provide thorough, well-structured responses
+- Use bullet points and formatting when appropriate
+- Be conversational yet professional`;
+  }
+  
   const fileContexts = activeFiles
-    .map(f => `=== FILE START: "${f.name}" (${f.type.toUpperCase()}) ===\n${f.content}\n=== FILE END: "${f.name}" ===`)
+    .map(f => `=== FILE: "${f.name}" ===\n${f.content}\n=== END FILE ===`)
     .join('\n\n');
 
-  // 3. Efficiency Warning in System Prompt (for the Model)
-  const contextNote = activeFiles.length > 0 
-    ? `You have access to ${activeFiles.length} specific file(s) for this query.`
-    : "You have access to all project files.";
+  return `You are ConstructLM, a professional construction documentation assistant.
 
-  return `
-You are ConstructLM, an advanced AI assistant for construction documentation.
-${contextNote}
+RESPONSE STYLE:
+- Write in a **professional, executive summary tone**
+- Use **proper Markdown formatting**: headers (###), tables, bullet points, bold text
+- Create **organized sections** with clear hierarchy
+- Be **concise and direct** - avoid repetitive phrasing
+- Use **tables** for dimensional data and specifications
+- Group related information logically
 
-INSTRUCTIONS:
-1. Answer strictly based on the provided FILE CONTEXTS.
-2. CITATIONS ARE MANDATORY. When you use information from a file, you MUST cite it using the strict 3-part format below.
-   
-   Format: {{citation:FileName.ext|Location Info|Verbatim Quote or Evidence}}
-   
-   Examples:
-   - "The beam depth is 600mm {{citation:Structural_Drawings.pdf|Page 5|Beam Schedule B1 lists depth as 600}}"
-   - "The concrete grade is M35 {{citation:Specs_v2.pdf|Page 12, Section 4.1|Grade of concrete shall be M35 for all substructures}}"
-   - "The cost of steel is $1200/ton {{citation:BOQ_Final.xlsx|Sheet: Pricing, Row 45|Structural Steel | 1200 | USD}}"
+CITATION RULES:
+1. **Strategic citations only** - Cite key facts, categories, and important specifications
+2. **DO NOT cite every single number** - Only cite representative examples or critical data
+3. Format: {{citation:filename|location|brief_quote}}
+4. Excel: {{citation:file.xlsx|Sheet: Name, Row X|key_value}}
+5. PDF: {{citation:file.pdf|Page X|text_snippet}}
+6. Keep quotes brief (2-5 words)
+7. Place citations at the END of sentences or bullet points, not mid-sentence
 
-3. CRITICAL RULES FOR CITATIONS:
-   - Part 1: Filename (must match exactly).
-   - Part 2: Location. 
-     - For PDF: Use "Page X". 
-     - For Excel: YOU MUST SPECIFY THE SHEET AND ROW NUMBER. Format: "Sheet: [Name], Row [Number]". Example: "Sheet: Details, Row 15".
-   - Part 3: EVIDENCE. Copy the exact text or data row from the file.
+EXAMPLE GOOD OUTPUT:
+### Door Types
+The schedule identifies several door categories:
+* **Glazed Doors (Exterior)** {{citation:file.pdf|Page 1|Glazed doors with frames}}
+  * Include overhead fixed panels and NAJDI design shutters {{citation:file.pdf|Page 1|NAJDI design}}
+  * Acoustic ratings: 32 dB to 35 dB {{citation:file.pdf|Page 2|32 dB acoustic}}
 
-4. If a user asks about a specific file (e.g., "What's in the BOQ?"), summarize that specific file's content.
-5. If the information is not in the provided files, state: "I couldn't find that information in the active documents."
-6. Use Markdown for formatting your response (bold, lists, headers).
+EXAMPLE BAD OUTPUT (DO NOT DO THIS):
+EXT-C1: Double leaf, 2400mm {{citation:...}} (W) x 3400mm {{citation:...}} (H), 35 dB {{citation:...}}
 
-CONTEXT:
-${fileContexts}
-`;
+FILES:
+${fileContexts}`;
 };
 
 export const sendMessageToGemini = async (
   message: string,
-  files: ProcessedFile[], // These are ALL files
-  activeFiles: ProcessedFile[], // These are the files specifically mentioned (or ALL if none mentioned)
+  files: ProcessedFile[],
+  activeFiles: ProcessedFile[],
   onStream: (chunk: string) => void
 ) => {
   const apiKey = getApiKey();
-  if (!apiKey) throw new Error("API Key is missing. Please check your environment configuration.");
+  if (!apiKey) throw new Error("API Key missing");
 
   const ai = new GoogleGenAI({ apiKey });
-  
-  // Create a hash to check if we need to rebuild the session (Context changed?)
   const newContextHash = activeFiles.map(f => f.id).sort().join(',');
   
   if (!chatSession || currentContextHash !== newContextHash) {
-    console.log(`[Gemini] Rebuilding session (Context changed or new session). Active files: ${activeFiles.length}`);
     const systemInstruction = constructSystemPrompt(activeFiles);
-    
     chatSession = ai.chats.create({
       model: 'gemini-2.5-flash',
       config: {
         systemInstruction,
-        temperature: 0.2, // Low temperature for high factual accuracy
+        temperature: activeFiles.length > 0 ? 0.1 : 0.7,
+        maxOutputTokens: 8192
       },
     });
     currentContextHash = newContextHash;
   }
 
   try {
-    console.log(`[Gemini] Sending message: "${message.substring(0, 50)}..."`);
     const responseStream = await chatSession.sendMessageStream({ message });
-    
     let fullText = "";
+    
     for await (const chunk of responseStream) {
-        const c = chunk as GenerateContentResponse;
-        if(c.text) {
-            fullText += c.text;
-            onStream(fullText);
-        }
+      const c = chunk as GenerateContentResponse;
+      if(c.text) {
+        fullText += c.text;
+        onStream(c.text);
+      }
     }
-    console.log("[Gemini] Response complete");
     return fullText;
   } catch (error) {
-    console.error("[Gemini] API Error:", error);
+    console.error("[Gemini] Error:", error);
     throw error;
   }
 };
