@@ -18,6 +18,10 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
   const [pageNumber, setPageNumber] = useState(initialPage);
   const [numPages, setNumPages] = useState(0);
   const [pdfScale, setPdfScale] = useState<number | null>(null);
+  const [viewScale, setViewScale] = useState(1);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartRef = useRef({ x: 0, y: 0, posX: 0, posY: 0 });
   
   // Text/Universal State
   const [loading, setLoading] = useState(isPdf);
@@ -29,6 +33,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
   const highlightLayerRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const renderTaskRef = useRef<any>(null);
+  const pdfContentRef = useRef<HTMLDivElement>(null);
 
   // --- PDF LOGIC ---
   useEffect(() => {
@@ -102,7 +107,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
         console.log(`[DocumentViewer] Rendering page ${pageNumber} at scale ${pdfScale}`);
         setLoading(true);
         const page = await pdfDocument.getPage(pageNumber);
-        const outputScale = window.devicePixelRatio || 1;
+        const outputScale = (window.devicePixelRatio || 1) * 5;
         const viewport = page.getViewport({ scale: pdfScale });
         const canvas = canvasRef.current;
         const context = canvas.getContext('2d');
@@ -257,18 +262,67 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
       return <FileIcon size={18} />;
   }
 
-  // Common Zoom Handlers
+  // Zoom & Pan Handlers
+  useEffect(() => {
+      if (!isPdf || !containerRef.current) return;
+      
+      const handleWheel = (e: WheelEvent) => {
+          e.preventDefault();
+          const delta = -e.deltaY * 0.003;
+          const newScale = Math.min(Math.max(0.5, viewScale + delta), 8);
+          
+          if (containerRef.current && pdfContentRef.current) {
+              const rect = containerRef.current.getBoundingClientRect();
+              const x = e.clientX - rect.left;
+              const y = e.clientY - rect.top;
+              const dx = (x - rect.width / 2 - position.x) * (newScale / viewScale - 1);
+              const dy = (y - rect.height / 2 - position.y) * (newScale / viewScale - 1);
+              setPosition({ x: position.x - dx, y: position.y - dy });
+          }
+          setViewScale(newScale);
+      };
+      
+      const container = containerRef.current;
+      container.addEventListener('wheel', handleWheel, { passive: false });
+      return () => container.removeEventListener('wheel', handleWheel);
+  }, [isPdf, viewScale, position]);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+      if (!isPdf || e.button !== 1) return;
+      e.preventDefault();
+      setIsDragging(true);
+      dragStartRef.current = { x: e.clientX, y: e.clientY, posX: position.x, posY: position.y };
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+      if (!isDragging) return;
+      const dx = e.clientX - dragStartRef.current.x;
+      const dy = e.clientY - dragStartRef.current.y;
+      setPosition({ x: dragStartRef.current.posX + dx, y: dragStartRef.current.posY + dy });
+  };
+
+  const handleMouseUp = () => setIsDragging(false);
+
   const handleZoomOut = () => {
-      if (isPdf) setPdfScale(s => Math.max(0.5, (s || 1) - 0.2));
+      if (isPdf) setViewScale(s => Math.max(0.5, s - 0.2));
       else setTextScale(s => Math.max(0.5, s - 0.1));
   };
 
   const handleZoomIn = () => {
-      if (isPdf) setPdfScale(s => Math.min(3, (s || 1) + 0.2));
+      if (isPdf) setViewScale(s => Math.min(8, s + 0.2));
       else setTextScale(s => Math.min(2.0, s + 0.1));
   };
+
+  const handleResetZoom = () => {
+      if (isPdf) {
+          setViewScale(1);
+          setPosition({ x: 0, y: 0 });
+      } else {
+          setTextScale(1.0);
+      }
+  };
   
-  const currentScaleDisplay = isPdf ? (pdfScale || 1) : textScale;
+  const currentScaleDisplay = isPdf ? viewScale : textScale;
 
   // -- Custom Content Rendering --
 
@@ -445,6 +499,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
                  <button onClick={handleZoomOut} className="p-1.5 hover:bg-white hover:shadow-sm rounded-md text-gray-500 transition-all"><ZoomOut size={14} /></button>
                  <span className="text-[10px] w-10 text-center font-medium text-gray-600">{Math.round(currentScaleDisplay * 100)}%</span>
                  <button onClick={handleZoomIn} className="p-1.5 hover:bg-white hover:shadow-sm rounded-md text-gray-500 transition-all"><ZoomIn size={14} /></button>
+                 {isPdf && <button onClick={handleResetZoom} className="p-1.5 hover:bg-white hover:shadow-sm rounded-md text-gray-500 transition-all text-[10px]" title="Reset">⟲</button>}
              </div>
              <div className="h-4 w-px bg-gray-200"></div>
              <button onClick={onClose} className="p-2 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-lg transition-colors" title="Close Viewer">
@@ -454,9 +509,17 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
       </div>
 
       {/* Viewport */}
-      <div ref={containerRef} className="flex-1 overflow-auto relative flex custom-scrollbar bg-gray-100/50" style={{ justifyContent: 'unset' }}>
+      <div 
+          ref={containerRef} 
+          className="flex-1 overflow-hidden relative flex custom-scrollbar bg-gray-100/50" 
+          style={{ justifyContent: isPdf ? 'center' : 'unset', alignItems: isPdf ? 'center' : 'unset', cursor: isDragging ? 'grabbing' : 'default' }}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+      >
          {isPdf && (
-             <div className="p-8">
+             <>
                  <div className="fixed bottom-6 z-20 bg-white/90 backdrop-blur border border-gray-200 shadow-lg rounded-full px-4 py-2 flex items-center gap-4 left-1/2 -translate-x-1/2 transform transition-opacity duration-300 opacity-0 hover:opacity-100 group-hover:opacity-100 pointer-events-none">
                     <button onClick={() => setPageNumber(p => Math.max(1, p - 1))} disabled={pageNumber <= 1} className="p-1 hover:text-blue-600 disabled:opacity-30 pointer-events-auto"><ChevronLeft size={20} /></button>
                     <span className="text-xs font-medium tabular-nums pointer-events-none">{pageNumber} / {numPages}</span>
@@ -470,16 +533,28 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
                         </div>
                      </div>
                  )}
-                 <div className="relative isolate shadow-xl ring-1 ring-black/5 bg-white transition-opacity duration-200 origin-top" style={{ width: 'fit-content', height: 'fit-content', opacity: loading ? 0.6 : 1 }}>
+                 <div 
+                    ref={pdfContentRef}
+                    className="relative isolate shadow-xl ring-1 ring-black/5 bg-white transition-opacity duration-200" 
+                    style={{ 
+                        width: 'fit-content', 
+                        height: 'fit-content', 
+                        opacity: loading ? 0.6 : 1,
+                        transform: `translate(${position.x}px, ${position.y}px) scale(${viewScale})`,
+                        transition: isDragging ? 'none' : 'transform 0.15s ease-out'
+                    }}
+                 >
                     <canvas ref={canvasRef} className="block" />
-                    <div ref={highlightLayerRef} className="absolute inset-0 pointer-events-none z-10" />
+                    <div ref={highlightLayerRef} className="absolute inset-0 pointer-events-none z-10" style={{ userSelect: 'none' }} />
                     <div ref={textLayerRef} className="textLayer absolute inset-0" />
                  </div>
-             </div>
+             </>
          )}
          {!isPdf && (
-             <div className="bg-white shadow-sm border border-gray-200 w-full max-w-5xl min-h-full mx-auto my-8" style={{ fontSize: `${textScale * 0.875}rem` }}>
-                <div className="p-12">{renderTextContent()}</div>
+             <div className="overflow-auto w-full h-full">
+                 <div className="bg-white shadow-sm border border-gray-200 w-full max-w-5xl min-h-full mx-auto my-8" style={{ fontSize: `${textScale * 0.875}rem` }}>
+                    <div className="p-12">{renderTextContent()}</div>
+                 </div>
              </div>
          )}
       </div>

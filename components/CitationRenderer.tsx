@@ -229,6 +229,8 @@ const CitationPortal: React.FC<CitationPortalProps> = ({ onClose, coords, fileNa
   const popoverRef = useRef<HTMLDivElement>(null);
   const [file, setFile] = useState<ProcessedFile | undefined>(undefined);
   const [pdfPageNumber, setPdfPageNumber] = useState<number | null>(null);
+  const [pdfScale, setPdfScale] = useState(1);
+  const pdfZoomHandlerRef = useRef<{ handleZoom: (delta: number) => void; handleReset: () => void }>();
 
   useEffect(() => {
     const foundFile = files.find(f => f.name === fileName);
@@ -273,26 +275,35 @@ const CitationPortal: React.FC<CitationPortalProps> = ({ onClose, coords, fileNa
         </div>
       </div>
       <div className="bg-slate-100 overflow-hidden relative flex-1">
-        {isPdfMode && file?.fileHandle ? <PdfPagePreview file={file.fileHandle} pageNumber={pdfPageNumber} quote={quote} /> : <TextContextViewer file={file} quote={quote} location={location} />}
+        {isPdfMode && file?.fileHandle ? <PdfPagePreview file={file.fileHandle} pageNumber={pdfPageNumber} quote={quote} onScaleChange={setPdfScale} zoomHandlerRef={pdfZoomHandlerRef} /> : <TextContextViewer file={file} quote={quote} location={location} />}
       </div>
-      <div className="bg-white px-2 py-1.5 border-t border-gray-200 flex-shrink-0">
-        <p className="text-[10px] text-gray-600 italic line-clamp-2">"{quote}"</p>
+      <div className="bg-white px-2 py-1.5 border-t border-gray-200 flex-shrink-0 flex items-center justify-between">
+        <p className="text-[10px] text-gray-600 italic line-clamp-2 flex-1">"{quote}"</p>
+        {isPdfMode && (
+          <div className="flex items-center gap-1 ml-2 flex-shrink-0">
+            <button onClick={() => pdfZoomHandlerRef.current?.handleZoom(0.2)} className="p-1 hover:bg-gray-100 rounded" title="Zoom In">+</button>
+            <span className="text-[10px] px-1 text-gray-600">{Math.round(pdfScale * 100)}%</span>
+            <button onClick={() => pdfZoomHandlerRef.current?.handleZoom(-0.2)} className="p-1 hover:bg-gray-100 rounded" title="Zoom Out">−</button>
+            <button onClick={() => pdfZoomHandlerRef.current?.handleReset()} className="p-1 hover:bg-gray-100 rounded text-[10px]" title="Reset">⟲</button>
+          </div>
+        )}
       </div>
     </div>,
     document.body
   );
 };
 
-const PdfPagePreview: React.FC<{ file: File; pageNumber: number; quote?: string }> = ({ file, pageNumber, quote }) => {
+const PdfPagePreview: React.FC<{ file: File; pageNumber: number; quote?: string; onScaleChange: (scale: number) => void; zoomHandlerRef: React.MutableRefObject<{ handleZoom: (delta: number) => void; handleReset: () => void } | undefined> }> = ({ file, pageNumber, quote, onScaleChange, zoomHandlerRef }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const highlightLayerRef = useRef<HTMLDivElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
+    const contentRef = useRef<HTMLDivElement>(null);
     const [loading, setLoading] = useState(true);
-    const [scale, setScale] = useState(1);
-    const [pan, setPan] = useState({ x: 0, y: 0 });
-    const [isPanning, setIsPanning] = useState(false);
-    const [panStart, setPanStart] = useState({ x: 0, y: 0 });
     const renderTaskRef = useRef<any>(null);
+    const [scale, setScale] = useState(1);
+    const [position, setPosition] = useState({ x: 0, y: 0 });
+    const [isDragging, setIsDragging] = useState(false);
+    const dragStartRef = useRef({ x: 0, y: 0, posX: 0, posY: 0 });
 
     useEffect(() => {
         const renderPage = async () => {
@@ -314,8 +325,8 @@ const PdfPagePreview: React.FC<{ file: File; pageNumber: number; quote?: string 
                 if(renderTaskRef.current) try { await renderTaskRef.current.cancel(); } catch(e) {}
 
                 const viewportUnscaled = page.getViewport({ scale: 1.0 });
-                const baseScale = 420 / viewportUnscaled.width;
-                const viewport = page.getViewport({ scale: baseScale * 5 });
+                const baseScale = 400 / viewportUnscaled.width;
+                const viewport = page.getViewport({ scale: baseScale * 10 });
 
                 const canvas = canvasRef.current;
                 if (!canvas) return;
@@ -324,8 +335,8 @@ const PdfPagePreview: React.FC<{ file: File; pageNumber: number; quote?: string 
 
                 canvas.height = viewport.height;
                 canvas.width = viewport.width;
-                canvas.style.width = `${viewport.width}px`;
-                canvas.style.height = `${viewport.height}px`;
+                canvas.style.width = `${viewport.width / 10}px`;
+                canvas.style.height = `${viewport.height / 10}px`;
 
                 const renderTask = page.render({ canvasContext: context, viewport });
                 renderTaskRef.current = renderTask;
@@ -346,31 +357,6 @@ const PdfPagePreview: React.FC<{ file: File; pageNumber: number; quote?: string 
         return () => { if(renderTaskRef.current) renderTaskRef.current.cancel(); };
     }, [file, pageNumber, quote]);
 
-    const handleWheel = (e: React.WheelEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const delta = e.deltaY > 0 ? -0.1 : 0.1;
-        setScale(prev => Math.max(0.5, Math.min(3, prev + delta)));
-    };
-
-    const handleMouseDown = (e: React.MouseEvent) => {
-        if (e.button === 0) {
-            e.preventDefault();
-            setIsPanning(true);
-            setPanStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
-        }
-    };
-
-    const handleMouseMove = (e: React.MouseEvent) => {
-        if (isPanning) {
-            setPan({ x: e.clientX - panStart.x, y: e.clientY - panStart.y });
-        }
-    };
-
-    const handleMouseUp = () => {
-        setIsPanning(false);
-    };
-
     const renderHighlights = (textContent: any, viewport: any, quote: string) => {
         if (!highlightLayerRef.current) return;
         highlightLayerRef.current.innerHTML = '';
@@ -389,6 +375,7 @@ const PdfPagePreview: React.FC<{ file: File; pageNumber: number; quote?: string 
         });
 
         const matchIndex = fullText.indexOf(normQuote);
+        const scaleFactor = 10;
 
         if (matchIndex !== -1) {
             const matchEnd = matchIndex + normQuote.length;
@@ -397,15 +384,15 @@ const PdfPagePreview: React.FC<{ file: File; pageNumber: number; quote?: string 
                     if (!window.pdfjsLib.Util) return;
 
                     const tx = window.pdfjsLib.Util.transform(viewport.transform, item.transform);
-                    const fontHeight = Math.hypot(tx[2], tx[3]);
-                    const fontWidth = item.width * viewport.scale;
+                    const fontHeight = Math.hypot(tx[2], tx[3]) / scaleFactor;
+                    const fontWidth = item.width * viewport.scale / scaleFactor;
                     const angle = Math.atan2(tx[1], tx[0]);
                     
                     const rect = document.createElement('div');
                     Object.assign(rect.style, {
                         position: 'absolute',
-                        left: `${tx[4]}px`,
-                        top: `${tx[5] - fontHeight}px`,
+                        left: `${tx[4] / scaleFactor}px`,
+                        top: `${(tx[5] - Math.hypot(tx[2], tx[3])) / scaleFactor}px`,
                         width: `${fontWidth}px`,
                         height: `${fontHeight}px`,
                         backgroundColor: 'rgba(255, 235, 59, 0.4)',
@@ -422,6 +409,62 @@ const PdfPagePreview: React.FC<{ file: File; pageNumber: number; quote?: string 
         }
     };
 
+    const handleWheel = (e: React.WheelEvent) => {
+        e.preventDefault();
+        const delta = -e.deltaY * 0.003;
+        const newScale = Math.min(Math.max(0.5, scale + delta), 8);
+        
+        if (containerRef.current && contentRef.current) {
+            const rect = containerRef.current.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const dx = (x - rect.width / 2 - position.x) * (newScale / scale - 1);
+            const dy = (y - rect.height / 2 - position.y) * (newScale / scale - 1);
+            setPosition({ x: position.x - dx, y: position.y - dy });
+        }
+        setScale(newScale);
+    };
+
+    const handleMouseDown = (e: React.MouseEvent) => {
+        if (e.button === 1) {
+            e.preventDefault();
+            setIsDragging(true);
+            dragStartRef.current = { x: e.clientX, y: e.clientY, posX: position.x, posY: position.y };
+        }
+    };
+
+    const handleMouseMove = (e: React.MouseEvent) => {
+        if (isDragging) {
+            const dx = e.clientX - dragStartRef.current.x;
+            const dy = e.clientY - dragStartRef.current.y;
+            setPosition({ x: dragStartRef.current.posX + dx, y: dragStartRef.current.posY + dy });
+        }
+    };
+
+    const handleMouseUp = () => setIsDragging(false);
+
+    const handleZoom = (delta: number) => {
+        setScale(prev => {
+            const newScale = Math.min(Math.max(0.5, prev + delta), 8);
+            onScaleChange(newScale);
+            return newScale;
+        });
+    };
+
+    const handleReset = () => {
+        setScale(1);
+        setPosition({ x: 0, y: 0 });
+        onScaleChange(1);
+    };
+
+    useEffect(() => {
+        zoomHandlerRef.current = { handleZoom, handleReset };
+    }, [scale, position]);
+
+    useEffect(() => {
+        onScaleChange(scale);
+    }, [scale]);
+
     return (
         <div 
             ref={containerRef}
@@ -431,24 +474,20 @@ const PdfPagePreview: React.FC<{ file: File; pageNumber: number; quote?: string 
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
-            style={{ cursor: isPanning ? 'grabbing' : 'grab' }}
+            style={{ cursor: isDragging ? 'grabbing' : 'default' }}
         >
             {loading && <div className="absolute inset-0 flex items-center justify-center z-20"><Loader2 size={20} className="animate-spin text-gray-500" /></div>}
             <div 
+                ref={contentRef}
                 className={`relative shadow-lg bg-white ${loading ? 'opacity-0' : 'opacity-100'}`}
-                style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`, transformOrigin: 'center center' }}
+                style={{
+                    transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
+                    transition: isDragging ? 'none' : 'transform 0.1s ease-out'
+                }}
             >
                  <canvas ref={canvasRef} className="block" />
-                 <div ref={highlightLayerRef} className="absolute inset-0 pointer-events-none z-10" />
+                 <div ref={highlightLayerRef} className="absolute inset-0 pointer-events-none z-10" style={{ userSelect: 'none' }} />
             </div>
-            {scale !== 1 && (
-                <button 
-                    onClick={() => { setScale(1); setPan({ x: 0, y: 0 }); }}
-                    className="absolute bottom-4 right-4 bg-white/90 hover:bg-white text-gray-700 px-3 py-1.5 rounded-lg shadow-lg text-xs font-medium border border-gray-200 transition-all z-30"
-                >
-                    Reset View
-                </button>
-            )}
         </div>
     );
 };
