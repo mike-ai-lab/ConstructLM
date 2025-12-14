@@ -370,7 +370,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
                       {sheetName}
                   </h4>
                   <div className={`overflow-x-auto border rounded-lg shadow-sm ${isTargetSheet ? 'border-blue-200' : 'border-gray-200'}`}>
-                      <table className="min-w-full divide-y divide-gray-200 text-xs">
+                      <table className="w-full table-auto divide-y divide-gray-200 text-xs">
                           <tbody className="bg-white divide-y divide-gray-100">
                               {rows.map((row, rIdx) => {
                                   const visualRowNumber = rIdx + 1;
@@ -382,15 +382,15 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
                                         id={isHighlightRow ? "excel-highlight-row" : undefined}
                                         className={`
                                             transition-colors duration-500
-                                            ${rIdx === 0 ? "bg-gray-50 font-semibold text-gray-900" : "text-gray-700 hover:bg-gray-50/50"}
+                                            ${rIdx === 0 ? "bg-gray-50 font-semibold text-gray-900 sticky top-0 z-20" : "text-gray-700 hover:bg-gray-50/50"}
                                             ${isHighlightRow ? "bg-amber-100 ring-2 ring-inset ring-amber-400 z-10 relative" : ""}
                                         `}
                                     >
-                                        <td className={`px-2 py-2 w-8 select-none text-[10px] text-right border-r border-gray-100 bg-gray-50/50 ${isHighlightRow ? "text-amber-700 font-bold" : "text-gray-300"}`}>
+                                        <td className={`px-1 py-1 w-8 select-none text-[10px] text-right border-r border-gray-100 bg-gray-50/50 ${isHighlightRow ? "text-amber-700 font-bold" : "text-gray-300"}`}>
                                             {visualRowNumber}
                                         </td>
                                         {row.map((cell, cIdx) => (
-                                            <td key={cIdx} className="px-3 py-2 whitespace-nowrap border-r border-gray-100 last:border-none max-w-[300px] truncate" title={cell}>
+                                            <td key={cIdx} className="px-1.5 py-1 border-r border-gray-100 last:border-none" title={cell}>
                                                 {cell}
                                             </td>
                                         ))}

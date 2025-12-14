@@ -1,0 +1,1271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <meta name="description" content="Interactive BOQ Mind Map for Doors, Windows & Furjat - BWB & KSU Projects">
+    <title>BOQ Interactive Mind Map - Doors, Windows & Furjat</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0c1445 0%, #1a2a6c 50%, #2c3e50 100%);
+            color: white;
+        }
+
+        #mindmap-container {
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .node {
+            cursor: pointer;
+            pointer-events: all;
+            touch-action: manipulation;
+        }
+
+        .node-rect {
+            stroke: none;
+            rx: 8;
+            ry: 8;
+            transition: all 0.3s ease;
+        }
+
+        .node-rect:hover {
+            filter: brightness(1.2);
+        }
+
+        .node text {
+            font: 12px 'Segoe UI', sans-serif;
+            fill: white;
+            text-anchor: start;
+            dominant-baseline: central;
+            pointer-events: none;
+            font-weight: 500;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+
+        .item-code {
+            font-weight: 700;
+            fill: #ffd700;
+            font-size: 13px;
+            text-shadow: 0 0 8px rgba(255, 215, 0, 0.6);
+        }
+
+        .link {
+            fill: none;
+            stroke-width: 3px;
+            stroke-opacity: 0.9;
+            transition: all 0.3s ease;
+        }
+
+        .controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #3498db;
+            max-width: 300px;
+            z-index: 1000;
+        }
+
+        .controls h3 {
+            margin: 0 0 10px 0;
+            color: #3498db;
+            font-size: 16px;
+        }
+
+        .controls p {
+            margin: 5px 0;
+            font-size: 12px;
+            color: #bdc3c7;
+            line-height: 1.4;
+        }
+
+        .legend {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+
+        .legend-toggle {
+            width: 40px;
+            height: 40px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .legend-toggle:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: scale(1.1);
+            border-color: rgba(255, 255, 255, 0.4);
+        }
+
+        .legend-toggle svg {
+            width: 20px;
+            height: 20px;
+            fill: #bdc3c7;
+        }
+
+        .legend-content {
+            display: none;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 12px;
+            border-radius: 8px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            margin-bottom: 8px;
+        }
+
+        .legend.expanded .legend-content {
+            display: block;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 4px 0;
+            font-size: 11px;
+        }
+
+        .legend-color {
+            width: 14px;
+            height: 14px;
+            border-radius: 2px;
+            margin-right: 6px;
+        }
+
+        .stats {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            border-right: 4px solid #27ae60;
+            z-index: 1000;
+        }
+
+        .stats h4 {
+            margin: 0 0 10px 0;
+            color: #27ae60;
+            font-size: 14px;
+        }
+
+        .stats p {
+            margin: 3px 0;
+            font-size: 11px;
+            color: #bdc3c7;
+        }
+
+        .filter-panel {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .filter-controls {
+            display: flex;
+            align-items: center;
+            gap: 0;
+        }
+
+        .filter-tips {
+            display: flex;
+            gap: 6px;
+            justify-content: center;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+        }
+
+        .filter-tip {
+            padding: 4px 8px;
+            font-size: 10px;
+            background: rgba(0, 0, 0, 0.6);
+            color: #bdc3c7;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .filter-tip:hover {
+            background: rgba(243, 156, 18, 0.3);
+            border-color: #f39c12;
+            color: #f39c12;
+        }
+
+        .filter-tip.active {
+            background: #f39c12;
+            color: #000;
+            border-color: #f39c12;
+        }
+
+        .search-box {
+            width: min(400px, 80vw);
+            padding: 10px 16px;
+            font-size: 13px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 25px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            box-sizing: border-box;
+            transition: all 0.3s;
+            touch-action: manipulation;
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: #f39c12;
+            background: rgba(0, 0, 0, 0.85);
+        }
+
+        .search-box::placeholder {
+            color: #888;
+        }
+
+        .node.faded { opacity: 0.15; }
+        .node.highlighted .node-rect { filter: brightness(1.3) drop-shadow(0 0 8px rgba(255,255,255,0.5)); }
+
+        .action-buttons {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            z-index: 1000;
+        }
+
+        .action-btn {
+            width: 40px;
+            height: 40px;
+            border: none;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .action-btn:hover {
+            background: rgba(52, 152, 219, 0.8);
+            border-color: #3498db;
+            transform: translateY(-2px);
+        }
+
+        .action-btn.reset:hover {
+            background: rgba(231, 76, 60, 0.8);
+            border-color: #e74c3c;
+        }
+
+        .action-btn svg {
+            width: 18px;
+            height: 18px;
+            fill: white;
+        }
+
+        .clear-filter-btn {
+            width: 40px;
+            height: 40px;
+            border: none;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            margin-left: 10px;
+            vertical-align: middle;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .clear-filter-btn:hover {
+            background: rgba(231, 76, 60, 0.8);
+            border-color: #e74c3c;
+            transform: scale(1.1);
+        }
+
+        .clear-filter-btn svg {
+            width: 18px;
+            height: 18px;
+            fill: white;
+        }
+    </style>
+</head>
+<body>
+
+
+
+<div class="legend">
+    <div class="legend-content">
+        <div class="legend-item">
+            <div class="legend-color" style="background: #3498db;"></div>
+            <span>Main Categories</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #e74c3c;"></div>
+            <span>Door Types</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #f39c12;"></div>
+            <span>Window Types</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #9b59b6;"></div>
+            <span>Furjat & Openings</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #27ae60;"></div>
+            <span>Specifications</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #7f8c8d;"></div>
+            <span>Materials</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #95a5a6;"></div>
+            <span>Performance Ratings</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #5d6d7e;"></div>
+            <span>Features & Accessories</span>
+        </div>
+    </div>
+    <div class="legend-toggle" onclick="toggleLegend()">
+        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>
+    </div>
+</div>
+
+<div class="action-buttons">
+    <button class="action-btn" onclick="collapseAll()" title="Collapse All">
+        <svg viewBox="0 0 24 24"><path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg>
+    </button>
+    <button class="action-btn" onclick="expandAll()" title="Expand All">
+        <svg viewBox="0 0 24 24"><path d="M16.59 8.59L12 13.17 7.41 8.59 6 10l6 6 6-6z"/></svg>
+    </button>
+    <button class="action-btn reset" onclick="resetView()" title="Reset View">
+        <svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>
+    </button>
+</div>
+
+<div class="filter-panel">
+    <div class="filter-tips">
+        <span class="filter-tip" onclick="filterByType('BWB')">BWB</span>
+        <span class="filter-tip" onclick="filterByType('KSU')">KSU</span>
+        <span class="filter-tip" onclick="filterByType('Glazed')">Glazed</span>
+        <span class="filter-tip" onclick="filterByType('Metal')">Metal</span>
+        <span class="filter-tip" onclick="filterByType('NAJDI')">NAJDI</span>
+        <span class="filter-tip" onclick="filterByType('Furjat')">Furjat</span>
+        <span class="filter-tip" onclick="filterByType('32dB')">32dB</span>
+        <span class="filter-tip" onclick="filterByType('35dB')">35dB</span>
+        <span class="filter-tip" onclick="filterByType('45dB')">45dB</span>
+    </div>
+    <div class="filter-controls">
+        <input type="text" id="filterInput" class="search-box" placeholder="Search items..." oninput="applyFilter(this.value)">
+        <button class="clear-filter-btn" onclick="clearFilter()" title="Clear Filters">
+            <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+    </div>
+</div>
+
+<div id="mindmap-container"></div>
+
+<script>
+// Comprehensive BOQ Data Structure (Kept exactly as provided)
+const boqData = {
+    "name": "BOQ MASTER",
+    "color": "#2c3e50",
+    "children": [
+        {
+            "name": "BWB PROJECT",
+            "color": "#3498db",
+            "children": [
+                {
+                    "name": "DOORS",
+                    "color": "#e74c3c",
+                    "children": [
+                        {
+                            "name": "Glazed Doors",
+                            "color": "#c0392b",
+                            "children": [
+                                {
+                                    "name": "External Glazed",
+                                    "children": [
+                                        {"name": "EXT-F: 1200x3100mm (32dB)"},
+                                        {"name": "EXT-C1: 2400x3400mm (35dB)"},
+                                        {"name": "EXT-C2: 2000x3200mm (32dB)"},
+                                        {"name": "EXT-C3: 1800x3000mm (32dB)"},
+                                        {"name": "EXT-D1: 2000x3200mm (32dB)"},
+                                        {"name": "EXT-D2: 2000x2900mm (32/35dB)"},
+                                        {"name": "EXT-D3: 1900x3200mm (32dB)"},
+                                        {"name": "EXT-D4: 2000x2900mm (35dB)"},
+                                        {"name": "EXT-H4A: 2800x4000mm (32dB)"},
+                                        {"name": "EXT-H4B: 2800x4000mm (32dB)"},
+                                        {"name": "EXT-H5: 2100x3300mm (32dB)"}
+                                    ]
+                                },
+                                {
+                                    "name": "Features",
+                                    "color": "#27ae60",
+                                    "children": [
+                                        {"name": "Clear tempered glass"},
+                                        {"name": "Overhead fix panel"},
+                                        {"name": "NAJDI timber shutter"},
+                                        {"name": "Acoustic rated (32-35dB)"},
+                                        {"name": "Ironmongery included"}
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            "name": "Metal Doors",
+                            "color": "#c0392b",
+                            "children": [
+                                {
+                                    "name": "Interior Metal",
+                                    "children": [
+                                        {"name": "INT-A1: 1100x2200mm"},
+                                        {"name": "INT-A1b: 1100x2200mm (30dB)"},
+                                        {"name": "INT-A1c: 1200x2200mm (32dB)"},
+                                        {"name": "INT-A3: 800x2200mm (30dB + louver)"},
+                                        {"name": "INT-B1: 1800x2200mm (Fire rated)"},
+                                        {"name": "INT-B2: 1800x3000mm (1.5hr fire)"},
+                                        {"name": "INT-B3: 2500x3000mm (1.5hr fire + 45dB)"},
+                                        {"name": "INT-C: 1000x2000mm"},
+                                        {"name": "INT-F: 1800x2200mm (32dB)"},
+                                        {"name": "INT-G: 1200x2200mm"}
+                                    ]
+                                },
+                                {
+                                    "name": "Fire Ratings",
+                                    "color": "#27ae60",
+                                    "children": [
+                                        {"name": "1 hour fire rated"},
+                                        {"name": "1.5 hour fire rated"},
+                                        {"name": "Non fire rated"},
+                                        {"name": "Acoustic combinations"}
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            "name": "Wood Doors",
+                            "color": "#c0392b",
+                            "children": [
+                                {
+                                    "name": "NAJDI Design",
+                                    "children": [
+                                        {"name": "EXT-A1: 900x2200mm"},
+                                        {"name": "EXT-A2: 1100x2200mm"},
+                                        {"name": "EXT-A3: 1200x3200mm (35dB)"},
+                                        {"name": "EXT-B1: 2500x3200mm"},
+                                        {"name": "EXT-B2: 2700x3200mm (45dB)"},
+                                        {"name": "EXT-H1: 2200x4000mm (32dB)"},
+                                        {"name": "EXT-H2: 4500x4000mm"},
+                                        {"name": "EXT-H3: 6000x5500mm"},
+                                        {"name": "EXT-J: 2000x2750mm (35dB)"}
+                                    ]
+                                },
+                                {
+                                    "name": "Features",
+                                    "color": "#27ae60",
+                                    "children": [
+                                        {"name": "Solid timber panel"},
+                                        {"name": "Applied timber carving"},
+                                        {"name": "Metal jamb (MT-01)"},
+                                        {"name": "Fire rated options"},
+                                        {"name": "Acoustic rated options"}
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "name": "WINDOWS",
+                    "color": "#f39c12",
+                    "children": [
+                        {
+                            "name": "Aluminum Windows",
+                            "color": "#e67e22",
+                            "children": [
+                                {"name": "W-01: 1000x2000mm"},
+                                {"name": "W-02: 300x1800mm"},
+                                {"name": "W-03: 900x1300mm"},
+                                {"name": "W-04: 1600x2000mm"},
+                                {"name": "W-05A: 1100x2130mm"},
+                                {"name": "W-05B: 1100x2130mm"},
+                                {"name": "W-06A: 1500x2130mm"},
+                                {"name": "W-06B: 1500x2130mm"},
+                                {"name": "W-06C: 1500x2130mm"},
+                                {"name": "W-06D: 1500x2130mm"},
+                                {"name": "W-07: 1050x2400mm / 750x750mm"},
+                                {"name": "W-08: 1100x2100mm"},
+                                {"name": "W-09A: 1100x2400mm"},
+                                {"name": "W-09B: 1100x2400mm"},
+                                {"name": "W-09C: 1100x2400mm"}
+                            ]
+                        },
+                        {
+                            "name": "NAJDI Windows",
+                            "color": "#e67e22",
+                            "children": [
+                                {"name": "W-10: 1200x1800mm (NAJDI pattern)"},
+                                {"name": "W-11: 1800x2200mm (External NAJDI)"},
+                                {"name": "W-12: 1500x2200mm (Both sides NAJDI)"},
+                                {"name": "W-13: 1600x2100mm (Both sides NAJDI)"},
+                                {"name": "W-14: 1600x1600mm"},
+                                {"name": "W-15: 2000x1500mm"}
+                            ]
+                        },
+                        {
+                            "name": "Features",
+                            "color": "#27ae60",
+                            "children": [
+                                {"name": "Clear tempered glass"},
+                                {"name": "Aluminum frame"},
+                                {"name": "Fixed/Hinged options"},
+                                {"name": "Wood shutters"},
+                                {"name": "NAJDI pattern carving"}
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "name": "FURJAT & OPENINGS",
+                    "color": "#9b59b6",
+                    "children": [
+                        {
+                            "name": "Opening Furjat",
+                            "color": "#8e44ad",
+                            "children": [
+                                {"name": "NP-01: 310x270mm"},
+                                {"name": "NP-02: 770x670mm"},
+                                {"name": "NP-03: 2215x1770mm"},
+                                {"name": "NP-04: 310x2070mm"},
+                                {"name": "NP-05: 310x2470mm"},
+                                {"name": "NP-06: 310x3270mm"},
+                                {"name": "NP-07: 770x3470mm"},
+                                {"name": "NP-08: 4235x3270mm"}
+                            ]
+                        },
+                        {
+                            "name": "Frameless Glass Partitions",
+                            "color": "#8e44ad",
+                            "children": [
+                                {"name": "P01: 3742x2700mm (32dB)"},
+                                {"name": "P02: 3888x2700mm (32dB)"},
+                                {"name": "P03: 1642x2700mm (32dB)"}
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "name": "ROLLER SHUTTERS",
+                    "color": "#34495e",
+                    "children": [
+                        {"name": "EXT-I1: 4200x3000mm"},
+                        {"name": "EXT-I2: 6600x5025mm (Security)"},
+                        {"name": "EXT-I3: 9350x5525mm (Security)"}
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "KSU PROJECT",
+            "color": "#3498db",
+            "children": [
+                {
+                    "name": "DOORS",
+                    "color": "#e74c3c",
+                    "children": [
+                        {
+                            "name": "NAJDI Style Doors",
+                            "color": "#c0392b",
+                            "children": [
+                                {
+                                    "name": "Thermally Broken Steel",
+                                    "children": [
+                                        {"name": "EXT-3: 1100x2400mm"},
+                                        {"name": "EXT-3B5: 1700x2400mm"},
+                                        {"name": "EXT-3C9: 1700x3000mm (with glass)"},
+                                        {"name": "EXT-5A: 1100x2400mm"},
+                                        {"name": "EXT-5B9: 2100x2400mm"},
+                                        {"name": "EXT-6: 2100x2400mm"},
+                                        {"name": "EXT-7: 1100x2400mm"},
+                                        {"name": "EXT-7L: 1100x2400mm"},
+                                        {"name": "EXT-7V: 1100x2400mm"},
+                                        {"name": "EXT-8: 2100x2400mm"},
+                                        {"name": "EXT-8S: 1600x2400mm"},
+                                        {"name": "EXT-8Z: 1900x2400mm"},
+                                        {"name": "EXT-15: 2340x2400mm"}
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            "name": "Glazed Doors",
+                            "color": "#c0392b",
+                            "children": [
+                                {
+                                    "name": "Ornamental Glazed",
+                                    "children": [
+                                        {"name": "Type 3: 1100x2400mm"},
+                                        {"name": "Type 3A: 1100x2400mm (with transom)"},
+                                        {"name": "Type 3B5: 1100x2400mm (with sidelite)"},
+                                        {"name": "Type 3B9: 1100x2400mm (with sidelite)"},
+                                        {"name": "Type 3C5: 1100x2400mm (sidelite + transom)"},
+                                        {"name": "Type 3C9: 1100x2400mm (sidelite + transom)"},
+                                        {"name": "Type 4: 2100x2400mm"},
+                                        {"name": "Type 4A: 2100x2400mm (with transom)"},
+                                        {"name": "Type 5: 1100x2400mm"},
+                                        {"name": "Type 5B: 1100x2400mm (with sidelite)"},
+                                        {"name": "Type 6: 2100x2400mm"},
+                                        {"name": "Type 6A: 2000x2350mm (with transom)"},
+                                        {"name": "Type 6C9: 3000x3000mm"}
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            "name": "Metal Doors",
+                            "color": "#c0392b",
+                            "children": [
+                                {
+                                    "name": "Hollow Metal",
+                                    "children": [
+                                        {"name": "Type 1: 1100x2400mm"},
+                                        {"name": "Type 1L: 1100x2400mm"},
+                                        {"name": "Type 1LV: 1100x2400mm"},
+                                        {"name": "Type 1L1: 1100x3000mm"},
+                                        {"name": "Type 2: 2100x2450mm"},
+                                        {"name": "Type 2L: 2100x3000mm"}
+                                    ]
+                                },
+                                {
+                                    "name": "Fire Rated Options",
+                                    "color": "#27ae60",
+                                    "children": [
+                                        {"name": "45 minutes fire rating"},
+                                        {"name": "90 minutes fire rating"},
+                                        {"name": "Non fire rated"},
+                                        {"name": "With louvers"},
+                                        {"name": "Acoustic combinations"}
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            "name": "Wood Doors",
+                            "color": "#c0392b",
+                            "children": [
+                                {
+                                    "name": "Solid Wood",
+                                    "children": [
+                                        {"name": "Type 7: 1100x2400mm"},
+                                        {"name": "Type 7.1: 1100x2100mm"},
+                                        {"name": "Type 7L: 1100x2400mm (with louver)"},
+                                        {"name": "Type 7U: 1100x2400mm (with undercut)"},
+                                        {"name": "Type 7V: 1100x2400mm (with vision)"},
+                                        {"name": "Type 8: 2100x2400mm"},
+                                        {"name": "Type 8S: 2100x2400mm"},
+                                        {"name": "Type 8V: 2100x2400mm (with vision)"},
+                                        {"name": "Type 10: 2100x2400mm"},
+                                        {"name": "Type 16: 900x2400mm"},
+                                        {"name": "Type 17: 2100x3100mm (Auditorium)"},
+                                        {"name": "Type 20: 1100x2400mm"}
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "name": "WINDOWS",
+                    "color": "#f39c12",
+                    "children": [
+                        {
+                            "name": "External Windows",
+                            "color": "#e67e22",
+                            "children": [
+                                {
+                                    "name": "Type A Series",
+                                    "children": [
+                                        {"name": "A-N-W: 800x1400mm (non-operable + wood shutter)"},
+                                        {"name": "A1-N-W: 800x1400mm (non-operable + wood shutter)"},
+                                        {"name": "A3-N-W: 800x1400mm (non-operable + wood shutter)"},
+                                        {"name": "A-O: 800x1400mm (operable)"},
+                                        {"name": "A1-O: 800x1400mm (operable + 1 furjat)"},
+                                        {"name": "A2-O: 800x1400mm (operable + 1 furjat)"},
+                                        {"name": "A3-O: 800x1400mm (operable + 2 furjat)"},
+                                        {"name": "A3-O-W: 800x1400mm (operable + wood shutter + 2 furjat)"}
+                                    ]
+                                },
+                                {
+                                    "name": "Type B Series",
+                                    "children": [
+                                        {"name": "B-N-W: 1000x2000mm (non-operable + wood shutter)"},
+                                        {"name": "B3-N-W: 1000x2000mm (non-operable + wood shutter)"},
+                                        {"name": "B-O: 1000x2000mm (operable)"},
+                                        {"name": "B1-O: 1000x2000mm (operable + 1 furjat)"},
+                                        {"name": "B3-O: 1000x2000mm (operable + 2 furjat)"},
+                                        {"name": "B4-O: 1000x2000mm (operable + 2 furjat)"}
+                                    ]
+                                },
+                                {
+                                    "name": "Type C Series",
+                                    "children": [
+                                        {"name": "C-O: 1000x1800mm (operable)"},
+                                        {"name": "C1-O: 1000x1800mm (operable + 1 furjat)"},
+                                        {"name": "C3-O: 1000x1800mm (operable + 2 furjat)"}
+                                    ]
+                                },
+                                {
+                                    "name": "Type CY Series",
+                                    "children": [
+                                        {"name": "CY1-N: 1000x2400mm (fixed)"},
+                                        {"name": "CY1-N-W: 1000x2400mm (fixed + wood shutter)"},
+                                        {"name": "CY2-N: 2200x2400mm (fixed)"},
+                                        {"name": "CY3-N: 1800x2400mm (fixed)"},
+                                        {"name": "CY4-N: 1000x1800mm"},
+                                        {"name": "CY5-N: 1600x1800mm (fixed)"},
+                                        {"name": "CY6-N: 1800x1800mm"}
+                                    ]
+                                },
+                                {
+                                    "name": "Other Types",
+                                    "children": [
+                                        {"name": "D-N-W: 800x2000mm (non-operable + wood shutter)"},
+                                        {"name": "D-O: 800x2000mm (operable)"},
+                                        {"name": "D1-O: 800x2000mm (operable + 1 furjat)"},
+                                        {"name": "E3-O: 800x1800mm (operable + 2 furjat)"},
+                                        {"name": "F-N: 800x800mm (non-operable)"},
+                                        {"name": "F-N-W: 800x800mm (non-operable + wood shutter)"},
+                                        {"name": "F1-N: 800x800mm (non-operable + 1 furjat)"},
+                                        {"name": "F1-N-W: 800x800mm (non-operable + 1 furjat + wood shutter)"},
+                                        {"name": "F2-N: 800x800mm (non-operable + 2 furjat)"},
+                                        {"name": "G-N: 400x1200mm (non-operable)"},
+                                        {"name": "G-N-W: 400x1200mm (non-operable + wood shutter)"}
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            "name": "Special Windows",
+                            "color": "#e67e22",
+                            "children": [
+                                {"name": "SF-1: 5000x3800mm (Glazed)"},
+                                {"name": "SF-2: 2200x3000mm (Glazed)"},
+                                {"name": "SF-3: 1600x1800mm (Glazed)"},
+                                {"name": "SF-4: 2200x2500mm (Glazed)"},
+                                {"name": "SF-5: 2400x3600mm (Glazed)"}
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "name": "FURJAT & DECORATIVE",
+                    "color": "#9b59b6",
+                    "children": [
+                        {
+                            "name": "Recessed Furjat",
+                            "color": "#8e44ad",
+                            "children": [
+                                {"name": "DW1-R: 2x200x1600mm + 12 triangular furjat"},
+                                {"name": "DW3-R: 1 triangular 1042x300mm + 3 triangular furjat"},
+                                {"name": "DW5-R: Rectangular furjat"},
+                                {"name": "DW6-R: 3x200x1060mm + 6 furjat"},
+                                {"name": "DW7-R: 3 recessed glazed furjat"},
+                                {"name": "DW8-R: 1x400mm equilateral triangle furjat"}
+                            ]
+                        },
+                        {
+                            "name": "Glazed Furjat",
+                            "color": "#8e44ad",
+                            "children": [
+                                {"name": "DW1-G: 2x200x1600mm + 12 triangular glazed furjat"},
+                                {"name": "DW3-G: 1 triangular 1042x300mm + 3 triangular glazed furjat"},
+                                {"name": "DW4-G: 1 triangular + 1 rectangular + 1 triangle furjat"},
+                                {"name": "DW5-G: 1 square 300x300mm + 1 triangular + 2 triangular furjat"},
+                                {"name": "DW6-G: 3x200x1060mm + 6 triangular glazed furjat"},
+                                {"name": "DW7-G: 3x400mm equilateral triangular glazed furjat"}
+                            ]
+                        },
+                        {
+                            "name": "Opening Furjat",
+                            "color": "#8e44ad",
+                            "children": [
+                                {"name": "DW1-OP: 2x200x1600mm + 12 triangular operable furjat"},
+                                {"name": "DW3-OP: 1 triangular 1042x300mm + 3 triangular operable furjat"},
+                                {"name": "DW4-OP: 1 triangular + 1 rectangular + 1 triangle operable furjat"},
+                                {"name": "DW6-OP: 3x200x1060mm + 6 operable furjat"},
+                                {"name": "DW7-OP: 3x400mm equilateral triangle operable furjat"},
+                                {"name": "DW8-OP: 1x400mm equilateral triangle operable furjat"}
+                            ]
+                        },
+                        {
+                            "name": "Internal Windows",
+                            "color": "#8e44ad",
+                            "children": [
+                                {"name": "INT-C-N: 400mm equilateral triangular operable furjat"},
+                                {"name": "INT-D-N: 400mm equilateral triangular operable furjat"},
+                                {"name": "INT-F-O: 400mm equilateral triangular operable furjat"},
+                                {"name": "INT-G-O: 400mm equilateral triangular operable furjat"},
+                                {"name": "INT-H-N: 6400x2450mm (with single leaf door)"}
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "name": "ROLLER SHUTTERS",
+                    "color": "#34495e",
+                    "children": [
+                        {"name": "Type 13: 3130x2400mm (Overhead coiling metal)"}
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "SPECIFICATIONS",
+            "color": "#27ae60",
+            "children": [
+                {
+                    "name": "Materials",
+                    "color": "#7f8c8d",
+                    "children": [
+                        {"name": "Clear tempered glass (10mm)"},
+                        {"name": "Thermally broken steel frame"},
+                        {"name": "Aluminum frame"},
+                        {"name": "Solid timber panel"},
+                        {"name": "Metal jamb (MT-01)"},
+                        {"name": "Hollow metal construction"},
+                        {"name": "Insulated Glass Units"},
+                        {"name": "NAJDI carved timber"}
+                    ]
+                },
+                {
+                    "name": "Performance Ratings",
+                    "color": "#95a5a6",
+                    "children": [
+                        {
+                            "name": "Fire Ratings",
+                            "children": [
+                                {"name": "45 minutes fire rating"},
+                                {"name": "60 minutes fire rating"},
+                                {"name": "90 minutes fire rating"},
+                                {"name": "1.5 hour fire rating"},
+                                {"name": "2 hour fire rating"},
+                                {"name": "Non fire rated"}
+                            ]
+                        },
+                        {
+                            "name": "Acoustic Ratings",
+                            "children": [
+                                {"name": "30 dB acoustic rated"},
+                                {"name": "32 dB acoustic rated"},
+                                {"name": "35 dB acoustic rated"},
+                                {"name": "45 dB acoustic rated"},
+                                {"name": "52/63 STC rating"},
+                                {"name": "Rw 50 dB acoustic rated"},
+                                {"name": "Rw 55 dB acoustic rated"},
+                                {"name": "Rw 60 dB acoustic rated"}
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "name": "Features & Accessories",
+                    "color": "#5d6d7e",
+                    "children": [
+                        {"name": "Concealed hinges"},
+                        {"name": "Ironmongery included"},
+                        {"name": "Paint finish"},
+                        {"name": "Glazing beads & gaskets"},
+                        {"name": "Vision panels"},
+                        {"name": "Louvers"},
+                        {"name": "Transom windows"},
+                        {"name": "Sidelites"},
+                        {"name": "Wood shutters"},
+                        {"name": "Fly mesh"},
+                        {"name": "Security features"},
+                        {"name": "Undercut options"}
+                    ]
+                }
+            ]
+        }
+    ]
+};
+
+// Set up canvas dimensions
+const margin = {top: 20, right: 120, bottom: 20, left: 120};
+const width = window.innerWidth;
+const height = window.innerHeight;
+
+// Define node spacing
+const dx = 35; // Vertical spacing between nodes
+const dy = 220; // Horizontal spacing between levels
+
+let i = 0;
+let root = d3.hierarchy(boqData);
+
+// Assign colors down the hierarchy based on parent
+root.descendants().forEach(d => {
+    if(d.data.color) {
+        d.color = d.data.color;
+    } else if (d.parent && d.parent.color) {
+        d.color = d.parent.color;
+    } else {
+        d.color = "#95a5a6"; // Default fallback color
+    }
+});
+
+// Setup standard D3 Tree layout with defined node size
+// Note: For horizontal trees, nodeSize is [verticalSpacing, horizontalSpacing]
+const tree = d3.tree().nodeSize([dx, dy]);
+
+// Setup SVG and Zoom capabilities with touch support
+const zoom = d3.zoom()
+    .scaleExtent([0.2, 4])
+    .filter(function(event) {
+        // Allow touch events and prevent default browser zoom
+        return !event.ctrlKey && !event.button;
+    })
+    .on("zoom", (event) => {
+        g.attr("transform", event.transform);
+    });
+
+const svg = d3.select("#mindmap-container")
+    .append("svg")
+    .attr("width", width)
+    .attr("height", height)
+    .style("font", "12px sans-serif")
+    .style("user-select", "none")
+    .call(zoom);
+
+const g = svg.append("g")
+    // Initial positioning: Center vertically, offset left horizontally
+    .attr("transform", `translate(${margin.left},${height/2})`);
+
+const linkGroup = g.append("g").attr("fill", "none").attr("stroke-width", 3.5);
+const nodeGroup = g.append("g");
+
+// Set initial zoom transform to prevent first-click bug
+const initialTransform = d3.zoomIdentity.translate(margin.left, height/2);
+svg.call(zoom.transform, initialTransform);
+
+// Set starting position for the root node
+root.x0 = 0; // Vertical center relative to the group 'g'
+root.y0 = 0; // Horizontal start
+
+// Initial collapse: Collapse all children of the main project nodes
+if (root.children) {
+    root.children.forEach(child => {
+        if (child.children) {
+            child.children.forEach(collapse);
+        }
+    });
+}
+
+// Helper function to collapse nodes recursively
+function collapse(d) {
+    if (d.children) {
+        d._children = d.children;
+        d._children.forEach(collapse);
+        d.children = null;
+    }
+}
+
+update(root);
+
+function update(source) {
+    const duration = 350; // Animation duration
+    const easing = d3.easeCubicOut;
+
+    // Compute the new tree layout based on currently expanded nodes
+    tree(root);
+
+    // Get lists of current nodes and links
+    const nodes = root.descendants();
+    const links = root.links();
+
+    // Normalize depth for horizontal fixed-depth layout
+    nodes.forEach(d => { d.y = d.depth * dy; });
+
+    // --- Node Handling ---
+
+    // Update existing nodes
+    const node = nodeGroup.selectAll("g.node")
+        .data(nodes, d => d.id || (d.id = ++i));
+
+    // Enter new nodes at the parent's previous position
+    const nodeEnter = node.enter().append("g")
+        .attr("class", "node")
+        // Start at source's previous position for smooth entry animation
+        .attr("transform", d => `translate(${source.y0},${source.x0})`)
+        .on("click", (event, d) => {
+            event.stopPropagation();
+            // Toggle children on click
+            if (d.children) {
+                d._children = d.children;
+                d.children = null;
+            } else {
+                d.children = d._children;
+                d._children = null;
+            }
+            update(d);
+        });
+
+    // Add the colored rectangle background
+    nodeEnter.append("rect")
+        .attr("class", "node-rect")
+        // y position is offset to center vertically around the text base line
+        .attr("y", -14)
+        .attr("height", 28)
+        .attr("rx", 6)
+        .attr("ry", 6)
+        .style("fill", d => d.color) // Solid fill color from data
+        .style("opacity", 0); // Start transparent
+
+    // Add the text label with item code styling
+    nodeEnter.each(function(d) {
+        const textGroup = d3.select(this);
+        const name = d.data.name;
+        const codeMatch = name.match(/^([A-Z0-9\-]+):\s*(.+)$/);
+        
+        if (codeMatch) {
+            // Has item code - split into code and content
+            const code = codeMatch[1] + ':';
+            const content = codeMatch[2];
+            
+            const textElem = textGroup.append("text")
+                .attr("dy", 0.35)
+                .attr("x", 12);
+            
+            textElem.append("tspan")
+                .attr("class", "item-code")
+                .text(code);
+            
+            textElem.append("tspan")
+                .text(' ' + content)
+                .style("fill", "white");
+            
+            textElem.style("fill-opacity", 0);
+            d.bbox = textElem.node().getBBox();
+        } else {
+            // No item code - regular text
+            const textElem = textGroup.append("text")
+                .attr("dy", 0.35)
+                .attr("x", 12)
+                .text(name)
+                .style("fill-opacity", 0);
+            
+            d.bbox = textElem.node().getBBox();
+        }
+    });
+
+    // Transition nodes to their new positions
+    const nodeUpdate = node.merge(nodeEnter).transition()
+        .duration(duration)
+        .ease(easing)
+        // Swap x and y for horizontal layout: translate(y, x)
+        .attr("transform", d => `translate(${d.y},${d.x})`);
+
+    // Update rectangle size based on text width and fade in
+    nodeUpdate.select("rect")
+        .attr("width", d => d.bbox.width + 24) // Text width + padding
+        .style("opacity", 1);
+
+    // Fade in text
+    nodeUpdate.select("text")
+        .style("fill-opacity", 1);
+    
+    const filterVal = document.getElementById('filterInput')?.value || '';
+    if (filterVal) {
+        applyFilter(filterVal);
+    }
+
+    // Transition exiting nodes to the source's new position and remove them
+    const nodeExit = node.exit().transition()
+        .duration(duration)
+        .ease(easing)
+        .attr("transform", d => `translate(${source.y},${source.x})`)
+        .remove();
+
+    nodeExit.select("rect").style("opacity", 0);
+    nodeExit.select("text").style("fill-opacity", 0);
+
+    // --- Link Handling ---
+
+    // Update existing links
+    const link = linkGroup.selectAll("path.link")
+        .data(links, d => d.target.id);
+
+    // Enter new links originating from the source's previous position
+    const linkEnter = link.enter().insert("path", "g")
+        .attr("class", "link")
+        .attr("stroke", d => d.target.color) // Link color matches target node
+        .attr("d", d => {
+            const o = {x: source.x0, y: source.y0};
+            return diagonal(o, o); // Start as zero-length path
+        });
+
+    // Transition links to their new positions
+    link.merge(linkEnter).transition()
+        .duration(duration)
+        .ease(easing)
+        .attr("d", d => diagonal(d.source, d.target));
+
+    // Transition exiting links back to the source's new position
+    link.exit().transition()
+        .duration(duration)
+        .ease(easing)
+        .attr("d", d => {
+            const o = {x: source.x, y: source.y};
+            return diagonal(o, o); // Collapse to zero-length path
+        })
+        .remove();
+
+    // Stash the old positions for transition animation next update
+    nodes.forEach(d => {
+        d.x0 = d.x;
+        d.y0 = d.y;
+    });
+
+    // Curved path generator for horizontal tree
+    function diagonal(s, d) {
+        return `M ${s.y} ${s.x}
+                C ${(s.y + d.y) / 2} ${s.x},
+                  ${(s.y + d.y) / 2} ${d.x},
+                  ${d.y} ${d.x}`;
+    }
+}
+
+let activeFilters = [];
+
+function toggleLegend() {
+    document.querySelector('.legend').classList.toggle('expanded');
+}
+
+function filterByType(type) {
+    const btn = event.target;
+    const idx = activeFilters.indexOf(type);
+    if (idx > -1) {
+        activeFilters.splice(idx, 1);
+        btn.classList.remove('active');
+    } else {
+        activeFilters.push(type);
+        btn.classList.add('active');
+    }
+    applyFilter(document.getElementById('filterInput').value);
+}
+
+function applyFilter(term) {
+    const search = term.toLowerCase();
+    const highlightedNodes = new Set();
+    
+    // Find matching nodes and mark them + all descendants
+    root.descendants().forEach(d => {
+        const name = d.data.name.toLowerCase();
+        const matches = (search && name.includes(search)) || (activeFilters.length && activeFilters.some(f => name.includes(f.toLowerCase())));
+        
+        if (matches) {
+            // Add this node and all its descendants
+            highlightedNodes.add(d.id);
+            if (d.descendants) {
+                d.descendants().forEach(desc => highlightedNodes.add(desc.id));
+            }
+        }
+    });
+    
+    nodeGroup.selectAll('.node')
+        .classed('highlighted', d => highlightedNodes.has(d.id))
+        .classed('faded', d => !highlightedNodes.has(d.id));
+}
+
+function clearFilter() {
+    document.getElementById('filterInput').value = '';
+    activeFilters = [];
+    document.querySelectorAll('.filter-tip').forEach(btn => btn.classList.remove('active'));
+    nodeGroup.selectAll('.node').classed('faded', false).classed('highlighted', false);
+}
+
+function collapseAll() {
+    root.children.forEach(collapse);
+    update(root);
+}
+
+function expandAll() {
+    const allNodes = root.descendants();
+    let depth = 0;
+    allNodes.forEach(d => {
+        if (d.depth > depth) depth = d.depth;
+    });
+    
+    function expandByDepth(currentDepth) {
+        if (currentDepth > depth) return;
+        
+        root.descendants().forEach(d => {
+            if (d.depth === currentDepth && d._children) {
+                d.children = d._children;
+                d._children = null;
+            }
+        });
+        
+        update(root);
+        setTimeout(() => expandByDepth(currentDepth + 1), 400);
+    }
+    
+    expandByDepth(0);
+}
+
+function resetView() {
+    svg.transition().duration(750).call(
+        zoom.transform,
+        initialTransform
+    );
+}
+
+window.addEventListener('resize', () => {
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        svg.attr("width", w).attr("height", h);
+        g.attr("transform", `translate(${margin.left},${h/2})`);
+        update(root);
+});
+
+</script>
+</body>
+</html>
