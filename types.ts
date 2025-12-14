@@ -51,5 +51,6 @@ declare global {
     pdfjsLib: any;
     XLSX: any;
     pdfWorkerReady: Promise<void>;
+    d3: any;
   }
 }

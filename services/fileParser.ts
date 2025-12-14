@@ -1,4 +1,5 @@
 import { ProcessedFile } from '../types';
+import { compressText } from './compressionService';
 
 export const generateId = () => Math.random().toString(36).substr(2, 9);
 
@@ -50,19 +51,20 @@ export const parseFile = async (file: File): Promise<ProcessedFile> => {
     content = `Error reading file: ${(error as Error).message}. Ensure it is a valid ${fileType.toUpperCase()} file.`;
   }
 
-  // Estimate token count (rough heuristic: 1 token ~= 4 chars)
-  const tokenCount = Math.ceil(content.length / 4);
+  // Compress content to reduce token usage
+  const compressed = compressText(content);
+  const tokenCount = Math.ceil(compressed.length / 4);
 
   return {
     id: generateId(),
     name: file.name,
     type: fileType,
-    content,
+    content: compressed,
     size: file.size,
     status,
     tokenCount,
-    fileHandle: file, // Store the original file object
-    path: file.webkitRelativePath || "" // Store relative path if available
+    fileHandle: file,
+    path: file.webkitRelativePath || ""
   };
 };
 
@@ -91,22 +93,18 @@ const extractPdfText = async (file: File): Promise<string> => {
         cMapPacked: true,
     }).promise;
     
-    let fullText = `[METADATA: PDF Document "${file.name}", ${pdf.numPages} Pages]\n\n`;
+    let fullText = `[METADATA: PDF "${file.name}", ${pdf.numPages}p]\n`;
 
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
       const textContent = await page.getTextContent();
-      
-      // Improved layout preservation:
       const pageText = textContent.items
         // @ts-ignore
         .map((item: any) => item.str)
         .join(' ');
 
       if (pageText.trim()) {
-        fullText += `--- [Page ${i}] ---\n${pageText}\n\n`;
-      } else {
-        fullText += `--- [Page ${i}] ---\n(Empty Page or Scanned Image)\n\n`;
+        fullText += `--- [Page ${i}] ---\n${pageText}\n`;
       }
     }
 
@@ -133,16 +131,14 @@ const extractExcelText = async (file: File): Promise<string> => {
   try {
     const arrayBuffer = await file.arrayBuffer();
     const workbook = (window as any).XLSX.read(arrayBuffer, { type: 'array' });
-    let fullText = `[METADATA: Excel Workbook "${file.name}", Sheets: ${workbook.SheetNames.join(', ')}]\n\n`;
+    let fullText = `[METADATA: Excel "${file.name}"]\n`;
 
     workbook.SheetNames.forEach((sheetName: string) => {
       const sheet = workbook.Sheets[sheetName];
       const csv = (window as any).XLSX.utils.sheet_to_csv(sheet, { blankrows: false });
       
       if (csv && csv.trim().length > 0) {
-        fullText += `--- [Sheet: ${sheetName}] ---\n${csv}\n\n`;
-      } else {
-        fullText += `--- [Sheet: ${sheetName}] ---\n(Empty Sheet)\n\n`;
+        fullText += `--- [Sheet: ${sheetName}] ---\n${csv}\n`;
       }
     });
 

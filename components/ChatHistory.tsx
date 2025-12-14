@@ -49,34 +49,27 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
 
   return (
     <>
-      <div className="px-5 pt-6 pb-2 flex-shrink-0">
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider">
-            Chat History
-          </h2>
+      <div className="px-4 py-2 flex-shrink-0 border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)]">
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] font-medium text-[#666666] dark:text-[#a0a0a0]">{chats.length} chats</span>
           <button
             onClick={onCreateChat}
-            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+            className="p-1.5 text-[#4485d1] hover:bg-[rgba(68,133,209,0.1)] rounded-lg transition-colors"
             title="New Chat"
           >
-            <Plus size={16} />
+            <Plus size={14} />
           </button>
         </div>
-        <div className="flex justify-between items-center px-1">
-          <span className="text-[10px] font-medium text-gray-400">{chats.length} chats</span>
-        </div>
       </div>
-      
-      <div className="h-px bg-gray-200 mx-5 my-2" />
 
       <div className="flex-1 overflow-y-auto px-2 py-2 custom-scrollbar min-h-0">
         {chats.length === 0 ? (
           <div className="text-center mt-12 px-6">
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-              <MessageCircle size={24} className="text-gray-300" />
+            <div className="w-16 h-16 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] rounded-full flex items-center justify-center mx-auto mb-3">
+              <MessageCircle size={24} className="text-[#a0a0a0]" />
             </div>
-            <p className="text-sm font-medium text-gray-500">No chat history</p>
-            <p className="text-xs text-gray-400 mt-1 leading-relaxed">
+            <p className="text-sm font-medium text-[#666666] dark:text-[#a0a0a0]">No chat history</p>
+            <p className="text-xs text-[#666666] dark:text-[#a0a0a0] mt-1 leading-relaxed">
               Create a new chat to get started.
             </p>
           </div>
@@ -89,44 +82,35 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
                   key={chat.id}
                   onClick={() => onSelectChat(chat.id)}
                   className={`
-                    group relative flex flex-col gap-1 p-3 rounded-lg transition-all cursor-pointer
-                    ${activeChatId === chat.id ? 'bg-blue-50 border border-blue-200' : 'hover:bg-gray-50 border border-transparent'}
+                    group relative flex items-center gap-2 px-3 py-2 rounded-lg transition-all cursor-pointer h-[55px]
+                    ${activeChatId === chat.id ? 'bg-[rgba(68,133,209,0.1)] border border-[#4485d1]' : 'hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] border border-transparent'}
                   `}
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-medium text-gray-800 truncate">
-                        {chat.name}
-                      </h3>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs text-gray-500 flex items-center gap-1">
-                          <Hash size={10} />
-                          {chat.messageCount} messages
-                        </span>
-                        <span className="text-xs text-gray-400">•</span>
-                        <span className="text-xs text-gray-500 flex items-center gap-1">
-                          <Calendar size={10} />
-                          {formatDate(chat.updatedAt)}
-                        </span>
-                      </div>
-                      <div className="mt-1">
-                        <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full">
-                          {getModelName(chat.modelId)}
-                        </span>
-                      </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-medium text-[#1a1a1a] dark:text-white truncate mb-1">
+                      {chat.name}
+                    </h3>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-[#666666] dark:text-[#a0a0a0]">
+                        {getModelName(chat.modelId)}
+                      </span>
+                      <span className="text-[10px] text-[#666666] dark:text-[#a0a0a0]">•</span>
+                      <span className="text-[10px] text-[#666666] dark:text-[#a0a0a0]">
+                        {formatDate(chat.updatedAt)}
+                      </span>
                     </div>
-                    
-                    <button
-                      onClick={(e) => handleDelete(chat.id, e)}
-                      className={`
-                        opacity-0 group-hover:opacity-100 p-1 rounded transition-all
-                        ${deleteConfirm === chat.id ? 'bg-red-100 text-red-600' : 'text-gray-400 hover:text-red-500 hover:bg-red-50'}
-                      `}
-                      title={deleteConfirm === chat.id ? 'Click again to confirm' : 'Delete chat'}
-                    >
-                      <Trash2 size={12} />
-                    </button>
                   </div>
+                  
+                  <button
+                    onClick={(e) => handleDelete(chat.id, e)}
+                    className={`
+                      opacity-0 group-hover:opacity-100 p-1 rounded transition-all flex-shrink-0
+                      ${deleteConfirm === chat.id ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400' : 'text-[#a0a0a0] hover:text-[#ef4444] hover:bg-red-50 dark:hover:bg-red-900/20'}
+                    `}
+                    title={deleteConfirm === chat.id ? 'Click again to confirm' : 'Delete chat'}
+                  >
+                    <Trash2 size={12} />
+                  </button>
                 </div>
               ))}
           </div>

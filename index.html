@@ -5,6 +5,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ConstructLM</title>
     <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              'dark-bg': '#1a1a1a',
+              'dark-bg-alt': '#222222',
+              'dark-surface': '#2a2a2a',
+              'dark-surface-hover': '#222222',
+              'dark-surface-active': '#2a2a2a',
+              'dark-text': '#ffffff',
+              'dark-text-secondary': '#a0a0a0',
+              'dark-text-tertiary': '#666666',
+              'accent-blue': '#4485d1',
+              'light-surface': 'rgba(0, 0, 0, 0.03)',
+              'light-surface-hover': 'rgba(0, 0, 0, 0.06)',
+              'light-surface-active': 'rgba(0, 0, 0, 0.1)'
+            }
+          }
+        }
+      }
+    </script>
     
     <!-- PDF.js for parsing PDF files - Using unpkg for better CORS reliability -->
     <script src="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js" crossorigin="anonymous"></script>
@@ -12,6 +35,13 @@
     <link rel="stylesheet" href="https://unpkg.com/pdfjs-dist@3.11.174/web/pdf_viewer.css">
     
     <script>
+      // Suppress PDF.js font warnings
+      const originalWarn = console.warn;
+      console.warn = function(...args) {
+        if (args[0]?.includes?.('TT: undefined function')) return;
+        originalWarn.apply(console, args);
+      };
+      
       // Create a global promise that resolves when the PDF worker is ready
       window.pdfWorkerReady = new Promise((resolve, reject) => {
         let initialized = false;
@@ -83,7 +113,30 @@
     </script>
     
     <style>
-      /* Custom scrollbar for better aesthetics */
+      :root {
+        --color-bg-dark: #1a1a1a;
+        --color-bg-alt-dark: #222222;
+        --color-surface-dark: #2a2a2a;
+        --color-surface-hover-dark: #222222;
+        --color-surface-active-dark: #2a2a2a;
+        --color-text-dark: #ffffff;
+        --color-text-secondary-dark: #a0a0a0;
+        --color-text-tertiary-dark: #666666;
+        --color-accent: #4485d1;
+        --color-delete: #ef4444;
+        --color-border-dark: rgba(255, 255, 255, 0.05);
+        
+        --color-bg-light: #ffffff;
+        --color-surface-light: rgba(0, 0, 0, 0.03);
+        --color-surface-hover-light: rgba(0, 0, 0, 0.06);
+        --color-surface-active-light: rgba(0, 0, 0, 0.1);
+        --color-text-light: #1a1a1a;
+        --color-text-secondary-light: #666666;
+        --color-text-tertiary-light: #999999;
+        --color-border-light: rgba(0, 0, 0, 0.15);
+      }
+      
+      /* Custom scrollbar */
       ::-webkit-scrollbar {
         width: 8px;
         height: 8px;
@@ -92,11 +145,17 @@
         background: transparent;
       }
       ::-webkit-scrollbar-thumb {
-        background: #cbd5e1;
+        background: #a0a0a0;
         border-radius: 4px;
       }
       ::-webkit-scrollbar-thumb:hover {
-        background: #94a3b8;
+        background: #666666;
+      }
+      .dark ::-webkit-scrollbar-thumb {
+        background: #666666;
+      }
+      .dark ::-webkit-scrollbar-thumb:hover {
+        background: #a0a0a0;
       }
       .citation-tooltip {
         visibility: hidden;
@@ -143,13 +202,17 @@
 
       /* Resize Handle Styles */
       .resize-handle-vertical {
-        width: 1px; /* Visual width */
+        width: 1px;
         position: relative;
-        background-color: #e2e8f0; /* slate-200 */
+        background-color: rgba(0, 0, 0, 0.15);
         cursor: col-resize;
         transition: background-color 0.2s;
         z-index: 50;
         flex-shrink: 0;
+      }
+      
+      .dark .resize-handle-vertical {
+        background-color: rgba(255, 255, 255, 0.05);
       }
       
       /* Invisible hit area for easier grabbing */
@@ -164,7 +227,7 @@
       }
 
       .resize-handle-vertical:hover, .resize-handle-vertical.active {
-        background-color: #3b82f6; /* blue-500 */
+        background-color: #4485d1;
         width: 2px;
       }
 
@@ -289,6 +352,9 @@
     <!-- html2canvas for screenshots -->
     <script src="https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     
+    <!-- D3.js for mind maps -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    
     <script type="importmap">
 {
   "imports": {
@@ -304,7 +370,7 @@
 }
 </script>
 </head>
-  <body class="bg-white text-slate-900 font-sans antialiased h-screen overflow-hidden selection:bg-blue-100 selection:text-blue-900">
+  <body class="bg-white dark:bg-[#1a1a1a] text-[#1a1a1a] dark:text-white font-sans antialiased h-screen overflow-hidden selection:bg-blue-100 dark:selection:bg-blue-900 selection:text-blue-900 dark:selection:text-blue-100">
     <div id="root" class="h-full w-full flex items-center justify-center text-gray-400">Loading ConstructLM...</div>
     <script type="module" src="/index.tsx"></script>
   </body>

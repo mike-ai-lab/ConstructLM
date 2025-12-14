@@ -59,7 +59,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, files, onViewDoc
       <div className={`flex max-w-[90%] md:max-w-[85%] ${isUser ? 'flex-row-reverse' : 'flex-row'} gap-4 group`}>
         {/* Avatar */}
         <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center shadow-sm border ${
-          isUser ? 'bg-white border-gray-100 text-gray-600' : 'bg-gradient-to-br from-blue-600 to-indigo-600 border-transparent text-white'
+          isUser ? 'bg-white dark:bg-[#2a2a2a] border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] text-[#666666] dark:text-[#a0a0a0]' : 'bg-gradient-to-br from-[#4485d1] to-[#4485d1] border-transparent text-white'
         }`}>
           {isUser ? <User size={14} /> : <Sparkles size={14} fill="currentColor" />}
         </div>
@@ -67,14 +67,14 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, files, onViewDoc
         {/* Content */}
         <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
           <div className="flex items-center gap-2 mb-1.5 opacity-0 group-hover:opacity-100 transition-opacity px-1">
-             <span className="text-[10px] font-bold text-black uppercase tracking-widest">
+             <span className="text-[10px] font-bold text-[#1a1a1a] dark:text-white uppercase tracking-widest">
                  {isUser ? 'You' : (message.modelId || 'AI')}
              </span>
              {!isUser && !message.isStreaming && (
                  <button 
                     onClick={handlePlayAudio}
                     disabled={isLoadingAudio}
-                    className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-blue-600 transition-colors"
+                    className="p-1 hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] rounded text-[#a0a0a0] hover:text-[#4485d1] transition-colors"
                     title="Read Aloud"
                  >
                     {isLoadingAudio ? <Loader2 size={12} className="animate-spin" /> : (isPlaying ? <StopCircle size={12} /> : <Volume2 size={12} />)}
@@ -85,8 +85,8 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, files, onViewDoc
           <div className={`
              relative px-5 py-3.5 text-sm leading-7 rounded-2xl shadow-sm
              ${isUser 
-                ? 'bg-[#f1f5f9] text-black rounded-tr-sm' 
-                : 'bg-white border border-gray-100 text-black rounded-tl-sm'
+                ? 'bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] text-[#1a1a1a] dark:text-white rounded-tr-sm' 
+                : 'bg-white dark:bg-[#2a2a2a] border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] text-[#1a1a1a] dark:text-white rounded-tl-sm'
              }
           `}>
             {message.isStreaming && !isUser && (
@@ -110,7 +110,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, files, onViewDoc
           
           {/* Token Usage Stats */}
           {!isUser && message.usage && (
-            <div className="text-[9px] text-gray-500 mt-1.5 px-1 flex gap-3">
+            <div className="text-[9px] text-[#666666] dark:text-[#a0a0a0] mt-1.5 px-1 flex gap-3">
               <span>In: {message.usage.inputTokens.toLocaleString()} tokens</span>
               <span>Out: {message.usage.outputTokens.toLocaleString()} tokens</span>
               <span className="font-semibold">Total: {message.usage.totalTokens.toLocaleString()}</span>

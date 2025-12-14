@@ -27,14 +27,14 @@ CITATION RULES:
 2. Use format: {{citation:filename|location|key_data}}
 3. Excel format: {{citation:file.xlsx|Sheet: Name, Row X|exact_cell_value}}
 4. PDF format: {{citation:file.pdf|Page X|exact_text_snippet}}
-5. Place citations RIGHT AFTER the data, not at sentence end
+5. Place citations RIGHT AFTER the information, inline is accepted style with accuracy.
 6. Use concise quotes (2-5 words max)
-7. Cite frequently but avoid duplicates
+7. Cite frequently and for every information and dont combine inforamtions in one citation.
 
 RESPONSE STYLE:
 - Be precise and factual
 - Use bullet points and structure
-- Keep under 150 lines
+- Keep under 200 lines
 - No repetitive content
 
 FILES:

@@ -1,7 +1,7 @@
-import React, { useRef, useState, useMemo, useEffect } from 'react';
+import React, { useRef, useState, useMemo, useEffect } from 'react'; 
 import { ProcessedFile } from '../types';
 import { ChatMetadata } from '../services/chatRegistry';
-import { FileText, FileSpreadsheet, File as FileIcon, X, Loader2, FolderOpen, Plus, ChevronRight, ChevronDown, Folder, Image, MessageCircle, Files, BookOpen, Minus } from 'lucide-react';
+import { FileText, FileSpreadsheet, File as FileIcon, X, Loader2, FolderOpen, Plus, ChevronRight, ChevronDown, Folder, Image, MessageCircle, Files, BookOpen, Minus, Network } from 'lucide-react';
 import ChatHistory from './ChatHistory';
 import DocumentViewer from './DocumentViewer';
 
@@ -10,12 +10,14 @@ interface FileSidebarProps {
   onUpload: (files: FileList) => void;
   onRemove: (id: string) => void;
   isProcessing: boolean;
-  // Chat history props
+  onGenerateMindMap?: (fileId: string) => void;
   chats: ChatMetadata[];
   activeChatId: string | null;
   onSelectChat: (chatId: string) => void;
   onCreateChat: () => void;
   onDeleteChat: (chatId: string) => void;
+  isDragOver: boolean;
+  onDragStateChange: (isDragging: boolean) => void;
 }
 
 interface TreeNode {
@@ -27,8 +29,9 @@ interface TreeNode {
 }
 
 const FileSidebar: React.FC<FileSidebarProps> = ({ 
-  files, onUpload, onRemove, isProcessing,
-  chats, activeChatId, onSelectChat, onCreateChat, onDeleteChat 
+  files, onUpload, onRemove, isProcessing, onGenerateMindMap,
+  chats, activeChatId, onSelectChat, onCreateChat, onDeleteChat,
+  isDragOver, onDragStateChange
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
@@ -115,11 +118,11 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
               return (
                   <div key={node.path} className="select-none">
                       <div 
-                        className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-100 rounded cursor-pointer text-gray-700"
+                        className="flex items-center gap-2 px-2 py-1.5 hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] rounded cursor-pointer text-[#1a1a1a] dark:text-white"
                         style={{ paddingLeft: `${depth * 12 + 8}px` }}
                         onClick={() => toggleFolder(node.path)}
                       >
-                          {expandedFolders.has(node.path) ? <ChevronDown size={14} className="text-gray-400"/> : <ChevronRight size={14} className="text-gray-400"/>}
+                          {expandedFolders.has(node.path) ? <ChevronDown size={14} className="text-[#a0a0a0]"/> : <ChevronRight size={14} className="text-[#a0a0a0]"/>}
                           <Folder size={14} className="text-blue-400 fill-blue-50" />
                           <span className="text-xs font-medium truncate">{node.name}</span>
                       </div>
@@ -141,7 +144,7 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
                     }}
                     className={`
                         group relative flex items-center gap-2 px-2 py-2 rounded-md transition-all cursor-grab active:cursor-grabbing
-                        ${file.status === 'error' ? 'bg-red-50' : 'hover:bg-gray-50'}
+                        ${file.status === 'error' ? 'bg-red-50 dark:bg-red-900/20' : 'hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a]'}
                     `}
                     style={{ marginLeft: `${depth * 12 + 8}px` }}
                 >
@@ -150,24 +153,33 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
                     </div>
                     
                     <div className="flex flex-col min-w-0 flex-1">
-                        <span className={`text-xs ${file.status === 'error' ? 'text-red-700' : 'text-gray-700 font-medium'}`} title={file.name}>
+                        <span className={`text-xs ${file.status === 'error' ? 'text-red-700' : 'text-[#1a1a1a] dark:text-white font-medium'}`} title={file.name}>
                         {file.name}
                         </span>
-                        {file.pageCount && (
-                          <span className="text-[10px] text-gray-400">{file.pageCount} pages</span>
-                        )}
+                        <span className="text-[10px] text-[#666666] dark:text-[#a0a0a0]">
+                          {file.tokenCount ? `~${(file.tokenCount / 1000).toFixed(1)}k tokens` : 'Processing...'}
+                        </span>
                     </div>
 
                     <button
                         onClick={(e) => { e.stopPropagation(); setPreviewFileId(file.id); }}
-                        className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-blue-500 rounded transition-all"
+                        className="opacity-0 group-hover:opacity-100 p-1 text-[#a0a0a0] hover:text-[#4485d1] rounded transition-all"
                         title="Preview"
                     >
                         <BookOpen size={12} />
                     </button>
+                    {onGenerateMindMap && (
+                      <button
+                          onClick={(e) => { e.stopPropagation(); onGenerateMindMap(file.id); }}
+                          className="opacity-0 group-hover:opacity-100 p-1 text-[#a0a0a0] hover:text-purple-500 rounded transition-all"
+                          title="Generate Mind Map"
+                      >
+                          <Network size={12} />
+                      </button>
+                    )}
                     <button
                         onClick={() => onRemove(file.id)}
-                        className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-500 rounded transition-all"
+                        className="opacity-0 group-hover:opacity-100 p-1 text-[#a0a0a0] hover:text-[#ef4444] rounded transition-all"
                         title="Remove source"
                     >
                         <X size={12} />
@@ -182,132 +194,162 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
 
   return (
     <>
-    <div className="flex flex-col h-full w-full">
+    <div 
+      className="flex flex-col h-full w-full relative box-border"
+      onDragOver={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onDragStateChange(true);
+      }}
+      onDragLeave={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.currentTarget === e.target || !e.currentTarget.contains(e.relatedTarget as Node)) {
+          onDragStateChange(false);
+        }
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onDragStateChange(false);
+        const droppedFiles = e.dataTransfer.files;
+        if (droppedFiles.length > 0) {
+          onUpload(droppedFiles);
+        }
+      }}
+    >
+      {/* Drag Indicator */}
+      {isDragOver && activeTab === 'files' && (
+        <div className="absolute inset-0 bg-blue-500/10 backdrop-blur-sm z-50 flex items-center justify-center pointer-events-none">
+          <div className="bg-white rounded-xl shadow-xl p-6 border-2 border-dashed border-blue-400">
+            <FileText size={32} className="text-blue-600 mx-auto mb-2" />
+            <p className="text-sm font-semibold text-gray-800">Drop to add sources</p>
+          </div>
+        </div>
+      )}
+
       {/* Tab Navigation */}
-      <div className="flex border-b-2 border-slate-300 bg-slate-200">
+      <div className="h-14 flex border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] box-border">
         <button
           onClick={() => setActiveTab('files')}
-          className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-            activeTab === 'files' 
-              ? 'text-blue-600 border-b-2 border-blue-600 bg-white' 
-              : 'text-gray-500 hover:text-gray-700'
+          className={`flex-1 px-4 text-xs font-bold uppercase tracking-wider transition-colors border-b-2 border-transparent flex items-center justify-center gap-2
+            ${activeTab === 'files' 
+              ? 'text-[#4485d1]' 
+              : 'text-[#666666] dark:text-[#a0a0a0] hover:text-[#1a1a1a] dark:hover:text-white'
           }`}
         >
-          <div className="flex items-center justify-center gap-2">
-            <Files size={16} />
-            Sources
-          </div>
+          <Files size={14} />
+          <span>Sources</span>
         </button>
         <button
           onClick={() => setActiveTab('chats')}
-          className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-            activeTab === 'chats' 
-              ? 'text-blue-600 border-b-2 border-blue-600 bg-white' 
-              : 'text-gray-500 hover:text-gray-700'
+          className={`flex-1 px-4 text-xs font-bold uppercase tracking-wider transition-colors border-b-2 border-transparent flex items-center justify-center gap-2
+            ${activeTab === 'chats' 
+              ? 'text-[#4485d1]' 
+              : 'text-[#666666] dark:text-[#a0a0a0] hover:text-[#1a1a1a] dark:hover:text-white'
           }`}
         >
-          <div className="flex items-center justify-center gap-2">
-            <MessageCircle size={16} />
-            Chats
-          </div>
+          <MessageCircle size={14} />
+          <span>Chats</span>
         </button>
       </div>
 
-      {/* Tab Content */}
-      {activeTab === 'files' ? (
-        <div className="flex flex-col h-full w-full">
-          {/* Header */}
-      <div className="px-5 pt-6 pb-2 flex-shrink-0">
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider">
-            Sources
-          </h2>
-          <div className="flex gap-1">
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isProcessing}
-              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50"
-              title="Add File"
-            >
-              <Plus size={16} />
-            </button>
-            <button
-              onClick={() => folderInputRef.current?.click()}
-              disabled={isProcessing}
-              className="p-1.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
-              title="Add Folder"
-            >
-              <FolderOpen size={16} />
-            </button>
-          </div>
-        </div>
-        <div className="hidden">
-
-            <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                multiple
-                className="hidden"
-                accept=".pdf,.xlsx,.xls,.csv,.txt,.md,.json,.png,.jpg,.jpeg,.gif,.bmp,.webp,.doc,.docx,.ppt,.pptx" 
-            />
-            <input
-                type="file"
-                ref={folderInputRef}
-                onChange={handleFolderChange}
-                {...({ webkitdirectory: "" } as any)}
-                multiple
-                className="hidden"
-            />
-        </div>
-        
-        <div className="flex justify-between items-center px-1">
-             <span className="text-[10px] font-medium text-gray-400">{files.length} sources</span>
-             {files.length > 0 && (
-                <span className="text-[10px] font-medium text-gray-400">~{(totalTokens / 1000).toFixed(0)}k tokens</span>
-             )}
-        </div>
-      </div>
-      
-      {/* Separator */}
-      <div className="h-px bg-gray-200 mx-5 my-2" />
-
-      {/* File Tree */}
-      <div className="flex-1 overflow-y-auto px-2 py-2 custom-scrollbar">
-        {isProcessing && (
-          <div className="flex items-center gap-3 p-3 mx-2 mb-2 text-sm text-blue-700 bg-blue-50 rounded-lg border border-blue-100 animate-pulse">
-            <Loader2 size={16} className="animate-spin" />
-            <span className="font-medium">Processing...</span>
-          </div>
-        )}
-
-        {files.length === 0 && !isProcessing ? (
-          <div className="text-center mt-12 px-6">
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                <FileText size={24} className="text-gray-300" />
+      {/* TAB CONTENT WRAPPER: make both tabs occupy the same sized content area (header height = 56px => h-14) */}
+      <div style={{ height: 'calc(100% - 56px)' }} className="flex flex-col min-h-0 box-border">
+        {activeTab === 'files' ? (
+          <div className="flex flex-col min-h-0 w-full relative box-border">
+            {/* Toolbar */}
+            <div className="px-4 py-2 flex-shrink-0 border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] bg-transparent">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                   <span className="text-[10px] font-medium text-[#666666] dark:text-[#a0a0a0]">{files.length} sources</span>
+                   {files.length > 0 && (
+                      <span className="text-[10px] font-medium text-[#666666] dark:text-[#a0a0a0]">• ~{(totalTokens / 1000).toFixed(0)}k tokens</span>
+                   )}
+                </div>
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isProcessing}
+                    className="p-1.5 text-[#4485d1] hover:bg-[rgba(68,133,209,0.1)] rounded-lg transition-colors disabled:opacity-50"
+                    title="Add File"
+                  >
+                    <Plus size={14} />
+                  </button>
+                  <button
+                    onClick={() => folderInputRef.current?.click()}
+                    disabled={isProcessing}
+                    className="p-1.5 text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] rounded-lg transition-colors disabled:opacity-50"
+                    title="Add Folder"
+                  >
+                    <FolderOpen size={14} />
+                  </button>
+                </div>
+              </div>
             </div>
-            <p className="text-sm font-medium text-gray-500">No sources yet</p>
-            <p className="text-xs text-gray-400 mt-1 leading-relaxed">
-              Upload documents, images, spreadsheets, or drag files anywhere to get started.
-            </p>
+            
+            <div className="hidden">
+              <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  multiple
+                  className="hidden"
+                  accept=".pdf,.xlsx,.xls,.csv,.txt,.md,.json,.png,.jpg,.jpeg,.gif,.bmp,.webp,.doc,.docx,.ppt,.pptx" 
+              />
+              <input
+                  type="file"
+                  ref={folderInputRef}
+                  onChange={handleFolderChange}
+                  {...({ webkitdirectory: "" } as any)}
+                  multiple
+                  className="hidden"
+              />
+            </div>
+
+            {/* File Tree area: make this the scrollable flex-1 area */}
+            <div className="flex-1 overflow-y-auto px-2 py-2 custom-scrollbar min-h-0">
+              {isProcessing && (
+                <div className="flex items-center gap-3 p-3 mx-2 mb-2 text-sm text-blue-700 bg-blue-50 rounded-lg border border-blue-100 animate-pulse">
+                  <Loader2 size={16} className="animate-spin" />
+                  <span className="font-medium">Processing...</span>
+                </div>
+              )}
+
+              {files.length === 0 && !isProcessing ? (
+                <div className="text-center mt-12 px-6">
+                  <div className="w-16 h-16 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] rounded-full flex items-center justify-center mx-auto mb-3">
+                      <FileText size={24} className="text-[#a0a0a0]" />
+                  </div>
+                  <p className="text-sm font-medium text-[#666666] dark:text-[#a0a0a0]">No sources yet</p>
+                  <p className="text-xs text-[#666666] dark:text-[#a0a0a0] mt-1 leading-relaxed">
+                    Upload documents, images, spreadsheets, or drag files anywhere to get started.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-0.5 pb-8">
+                    {renderTree(fileTree)}
+                </div>
+              )}
+            </div>
           </div>
         ) : (
-          <div className="space-y-0.5 pb-8">
-              {renderTree(fileTree)}
+          // Chat area: wrapped in the same sized content container to avoid size/scale differences
+          <div className="flex flex-col min-h-0 w-full">
+            {/* Keep a consistent top spacer/toolbar height so chats and files align visually */}
+            <div className="px-4 py-2 flex-shrink-0 border-b border-[rgba(0,0,0,0.05)] bg-transparent" />
+            <div className="flex-1 overflow-y-auto min-h-0">
+              <ChatHistory
+                chats={chats}
+                activeChatId={activeChatId}
+                onSelectChat={onSelectChat}
+                onCreateChat={onCreateChat}
+                onDeleteChat={onDeleteChat}
+              />
+            </div>
           </div>
         )}
-        </div>
-        </div>
-      ) : (
-        <ChatHistory
-          chats={chats}
-          activeChatId={activeChatId}
-          onSelectChat={onSelectChat}
-          onCreateChat={onCreateChat}
-          onDeleteChat={onDeleteChat}
-        />
-      )}
-      
+      </div>
     </div>
     {previewFile && (
       <FilePreviewModal file={previewFile} onClose={() => setPreviewFileId(null)} />

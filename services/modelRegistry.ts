@@ -228,6 +228,7 @@ export const getModel = (id: string): ModelConfig => {
 
 // PREFERENCE KEYS
 const STORAGE_PREFIX = 'constructlm_config_';
+const RATE_LIMIT_PREFIX = 'constructlm_ratelimit_';
 
 export const getApiKeyForModel = (model: ModelConfig): string | undefined => {
     // 1. Check LocalStorage (Runtime Config set by user in Settings)
@@ -258,4 +259,24 @@ export const saveApiKey = (envKey: string, value: string) => {
 
 export const getStoredApiKey = (envKey: string): string => {
     return localStorage.getItem(`${STORAGE_PREFIX}${envKey}`) || '';
+};
+
+// Rate Limit Management
+export const setRateLimitCooldown = (modelId: string, resetTimeMs: number) => {
+    localStorage.setItem(`${RATE_LIMIT_PREFIX}${modelId}`, resetTimeMs.toString());
+};
+
+export const getRateLimitCooldown = (modelId: string): number | null => {
+    const stored = localStorage.getItem(`${RATE_LIMIT_PREFIX}${modelId}`);
+    if (!stored) return null;
+    const resetTime = parseInt(stored, 10);
+    if (Date.now() >= resetTime) {
+        localStorage.removeItem(`${RATE_LIMIT_PREFIX}${modelId}`);
+        return null;
+    }
+    return resetTime;
+};
+
+export const clearRateLimitCooldown = (modelId: string) => {
+    localStorage.removeItem(`${RATE_LIMIT_PREFIX}${modelId}`);
 };

@@ -154,7 +154,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
     const renderApiInput = (label: string, provider: Provider, placeholder: string, desc: string) => (
         <div className="space-y-1.5">
             <div className="flex justify-between items-center">
-                <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">{label}</label>
+                <label className="text-xs font-bold text-[#666666] dark:text-[#a0a0a0] uppercase tracking-wider">{label}</label>
                 {testResults[provider] && (
                     <span className={`text-[10px] flex items-center gap-1 ${testResults[provider]?.success ? 'text-green-600' : 'text-red-500'}`}>
                         {testResults[provider]?.success ? <CheckCircle size={10} /> : <AlertCircle size={10} />}
@@ -171,42 +171,42 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                         setTestResults(prev => ({ ...prev, [provider]: null }));
                     }}
                     placeholder={placeholder}
-                    className={`flex-1 px-3 py-2 bg-gray-50 border rounded-lg text-sm focus:outline-none focus:ring-2 transition-all ${testResults[provider]?.success === false ? 'border-red-300 focus:ring-red-200' : 'border-gray-200 focus:ring-blue-500/20 focus:border-blue-500'}`}
+                    className={`flex-1 px-3 py-2 bg-[rgba(0,0,0,0.03)] dark:bg-[#1a1a1a] border rounded-lg text-sm text-[#1a1a1a] dark:text-white focus:outline-none focus:ring-2 transition-all ${testResults[provider]?.success === false ? 'border-red-300 focus:ring-red-200' : 'border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] focus:ring-[rgba(68,133,209,0.2)] focus:border-[#4485d1]'}`}
                 />
                 <button
                     onClick={() => validateKey(provider, keys[provider])}
                     disabled={testingProvider === provider || !keys[provider] || (Date.now() - lastTestTime[provider] < 5000)}
-                    className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="px-3 py-2 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] hover:bg-[rgba(0,0,0,0.06)] dark:hover:bg-[#222222] text-[#666666] dark:text-[#a0a0a0] rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     title={Date.now() - lastTestTime[provider] < 5000 ? "Wait before testing again" : "Test API Connection"}
                 >
                     {testingProvider === provider ? <Loader2 size={16} className="animate-spin" /> : <Play size={16} />}
                 </button>
             </div>
-            <p className="text-[10px] text-gray-400">{desc}</p>
+            <p className="text-[10px] text-[#666666] dark:text-[#a0a0a0]">{desc}</p>
         </div>
     );
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="bg-white dark:bg-[#222222] w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
                 {/* Header */}
-                <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                <div className="px-6 py-4 border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] flex items-center justify-between bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a]">
                     <div className="flex items-center gap-2">
-                        <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
+                        <div className="p-2 bg-[rgba(68,133,209,0.1)] text-[#4485d1] rounded-lg">
                             <Key size={18} />
                         </div>
-                        <h2 className="font-semibold text-gray-800">Configuration</h2>
+                        <h2 className="font-semibold text-[#1a1a1a] dark:text-white">Configuration</h2>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full text-gray-500 transition-colors">
+                    <button onClick={onClose} className="p-2 hover:bg-[rgba(0,0,0,0.06)] dark:hover:bg-[#222222] rounded-full text-[#a0a0a0] transition-colors">
                         <X size={18} />
                     </button>
                 </div>
 
                 {/* Content */}
                 <div className="p-6 overflow-y-auto space-y-6 flex-1">
-                    <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 flex gap-3">
-                        <ShieldCheck size={18} className="text-blue-600 flex-shrink-0 mt-0.5" />
-                        <p className="text-xs text-blue-800 leading-relaxed">
+                    <div className="bg-[rgba(68,133,209,0.1)] border border-[rgba(68,133,209,0.2)] dark:border-[rgba(68,133,209,0.3)] rounded-lg p-3 flex gap-3">
+                        <ShieldCheck size={18} className="text-[#4485d1] flex-shrink-0 mt-0.5" />
+                        <p className="text-xs text-[#1a1a1a] dark:text-white leading-relaxed">
                             API Keys are stored locally on your device.
                         </p>
                     </div>
@@ -217,20 +217,20 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                     </div>
 
                     {/* Local Models Section */}
-                    <div className="border-t border-gray-200 pt-6">
+                    <div className="border-t border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] pt-6">
                         <div className="flex items-center gap-2 mb-3">
                             <Cpu size={16} className="text-purple-600" />
-                            <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider">Local Models (Ollama)</h3>
+                            <h3 className="text-xs font-bold text-[#666666] dark:text-[#a0a0a0] uppercase tracking-wider">Local Models (Ollama)</h3>
                         </div>
                         <LocalModelsStatus />
                     </div>
                 </div>
 
                 {/* Footer */}
-                <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex justify-end gap-3 flex-shrink-0">
+                <div className="px-6 py-4 border-t border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] flex justify-end gap-3 flex-shrink-0">
                     <button 
                         onClick={onClose}
-                        className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-200/50 rounded-lg transition-colors"
+                        className="px-4 py-2 text-sm font-medium text-[#666666] dark:text-[#a0a0a0] hover:text-[#1a1a1a] dark:hover:text-white hover:bg-[rgba(0,0,0,0.06)] dark:hover:bg-[#222222] rounded-lg transition-colors"
                     >
                         Cancel
                     </button>
@@ -238,7 +238,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                         onClick={handleSave}
                         className={`
                             px-4 py-2 text-sm font-medium text-white rounded-lg shadow-sm flex items-center gap-2 transition-all
-                            ${showSuccess ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700'}
+                            ${showSuccess ? 'bg-green-600 hover:bg-green-700' : 'bg-[#4485d1] hover:bg-[#3674c1]'}
                         `}
                     >
                         {showSuccess ? (

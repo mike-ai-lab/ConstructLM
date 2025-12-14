@@ -22,6 +22,8 @@ export interface ChatMetadata {
 class ChatRegistryService {
   private readonly STORAGE_KEY = 'constructlm_chats';
   private readonly FILES_KEY = 'constructlm_files';
+  private readonly MAX_MESSAGES_PER_CHAT = 50;
+  private readonly MAX_CHATS = 10;
 
   generateChatId(): string {
     return `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -61,18 +63,52 @@ class ChatRegistryService {
   saveChat(chat: ChatSession): void {
     try {
       const stored = localStorage.getItem(this.STORAGE_KEY);
-      const chats: ChatSession[] = stored ? JSON.parse(stored) : [];
+      let chats: ChatSession[] = stored ? JSON.parse(stored) : [];
       const existingIndex = chats.findIndex(c => c.id === chat.id);
       
+      // Trim messages if exceeding limit
+      const trimmedChat = {
+        ...chat,
+        messages: chat.messages.slice(-this.MAX_MESSAGES_PER_CHAT),
+        updatedAt: Date.now()
+      };
+      
       if (existingIndex >= 0) {
-        chats[existingIndex] = { ...chat, updatedAt: Date.now() };
+        chats[existingIndex] = trimmedChat;
       } else {
-        chats.push(chat);
+        chats.push(trimmedChat);
+      }
+      
+      // Keep only most recent chats
+      if (chats.length > this.MAX_CHATS) {
+        chats.sort((a, b) => b.updatedAt - a.updatedAt);
+        chats = chats.slice(0, this.MAX_CHATS);
       }
       
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(chats));
     } catch (error) {
+      if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+        this.handleQuotaExceeded();
+      }
       console.error('Error saving chat:', error);
+    }
+  }
+
+  private handleQuotaExceeded(): void {
+    try {
+      const stored = localStorage.getItem(this.STORAGE_KEY);
+      if (!stored) return;
+      
+      let chats: ChatSession[] = JSON.parse(stored);
+      chats.sort((a, b) => b.updatedAt - a.updatedAt);
+      chats = chats.slice(0, 5).map(chat => ({
+        ...chat,
+        messages: chat.messages.slice(-20)
+      }));
+      
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(chats));
+    } catch (error) {
+      localStorage.removeItem(this.STORAGE_KEY);
     }
   }
 

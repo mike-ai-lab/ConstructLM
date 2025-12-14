@@ -1,6 +1,6 @@
 
 import { Message, ProcessedFile, ModelConfig } from "../types";
-import { getModel, getApiKeyForModel } from "./modelRegistry";
+import { getModel, getApiKeyForModel, setRateLimitCooldown } from "./modelRegistry";
 import { sendMessageToGemini } from "./geminiService";
 import { streamLocalModel } from "./localModelService";
 import { ragService } from "./ragService";
@@ -112,18 +112,55 @@ export const sendMessageToLLM = async (
             if (!apiKey) {
                 throw new Error(`API Key for ${model.name} is missing. Please open Settings (Gear Icon) to add it.`);
             }
-            const fullContextPrompt = constructStatelessPrompt(activeFiles, systemPrompt);
-            return await streamOpenAICompatible(model, apiKey, history, newMessage, fullContextPrompt, onStream);
+            
+            const messages = [
+                { role: 'system', content: systemPrompt },
+                ...history.filter(m => !m.isStreaming && m.id !== 'intro' && m.role !== 'model').slice(-6).map(m => ({ role: m.role, content: m.content })),
+                { role: 'user', content: newMessage }
+            ];
+            
+            if (activeFiles.length > 0) {
+                const fileContext = activeFiles.map(f => `=== FILE: "${f.name}" ===\n${f.content}\n=== END FILE ===`).join('\n\n');
+                messages[messages.length - 1].content += `\n\nFILE CONTEXT:\n${fileContext}`;
+            }
+            
+            return await streamOpenAICompatible(model, apiKey, messages, onStream);
         } else {
             throw new Error(`Provider ${model.provider} not implemented yet.`);
         }
     } catch (error: any) {
         const errMsg = error.message || "";
         
-        if (errMsg.includes("413") || errMsg.includes("too large") || errMsg.includes("TPM") || errMsg.includes("tokens")) {
+        if (errMsg.includes("413") || errMsg.includes("too large") || errMsg.includes("TPM")) {
             throw new Error(
-                `**Capacity Limit Reached:** The free version of **${model.name}** cannot read this much text at once.\n\n` +
-                `**Recommendation:** Switch to a local model or **Gemini 2.5 Flash** or select fewer files.`
+                `**Message Too Large:** ${model.name} cannot process this request.\n\n` +
+                `**Solution:** Use @mentions to select specific files only, or switch to Gemini 2.5 Flash.`
+            );
+        }
+        
+        if (errMsg.includes("429") || errMsg.includes("Rate limit")) {
+            const match = errMsg.match(/try again in ([^.]+)/);
+            const waitTime = match ? match[1] : 'some time';
+            
+            // Parse wait time and store cooldown
+            const timeMatch = waitTime.match(/(\d+)\s*(second|minute|hour|day)s?/i);
+            if (timeMatch) {
+                const value = parseInt(timeMatch[1], 10);
+                const unit = timeMatch[2].toLowerCase();
+                let ms = 0;
+                if (unit === 'second') ms = value * 1000;
+                else if (unit === 'minute') ms = value * 60 * 1000;
+                else if (unit === 'hour') ms = value * 60 * 60 * 1000;
+                else if (unit === 'day') ms = value * 24 * 60 * 60 * 1000;
+                
+                if (ms > 0) {
+                    setRateLimitCooldown(modelId, Date.now() + ms);
+                }
+            }
+            
+            throw new Error(
+                `**Rate Limit Reached:** ${model.name} daily quota exceeded.\n\n` +
+                `**Wait:** ${waitTime} or switch to Gemini 2.5 Flash (unlimited free tier).`
             );
         }
         
@@ -159,23 +196,14 @@ const constructStatelessPrompt = (files: ProcessedFile[], baseSystemPrompt: stri
 const streamOpenAICompatible = async (
     model: ModelConfig,
     apiKey: string,
-    history: Message[],
-    newMessage: string,
-    systemPrompt: string,
+    messages: Array<{ role: string; content: string }>,
     onStream: (chunk: string) => void
 ): Promise<{ inputTokens?: number; outputTokens?: number; totalTokens?: number }> => {
-    // Standard stateless reconstruction of history
-    const messages = [
-        { role: 'system', content: systemPrompt },
-        ...history
-            .filter(m => !m.isStreaming && m.id !== 'intro' && m.role !== 'model') 
-            .map(m => ({ role: m.role, content: m.content })),
-        { role: 'user', content: newMessage }
-    ];
 
     let baseUrl = 'https://api.openai.com/v1/chat/completions';
     if (model.provider === 'groq') {
-        baseUrl = 'https://api.groq.com/openai/v1/chat/completions';
+        // Use CORS proxy for development
+        baseUrl = 'https://corsproxy.io/?' + encodeURIComponent('https://api.groq.com/openai/v1/chat/completions');
     }
 
     try {
@@ -195,7 +223,27 @@ const streamOpenAICompatible = async (
 
         if (!response.ok) {
             const err = await response.json().catch(() => ({}));
-            throw new Error(`API Error ${response.status}: ${err.error?.message || response.statusText}`);
+            const errorMsg = err.error?.message || response.statusText;
+            
+            // Handle rate limit
+            if (response.status === 429) {
+                const match = errorMsg.match(/(\d+)\s*(second|minute|hour|day)s?/i);
+                if (match) {
+                    const value = parseInt(match[1], 10);
+                    const unit = match[2].toLowerCase();
+                    let ms = 0;
+                    if (unit === 'second') ms = value * 1000;
+                    else if (unit === 'minute') ms = value * 60 * 1000;
+                    else if (unit === 'hour') ms = value * 60 * 60 * 1000;
+                    else if (unit === 'day') ms = value * 24 * 60 * 60 * 1000;
+                    
+                    if (ms > 0) {
+                        setRateLimitCooldown(model.id, Date.now() + ms);
+                    }
+                }
+            }
+            
+            throw new Error(`API Error ${response.status}: ${errorMsg}`);
         }
 
         if (!response.body) throw new Error("No response body");
@@ -243,8 +291,17 @@ const streamOpenAICompatible = async (
             }
         }
         return usage;
-    } catch (error) {
+    } catch (error: any) {
         console.error(`[${model.provider}] Error:`, error);
+        
+        // Handle network errors
+        if (error.message?.includes('Failed to fetch')) {
+            throw new Error(
+                `**Connection Error:** Cannot reach ${model.name} API.\n\n` +
+                `Check your internet connection or try switching to Gemini models.`
+            );
+        }
+        
         throw error;
     }
 };

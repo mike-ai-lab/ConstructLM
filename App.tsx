@@ -7,13 +7,17 @@ import DocumentViewer from './components/DocumentViewer';
 import LiveSession from './components/LiveSession';
 import { sendMessageToLLM } from './services/llmService';
 import { initializeGemini } from './services/geminiService';
-import { MODEL_REGISTRY, DEFAULT_MODEL_ID } from './services/modelRegistry';
+import { MODEL_REGISTRY, DEFAULT_MODEL_ID, getRateLimitCooldown, clearRateLimitCooldown } from './services/modelRegistry';
 import SettingsModal from './components/SettingsModal';
-import { Send, Menu, Sparkles, X, FileText, Database, PanelLeft, PanelLeftOpen, Mic, Settings, Cpu, ChevronDown, Camera, Highlighter, Edit3, Trash2, Palette, Minus, Plus, Check } from 'lucide-react';
+import { Send, Menu, Sparkles, X, FileText, Database, PanelLeft, PanelLeftOpen, Mic, Settings, Cpu, ChevronDown, Camera, Highlighter, Edit3, Trash2, Palette, Minus, Plus, Check, Network, Image, Moon, Sun } from 'lucide-react';
 import { snapshotService, Snapshot } from './services/snapshotService';
-import SnapshotPanel from './components/SnapshotPanel';
+
 import { drawingService, DrawingTool, DRAWING_COLORS, DrawingState } from './services/drawingService';
 import { chatRegistry, ChatSession, ChatMetadata } from './services/chatRegistry';
+import MindMapViewer from './components/MindMapViewer';
+import { generateMindMapData } from './services/mindMapService';
+import { mindMapCache } from './services/mindMapCache';
+import GraphicsLibrary from './components/GraphicsLibrary';
 
 interface ViewState {
   fileId: string;
@@ -38,7 +42,7 @@ const App: React.FC = () => {
   const [input, setInput] = useState('');
   const [isProcessingFiles, setIsProcessingFiles] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [isDragOver, setIsDragOver] = useState(false);
+  const [isSidebarDragOver, setIsSidebarDragOver] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   // Layout State
@@ -56,7 +60,8 @@ const App: React.FC = () => {
   // Mention State
   const [showMentionMenu, setShowMentionMenu] = useState(false);
   const [mentionQuery, setMentionQuery] = useState('');
-  const [mentionIndex, setMentionIndex] = useState(0); // For keyboard nav
+  const [mentionIndex, setMentionIndex] = useState(0);
+  const [isInputDragOver, setIsInputDragOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Live Mode State
@@ -65,12 +70,18 @@ const App: React.FC = () => {
   const [showModelMenu, setShowModelMenu] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
-  const [showSnapshots, setShowSnapshots] = useState(false);
+  const [showGraphicsLibrary, setShowGraphicsLibrary] = useState(false);
   const modelMenuRef = useRef<HTMLDivElement>(null);
+  const [rateLimitTimers, setRateLimitTimers] = useState<Record<string, number>>({});
   
   // Drawing State
   const [drawingState, setDrawingState] = useState<DrawingState>(drawingService.getState());
   const [showColorPicker, setShowColorPicker] = useState(false);
+
+  // Mind Map State
+  const [mindMapData, setMindMapData] = useState<any>(null);
+  const [mindMapFileName, setMindMapFileName] = useState<string>('');
+  const [isGeneratingMindMap, setIsGeneratingMindMap] = useState(false);
 
   useEffect(() => {
       initializeGemini();
@@ -122,8 +133,8 @@ const App: React.FC = () => {
         e.preventDefault();
         handleTakeSnapshot();
       }
-      if (e.key === 'Escape' && showSnapshots) {
-        setShowSnapshots(false);
+      if (e.key === 'Escape' && showGraphicsLibrary) {
+        setShowGraphicsLibrary(false);
       }
       if (e.key === 'Escape' && showModelMenu) {
         setShowModelMenu(false);
@@ -132,7 +143,23 @@ const App: React.FC = () => {
     
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showSnapshots, showModelMenu]);
+  }, [showGraphicsLibrary, showModelMenu]);
+
+  // Rate limit timer updater
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const timers: Record<string, number> = {};
+      MODEL_REGISTRY.forEach(model => {
+        const cooldown = getRateLimitCooldown(model.id);
+        if (cooldown) {
+          timers[model.id] = cooldown;
+        }
+      });
+      setRateLimitTimers(timers);
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, []);
 
   // Separate effect for click outside
   useEffect(() => {
@@ -324,29 +351,7 @@ const App: React.FC = () => {
     setIsProcessingFiles(false);
   };
 
-  // Drag and Drop handlers
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragOver(true);
-  };
 
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragOver(false);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragOver(false);
-    
-    const droppedFiles = e.dataTransfer.files;
-    if (droppedFiles.length > 0) {
-      handleFileUpload(droppedFiles);
-    }
-  };
 
   const handleRemoveFile = (id: string) => {
     setFiles(prev => prev.filter(f => f.id !== id));
@@ -424,9 +429,36 @@ const App: React.FC = () => {
     if (!input.trim() || isGenerating) return;
 
     const mentionedFiles = files.filter(f => input.includes(`@${f.name}`));
-    const activeContextFiles = mentionedFiles.length > 0 ? mentionedFiles : (files.length > 0 ? files : []);
+    const activeContextFiles = mentionedFiles;
+    
+    // Token validation
+    const totalTokens = activeContextFiles.reduce((sum, f) => sum + (f.tokenCount || 0), 0);
+    if (totalTokens > 50000) {
+      const errorMsg: Message = {
+        id: Date.now().toString(),
+        role: 'model',
+        content: `**Token Limit Exceeded**\n\nYou're trying to send ~${(totalTokens / 1000).toFixed(0)}k tokens, but most models have a limit of 30-50k tokens.\n\n**Solution:** Remove some @mentions or use fewer/smaller files.`,
+        timestamp: Date.now()
+      };
+      setMessages(prev => [...prev, { id: Date.now().toString(), role: 'user', content: input, timestamp: Date.now() }, errorMsg]);
+      setInput('');
+      return;
+    }
 
     const displayContent = input.replace(/@([^\s]+)/g, '$1');
+    
+    // Show helpful message if files exist but none mentioned
+    if (files.length > 0 && activeContextFiles.length === 0 && input.toLowerCase().includes('file')) {
+      const helpMsg: Message = {
+        id: Date.now().toString(),
+        role: 'model',
+        content: `**Tip:** You have ${files.length} file(s) uploaded, but none are mentioned.\n\nUse **@filename** to include files in your question. Type **@** to see the list.`,
+        timestamp: Date.now()
+      };
+      setMessages(prev => [...prev, { id: Date.now().toString(), role: 'user', content: displayContent, timestamp: Date.now() }, helpMsg]);
+      setInput('');
+      return;
+    }
 
     const userMsg: Message = {
       id: Date.now().toString(),
@@ -477,11 +509,12 @@ const App: React.FC = () => {
             : msg
         ));
       }
-    } catch (error) {
+    } catch (error: any) {
        console.error(error);
+       const errorMsg = error?.message || "Sorry, I encountered an error. Please check your connection.";
        setMessages(prev => prev.map(msg => 
             msg.id === modelMsgId 
-            ? { ...msg, content: "Sorry, I encountered an error. Please check your connection." } 
+            ? { ...msg, content: `**Error:** ${errorMsg}` } 
             : msg
         ));
     } finally {
@@ -585,27 +618,69 @@ const App: React.FC = () => {
 
   const currentColor = DRAWING_COLORS.find(c => c.id === drawingState.colorId) || DRAWING_COLORS[0];
 
+  const handleGenerateMindMap = async (fileId: string) => {
+    const file = files.find(f => f.id === fileId);
+    if (!file) return;
+
+    const cached = mindMapCache.get(fileId, activeModelId);
+    if (cached) {
+      setMindMapData(cached.data);
+      setMindMapFileName(cached.fileName);
+      return;
+    }
+
+    setIsGeneratingMindMap(true);
+    try {
+      const data = await generateMindMapData(file, activeModelId);
+      mindMapCache.save(fileId, file.name, activeModelId, data);
+      setMindMapData(data);
+      setMindMapFileName(file.name);
+    } catch (error: any) {
+      console.error('Mind map generation error:', error);
+      const toast = document.createElement('div');
+      toast.className = 'fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-[9999]';
+      toast.textContent = error.message || 'Failed to generate mind map';
+      document.body.appendChild(toast);
+      setTimeout(() => document.body.removeChild(toast), 3000);
+    } finally {
+      setIsGeneratingMindMap(false);
+    }
+  };
+
+  const handleOpenMindMapFromLibrary = (fileId: string, modelId: string, data: any, fileName: string) => {
+    setMindMapData(data);
+    setMindMapFileName(fileName);
+    setShowGraphicsLibrary(false);
+  };
+
+  const handleDeleteMindMap = (fileId: string, modelId: string) => {
+    mindMapCache.delete(fileId, modelId);
+  };
+
   return (
-    <div 
-      className="flex h-screen w-full bg-white overflow-hidden text-sm relative"
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
-    >
-      {/* Drag Overlay */}
-      {isDragOver && (
-        <div className="absolute inset-0 bg-blue-500/10 backdrop-blur-sm z-50 flex items-center justify-center drag-overlay">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 border-2 border-dashed border-blue-400 text-center">
-            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <FileText size={32} className="text-blue-600" />
+    <div className="flex h-screen w-full bg-white dark:bg-[#1a1a1a] overflow-hidden text-sm relative">
+      {isLiveMode && <LiveSession onClose={() => setIsLiveMode(false)} />}
+      {isSettingsOpen && <SettingsModal onClose={() => setIsSettingsOpen(false)} />}
+      {isGeneratingMindMap && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 flex flex-col items-center gap-4">
+            <div className="w-16 h-16 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin" />
+            <div className="text-center">
+              <h3 className="text-lg font-semibold text-gray-800 mb-1">Generating Mind Map</h3>
+              <p className="text-sm text-gray-600">AI is analyzing the document structure...</p>
             </div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">Drop files here</h3>
-            <p className="text-sm text-gray-600">Support for PDF, Excel, images, documents and more</p>
           </div>
         </div>
       )}
-      {isLiveMode && <LiveSession onClose={() => setIsLiveMode(false)} />}
-      {isSettingsOpen && <SettingsModal onClose={() => setIsSettingsOpen(false)} />}
+      {mindMapData && (
+        <div className="fixed inset-0 z-[60]">
+          <MindMapViewer 
+            data={mindMapData} 
+            fileName={mindMapFileName}
+            onClose={() => { setMindMapData(null); setMindMapFileName(''); }}
+          />
+        </div>
+      )}
       
       {/* Mobile Menu Button */}
       {isMobile && !isSidebarOpen && (
@@ -620,7 +695,7 @@ const App: React.FC = () => {
       {/* --- LEFT SIDEBAR --- */}
       <div 
         className={`
-            fixed md:relative z-40 h-full bg-slate-100 flex flex-col transition-all duration-300 ease-in-out border-r-2 border-slate-300 md:border-r-0
+            fixed md:relative z-40 h-full bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] flex flex-col transition-all duration-300 ease-in-out border-r border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] md:border-r-0
             ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
             ${!isSidebarOpen && !isMobile ? 'md:w-0 md:opacity-0 md:overflow-hidden' : ''}
         `}
@@ -644,18 +719,21 @@ const App: React.FC = () => {
                     onUpload={handleFileUpload} 
                     onRemove={handleRemoveFile}
                     isProcessing={isProcessingFiles}
+                    onGenerateMindMap={handleGenerateMindMap}
                     chats={chats}
                     activeChatId={currentChatId}
                     onSelectChat={handleSelectChat}
                     onCreateChat={handleCreateChat}
                     onDeleteChat={handleDeleteChat}
+                    isDragOver={isSidebarDragOver}
+                    onDragStateChange={setIsSidebarDragOver}
                 />
             </div>
         </div>
       </div>
 
       {/* Resize Handle: Left */}
-      {!isMobile && isSidebarOpen && (
+      {!isMobile && isSidebarOpen && !mindMapData && !isGeneratingMindMap && (
           <div 
             className={`resize-handle-vertical ${isResizingSidebar ? 'active' : ''}`}
             onMouseDown={() => setIsResizingSidebar(true)}
@@ -663,9 +741,9 @@ const App: React.FC = () => {
       )}
 
       {/* --- MIDDLE CHAT AREA --- */}
-      <div className="flex-1 flex flex-col h-full relative bg-white transition-all duration-300" style={{ minWidth: MIN_CHAT_WIDTH }}>
+      <div className="flex-1 flex flex-col h-full relative bg-white dark:bg-[#1a1a1a] transition-all duration-300" style={{ minWidth: MIN_CHAT_WIDTH }}>
         {/* Header */}
-        <header className="h-14 flex-none border-b border-gray-100 flex items-center justify-between px-6 bg-white/80 backdrop-blur-sm z-10 min-w-0 overflow-visible">
+        <header className="h-14 flex-none border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] flex items-center justify-between px-6 bg-white/80 dark:bg-[#1a1a1a]/80 backdrop-blur-sm z-10 min-w-0 overflow-visible">
           <div className="flex items-center gap-2 min-w-0 flex-shrink">
              {!isMobile && (
                  <button 
@@ -676,15 +754,15 @@ const App: React.FC = () => {
                     {isSidebarOpen ? <PanelLeft size={20} /> : <PanelLeftOpen size={20} />}
                  </button>
              )}
-             <div className="bg-gradient-to-tr from-blue-600 to-indigo-500 p-1.5 rounded-lg shadow-sm flex-shrink-0">
+             <div className="bg-gradient-to-tr from-[#4485d1] to-[#4485d1] p-1.5 rounded-lg shadow-sm flex-shrink-0">
                 <Sparkles size={16} className="text-white" />
              </div>
-             <h1 className="font-semibold text-black text-lg tracking-tight mr-4 truncate">ConstructLM</h1>
+             <h1 className="font-semibold text-[#1a1a1a] dark:text-white text-lg tracking-tight mr-4 truncate">ConstructLM</h1>
              
              <div className="relative" ref={modelMenuRef}>
                  <button 
                     onClick={() => setShowModelMenu(!showModelMenu)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100/80 hover:bg-gray-200/80 rounded-full text-xs font-medium text-black transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] hover:bg-[rgba(0,0,0,0.06)] dark:hover:bg-[#222222] rounded-full text-xs font-medium text-[#1a1a1a] dark:text-white transition-colors"
                  >
                      <Cpu size={14} />
                      <span className="max-w-[120px] truncate">{activeModel.name}</span>
@@ -692,35 +770,50 @@ const App: React.FC = () => {
                  </button>
                  
                  {showModelMenu && (
-                     <div className="absolute top-full left-0 mt-2 w-72 bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden z-[100]">
-                         <div className="px-3 py-2 bg-gray-50 border-b text-[10px] font-bold text-gray-400 uppercase">Select Model</div>
+                     <div className="absolute top-full left-0 mt-2 w-72 bg-white dark:bg-[#222222] rounded-xl shadow-xl border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] overflow-hidden z-[100]">
+                         <div className="px-3 py-2 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] text-[10px] font-bold text-[#666666] dark:text-[#a0a0a0] uppercase">Select Model</div>
                          <div className="max-h-[400px] overflow-y-auto p-1">
-                             {MODEL_REGISTRY.map(model => (
+                             {MODEL_REGISTRY.map(model => {
+                               const cooldown = rateLimitTimers[model.id];
+                               const isRateLimited = cooldown && cooldown > Date.now();
+                               const remainingMs = isRateLimited ? cooldown - Date.now() : 0;
+                               const remainingMinutes = Math.floor(remainingMs / 60000);
+                               const remainingSeconds = Math.floor((remainingMs % 60000) / 1000);
+                               const timeDisplay = remainingMinutes > 0 
+                                 ? `${remainingMinutes}:${remainingSeconds.toString().padStart(2, '0')}`
+                                 : `${remainingSeconds}s`;
+                               
+                               return (
                                  <button
                                      key={model.id}
                                      onClick={() => { setActiveModelId(model.id); setShowModelMenu(false); }}
-                                     className={`w-full text-left px-3 py-2.5 rounded-lg transition-colors ${activeModelId === model.id ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
+                                     className={`w-full text-left px-3 py-2.5 rounded-lg transition-colors ${activeModelId === model.id ? 'bg-[rgba(68,133,209,0.1)]' : 'hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a]'}`}
                                  >
                                      <div className="flex items-center justify-between gap-2">
                                         <div className="flex items-center gap-2">
                                           <div className={`w-2 h-2 rounded-full ${model.provider === 'google' ? 'bg-blue-500' : 'bg-orange-500'}`} />
-                                          <span className="text-sm font-medium text-black">{model.name}</span>
+                                          <span className="text-sm font-medium text-[#1a1a1a] dark:text-white">{model.name}</span>
                                         </div>
-                                        <span className={`text-[9px] px-1.5 py-0.5 rounded ${
-                                          model.capacityTag === 'High' ? 'bg-green-100 text-green-700' :
-                                          model.capacityTag === 'Medium' ? 'bg-yellow-100 text-yellow-700' :
-                                          'bg-gray-100 text-gray-600'
-                                        }`}>{model.capacityTag}</span>
+                                        {isRateLimited ? (
+                                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 font-mono">▽{timeDisplay}</span>
+                                        ) : (
+                                          <span className={`text-[9px] px-1.5 py-0.5 rounded ${
+                                            model.capacityTag === 'High' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' :
+                                            model.capacityTag === 'Medium' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400' :
+                                            'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+                                          }`}>{model.capacityTag}</span>
+                                        )}
                                      </div>
-                                     <div className="text-[10px] text-gray-600 pl-4 mt-0.5">{model.description}</div>
+                                     <div className="text-[10px] text-[#666666] dark:text-[#a0a0a0] pl-4 mt-0.5">{model.description}</div>
                                      {model.maxInputWords && model.maxOutputWords && (
-                                       <div className="text-[9px] text-gray-600 pl-4 mt-1 flex gap-3">
+                                       <div className="text-[9px] text-[#666666] dark:text-[#a0a0a0] pl-4 mt-1 flex gap-3">
                                          <span>In: ~{(model.maxInputWords / 1000).toFixed(0)}K</span>
                                          <span>Out: ~{(model.maxOutputWords / 1000).toFixed(0)}K</span>
                                        </div>
                                      )}
                                  </button>
-                             ))}
+                               );
+                             })}
                          </div>
                      </div>
                  )}
@@ -730,7 +823,7 @@ const App: React.FC = () => {
             {/* New Chat Button */}
             <button
               onClick={handleCreateChat}
-              className="p-2 text-gray-400 hover:bg-blue-50 hover:text-blue-600 rounded-full transition-colors"
+              className="p-2 text-[#a0a0a0] hover:bg-[rgba(68,133,209,0.1)] hover:text-[#4485d1] rounded-full transition-colors"
               title="New Chat"
             >
               <Plus size={18} />
@@ -740,8 +833,8 @@ const App: React.FC = () => {
               onClick={() => handleDrawingToolChange('highlighter')}
               className={`p-2 rounded-full transition-colors ${
                 drawingState.tool === 'highlighter'
-                  ? 'bg-yellow-100 text-yellow-700'
-                  : 'text-gray-400 hover:text-yellow-600 hover:bg-yellow-50'
+                  ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400'
+                  : 'text-[#a0a0a0] hover:text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20'
               }`}
               title="Highlighter"
             >
@@ -751,8 +844,8 @@ const App: React.FC = () => {
               onClick={() => handleDrawingToolChange('pen')}
               className={`p-2 rounded-full transition-colors ${
                 drawingState.tool === 'pen'
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'
+                  ? 'bg-[rgba(68,133,209,0.1)] text-[#4485d1]'
+                  : 'text-[#a0a0a0] hover:text-[#4485d1] hover:bg-[rgba(68,133,209,0.1)]'
               }`}
               title="Drawing Pen"
             >
@@ -762,7 +855,7 @@ const App: React.FC = () => {
             {drawingState.isActive && (
               <button
                 onClick={() => handleDrawingToolChange('none')}
-                className="p-2 bg-green-100 text-green-700 hover:bg-green-200 rounded-full transition-colors"
+                className="p-2 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/40 rounded-full transition-colors"
                 title="Done Drawing"
               >
                 <Check size={18} />
@@ -770,7 +863,7 @@ const App: React.FC = () => {
             )}
             <button
               onClick={handleClearAll}
-              className="p-2 text-gray-400 hover:bg-red-100 hover:text-red-600 rounded-full transition-colors"
+              className="p-2 text-[#a0a0a0] hover:bg-red-100 dark:hover:bg-red-900/30 hover:text-[#ef4444] rounded-full transition-colors"
               title="Clear All"
             >
               <Trash2 size={18} />
@@ -783,7 +876,7 @@ const App: React.FC = () => {
                 <div className="relative">
                   <button
                     onClick={() => setShowColorPicker(!showColorPicker)}
-                    className="p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 rounded-full transition-colors"
+                    className="p-2 text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] hover:text-[#1a1a1a] dark:hover:text-white rounded-full transition-colors"
                     title="Choose Color"
                   >
                     <div className="flex items-center">
@@ -795,14 +888,14 @@ const App: React.FC = () => {
                   </button>
                   
                   {showColorPicker && (
-                    <div className="absolute top-full right-0 mt-2 bg-white rounded-lg shadow-lg border border-gray-200 p-2 z-50">
+                    <div className="absolute top-full right-0 mt-2 bg-white dark:bg-[#222222] rounded-lg shadow-lg border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] p-2 z-50">
                       <div className="grid grid-cols-5 gap-1">
                         {DRAWING_COLORS.map(color => (
                           <button
                             key={color.id}
                             onClick={() => handleColorChange(color.id)}
                             className={`w-6 h-6 rounded-full border-2 transition-all hover:scale-110 ${
-                              drawingState.colorId === color.id ? 'border-gray-400 scale-110' : 'border-gray-200'
+                              drawingState.colorId === color.id ? 'border-[#a0a0a0] scale-110' : 'border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)]'
                             }`}
                             style={{ backgroundColor: color.color }}
                             title={color.name}
@@ -819,7 +912,7 @@ const App: React.FC = () => {
                     <button
                       onClick={() => handleStrokeWidthChange(-1)}
                       disabled={drawingState.strokeWidth <= 1}
-                      className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed rounded"
+                      className="p-1 text-[#a0a0a0] hover:text-[#1a1a1a] dark:hover:text-white disabled:opacity-50 disabled:cursor-not-allowed rounded"
                       title="Decrease stroke width"
                     >
                       <Minus size={14} />
@@ -834,7 +927,7 @@ const App: React.FC = () => {
                     <button
                       onClick={() => handleStrokeWidthChange(1)}
                       disabled={drawingState.strokeWidth >= 10}
-                      className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed rounded"
+                      className="p-1 text-[#a0a0a0] hover:text-[#1a1a1a] dark:hover:text-white disabled:opacity-50 disabled:cursor-not-allowed rounded"
                       title="Increase stroke width"
                     >
                       <Plus size={14} />
@@ -846,36 +939,45 @@ const App: React.FC = () => {
             
             <button 
               onClick={handleTakeSnapshot}
-              className="p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 rounded-full transition-colors"
+              className="p-2 text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] hover:text-[#1a1a1a] dark:hover:text-white rounded-full transition-colors"
               title="Take Snapshot (Ctrl+Shift+S)"
             >
                 <Camera size={18} />
             </button>
             <div className="relative">
               <button 
-                onClick={() => setShowSnapshots(!showSnapshots)}
-                className="p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 rounded-full transition-colors relative"
-                title="View Snapshots"
+                onClick={() => setShowGraphicsLibrary(!showGraphicsLibrary)}
+                className="p-2 text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] hover:text-[#1a1a1a] dark:hover:text-white rounded-full transition-colors relative"
+                title="Graphics Library"
               >
-                  <FileText size={18} />
-                  {snapshots.length > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                      {snapshots.length}
+                  <Image size={18} />
+                  {(snapshots.length + Object.keys(mindMapCache.getAll()).length) > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-[#4485d1] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                      {snapshots.length + Object.keys(mindMapCache.getAll()).length}
                     </span>
                   )}
               </button>
-              <SnapshotPanel
+              <GraphicsLibrary
+                isOpen={showGraphicsLibrary}
+                onClose={() => setShowGraphicsLibrary(false)}
                 snapshots={snapshots}
-                isOpen={showSnapshots}
-                onClose={() => setShowSnapshots(false)}
-                onDownload={handleDownloadSnapshot}
-                onCopy={handleCopySnapshot}
-                onDelete={handleDeleteSnapshot}
+                onDownloadSnapshot={handleDownloadSnapshot}
+                onCopySnapshot={handleCopySnapshot}
+                onDeleteSnapshot={handleDeleteSnapshot}
+                onOpenMindMap={handleOpenMindMapFromLibrary}
               />
             </div>
             <button 
+              onClick={() => document.documentElement.classList.toggle('dark')}
+              className="p-2 text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] hover:text-[#1a1a1a] dark:hover:text-white rounded-full transition-colors"
+              title="Toggle Theme"
+            >
+                <Moon size={18} className="dark:hidden" />
+                <Sun size={18} className="hidden dark:block" />
+            </button>
+            <button 
               onClick={() => setIsSettingsOpen(true)}
-              className="p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 rounded-full transition-colors"
+              className="p-2 text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] hover:text-[#1a1a1a] dark:hover:text-white rounded-full transition-colors"
             >
                 <Settings size={18} />
             </button>
@@ -883,7 +985,7 @@ const App: React.FC = () => {
         </header>
 
         {/* Messages */}
-        <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 scroll-smooth bg-white">
+        <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 scroll-smooth bg-white dark:bg-[#1a1a1a]">
             <div className="max-w-3xl mx-auto w-full pb-4">
                 {messages.map((msg) => (
                     <MessageBubble 
@@ -898,28 +1000,40 @@ const App: React.FC = () => {
         </div>
 
         {/* Input Area */}
-        <div className="p-4 md:p-6 bg-gradient-to-t from-white via-white to-transparent relative snapshot-ignore">
+        <div className="p-4 md:p-6 bg-gradient-to-t from-white dark:from-[#1a1a1a] via-white dark:via-[#1a1a1a] to-transparent relative snapshot-ignore">
           <div className="max-w-3xl mx-auto w-full relative">
             
-            {/* Context Indicator (Efficiency Mode) */}
-            {input.trim() && files.length > 0 && (
-                <div className="absolute -top-6 left-6 text-[10px] font-medium transition-all duration-300">
-                    {files.filter(f => input.includes(`@${f.name}`)).length > 0 ? (
-                        <span className="text-blue-600 flex items-center gap-1">
-                            <Sparkles size={10} /> Efficiency Mode: Focused on specific files
-                        </span>
-                    ) : (
-                        <span className="text-gray-400 flex items-center gap-1">
-                            <Database size={10} /> Context: All {files.length} files
-                        </span>
-                    )}
+            {/* Context Indicator */}
+            {isInputDragOver && (
+                <div className="absolute -top-8 left-1/2 -translate-x-1/2 text-xs font-medium bg-[#4485d1] text-white px-3 py-1.5 rounded-full shadow-lg animate-bounce">
+                    Drop to add & mention
                 </div>
             )}
+            {!isInputDragOver && input.trim() && files.length > 0 && (() => {
+                const mentionedFiles = files.filter(f => input.includes(`@${f.name}`));
+                const totalTokens = mentionedFiles.reduce((sum, f) => sum + (f.tokenCount || 0), 0);
+                const isOverLimit = totalTokens > 30000;
+                
+                return (
+                  <div className="absolute -top-6 left-6 text-[10px] font-medium transition-all duration-300">
+                      {mentionedFiles.length > 0 ? (
+                          <span className={`flex items-center gap-1 ${isOverLimit ? 'text-[#ef4444]' : 'text-[#4485d1]'}`}>
+                              <Sparkles size={10} /> {mentionedFiles.length} file(s) • ~{(totalTokens / 1000).toFixed(0)}k tokens
+                              {isOverLimit && ' ⚠️'}
+                          </span>
+                      ) : (
+                          <span className="text-[#666666] dark:text-[#a0a0a0] flex items-center gap-1">
+                              <Database size={10} /> No files selected - Use @ to mention
+                          </span>
+                      )}
+                  </div>
+                );
+            })()}
 
             {/* Mention Popup Menu */}
             {showMentionMenu && filteredFiles.length > 0 && (
-                <div className="absolute bottom-full left-6 mb-2 w-64 bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden z-50 animate-in slide-in-from-bottom-2 fade-in duration-200">
-                    <div className="px-3 py-2 bg-gray-50 border-b border-gray-100 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                <div className="absolute bottom-full left-6 mb-2 w-64 bg-white dark:bg-[#222222] rounded-xl shadow-xl border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] overflow-hidden z-50 animate-in slide-in-from-bottom-2 fade-in duration-200">
+                    <div className="px-3 py-2 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] text-[10px] font-bold text-[#666666] dark:text-[#a0a0a0] uppercase tracking-wider">
                         Mention a source
                     </div>
                     <div className="max-h-48 overflow-y-auto p-1">
@@ -927,9 +1041,9 @@ const App: React.FC = () => {
                             <button
                                 key={f.id}
                                 onClick={() => insertMention(f.name)}
-                                className={`w-full text-left px-3 py-2 text-xs rounded-lg flex items-center gap-2 transition-colors ${i === mentionIndex ? 'bg-blue-50 text-blue-700' : 'hover:bg-gray-50 text-gray-700'}`}
+                                className={`w-full text-left px-3 py-2 text-xs rounded-lg flex items-center gap-2 transition-colors ${i === mentionIndex ? 'bg-[rgba(68,133,209,0.1)] text-[#4485d1]' : 'hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] text-[#1a1a1a] dark:text-white'}`}
                             >
-                                <FileText size={14} className={i === mentionIndex ? 'text-blue-500' : 'text-gray-400'} />
+                                <FileText size={14} className={i === mentionIndex ? 'text-[#4485d1]' : 'text-[#a0a0a0]'} />
                                 <span className="truncate">{f.name}</span>
                             </button>
                         ))}
@@ -937,7 +1051,9 @@ const App: React.FC = () => {
                 </div>
             )}
 
-            <div className="relative flex items-center shadow-lg shadow-gray-200/50 rounded-full bg-white border border-gray-200 focus-within:ring-2 focus-within:ring-blue-100 transition-all">
+            <div className={`relative flex items-center shadow-lg shadow-gray-200/50 dark:shadow-black/50 rounded-full bg-white dark:bg-[#2a2a2a] border-2 transition-all ${
+              isInputDragOver ? 'border-[#4485d1] ring-4 ring-[rgba(68,133,209,0.1)] bg-[rgba(68,133,209,0.05)]' : 'border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] focus-within:ring-2 focus-within:ring-[rgba(68,133,209,0.1)]'
+            }`}>
                 {/* File Upload Button */}
                 <input
                     type="file"
@@ -949,7 +1065,7 @@ const App: React.FC = () => {
                 />
                 <label
                     htmlFor="chat-file-input"
-                    className="absolute left-12 p-2 rounded-full text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                    className="absolute left-12 p-2 rounded-full text-[#a0a0a0] hover:text-[#4485d1] hover:bg-[rgba(68,133,209,0.1)] transition-colors cursor-pointer"
                     title="Attach files"
                 >
                     <FileText size={20} />
@@ -957,7 +1073,7 @@ const App: React.FC = () => {
                 {/* Live Mic Button */}
                 <button 
                     onClick={() => setIsLiveMode(true)}
-                    className="absolute left-2 p-2 rounded-full text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                    className="absolute left-2 p-2 rounded-full text-[#a0a0a0] hover:text-[#4485d1] hover:bg-[rgba(68,133,209,0.1)] transition-colors"
                     title="Start Live Conversation"
                 >
                     <Mic size={20} />
@@ -969,15 +1085,19 @@ const App: React.FC = () => {
                     value={input}
                     onChange={handleInputChange}
                     onKeyDown={handleKeyDown}
-                    onDrop={(e) => {
+                    onDrop={async (e) => {
                       e.preventDefault();
                       e.stopPropagation();
+                      setIsInputDragOver(false);
+                      
+                      const cursorPos = inputRef.current?.selectionStart || input.length;
+                      const before = input.slice(0, cursorPos);
+                      const after = input.slice(cursorPos);
+                      const space = (before && !before.endsWith(' ')) ? ' ' : '';
+                      
+                      // Handle drag from sources panel
                       const mention = e.dataTransfer.getData('text/plain');
                       if (mention && mention.startsWith('@')) {
-                        const cursorPos = inputRef.current?.selectionStart || input.length;
-                        const before = input.slice(0, cursorPos);
-                        const after = input.slice(cursorPos);
-                        const space = (before && !before.endsWith(' ')) ? ' ' : '';
                         const newValue = before + space + mention + ' ' + after;
                         setInput(newValue);
                         setTimeout(() => {
@@ -987,20 +1107,42 @@ const App: React.FC = () => {
                             inputRef.current.focus();
                           }
                         }, 10);
+                        return;
+                      }
+                      
+                      // Handle external file drop
+                      const droppedFiles = e.dataTransfer.files;
+                      if (droppedFiles.length > 0) {
+                        await handleFileUpload(droppedFiles);
+                        const mentions = Array.from(droppedFiles).map(f => `@${f.name}`).join(' ');
+                        const newValue = before + space + mentions + ' ' + after;
+                        setInput(newValue);
+                        setTimeout(() => {
+                          if (inputRef.current) {
+                            inputRef.current.focus();
+                          }
+                        }, 100);
                       }
                     }}
                     onDragOver={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
                       e.dataTransfer.dropEffect = 'copy';
+                      setIsInputDragOver(true);
                     }}
                     onDragEnter={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
+                      setIsInputDragOver(true);
                     }}
-                    placeholder={files.length === 0 ? "Ask me anything or drag files here..." : "Ask a question (Type '@' or drag files to reference)..."}
+                    onDragLeave={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsInputDragOver(false);
+                    }}
+                    placeholder={files.length === 0 ? "Ask me anything or drag files here..." : "Type @ to mention files (required for file context)..."}
                     disabled={isGenerating}
-                    className="w-full bg-transparent text-black placeholder-gray-500 rounded-full pl-24 pr-14 py-4 focus:outline-none"
+                    className="w-full bg-transparent text-[#1a1a1a] dark:text-white placeholder-[#666666] dark:placeholder-[#a0a0a0] rounded-full pl-24 pr-14 py-4 focus:outline-none"
                     autoComplete="off"
                 />
                 
@@ -1010,22 +1152,22 @@ const App: React.FC = () => {
                         disabled={!input.trim() || isGenerating}
                         className={`
                             p-2.5 rounded-full transition-all duration-200
-                            ${!input.trim() || isGenerating ? 'bg-gray-100 text-gray-400' : 'bg-blue-600 text-white hover:bg-blue-700 shadow-md'}
+                            ${!input.trim() || isGenerating ? 'bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] text-[#a0a0a0]' : 'bg-[#4485d1] text-white hover:bg-[#3674c1] shadow-md'}
                         `}
                     >
                         {isGenerating ? <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" /> : <Send size={18} />}
                     </button>
                 </div>
             </div>
-            <div className="text-center mt-2 flex justify-center gap-4">
-                 <span className="text-[10px] text-gray-400">AI can make mistakes. Please verify citations.</span>
+            <div className="text-center h-[30px] flex items-center justify-center">
+                 <span className="text-[10px] text-[#666666] dark:text-[#a0a0a0]">AI can make mistakes. Please verify citations.</span>
             </div>
           </div>
         </div>
       </div>
 
       {/* Resize Handle: Right (Only if Viewer is open) */}
-      {!isMobile && activeFile && (
+      {!isMobile && activeFile && !mindMapData && !isGeneratingMindMap && (
           <div 
             className={`resize-handle-vertical ${isResizingViewer ? 'active' : ''}`}
             onMouseDown={() => setIsResizingViewer(true)}
@@ -1036,7 +1178,7 @@ const App: React.FC = () => {
       {activeFile && (
           <div 
             className={`
-               fixed md:relative z-30 h-full bg-slate-50 flex flex-col shadow-2xl md:shadow-none border-l-2 border-slate-300
+               fixed md:relative z-30 h-full bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] flex flex-col shadow-2xl md:shadow-none border-l border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)]
                animate-in slide-in-from-right duration-300
             `}
             style={{ 
