@@ -48,21 +48,19 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
   };
 
   return (
-    <>
-      <div className="px-4 py-2 flex-shrink-0 border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)]">
-        <div className="flex items-center justify-between">
-          <span className="text-[10px] font-medium text-[#666666] dark:text-[#a0a0a0]">{chats.length} chats</span>
-          <button
-            onClick={onCreateChat}
-            className="p-1.5 text-[#4485d1] hover:bg-[rgba(68,133,209,0.1)] rounded-lg transition-colors"
-            title="New Chat"
-          >
-            <Plus size={14} />
-          </button>
-        </div>
+    <div className="flex flex-col h-full">
+      <div className="px-4 h-[50px] flex items-center justify-between flex-shrink-0 border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)]">
+        <span className="text-[10px] font-medium text-[#666666] dark:text-[#a0a0a0]">{chats.length} chats</span>
+        <button
+          onClick={onCreateChat}
+          className="p-1.5 text-[#4485d1] hover:bg-[rgba(68,133,209,0.1)] rounded-lg transition-colors"
+          title="New Chat"
+        >
+          <Plus size={14} />
+        </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-2 py-2 custom-scrollbar min-h-0">
+      <div className="flex-1 overflow-y-auto px-2 py-2 custom-scrollbar">
         {chats.length === 0 ? (
           <div className="text-center mt-12 px-6">
             <div className="w-16 h-16 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] rounded-full flex items-center justify-center mx-auto mb-3">
@@ -116,7 +114,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
           </div>
         )}
       </div>
-    </>
+    </div>
   );
 };
 

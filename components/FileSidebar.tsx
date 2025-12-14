@@ -229,13 +229,13 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
       )}
 
       {/* Tab Navigation */}
-      <div className="h-14 flex border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] box-border">
+      <div className="h-[55px] flex-shrink-0 flex border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a]">
         <button
           onClick={() => setActiveTab('files')}
-          className={`flex-1 px-4 text-xs font-bold uppercase tracking-wider transition-colors border-b-2 border-transparent flex items-center justify-center gap-2
-            ${activeTab === 'files' 
-              ? 'text-[#4485d1]' 
-              : 'text-[#666666] dark:text-[#a0a0a0] hover:text-[#1a1a1a] dark:hover:text-white'
+          className={`flex-1 h-full px-4 text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2 ${
+            activeTab === 'files' 
+              ? 'text-[#4485d1] border-b-2 border-[#4485d1] bg-white dark:bg-[#1a1a1a]' 
+              : 'text-[#666666] dark:text-[#a0a0a0] hover:text-[#1a1a1a] dark:hover:text-white border-b-2 border-transparent'
           }`}
         >
           <Files size={14} />
@@ -243,10 +243,10 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
         </button>
         <button
           onClick={() => setActiveTab('chats')}
-          className={`flex-1 px-4 text-xs font-bold uppercase tracking-wider transition-colors border-b-2 border-transparent flex items-center justify-center gap-2
-            ${activeTab === 'chats' 
-              ? 'text-[#4485d1]' 
-              : 'text-[#666666] dark:text-[#a0a0a0] hover:text-[#1a1a1a] dark:hover:text-white'
+          className={`flex-1 h-full px-4 text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2 ${
+            activeTab === 'chats' 
+              ? 'text-[#4485d1] border-b-2 border-[#4485d1] bg-white dark:bg-[#1a1a1a]' 
+              : 'text-[#666666] dark:text-[#a0a0a0] hover:text-[#1a1a1a] dark:hover:text-white border-b-2 border-transparent'
           }`}
         >
           <MessageCircle size={14} />
@@ -254,8 +254,8 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
         </button>
       </div>
 
-      {/* TAB CONTENT WRAPPER: make both tabs occupy the same sized content area (header height = 56px => h-14) */}
-      <div style={{ height: 'calc(100% - 56px)' }} className="flex flex-col min-h-0 box-border">
+      {/* TAB CONTENT WRAPPER: make both tabs occupy the same sized content area (header height = 55px) */}
+      <div style={{ height: 'calc(100% - 55px)' }} className="flex flex-col min-h-0 box-border">
         {activeTab === 'files' ? (
           <div className="flex flex-col min-h-0 w-full relative box-border">
             {/* Toolbar */}
@@ -334,20 +334,13 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
             </div>
           </div>
         ) : (
-          // Chat area: wrapped in the same sized content container to avoid size/scale differences
-          <div className="flex flex-col min-h-0 w-full">
-            {/* Keep a consistent top spacer/toolbar height so chats and files align visually */}
-            <div className="px-4 py-2 flex-shrink-0 border-b border-[rgba(0,0,0,0.05)] bg-transparent" />
-            <div className="flex-1 overflow-y-auto min-h-0">
-              <ChatHistory
-                chats={chats}
-                activeChatId={activeChatId}
-                onSelectChat={onSelectChat}
-                onCreateChat={onCreateChat}
-                onDeleteChat={onDeleteChat}
-              />
-            </div>
-          </div>
+          <ChatHistory
+            chats={chats}
+            activeChatId={activeChatId}
+            onSelectChat={onSelectChat}
+            onCreateChat={onCreateChat}
+            onDeleteChat={onDeleteChat}
+          />
         )}
       </div>
     </div>
