@@ -81,40 +81,44 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
 
             try {
                 if (provider === 'google') {
-                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            contents: [{ parts: [{ text: "Hi" }] }],
-                            generationConfig: { maxOutputTokens: 1 }
-                        }),
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`, {
+                        method: 'GET',
                         signal: controller.signal
                     });
                     if (!response.ok) {
-                        const errorData = await response.json().catch(() => null);
-                        if (response.status === 429) {
-                            throw new Error(`Quota exceeded. Get a new key from ai.google.dev`);
+                        if (response.status === 400) {
+                            throw new Error(`Invalid API key`);
                         }
                         throw new Error(`API Error ${response.status}`);
                     }
                 } 
                 else if (provider === 'groq') {
-                    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-                        method: 'POST',
-                        headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ model: 'llama-3.1-8b-instant', messages: [{ role: 'user', content: 'Hi' }], max_tokens: 1 }),
-                        signal: controller.signal
-                    });
-                    if (!response.ok) throw new Error(`Error ${response.status}`);
+                    if ((window as any).electron?.proxyGroq) {
+                        const result = await (window as any).electron.proxyGroq(key, { model: 'llama-3.1-8b-instant', messages: [{ role: 'user', content: 'Hi' }], max_tokens: 1 });
+                        if (!result.ok) throw new Error(`Error ${result.status || result.error}`);
+                    } else {
+                        const response = await fetch('http://localhost:3002/api/proxy/groq', {
+                            method: 'POST',
+                            headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ model: 'llama-3.1-8b-instant', messages: [{ role: 'user', content: 'Hi' }], max_tokens: 1 }),
+                            signal: controller.signal
+                        });
+                        if (!response.ok) throw new Error(`Error ${response.status}`);
+                    }
                 }
                 else if (provider === 'openai') {
-                    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-                        method: 'POST',
-                        headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'user', content: 'Hi' }], max_tokens: 1 }),
-                        signal: controller.signal
-                    });
-                    if (!response.ok) throw new Error(`Error ${response.status}`);
+                    if ((window as any).electron?.proxyOpenai) {
+                        const result = await (window as any).electron.proxyOpenai(key, { model: 'gpt-4o-mini', messages: [{ role: 'user', content: 'Hi' }], max_tokens: 1 });
+                        if (!result.ok) throw new Error(`Error ${result.status || result.error}`);
+                    } else {
+                        const response = await fetch('http://localhost:3002/api/proxy/openai', {
+                            method: 'POST',
+                            headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'user', content: 'Hi' }], max_tokens: 1 }),
+                            signal: controller.signal
+                        });
+                        if (!response.ok) throw new Error(`Error ${response.status}`);
+                    }
                 }
 
                 clearTimeout(timeoutId);

@@ -8,11 +8,11 @@ export interface DrawingColor {
 }
 
 export const DRAWING_COLORS: DrawingColor[] = [
-  { id: 'yellow', name: 'Yellow', color: '#FCD34D', highlightColor: '#FEF3C7' },
-  { id: 'green', name: 'Green', color: '#34D399', highlightColor: '#D1FAE5' },
-  { id: 'blue', name: 'Blue', color: '#60A5FA', highlightColor: '#DBEAFE' },
-  { id: 'pink', name: 'Pink', color: '#F472B6', highlightColor: '#FCE7F3' },
-  { id: 'purple', name: 'Purple', color: '#A78BFA', highlightColor: '#EDE9FE' }
+  { id: 'yellow', name: 'Yellow', color: '#FCD34D', highlightColor: 'rgba(252, 211, 77, 0.4)' },
+  { id: 'green', name: 'Green', color: '#34D399', highlightColor: 'rgba(16, 185, 129, 0.4)' },
+  { id: 'blue', name: 'Blue', color: '#60A5FA', highlightColor: 'rgba(59, 130, 246, 0.4)' },
+  { id: 'pink', name: 'Pink', color: '#F472B6', highlightColor: 'rgba(236, 72, 153, 0.4)' },
+  { id: 'purple', name: 'Purple', color: '#A78BFA', highlightColor: 'rgba(139, 92, 246, 0.4)' }
 ];
 
 export interface DrawingState {
@@ -64,34 +64,24 @@ class DrawingService {
   }
 
   private setupCanvas() {
-    // Wait for messages container to be available
-    const attachCanvas = () => {
-      const container = document.querySelector('.flex-1.overflow-y-auto');
-      if (!container) {
-        setTimeout(attachCanvas, 100);
-        return;
-      }
-      
-      this.canvas = document.createElement('canvas');
-      this.canvas.id = 'drawing-overlay';
-      this.canvas.style.position = 'absolute';
-      this.canvas.style.top = '0';
-      this.canvas.style.left = '0';
-      this.canvas.style.pointerEvents = 'none';
-      this.canvas.style.zIndex = '10';
-      
-      this.ctx = this.canvas.getContext('2d');
-      if (this.ctx) {
-        this.ctx.lineCap = 'round';
-        this.ctx.lineJoin = 'round';
-      }
-      
-      (container as HTMLElement).style.position = 'relative';
-      container.appendChild(this.canvas);
-      this.updateCanvasSize();
-    };
+    this.canvas = document.createElement('canvas');
+    this.canvas.id = 'drawing-overlay';
+    this.canvas.style.position = 'fixed';
+    this.canvas.style.top = '0';
+    this.canvas.style.left = '0';
+    this.canvas.style.width = '100vw';
+    this.canvas.style.height = '100vh';
+    this.canvas.style.pointerEvents = 'none';
+    this.canvas.style.zIndex = '9';
     
-    attachCanvas();
+    this.ctx = this.canvas.getContext('2d');
+    if (this.ctx) {
+      this.ctx.lineCap = 'round';
+      this.ctx.lineJoin = 'round';
+    }
+    
+    document.body.appendChild(this.canvas);
+    this.updateCanvasSize();
   }
 
   private setupEventListeners() {
@@ -109,12 +99,9 @@ class DrawingService {
   private updateCanvasSize() {
     if (!this.canvas) return;
     
-    const container = this.canvas.parentElement;
-    if (!container) return;
-    
     const dpr = window.devicePixelRatio || 1;
-    const width = container.scrollWidth;
-    const height = container.scrollHeight;
+    const width = window.innerWidth;
+    const height = window.innerHeight;
     
     this.canvas.width = width * dpr;
     this.canvas.height = height * dpr;
@@ -131,19 +118,16 @@ class DrawingService {
     if (!this.state.isActive || this.state.tool === 'none' || this.state.tool === 'highlighter') return;
     
     const target = e.target as HTMLElement;
-    // Don't interfere with any interactive elements
-    if (target.closest('header') || target.closest('button') || target.closest('[role="button"]') || 
-        target.closest('input') || target.closest('select') || target.closest('a') || 
-        target.tagName === 'BUTTON' || target.tagName === 'INPUT' || target.tagName === 'SELECT') {
+    
+    // Allow clicks on buttons and interactive elements
+    if (target.tagName === 'BUTTON' || target.closest('button') || target.closest('input') || target.closest('textarea')) {
       return;
     }
     
-    const container = this.canvas?.parentElement;
-    if (!container) return;
+    if (target !== this.canvas) return;
     
-    const rect = container.getBoundingClientRect();
-    const x = e.clientX - rect.left + container.scrollLeft;
-    const y = e.clientY - rect.top + container.scrollTop;
+    const x = e.clientX;
+    const y = e.clientY;
     
     this.isDrawing = true;
     this.currentStroke = {
@@ -159,12 +143,8 @@ class DrawingService {
   private handleMouseMove(e: MouseEvent) {
     if (!this.isDrawing || !this.currentStroke) return;
     
-    const container = this.canvas?.parentElement;
-    if (!container) return;
-    
-    const rect = container.getBoundingClientRect();
-    const x = e.clientX - rect.left + container.scrollLeft;
-    const y = e.clientY - rect.top + container.scrollTop;
+    const x = e.clientX;
+    const y = e.clientY;
     
     this.currentStroke.points.push({ x, y });
     
@@ -242,6 +222,7 @@ class DrawingService {
       span.style.backgroundColor = highlight.color;
       span.style.padding = '2px 0';
       span.style.borderRadius = '2px';
+      span.style.color = 'inherit';
       span.dataset.highlightId = highlight.id;
       span.className = 'drawing-highlight';
       
@@ -534,9 +515,17 @@ class DrawingService {
     this.state.tool = tool;
     this.state.isActive = tool !== 'none';
     
+    // Update canvas pointer events
+    if (this.canvas) {
+      this.canvas.style.pointerEvents = (this.state.isActive && tool === 'pen') ? 'auto' : 'none';
+    }
+    
     // Update cursor
-    document.body.style.cursor = this.state.isActive ? 
-      (tool === 'highlighter' ? 'text' : 'crosshair') : 'default';
+    if (this.state.isActive) {
+      document.body.style.cursor = tool === 'highlighter' ? 'text' : 'crosshair';
+    } else {
+      document.body.style.cursor = '';
+    }
     
     this.notifyListeners();
   }

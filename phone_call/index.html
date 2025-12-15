@@ -1,0 +1,44 @@
+<!-- filename: index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Model Call Simulation</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="call-screen">
+        <div id="initial-state">
+            <h1>Call AI Model</h1>
+            <p>Click below to start a live conversation with the AI.</p>
+            <button id="call-button">Start Live Conversation</button>
+        </div>
+
+        <div id="calling-state" class="hidden">
+            <div class="avatar-container">
+                <!-- Placeholder image for the AI Model -->
+                <img src="https://via.placeholder.com/100/007bff/ffffff?text=AI" alt="AI Avatar" class="avatar">
+                <!-- Visual ringing animation overlay -->
+                <div class="ringing-animation"></div>
+            </div>
+            <h2 id="contact-name">AI Model</h2>
+            <p id="call-status"></p>
+            <div class="call-actions">
+                <button id="hangup-button" class="hidden">End Call</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Audio element for the ringtone -->
+    <audio id="ringtone" loop>
+        <!-- IMPORTANT: Place your ringtone sound file here. -->
+        <!-- Example: <source src="ringtone.mp3" type="audio/mpeg"> -->
+        <!-- You can find free ringtones online. Save it as 'ringtone.mp3' in the same folder. -->
+        <source src="ringtone.mp3" type="audio/mpeg">
+        Your browser does not support the audio element.
+    </audio>
+
+    <script src="script.js"></script>
+</body>
+</html>

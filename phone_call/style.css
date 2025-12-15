@@ -1,0 +1,169 @@
+/* filename: style.css */
+body {
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: #e0f2f7; /* Light blue background */
+    margin: 0;
+    overflow: hidden;
+    color: #333;
+}
+
+#call-screen {
+    background-color: #ffffff;
+    border-radius: 18px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+    width: 380px;
+    padding: 30px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.5s ease-in-out;
+}
+
+/* Initial State */
+#initial-state h1 {
+    color: #007bff;
+    margin-bottom: 15px;
+    font-size: 2.2em;
+}
+
+#initial-state p {
+    color: #555;
+    margin-bottom: 30px;
+    font-size: 1.1em;
+}
+
+#call-button {
+    background-color: #28a745; /* Green call button */
+    color: white;
+    border: none;
+    padding: 16px 32px;
+    border-radius: 35px;
+    font-size: 1.2em;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    outline: none;
+    box-shadow: 0 4px 10px rgba(40, 167, 69, 0.3);
+}
+
+#call-button:hover {
+    background-color: #218838;
+    transform: translateY(-2px);
+}
+
+#call-button:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 5px rgba(40, 167, 69, 0.3);
+}
+
+/* Calling State */
+#calling-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    padding: 20px 0;
+}
+
+.avatar-container {
+    position: relative;
+    width: 140px;
+    height: 140px;
+    margin-bottom: 25px;
+}
+
+.avatar {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid #007bff; /* Primary accent border */
+    position: relative;
+    z-index: 2;
+}
+
+.ringing-animation {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    background: rgba(0, 123, 255, 0.2); /* Lighter blue, semi-transparent */
+    opacity: 0;
+    animation: ring-pulse 2s infinite ease-out;
+    z-index: 1;
+    /* Ensure it's paused initially and when hidden */
+    animation-play-state: paused;
+}
+
+@keyframes ring-pulse {
+    0% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 0.7;
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(1.8);
+        opacity: 0;
+    }
+}
+
+#calling-state h2 {
+    color: #333;
+    font-size: 2em;
+    margin-bottom: 8px;
+}
+
+#call-status {
+    color: #666;
+    font-size: 1.2em;
+    min-height: 28px; /* Prevents layout shift when text changes */
+    font-weight: 500;
+}
+
+/* Animation for status text */
+.status-animating {
+    animation: pulse-text 1.5s infinite alternate;
+}
+
+@keyframes pulse-text {
+    0% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+.call-actions {
+    margin-top: 40px;
+}
+
+#hangup-button {
+    background-color: #dc3545; /* Red for hangup */
+    color: white;
+    border: none;
+    padding: 14px 28px;
+    border-radius: 30px;
+    font-size: 1.1em;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    outline: none;
+    box-shadow: 0 4px 10px rgba(220, 53, 69, 0.3);
+}
+
+#hangup-button:hover {
+    background-color: #c82333;
+    transform: translateY(-2px);
+}
+
+#hangup-button:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 5px rgba(220, 53, 69, 0.3);
+}
+
+/* Utility Class */
+.hidden {
+    display: none !important;
+}

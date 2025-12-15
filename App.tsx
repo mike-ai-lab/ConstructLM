@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { ProcessedFile, Message } from './types';
 import { parseFile } from './services/fileParser';
 import FileSidebar from './components/FileSidebar';
@@ -9,7 +9,7 @@ import { sendMessageToLLM } from './services/llmService';
 import { initializeGemini } from './services/geminiService';
 import { MODEL_REGISTRY, DEFAULT_MODEL_ID, getRateLimitCooldown, clearRateLimitCooldown } from './services/modelRegistry';
 import SettingsModal from './components/SettingsModal';
-import { Send, Menu, Sparkles, X, FileText, Database, PanelLeft, PanelLeftOpen, Mic, Settings, Cpu, ChevronDown, Camera, Highlighter, Edit3, Trash2, Palette, Minus, Plus, Check, Network, Image, Moon, Sun } from 'lucide-react';
+import { Send, Menu, Sparkles, X, FileText, Database, PanelLeft, PanelLeftOpen, Mic, Settings, Cpu, ChevronDown, Camera, Highlighter, Edit3, Trash2, Palette, Minus, Plus, Check, Network, Image, Moon, Sun, Phone } from 'lucide-react';
 import { snapshotService, Snapshot } from './services/snapshotService';
 
 import { drawingService, DrawingTool, DRAWING_COLORS, DrawingState } from './services/drawingService';
@@ -20,6 +20,7 @@ import { mindMapCache } from './services/mindMapCache';
 import GraphicsLibrary from './components/GraphicsLibrary';
 import { useUIHelpersInit, useToast } from './hooks/useUIHelpers';
 import { contextMenuManager, createInputContextMenu } from './utils/uiHelpers';
+
 
 interface ViewState {
   fileId: string;
@@ -38,6 +39,8 @@ const App: React.FC = () => {
   // Initialize UI helpers
   useUIHelpersInit();
   const { showToast } = useToast();
+  
+
   
   // Chat Registry State
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
@@ -72,6 +75,7 @@ const App: React.FC = () => {
 
   // Live Mode State
   const [isLiveMode, setIsLiveMode] = useState(false);
+  const [isCallingEffect, setIsCallingEffect] = useState(false);
   const [activeModelId, setActiveModelId] = useState<string>(DEFAULT_MODEL_ID);
   const [showModelMenu, setShowModelMenu] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -728,9 +732,34 @@ const App: React.FC = () => {
     mindMapCache.delete(fileId, modelId);
   };
 
+  const handleCloseLiveSession = useCallback(() => {
+    setIsLiveMode(false);
+  }, []);
+  
   return (
     <div className="flex h-screen w-full bg-white dark:bg-[#1a1a1a] overflow-hidden text-sm relative">
-      {isLiveMode && <LiveSession onClose={() => setIsLiveMode(false)} />}
+      {isLiveMode && (
+        <>
+          <div style={{position: 'fixed', top: 0, left: 0, zIndex: 99999, background: 'red', color: 'white', padding: '10px'}}>LIVE MODE ACTIVE</div>
+          <LiveSession onClose={handleCloseLiveSession} />
+        </>
+      )}
+      {isCallingEffect && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] flex items-center justify-center">
+          <div className="bg-white dark:bg-[#222222] rounded-3xl shadow-2xl p-12 flex flex-col items-center gap-6 animate-in zoom-in duration-300">
+            <div className="relative">
+              <div className="absolute inset-0 bg-green-500 rounded-full animate-ping opacity-75" />
+              <div className="relative bg-green-500 p-6 rounded-full">
+                <Phone size={48} className="text-white animate-pulse" />
+              </div>
+            </div>
+            <div className="text-center">
+              <h3 className="text-2xl font-semibold text-gray-800 dark:text-white mb-2">Calling Gemini...</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Connecting to live conversation</p>
+            </div>
+          </div>
+        </div>
+      )}
       {isSettingsOpen && <SettingsModal onClose={() => setIsSettingsOpen(false)} />}
       {isGeneratingMindMap && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center">
@@ -764,6 +793,7 @@ const App: React.FC = () => {
       )}
 
       {/* --- LEFT SIDEBAR --- */}
+      {true && (
       <div 
         className={`
             fixed md:relative z-40 h-full bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] flex flex-col transition-all duration-300 ease-in-out border-r border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] md:border-r-0
@@ -802,6 +832,7 @@ const App: React.FC = () => {
             </div>
         </div>
       </div>
+      )}
 
       {/* Resize Handle: Left */}
       {!isMobile && isSidebarOpen && !mindMapData && !isGeneratingMindMap && (
@@ -812,6 +843,7 @@ const App: React.FC = () => {
       )}
 
       {/* --- MIDDLE CHAT AREA --- */}
+      {true && (
       <div className="flex-1 flex flex-col h-full relative bg-white dark:bg-[#1a1a1a] transition-all duration-300" style={{ minWidth: MIN_CHAT_WIDTH }}>
         {/* Header */}
         <header className="h-[65px] flex-none border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] flex items-center justify-between px-6 bg-white/80 dark:bg-[#1a1a1a]/80 backdrop-blur-sm z-10 min-w-0 overflow-visible">
@@ -890,7 +922,28 @@ const App: React.FC = () => {
                  )}
              </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            {/* Live Call Button */}
+            <button
+              onClick={() => {
+                if (!isCallingEffect && !isLiveMode) {
+                  setIsCallingEffect(true);
+                  setTimeout(() => {
+                    setIsCallingEffect(false);
+                    setIsLiveMode(true);
+                  }, 5000);
+                }
+              }}
+              disabled={isCallingEffect || isLiveMode}
+              className={`p-2 rounded-full transition-all ${
+                isCallingEffect 
+                  ? 'bg-green-500 text-white animate-pulse scale-110' 
+                  : 'text-[#a0a0a0] hover:bg-green-100 dark:hover:bg-green-900/30 hover:text-green-600'
+              } ${isLiveMode ? 'opacity-50 cursor-not-allowed' : ''}`}
+              title="Call Gemini Live"
+            >
+              <Phone size={18} className={isCallingEffect ? 'animate-bounce' : ''} />
+            </button>
             {/* New Chat Button */}
             <button
               onClick={handleCreateChat}
@@ -959,20 +1012,18 @@ const App: React.FC = () => {
                   </button>
                   
                   {showColorPicker && (
-                    <div className="absolute top-full right-0 mt-2 bg-white dark:bg-[#222222] rounded-lg shadow-lg border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] p-2 z-50">
-                      <div className="grid grid-cols-5 gap-1">
-                        {DRAWING_COLORS.map(color => (
-                          <button
-                            key={color.id}
-                            onClick={() => handleColorChange(color.id)}
-                            className={`w-6 h-6 rounded-full border-2 transition-all hover:scale-110 ${
-                              drawingState.colorId === color.id ? 'border-[#a0a0a0] scale-110' : 'border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)]'
-                            }`}
-                            style={{ backgroundColor: color.color }}
-                            title={(color as any).name}
-                          />
-                        ))}
-                      </div>
+                    <div className="absolute top-full right-0 mt-2 bg-white dark:bg-[#222222] rounded-lg shadow-lg border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] p-2 z-50 flex gap-1">
+                      {DRAWING_COLORS.map(color => (
+                        <button
+                          key={color.id}
+                          onClick={() => handleColorChange(color.id)}
+                          className={`w-6 h-6 rounded-full border-2 transition-all hover:scale-110 flex-shrink-0 ${
+                            drawingState.colorId === color.id ? 'border-[#a0a0a0] scale-110' : 'border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)]'
+                          }`}
+                          style={{ backgroundColor: color.color }}
+                          title={(color as any).name}
+                        />
+                      ))}
                     </div>
                   )}
                 </div>
@@ -1057,7 +1108,7 @@ const App: React.FC = () => {
 
         {/* Messages */}
         <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 scroll-smooth bg-white dark:bg-[#1a1a1a]">
-            <div className="max-w-3xl mx-auto w-full pb-4">
+            <div className="max-w-3xl mx-auto w-full pb-[100px]">
                 {messages.map((msg) => (
                     <MessageBubble 
                         key={msg.id} 
@@ -1073,11 +1124,34 @@ const App: React.FC = () => {
 
         
         {/* Floating Input Area */}
-        {!mindMapData && !isSettingsOpen && (
+        {!mindMapData && !isSettingsOpen && !isCallingEffect && (
+        <>
+        {/* Solid background layer */}
+        <div 
+          className="fixed bottom-0 bg-white dark:bg-[#1a1a1a] pointer-events-none transition-all duration-300"
+          style={{
+            left: isMobile ? '16px' : (isSidebarOpen ? `${sidebarWidth + 16}px` : '16px'),
+            right: activeFile ? (isMobile ? '16px' : `${viewerWidth + 16}px`) : '16px',
+            height: '140px',
+            zIndex: 149
+          }}
+        />
+        {/* Gradient layer */}
+        <div 
+          className="fixed bottom-[140px] pointer-events-none transition-all duration-300"
+          style={{
+            left: isMobile ? '16px' : (isSidebarOpen ? `${sidebarWidth + 16}px` : '16px'),
+            right: activeFile ? (isMobile ? '16px' : `${viewerWidth + 16}px`) : '16px',
+            height: '30px',
+            zIndex: 149,
+            background: `linear-gradient(to top, ${document.documentElement.classList.contains('dark') ? '#1a1a1a' : '#ffffff'} 0%, transparent 100%)`
+          }}
+        />
         <div 
           className="floating-input-container"
           style={{
-            left: isMobile ? '16px' : (isSidebarOpen ? `${sidebarWidth + 16}px` : '16px')
+            left: isMobile ? '16px' : (isSidebarOpen ? `${sidebarWidth + 16}px` : '16px'),
+            right: activeFile ? (isMobile ? '16px' : `${viewerWidth + 16}px`) : '16px'
           }}
         >
           <div className="max-w-3xl mx-auto w-full relative">
@@ -1142,18 +1216,11 @@ const App: React.FC = () => {
                 />
                 <label
                     htmlFor="chat-file-input"
-                    className="absolute left-12 p-2 rounded-full text-[#a0a0a0] hover:text-[#4485d1] hover:bg-[rgba(68,133,209,0.1)] transition-colors cursor-pointer"
+                    className="absolute left-2 p-2 rounded-full text-[#a0a0a0] hover:text-[#4485d1] hover:bg-[rgba(68,133,209,0.1)] transition-colors cursor-pointer"
                     title="Attach files"
                 >
                     <FileText size={20} />
                 </label>
-                <button 
-                    onClick={() => setIsLiveMode(true)}
-                    className="absolute left-2 p-2 rounded-full text-[#a0a0a0] hover:text-[#4485d1] hover:bg-[rgba(68,133,209,0.1)] transition-colors"
-                    title="Start Live Conversation"
-                >
-                    <Mic size={20} />
-                </button>
 
                 <textarea
                     ref={inputRef}
@@ -1224,7 +1291,7 @@ const App: React.FC = () => {
                     disabled={isGenerating}
                     autoComplete="off"
                     rows={1}
-                    style={{ height: 'auto', paddingLeft: '96px', paddingRight: '56px' }}
+                    style={{ height: 'auto', paddingLeft: '56px', paddingRight: '56px' }}
                     onInput={(e) => {
                       const target = e.target as HTMLTextAreaElement;
                       target.style.height = 'auto';
@@ -1246,10 +1313,11 @@ const App: React.FC = () => {
             </div>
           </div>
         </div>
+        </>
         )}
 
         {/* Footer Text - Independent Element */}
-        {!mindMapData && !isSettingsOpen && (
+        {!mindMapData && !isSettingsOpen && !isCallingEffect && (
         <div 
           className="fixed bottom-2 text-center pointer-events-none z-[9997]"
           style={{
@@ -1262,6 +1330,7 @@ const App: React.FC = () => {
         </div>
         )}
       </div>
+      )}
 
       {/* Resize Handle: Right (Only if Viewer is open) */}
       {!isMobile && activeFile && !mindMapData && !isGeneratingMindMap && (

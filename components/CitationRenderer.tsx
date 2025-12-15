@@ -160,8 +160,11 @@ const CitationRenderer: React.FC<CitationRendererProps> = ({ text, files, onView
   if (!text) return null;
   resetCitationCounter();
 
+  // Decode HTML entities first
+  const decodedText = text.replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+  
   // Remove newlines around citations to keep them inline
-  const cleanedText = text.replace(/\n*((?:\{\{|【)citation:.*?(?:\}\}|】))\n*/g, '$1');
+  const cleanedText = decodedText.replace(/\n*((?:\{\{|【)citation:.*?(?:\}\}|】))\n*/g, '$1');
   const rawParts = cleanedText.split(SPLIT_REGEX).filter(p => p !== undefined && p !== null);
 
   return (
@@ -200,7 +203,8 @@ const CitationRenderer: React.FC<CitationRendererProps> = ({ text, files, onView
 
 // Helper component to render table cells with citations
 const TableCellWithCitations: React.FC<{ text: string; files: ProcessedFile[]; onViewDocument: (fileName: string, page?: number, quote?: string, location?: string) => void }> = ({ text, files, onViewDocument }) => {
-  const parts = text.split(SPLIT_REGEX).filter(p => p !== undefined && p !== null);
+  const decodedText = text.replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+  const parts = decodedText.split(SPLIT_REGEX).filter(p => p !== undefined && p !== null);
   
   return (
     <>
@@ -352,14 +356,14 @@ const CitationPortal: React.FC<CitationPortalProps> = ({ onClose, coords, fileNa
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [onClose]);
+  }, [onClose, triggerRef]);
 
   const isPdfMode = file?.type === 'pdf' && pdfPageNumber !== null;
 
   return createPortal(
     <div
       ref={popoverRef}
-      className="fixed z-[9999] w-[450px] max-w-[90vw] bg-white dark:bg-[#222222] text-[#1a1a1a] dark:text-white rounded-lg shadow-2xl border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] flex flex-col overflow-hidden animate-in fade-in duration-150"
+      className="absolute z-[9999] w-[450px] max-w-[90vw] bg-white dark:bg-[#222222] text-[#1a1a1a] dark:text-white rounded-lg shadow-2xl border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] flex flex-col overflow-hidden animate-in fade-in duration-150"
       style={{ top: coords.top, left: coords.left, maxHeight: 'min(70vh, 500px)' }}
       role="dialog"
       aria-modal="true"
@@ -565,11 +569,11 @@ const PdfPagePreview: React.FC<{ file: File; pageNumber: number; quote?: string;
 
   useEffect(() => {
     zoomHandlerRef.current = { handleZoom, handleReset };
-  }, [scale, position]);
+  }, [handleZoom, handleReset]);
 
   useEffect(() => {
     onScaleChange(scale);
-  }, [scale]);
+  }, [scale, onScaleChange]);
 
   return (
     <div
