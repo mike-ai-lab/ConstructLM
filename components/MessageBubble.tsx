@@ -1,9 +1,10 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Message, ProcessedFile } from '../types';
 import { Sparkles, User, Volume2, Loader2, StopCircle } from 'lucide-react';
 import CitationRenderer from './CitationRenderer';
 import { generateSpeech } from '../services/geminiService';
 import { decodeAudioData } from '../services/audioUtils';
+import { contextMenuManager, createMessageContextMenu } from '../utils/uiHelpers';
 
 interface MessageBubbleProps {
   message: Message;
@@ -17,6 +18,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, files, onViewDoc
   const [isLoadingAudio, setIsLoadingAudio] = useState(false);
   const audioContextRef = useRef<AudioContext | null>(null);
   const sourceRef = useRef<AudioBufferSourceNode | null>(null);
+
 
   const handlePlayAudio = async () => {
       if (isPlaying) {
@@ -67,7 +69,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, files, onViewDoc
         {/* Content */}
         <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
           <div className="flex items-center gap-2 mb-1.5 opacity-0 group-hover:opacity-100 transition-opacity px-1">
-             <span className="text-[10px] font-bold text-[#1a1a1a] dark:text-white uppercase tracking-widest">
+             <span className="text-[12px] font-bold text-[#1a1a1a] dark:text-white uppercase tracking-widest">
                  {isUser ? 'You' : (message.modelId || 'AI')}
              </span>
              {!isUser && !message.isStreaming && (
@@ -86,7 +88,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, files, onViewDoc
              relative px-5 py-3.5 text-sm leading-7 rounded-2xl shadow-sm
              ${isUser 
                 ? 'bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] text-[#1a1a1a] dark:text-white rounded-tr-sm' 
-                : 'bg-white dark:bg-[#2a2a2a] border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] text-[#1a1a1a] dark:text-white rounded-tl-sm'
+                : 'text-[#1a1a1a] dark:text-white'
              }
           `}>
             {message.isStreaming && !isUser && (
@@ -95,7 +97,15 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, files, onViewDoc
                  </div>
              )}
              
-            <div className="whitespace-pre-wrap font-normal message-content" data-highlightable="true">
+            <div 
+              className="whitespace-pre-wrap font-normal message-content" 
+              data-highlightable="true"
+              onContextMenu={(e) => {
+                e.preventDefault();
+                const menuItems = createMessageContextMenu(e.currentTarget, message.content);
+                contextMenuManager.showMenu(e.clientX, e.clientY, menuItems, 'message-context-menu');
+              }}
+            >
               {isUser ? (
                   <div>{message.content}</div>
               ) : (
@@ -110,7 +120,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, files, onViewDoc
           
           {/* Token Usage Stats */}
           {!isUser && message.usage && (
-            <div className="text-[9px] text-[#666666] dark:text-[#a0a0a0] mt-1.5 px-1 flex gap-3">
+            <div className="text-[12px] text-[#666666] dark:text-[#a0a0a0] mt-1.5 px-1 flex gap-3">
               <span>In: {message.usage.inputTokens.toLocaleString()} tokens</span>
               <span>Out: {message.usage.outputTokens.toLocaleString()} tokens</span>
               <span className="font-semibold">Total: {message.usage.totalTokens.toLocaleString()}</span>

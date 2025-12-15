@@ -18,6 +18,8 @@ import MindMapViewer from './components/MindMapViewer';
 import { generateMindMapData } from './services/mindMapService';
 import { mindMapCache } from './services/mindMapCache';
 import GraphicsLibrary from './components/GraphicsLibrary';
+import { useUIHelpersInit, useToast } from './hooks/useUIHelpers';
+import { contextMenuManager, createInputContextMenu } from './utils/uiHelpers';
 
 interface ViewState {
   fileId: string;
@@ -33,6 +35,10 @@ const MAX_VIEWER_WIDTH = 800;
 const MIN_CHAT_WIDTH = 600;
 
 const App: React.FC = () => {
+  // Initialize UI helpers
+  useUIHelpersInit();
+  const { showToast } = useToast();
+  
   // Chat Registry State
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const [chats, setChats] = useState<ChatMetadata[]>([]);
@@ -62,7 +68,7 @@ const App: React.FC = () => {
   const [mentionQuery, setMentionQuery] = useState('');
   const [mentionIndex, setMentionIndex] = useState(0);
   const [isInputDragOver, setIsInputDragOver] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   // Live Mode State
   const [isLiveMode, setIsLiveMode] = useState(false);
@@ -82,6 +88,71 @@ const App: React.FC = () => {
   const [mindMapData, setMindMapData] = useState<any>(null);
   const [mindMapFileName, setMindMapFileName] = useState<string>('');
   const [isGeneratingMindMap, setIsGeneratingMindMap] = useState(false);
+
+  // Input field design specifications from gemini_dictation_and_assistant
+  const inputFieldSpecs = {
+    // Container positioning
+    position: 'fixed',
+    bottom: '32px', // Distance from bottom edge of window
+    left: '50%',
+    transform: 'translateX(-50%)',
+    width: '82.8%', // Exact width percentage
+    maxWidth: '800px',
+    zIndex: 150,
+    
+    // Container styling
+    containerStyle: {
+      display: 'flex',
+      alignItems: 'center',
+      width: '100%',
+      background: 'var(--color-surface)',
+      borderRadius: '50px', // Fully rounded corners
+      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
+      border: '1px solid var(--color-border)',
+      padding: '6px',
+    },
+    
+    // Input field styling
+    inputStyle: {
+      flexGrow: 1,
+      fontSize: '16px', // var(--font-size-md)
+      fontWeight: '400', // var(--font-weight-normal)
+      padding: '8px 12px',
+      color: '#374151',
+      background: 'transparent',
+      border: 'none',
+      outline: 'none',
+      fontFamily: 'var(--font-primary)',
+      resize: 'none',
+      overflowY: 'auto',
+      minHeight: '40px',
+      lineHeight: '20px',
+    },
+    
+    // Button styling
+    buttonStyle: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: '32px',
+      height: '32px',
+      background: '#000000',
+      color: 'white',
+      borderRadius: '50%',
+      border: 'none',
+      cursor: 'pointer',
+      transition: 'all 150ms ease',
+      marginRight: '4px',
+      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+    },
+    
+    // Responsive adjustments
+    mobileAdjustments: {
+      width: '90%',
+      bottom: '50px',
+      padding: '12px 16px',
+    }
+  };
 
   useEffect(() => {
       initializeGemini();
@@ -367,7 +438,7 @@ const App: React.FC = () => {
   }, [messages, files, activeModelId]);
 
   // --- Mention Logic ---
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const val = e.target.value;
     setInput(val);
 
@@ -639,7 +710,7 @@ const App: React.FC = () => {
       console.error('Mind map generation error:', error);
       const toast = document.createElement('div');
       toast.className = 'fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-[9999]';
-      toast.textContent = error.message || 'Failed to generate mind map';
+      toast.textContent = (error as Error).message || 'Failed to generate mind map';
       document.body.appendChild(toast);
       setTimeout(() => document.body.removeChild(toast), 3000);
     } finally {
@@ -743,7 +814,7 @@ const App: React.FC = () => {
       {/* --- MIDDLE CHAT AREA --- */}
       <div className="flex-1 flex flex-col h-full relative bg-white dark:bg-[#1a1a1a] transition-all duration-300" style={{ minWidth: MIN_CHAT_WIDTH }}>
         {/* Header */}
-        <header className="h-[55px] flex-none border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] flex items-center justify-between px-6 bg-white/80 dark:bg-[#1a1a1a]/80 backdrop-blur-sm z-10 min-w-0 overflow-visible">
+        <header className="h-[65px] flex-none border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] flex items-center justify-between px-6 bg-white/80 dark:bg-[#1a1a1a]/80 backdrop-blur-sm z-10 min-w-0 overflow-visible">
           <div className="flex items-center gap-2 min-w-0 flex-shrink">
              {!isMobile && (
                  <button 
@@ -771,7 +842,7 @@ const App: React.FC = () => {
                  
                  {showModelMenu && (
                      <div className="absolute top-full left-0 mt-2 w-72 bg-white dark:bg-[#222222] rounded-xl shadow-xl border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] overflow-hidden z-[100]">
-                         <div className="px-3 py-2 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] text-[10px] font-bold text-[#666666] dark:text-[#a0a0a0] uppercase">Select Model</div>
+                         <div className="px-3 py-2 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] text-[12px] font-bold text-[#666666] dark:text-[#a0a0a0] uppercase">Select Model</div>
                          <div className="max-h-[400px] overflow-y-auto p-1">
                              {MODEL_REGISTRY.map(model => {
                                const cooldown = rateLimitTimers[model.id];
@@ -795,18 +866,18 @@ const App: React.FC = () => {
                                           <span className="text-sm font-medium text-[#1a1a1a] dark:text-white">{model.name}</span>
                                         </div>
                                         {isRateLimited ? (
-                                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 font-mono">▽{timeDisplay}</span>
+                                          <span className="text-[12px] px-1.5 py-0.5 rounded bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 font-mono">▽{timeDisplay}</span>
                                         ) : (
-                                          <span className={`text-[9px] px-1.5 py-0.5 rounded ${
+                                          <span className={`text-[12px] px-1.5 py-0.5 rounded ${
                                             model.capacityTag === 'High' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' :
                                             model.capacityTag === 'Medium' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400' :
                                             'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
                                           }`}>{model.capacityTag}</span>
                                         )}
                                      </div>
-                                     <div className="text-[10px] text-[#666666] dark:text-[#a0a0a0] pl-4 mt-0.5">{model.description}</div>
+                                     <div className="text-[12px] text-[#666666] dark:text-[#a0a0a0] pl-4 mt-0.5">{model.description}</div>
                                      {model.maxInputWords && model.maxOutputWords && (
-                                       <div className="text-[9px] text-[#666666] dark:text-[#a0a0a0] pl-4 mt-1 flex gap-3">
+                                       <div className="text-[12px] text-[#666666] dark:text-[#a0a0a0] pl-4 mt-1 flex gap-3">
                                          <span>In: ~{(model.maxInputWords / 1000).toFixed(0)}K</span>
                                          <span>Out: ~{(model.maxOutputWords / 1000).toFixed(0)}K</span>
                                        </div>
@@ -898,7 +969,7 @@ const App: React.FC = () => {
                               drawingState.colorId === color.id ? 'border-[#a0a0a0] scale-110' : 'border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)]'
                             }`}
                             style={{ backgroundColor: color.color }}
-                            title={color.name}
+                            title={(color as any).name}
                           />
                         ))}
                       </div>
@@ -999,10 +1070,17 @@ const App: React.FC = () => {
             </div>
         </div>
 
-        {/* Input Area */}
-        <div className="p-4 md:p-6 bg-gradient-to-t from-white dark:from-[#1a1a1a] via-white dark:via-[#1a1a1a] to-transparent relative snapshot-ignore">
+
+        
+        {/* Floating Input Area */}
+        {!mindMapData && !isSettingsOpen && (
+        <div 
+          className="floating-input-container"
+          style={{
+            left: isMobile ? '16px' : (isSidebarOpen ? `${sidebarWidth + 16}px` : '16px')
+          }}
+        >
           <div className="max-w-3xl mx-auto w-full relative">
-            
             {/* Context Indicator */}
             {isInputDragOver && (
                 <div className="absolute -top-8 left-1/2 -translate-x-1/2 text-xs font-medium bg-[#4485d1] text-white px-3 py-1.5 rounded-full shadow-lg animate-bounce">
@@ -1015,7 +1093,7 @@ const App: React.FC = () => {
                 const isOverLimit = totalTokens > 30000;
                 
                 return (
-                  <div className="absolute -top-6 left-6 text-[10px] font-medium transition-all duration-300">
+                  <div className="absolute -top-6 left-6 text-[12px] font-medium transition-all duration-300">
                       {mentionedFiles.length > 0 ? (
                           <span className={`flex items-center gap-1 ${isOverLimit ? 'text-[#ef4444]' : 'text-[#4485d1]'}`}>
                               <Sparkles size={10} /> {mentionedFiles.length} file(s) • ~{(totalTokens / 1000).toFixed(0)}k tokens
@@ -1033,7 +1111,7 @@ const App: React.FC = () => {
             {/* Mention Popup Menu */}
             {showMentionMenu && filteredFiles.length > 0 && (
                 <div className="absolute bottom-full left-6 mb-2 w-64 bg-white dark:bg-[#222222] rounded-xl shadow-xl border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] overflow-hidden z-50 animate-in slide-in-from-bottom-2 fade-in duration-200">
-                    <div className="px-3 py-2 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] text-[10px] font-bold text-[#666666] dark:text-[#a0a0a0] uppercase tracking-wider">
+                    <div className="px-3 py-2 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] text-[12px] font-bold text-[#666666] dark:text-[#a0a0a0] uppercase tracking-wider">
                         Mention a source
                     </div>
                     <div className="max-h-48 overflow-y-auto p-1">
@@ -1051,10 +1129,9 @@ const App: React.FC = () => {
                 </div>
             )}
 
-            <div className={`relative flex items-center shadow-lg shadow-gray-200/50 dark:shadow-black/50 rounded-full bg-white dark:bg-[#2a2a2a] border-2 transition-all ${
-              isInputDragOver ? 'border-[#4485d1] ring-4 ring-[rgba(68,133,209,0.1)] bg-[rgba(68,133,209,0.05)]' : 'border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] focus-within:ring-2 focus-within:ring-[rgba(68,133,209,0.1)]'
+            <div className={`floating-input-wrapper transition-all ${
+              isInputDragOver ? 'border-[#4485d1] ring-4 ring-[rgba(68,133,209,0.1)] bg-[rgba(68,133,209,0.05)]' : 'focus-within:ring-2 focus-within:ring-[rgba(68,133,209,0.1)]'
             }`}>
-                {/* File Upload Button */}
                 <input
                     type="file"
                     id="chat-file-input"
@@ -1070,7 +1147,6 @@ const App: React.FC = () => {
                 >
                     <FileText size={20} />
                 </label>
-                {/* Live Mic Button */}
                 <button 
                     onClick={() => setIsLiveMode(true)}
                     className="absolute left-2 p-2 rounded-full text-[#a0a0a0] hover:text-[#4485d1] hover:bg-[rgba(68,133,209,0.1)] transition-colors"
@@ -1079,12 +1155,18 @@ const App: React.FC = () => {
                     <Mic size={20} />
                 </button>
 
-                <input
+                <textarea
                     ref={inputRef}
-                    type="text"
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      const element = e.currentTarget;
+                      const menuItems = createInputContextMenu(element);
+                      contextMenuManager.showMenu(e.clientX, e.clientY, menuItems, 'input-context-menu');
+                    }}
                     value={input}
                     onChange={handleInputChange}
                     onKeyDown={handleKeyDown}
+                    className="floating-input-field"
                     onDrop={async (e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -1095,7 +1177,6 @@ const App: React.FC = () => {
                       const after = input.slice(cursorPos);
                       const space = (before && !before.endsWith(' ')) ? ' ' : '';
                       
-                      // Handle drag from sources panel
                       const mention = e.dataTransfer.getData('text/plain');
                       if (mention && mention.startsWith('@')) {
                         const newValue = before + space + mention + ' ' + after;
@@ -1110,7 +1191,6 @@ const App: React.FC = () => {
                         return;
                       }
                       
-                      // Handle external file drop
                       const droppedFiles = e.dataTransfer.files;
                       if (droppedFiles.length > 0) {
                         await handleFileUpload(droppedFiles);
@@ -1142,28 +1222,45 @@ const App: React.FC = () => {
                     }}
                     placeholder={files.length === 0 ? "Ask me anything or drag files here..." : "Type @ to mention files (required for file context)..."}
                     disabled={isGenerating}
-                    className="w-full bg-transparent text-[#1a1a1a] dark:text-white placeholder-[#666666] dark:placeholder-[#a0a0a0] rounded-full pl-24 pr-14 py-4 focus:outline-none"
                     autoComplete="off"
+                    rows={1}
+                    style={{ height: 'auto', paddingLeft: '96px', paddingRight: '56px' }}
+                    onInput={(e) => {
+                      const target = e.target as HTMLTextAreaElement;
+                      target.style.height = 'auto';
+                      target.style.height = Math.min(target.scrollHeight, 230) + 'px';
+                    }}
                 />
                 
                 <div className="absolute right-2 top-1/2 -translate-y-1/2">
                     <button
                         onClick={handleSendMessage}
                         disabled={!input.trim() || isGenerating}
-                        className={`
-                            p-2.5 rounded-full transition-all duration-200
-                            ${!input.trim() || isGenerating ? 'bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] text-[#a0a0a0]' : 'bg-[#4485d1] text-white hover:bg-[#3674c1] shadow-md'}
-                        `}
+                        className={`floating-send-button ${
+                            !input.trim() || isGenerating ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
                     >
-                        {isGenerating ? <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" /> : <Send size={18} />}
+                        {isGenerating ? <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" /> : <Send size={16} />}
                     </button>
                 </div>
             </div>
-            <div className="text-center h-[30px] flex items-center justify-center">
-                 <span className="text-[10px] text-[#666666] dark:text-[#a0a0a0]">AI can make mistakes. Please verify citations.</span>
-            </div>
           </div>
         </div>
+        )}
+
+        {/* Footer Text - Independent Element */}
+        {!mindMapData && !isSettingsOpen && (
+        <div 
+          className="fixed bottom-2 text-center pointer-events-none z-[9997]"
+          style={{
+            left: isMobile ? '16px' : (isSidebarOpen ? `${sidebarWidth + 16}px` : '16px'),
+            right: '16px',
+            transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+          }}
+        >
+          <span className="text-[#666666] dark:text-[#a0a0a0] text-xs">AI can make mistakes. Please verify citations.</span>
+        </div>
+        )}
       </div>
 
       {/* Resize Handle: Right (Only if Viewer is open) */}

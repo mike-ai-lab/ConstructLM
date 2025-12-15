@@ -50,7 +50,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
   return (
     <div className="flex flex-col h-full">
       <div className="px-4 h-[50px] flex items-center justify-between flex-shrink-0 border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)]">
-        <span className="text-[10px] font-medium text-[#666666] dark:text-[#a0a0a0]">{chats.length} chats</span>
+        <span className="text-[12px] font-medium text-[#666666] dark:text-[#a0a0a0]">{chats.length} chats</span>
         <button
           onClick={onCreateChat}
           className="p-1.5 text-[#4485d1] hover:bg-[rgba(68,133,209,0.1)] rounded-lg transition-colors"
@@ -81,7 +81,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
                   onClick={() => onSelectChat(chat.id)}
                   className={`
                     group relative flex items-center gap-2 px-3 py-2 rounded-lg transition-all cursor-pointer h-[55px]
-                    ${activeChatId === chat.id ? 'bg-[rgba(68,133,209,0.1)] border border-[#4485d1]' : 'hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] border border-transparent'}
+                    ${activeChatId === chat.id ? 'bg-[rgba(0,0,0,0.06)] dark:bg-[rgba(255,255,255,0.06)]' : 'hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[rgba(255,255,255,0.03)]'}
                   `}
                 >
                   <div className="flex-1 min-w-0">
@@ -89,11 +89,11 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
                       {chat.name}
                     </h3>
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-[#666666] dark:text-[#a0a0a0]">
+                      <span className="text-[12px] text-[#666666] dark:text-[#a0a0a0]">
                         {getModelName(chat.modelId)}
                       </span>
-                      <span className="text-[10px] text-[#666666] dark:text-[#a0a0a0]">•</span>
-                      <span className="text-[10px] text-[#666666] dark:text-[#a0a0a0]">
+                      <span className="text-[12px] text-[#666666] dark:text-[#a0a0a0]">•</span>
+                      <span className="text-[12px] text-[#666666] dark:text-[#a0a0a0]">
                         {formatDate(chat.updatedAt)}
                       </span>
                     </div>

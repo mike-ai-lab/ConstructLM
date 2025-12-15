@@ -1,167 +1,27 @@
-gemini-1.5-flash
+**Summary of DG‑NCD‑400‑0000‑AYS‑DWG‑AR‑700‑0079072 (PDF)**  
 
-The "BWB_DOORS_WINDOWS_SUMMARY.pdf" document provides a detailed schedule of various doors, windows, and openings for the BWB building.
-1. Glazed Doors:
-  Non Fire Rated Glazed Doors:
-  EXT-C1: Double leaf, 2400mm
- (W) x 3400mm 
- (H), 35 dB 
- acoustic rating, with overhead fix panel and clear tempered glass 
-. 5 units 
- located in Circulation 
-.
-  EXT-C2: Double leaf, 2000mm
- (W) x 3200mm 
- (H), 32 dB 
- acoustic rating, with overhead fix panel and clear tempered glass 
-. 1 unit 
- for Terrace 
-.
-  EXT-C3: Single leaf, 1800mm
- (W) x 3000mm 
- (H), 32 dB 
- acoustic rating, with overhead fix panel and clear tempered glass 
-. 1 unit 
- for General areas 
-.
-  EXT-D1, D2, D3, D4, H4A, H4B, H5: Double leaf doors
- with clear tempered glass, overhead fix panel, and external timber shutter in NAJDI design 
-. Quantities range from 1 
- to 19 
-, with widths from 1900mm 
- to 2800mm 
- and heights from 2900mm 
- to 4000mm 
-. Acoustic ratings are 32 dB 
-, 35 dB 
-, or various 
-.
-2. Wooden Solid Doors:
-  Non Fire Rated Wooden Solid Doors:
-  EXT-A1, A2, A3: Single leaf doors
- with NAJDI design 
-. Quantities from 2 
- to 6 
-, widths from 900mm 
- to 1200mm 
-, and heights from 2200mm 
- to 3200mm 
-.
-  EXT-B1, B2, J: Double leaf doors
- with NAJDI design 
-. Quantities from 1 
- to 2 
-, widths from 2000mm 
- to 2700mm 
-, and heights from 2750mm 
- to 3200mm 
-.
-  Fire Rated Wooden Solid Doors:
-  EXT-H1, H2, H3: Double leaf doors
- with NAJDI design 
-. Quantities from 1 
- to 2 
-, widths from 2200mm 
- to 6000mm 
-, and heights from 4000mm 
- to 5500mm 
-.
-  EXT-A2: Single leaf, 1100mm
- (W) x 2200mm 
- (H), Fire Rated 
-. 4 units 
-.
-  EXT-A4: Single leaf, 1100mm
- (W) x 2300mm 
- (H), 1 Hour Fire Rated 
-, 45 dB 
- acoustic rating. 1 unit 
-.
-  EXT-B1: Double leaf, 2500mm
- (W) x 3200mm 
- (H), 1 Hour Fire Rated 
-. 1 unit 
-.
-3. Overhead Coiling Metal Doors:
-  EXT-I1, I2, I3: Non Fire Rated
- overhead coiling metal doors 
-. 1 unit 
- each, located in B2 Service Yard - Circulation 
-. Widths range from 4200mm 
- to 9350mm 
- and heights from 3000mm 
- to 5525mm 
-. Two units (EXT-I2, EXT-I3) are security controllable 
-.
-4. Hollow Metal Doors:
-  Non Fire Rated Hollow Metal Doors:
-  INT-A1b, A1c, A3a, A3b, C, F, G: Single or double leaf
- hollow metal doors 
-. Quantities from 1 
- to 4 
-, widths from 800mm 
- to 1800mm 
-, and heights from 2000mm 
- to 2200mm 
-. Acoustic ratings are 30 dB 
- or various 
-.
-  Fire Rated Hollow Metal Doors:
-  INT-B1, B2, B3, C, F, G, A1, A1a, A1b, A1c: Single or double leaf
- hollow metal doors 
-. Fire ratings include Fire Rated 
-, 1 Hour Fire Rated 
-, and 1.5 Hour Fire Rated 
-. Quantities range from 0 
- (for INT-A1) to 16 
-. Widths from 1000mm 
- to 2500mm 
- and heights from 2000mm 
- to 3000mm 
-.
-5. Opening Furjat:
-  NP-01 to NP-08: These are openings of type "Opening Furjat"
- with no specified fire rating 
-. Quantities range from 4 
- to 186 
-. Dimensions vary significantly, e.g., 310mm 
- (W) x 270mm 
- (H) for NP-01 
- and 4235mm 
- (W) x 3270mm 
- (H) for NP-08 
-.
-6. Fixed Glass Windows:
-  W-01, W-02, W-04, W-05, W-06, W-07, W-09, W-14, W-15: Fixed clear glass windows with aluminum frames
-. Quantities from 1 
- to 60 
-. Dimensions vary, e.g., W-02 is 300mm 
- (W) x 1800mm 
- (H) 
-, while W-09 is 1100mm 
- (W) x 2400mm 
- (H) 
-. Some types have various sub-types 
-.
-  W-11, W-12, W-13: Fixed clear glass windows with aluminum frames
- and solid wood leaves with NAJDI pattern 
-. Quantities from 1 
- to 27 
-.
-7. Hinged Glass Windows:
-  W-03, W-08, W-10: Hinged clear glass windows with aluminum frames
-. Quantities from 6 
- to 76 
-. Dimensions vary, e.g., W-03 is 900mm 
- (W) x 1300mm 
- (H) 
-.
-8. Frameless Store Fronts:
-  P01, P02, P03: Single leaf frameless store front glazing systems
- with a 32 dB 
- acoustic rating. 1 unit 
- each, located at the Entrance 
-. Widths range from 1642mm 
- to 3888mm 
-, all with a height of 2700mm 
-.
+| Item | Description (as shown in the drawing) | Key Details & Dimensions | Location / Use |
+|------|----------------------------------------|--------------------------|----------------|
+| **Drawing Identification** | “0079072” appears on several title‑block lines and in the drawing‑number field. | Drawing number **0079072**; Scale **1 : 50**; Revision – “REV 1”. | King Salman University, AD DIRIYAH, Riyadh (Saudi Arabia). |
+| **Project Information** | Project title, address, and consultants are listed in the header. | “PROJECT TITLE – KING SALMAN UNIVERSITY”; Address “8500 Prince Sattam Ibn Abdulaziz St, Al Sodha Dist, AD DIR’IYAH, RIYADH 12572‑4000”. | – |
+| **Typical Interior Windows – Types & Locations** | The drawing lists a series of interior window families (INT‑A … INT‑H) with associated locations. | • **INT‑A‑N / INT‑A‑O** – “TYPE: INT‑A” – **Location: AUDITORIUM**  <br>• **INT‑B‑N** – “TYPE: INT‑B” – **Location: AUDITORIUM**  <br>• **INT‑C‑N** – “TYPE: INT‑C” – **Location: DAYCARE**  <br>• **INT‑D‑N** – “TYPE: INT‑D” – **Location: Z7 OFFICE SUITE**  <br>• **INT‑E‑N** – “TYPE: INT‑E” – **Location: Z4 MAJLIS**  <br>• **INT‑F‑O** – “TYPE: INT‑F” – **Location: LIBRARY**  <br>• **INT‑G‑O** – “TYPE: INT‑G” – **Location: LIBRARY**  <br>• **INT‑H‑N** – “INT‑H‑N – SQUASH COURT – INTERIOR”. | – |
+| **Representative Dimensions** | A series of numeric values (mm) are placed next to each window type. | • **900 mm**, **1050 mm**, **1600 mm**, **1500 mm**, **2500 mm**, **1400 mm**, **1000 mm**, **1800 mm**, **600 mm**, **2100 mm**, **2800 mm**, **2400 mm**, **1305 mm**, **115 mm**, **950 mm**, **300 mm**, **2450 mm**, **152 mm**, **12 mm** (clear tempered glass thickness). | These dimensions correspond to overall opening widths, heights, and glazing thicknesses for the various interior window families. |
+| **Glazing & Finishes** | The drawing repeatedly references “CLEAR TEMPERED GLASS” and associated hardware. | • **12 MM CLEAR TEMPERED GLASS** (multiple mentions).  <br>• **ALUMINUM BRACKET**, **ALUMINUM U‑CHANNEL**, **ALUMINUM COVER SHEET**, **ALUMINUM EDGE**.  <br>• **SILICONE JOINT** and **CLEAR SILICONE** for sealing.  <br>• **ANCHOR FIXINGS IN EPOXY RESIN** for mounting. | Typical interior window finish specification. |
+| **Additional Details** | “FRIT PATTERN REFER TO DOOR 19 FOR FRIT PATTERN DETAILING” appears near the INT‑H‑N entry. | Indicates a frit (patterned glass) detail that should be cross‑referenced with Door 19 on the same drawing set. | – |
+| **Court‑Related Elements** | The term “SQUASH COURT – INTERIOR” is attached to INT‑H‑N. | The drawing includes “TYPICAL COURT FLOOR BLOCKING”, “FINISHED COURT WALL”, and “FINISHED FLOOR” notes, suggesting the window is part of a squash‑court interior wall assembly. | – |
+| **General Notes & Disclaimers** | Standard disclaimer text appears in the lower‑right of the sheet. | “DO NOT SCALE THIS DRAWING”, “The Contractor shall not be relieved of responsibility…”, and copyright notice for Diriyah Gate Company Limited (DGCL). | – |
+| **Reference Files & BIM Link** | The title block lists a BIM 360 path. | “BIM 360://DGDA‑King Salman University/DG‑NCD‑400‑0000‑AYS‑DDE‑AR‑A00‑0000007_rvt.rvt”. | Indicates the Revit model that underlies this drawing. |
+
+---
+
+### How to Use This Information  
+
+1. **Identify the correct window family** for a given interior space (e.g., Auditorium → INT‑A, Library → INT‑F/INT‑G).  
+2. **Apply the listed dimensions** (width, height, glazing thickness) when ordering or fabricating the units.  
+3. **Follow the finish schedule** – clear tempered glass of 12 mm thickness, aluminum brackets/U‑channels, silicone joints, and epoxy‑resin anchor fixings.  
+4. **Cross‑reference frit patterns** with Door 19 if a patterned glass finish is required for the squash‑court window (INT‑H‑N).  
+5. **Consult the BIM 360 model** (link above) for 3‑D coordination, clash detection, and detailed assembly instructions.  
+
+---
+
+**Note:** The first file you mentioned (DG‑NCD‑400‑0000‑AYS‑DWG‑AR‑400‑0079070_PDF.pdf) was not provided, so any details specific to that drawing cannot be addressed at this time. If you upload that file, I can extract and compare its contents as well.

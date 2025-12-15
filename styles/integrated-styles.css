@@ -1,0 +1,842 @@
+/* ========================================
+   INTEGRATED STYLES FROM GEMINI DICTATION APP
+   ======================================== */
+
+/* CSS Variables for consistent theming */
+:root {
+  /* Font System */
+  --font-primary: 'Inter', ui-sans-serif, -apple-system, system-ui, "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol";
+  --font-mono: 'SF Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  
+  /* Font Sizes */
+  --font-size-xs: 11px;
+  --font-size-sm: 12px;
+  --font-size-base: 14px;
+  --font-size-md: 16px;
+  --font-size-lg: 18px;
+  --font-size-xl: 20px;
+  --font-size-2xl: 24px;
+  
+  /* Font Weights */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* Border Radius */
+  --border-radius-sm: 8px;
+  --border-radius-md: 12px;
+  --border-radius-lg: 14px;
+
+  /* Transitions */
+  --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Shadows */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.15);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.3);
+
+  /* Light Theme Colors */
+  --color-bg-light: #ffffff;
+  --color-surface-light: rgba(0, 0, 0, 0.03);
+  --color-surface-hover-light: rgba(0, 0, 0, 0.06);
+  --color-surface-active-light: rgba(0, 0, 0, 0.1);
+  --color-text-light: #1a1a1a;
+  --color-text-secondary-light: #666666;
+  --color-text-tertiary-light: #999999;
+  --color-border-light: rgba(0, 0, 0, 0.15);
+  --color-accent-light: #4485d1;
+
+  /* Dark Theme Colors */
+  --color-bg-dark: #1a1a1a;
+  --color-surface-dark: #2a2a2a;
+  --color-surface-hover-dark: #222222;
+  --color-surface-active-dark: #2a2a2a;
+  --color-text-dark: #ffffff;
+  --color-text-secondary-dark: #a0a0a0;
+  --color-text-tertiary-dark: #666666;
+  --color-border-dark: rgba(255, 255, 255, 0.05);
+  --color-accent-dark: #4485d1;
+
+  /* Current theme variables - default to light */
+  --color-bg: var(--color-bg-light);
+  --color-surface: var(--color-surface-light);
+  --color-surface-hover: var(--color-surface-hover-light);
+  --color-surface-active: var(--color-surface-active-light);
+  --color-text: var(--color-text-light);
+  --color-text-secondary: var(--color-text-secondary-light);
+  --color-text-tertiary: var(--color-text-tertiary-light);
+  --color-border: var(--color-border-light);
+  --color-accent: var(--color-accent-light);
+  --color-delete: #ef4444;
+  --color-success: #4485d1;
+}
+
+/* Dark mode theme switching */
+html.dark {
+  --color-bg: var(--color-bg-dark);
+  --color-surface: var(--color-surface-dark);
+  --color-surface-hover: var(--color-surface-hover-dark);
+  --color-surface-active: var(--color-surface-active-dark);
+  --color-text: var(--color-text-dark);
+  --color-text-secondary: var(--color-text-secondary-dark);
+  --color-text-tertiary: var(--color-text-tertiary-dark);
+  --color-border: var(--color-border-dark);
+  --color-accent: var(--color-accent-dark);
+}
+
+/* ========================================
+   ENHANCED INPUT FIELD POSITIONING
+   ======================================== */
+
+.floating-input-container {
+  position: fixed;
+  bottom: 32px;
+  right: 16px;
+  max-width: 800px;
+  margin: 0 auto;
+  z-index: 9998;
+  transition: left var(--transition-normal);
+}
+
+.floating-input-wrapper {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  background: var(--color-surface);
+  border-radius: 50px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--color-border);
+  padding: 6px;
+  backdrop-filter: blur(10px);
+  transition: box-shadow var(--transition-fast);
+}
+
+html.dark .floating-input-wrapper {
+  box-shadow: var(--shadow-lg);
+}
+
+.floating-input-field {
+  flex-grow: 1;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-normal);
+  padding: 8px 12px;
+  color: #374151;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: var(--font-primary);
+  resize: none;
+  overflow-y: auto;
+  min-height: 40px;
+  line-height: 20px;
+  transition: color var(--transition-fast);
+}
+
+html.dark .floating-input-field {
+  color: var(--color-text);
+}
+
+.floating-input-field::placeholder {
+  color: #9ca3af;
+  transition: color var(--transition-fast);
+}
+
+html.dark .floating-input-field::placeholder {
+  color: var(--color-text-secondary);
+}
+
+.floating-send-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: #000000;
+  color: white;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  transition: all 150ms ease;
+  margin-right: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.floating-send-button:hover {
+  background: #1f2937;
+}
+
+.floating-send-button:focus {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+html.dark .floating-send-button {
+  background: var(--color-accent);
+}
+
+html.dark .floating-send-button:hover {
+  filter: brightness(1.1);
+}
+
+/* ========================================
+   DYNAMIC TOOLTIPS
+   ======================================== */
+
+.dynamic-tooltip {
+  position: fixed;
+  background: var(--color-surface);
+  color: var(--color-text);
+  padding: 8px 12px;
+  border-radius: var(--border-radius-sm);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  font-family: var(--font-primary);
+  white-space: nowrap;
+  z-index: 9999;
+  pointer-events: none;
+  border: 1px solid var(--color-border);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(10px);
+  opacity: 1;
+  animation: tooltipFadeIn 0.2s ease-out;
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dynamic-tooltip {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ========================================
+   CONTEXT MENUS
+   ======================================== */
+
+.context-menu {
+  position: fixed;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-md);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(10px);
+  z-index: 10000;
+  min-width: 200px;
+  overflow: hidden;
+  animation: contextMenuAppear 0.15s ease-out;
+}
+
+@keyframes contextMenuAppear {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .context-menu,
+  .input-context-menu,
+  .message-context-menu {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  color: var(--color-text);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  font-family: var(--font-primary);
+}
+
+.context-menu-item:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-accent);
+  transform: translateX(2px);
+}
+
+.context-menu-item:active {
+  background: var(--color-surface-active);
+}
+
+.context-menu-item i {
+  width: 18px;
+  text-align: center;
+  color: var(--color-accent);
+}
+
+.context-menu-divider {
+  height: 1px;
+  background: var(--color-border);
+  margin: 4px 0;
+}
+
+.context-menu-item.danger {
+  color: var(--color-delete);
+}
+
+.context-menu-item.danger:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.context-menu-item.danger i {
+  color: var(--color-delete);
+}
+
+/* ========================================
+   CUSTOM INPUT CONTEXT MENU
+   ======================================== */
+
+.input-context-menu {
+  position: fixed;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(10px);
+  z-index: 10001;
+  min-width: 160px;
+  overflow: hidden;
+  animation: contextMenuAppear 0.15s ease-out;
+}
+
+.input-context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  color: var(--color-text);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  font-family: var(--font-primary);
+}
+
+.input-context-menu-item:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-accent);
+}
+
+.input-context-menu-item i {
+  width: 14px;
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+
+.input-context-menu-item:hover i {
+  color: var(--color-accent);
+}
+
+/* ========================================
+   MESSAGE CONTEXT MENU
+   ======================================== */
+
+.message-context-menu {
+  position: fixed;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(10px);
+  z-index: 10002;
+  min-width: 180px;
+  overflow: hidden;
+  animation: contextMenuAppear 0.15s ease-out;
+}
+
+.message-context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  color: var(--color-text);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  font-family: var(--font-primary);
+}
+
+.message-context-menu-item:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-accent);
+}
+
+.message-context-menu-item i {
+  width: 16px;
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+
+.message-context-menu-item:hover i {
+  color: var(--color-accent);
+}
+
+/* ========================================
+   ENHANCED BUTTON STYLES
+   ======================================== */
+
+.action-button {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  padding: 8px 12px;
+  border-radius: var(--border-radius-sm);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.action-button:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.action-button:active {
+  transform: translateY(0);
+}
+
+.action-button.primary {
+  background: var(--color-accent);
+  color: white;
+  border-color: var(--color-accent);
+}
+
+.action-button.primary:hover {
+  filter: brightness(1.1);
+  transform: translateY(-2px);
+}
+
+.action-button.danger {
+  color: var(--color-delete);
+  border-color: var(--color-delete);
+}
+
+.action-button.danger:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--color-delete);
+}
+
+/* ========================================
+   DROPDOWN MENUS
+   ======================================== */
+
+.dropdown-menu {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-md);
+  padding: 6px 0;
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(10px);
+  font-family: var(--font-primary);
+  font-size: var(--font-size-base);
+  color: var(--color-text);
+  animation: dropdownFadeIn 0.18s ease-out;
+  min-width: 200px;
+}
+
+.dropdown-option {
+  padding: 8px 14px;
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: var(--font-primary);
+  margin: 2px 8px;
+}
+
+.dropdown-option:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-accent);
+}
+
+@keyframes dropdownFadeIn {
+  from { 
+    opacity: 0; 
+    transform: translateY(-5px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+/* ========================================
+   ENHANCED SCROLLBARS
+   ======================================== */
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--color-text-tertiary);
+  border-radius: 4px;
+  transition: background var(--transition-fast);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-secondary);
+}
+
+/* ========================================
+   LOADING STATES
+   ======================================== */
+
+.loading-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--color-surface-active);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-dots {
+  display: flex;
+  gap: 4px;
+}
+
+.loading-dots span {
+  width: 6px;
+  height: 6px;
+  background-color: var(--color-accent);
+  border-radius: 50%;
+  animation: bounce 1.4s infinite ease-in-out both;
+}
+
+.loading-dots span:nth-child(2) { animation-delay: -0.16s; }
+.loading-dots span:nth-child(3) { animation-delay: -0.32s; }
+
+@keyframes bounce {
+  0%, 80%, 100% { transform: scale(0); }
+  40% { transform: scale(1.0); }
+}
+
+/* ========================================
+   TOAST NOTIFICATIONS
+   ======================================== */
+
+.toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.toast {
+  pointer-events: auto;
+  padding: 12px 16px;
+  border-radius: var(--border-radius-md);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow-md);
+  transform: translateX(100%);
+  animation: slideInToast 0.3s ease-out forwards;
+  min-width: 200px;
+  max-width: 400px;
+}
+
+.toast.removing {
+  animation: slideOutToast 0.3s ease-in forwards;
+}
+
+.toast.success {
+  border-color: var(--color-success);
+  background: rgba(68, 133, 209, 0.1);
+}
+
+.toast.error {
+  border-color: var(--color-delete);
+  color: var(--color-delete);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+@keyframes slideInToast {
+  to { transform: translateX(0); }
+}
+
+@keyframes slideOutToast {
+  to { transform: translateX(100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    animation: none;
+    transform: translateX(0);
+  }
+  .toast.removing {
+    opacity: 0;
+  }
+}
+
+/* ========================================
+   MODAL OVERLAYS
+   ======================================== */
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(10px);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--transition-normal);
+}
+
+.modal-overlay:not(.hidden) {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.modal {
+  background: var(--color-bg);
+  padding: 24px;
+  border-radius: 20px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 85vh;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--color-border);
+  transform: scale(0.95);
+  transition: transform var(--transition-normal);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-overlay:not(.hidden) .modal {
+  transform: scale(1);
+}
+
+/* ========================================
+   UTILITY CLASSES
+   ======================================== */
+
+.hidden {
+  display: none !important;
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+.scale-in {
+  animation: scaleIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ========================================
+   RESPONSIVE DESIGN
+   ======================================== */
+
+@media (max-width: 1024px) {
+  .floating-input-container {
+    width: 85%;
+  }
+}
+
+@media (max-width: 768px) {
+  .floating-input-container {
+    width: 90%;
+    bottom: 20px;
+  }
+  
+  .floating-input-wrapper {
+    padding: 12px 16px;
+  }
+  
+  .context-menu {
+    min-width: 160px;
+  }
+  
+  .dropdown-menu {
+    min-width: 180px;
+  }
+  
+  .modal {
+    width: 95%;
+    padding: 20px;
+  }
+  
+  .toast {
+    min-width: 180px;
+    max-width: 300px;
+  }
+}
+
+@media (max-width: 480px) {
+  .floating-input-container {
+    width: 95%;
+  }
+  
+  .context-menu {
+    min-width: 140px;
+  }
+  
+  .dropdown-menu {
+    min-width: 160px;
+  }
+}
+
+/* ========================================
+   DARK MODE SPECIFIC ADJUSTMENTS
+   ======================================== */
+
+html.dark .context-menu {
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+}
+
+html.dark .dropdown-menu {
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6);
+}
+
+html.dark .modal {
+  background: var(--color-bg-dark);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+}
+
+html.dark .toast {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+html.dark .action-button {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* ========================================
+   ACCESSIBILITY IMPROVEMENTS
+   ======================================== */
+
+.context-menu-item:focus,
+.dropdown-option:focus,
+.action-button:focus {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transform: none !important;
+  }
+  
+  .floating-input-wrapper,
+  .floating-input-field,
+  .floating-send-button {
+    transition: none !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  :root {
+    --color-border-light: rgba(0, 0, 0, 0.3);
+    --color-border-dark: rgba(255, 255, 255, 0.3);
+  }
+}

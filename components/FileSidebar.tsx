@@ -156,7 +156,7 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
                         <span className={`text-xs ${file.status === 'error' ? 'text-red-700' : 'text-[#1a1a1a] dark:text-white font-medium'}`} title={file.name}>
                         {file.name}
                         </span>
-                        <span className="text-[10px] text-[#666666] dark:text-[#a0a0a0]">
+                        <span className="text-[12px] text-[#666666] dark:text-[#a0a0a0]">
                           {file.tokenCount ? `~${(file.tokenCount / 1000).toFixed(1)}k tokens` : 'Processing...'}
                         </span>
                     </div>
@@ -229,13 +229,13 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
       )}
 
       {/* Tab Navigation */}
-      <div className="h-[55px] flex-shrink-0 flex border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a]">
+      <div className="h-[65px] flex-shrink-0 flex bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a]">
         <button
           onClick={() => setActiveTab('files')}
           className={`flex-1 h-full px-4 text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2 ${
             activeTab === 'files' 
-              ? 'text-[#4485d1] border-b-2 border-[#4485d1] bg-white dark:bg-[#1a1a1a]' 
-              : 'text-[#666666] dark:text-[#a0a0a0] hover:text-[#1a1a1a] dark:hover:text-white border-b-2 border-transparent'
+              ? 'text-[#1a1a1a] dark:text-white bg-[rgba(0,0,0,0.06)] dark:bg-[rgba(255,255,255,0.06)]' 
+              : 'text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[rgba(255,255,255,0.03)]'
           }`}
         >
           <Files size={14} />
@@ -245,8 +245,8 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
           onClick={() => setActiveTab('chats')}
           className={`flex-1 h-full px-4 text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2 ${
             activeTab === 'chats' 
-              ? 'text-[#4485d1] border-b-2 border-[#4485d1] bg-white dark:bg-[#1a1a1a]' 
-              : 'text-[#666666] dark:text-[#a0a0a0] hover:text-[#1a1a1a] dark:hover:text-white border-b-2 border-transparent'
+              ? 'text-[#1a1a1a] dark:text-white bg-[rgba(0,0,0,0.06)] dark:bg-[rgba(255,255,255,0.06)]' 
+              : 'text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[rgba(255,255,255,0.03)]'
           }`}
         >
           <MessageCircle size={14} />
@@ -254,17 +254,17 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
         </button>
       </div>
 
-      {/* TAB CONTENT WRAPPER: make both tabs occupy the same sized content area (header height = 55px) */}
-      <div style={{ height: 'calc(100% - 55px)' }} className="flex flex-col min-h-0 box-border">
+      {/* TAB CONTENT WRAPPER: make both tabs occupy the same sized content area (header height = 65px) */}
+      <div style={{ height: 'calc(100% - 65px)' }} className="flex flex-col min-h-0 box-border">
         {activeTab === 'files' ? (
           <div className="flex flex-col min-h-0 w-full relative box-border">
             {/* Toolbar */}
             <div className="px-4 py-2 flex-shrink-0 border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] bg-transparent">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                   <span className="text-[10px] font-medium text-[#666666] dark:text-[#a0a0a0]">{files.length} sources</span>
+                   <span className="text-[12px] font-medium text-[#666666] dark:text-[#a0a0a0]">{files.length} sources</span>
                    {files.length > 0 && (
-                      <span className="text-[10px] font-medium text-[#666666] dark:text-[#a0a0a0]">• ~{(totalTokens / 1000).toFixed(0)}k tokens</span>
+                      <span className="text-[12px] font-medium text-[#666666] dark:text-[#a0a0a0]">• ~{(totalTokens / 1000).toFixed(0)}k tokens</span>
                    )}
                 </div>
                 <div className="flex gap-1">

@@ -152,17 +152,17 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
     };
 
     const renderApiInput = (label: string, provider: Provider, placeholder: string, desc: string) => (
-        <div className="space-y-1.5">
+        <div className="space-y-1">
             <div className="flex justify-between items-center">
                 <label className="text-xs font-bold text-[#666666] dark:text-[#a0a0a0] uppercase tracking-wider">{label}</label>
                 {testResults[provider] && (
-                    <span className={`text-[10px] flex items-center gap-1 ${testResults[provider]?.success ? 'text-green-600' : 'text-red-500'}`}>
-                        {testResults[provider]?.success ? <CheckCircle size={10} /> : <AlertCircle size={10} />}
+                    <span className={`text-[12px] flex items-center gap-1 ${testResults[provider]?.success ? 'text-[#4485d1]' : 'text-[#666666] dark:text-[#a0a0a0]'}`}>
+                        {testResults[provider]?.success ? <CheckCircle size={12} /> : <AlertCircle size={12} />}
                         {testResults[provider]?.message}
                     </span>
                 )}
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-1.5">
                 <input 
                     type="text" 
                     value={keys[provider]}
@@ -171,55 +171,55 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                         setTestResults(prev => ({ ...prev, [provider]: null }));
                     }}
                     placeholder={placeholder}
-                    className={`flex-1 px-3 py-2 bg-[rgba(0,0,0,0.03)] dark:bg-[#1a1a1a] border rounded-lg text-sm text-[#1a1a1a] dark:text-white focus:outline-none focus:ring-2 transition-all ${testResults[provider]?.success === false ? 'border-red-300 focus:ring-red-200' : 'border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] focus:ring-[rgba(68,133,209,0.2)] focus:border-[#4485d1]'}`}
+                    className="flex-1 px-2.5 py-1.5 bg-[rgba(0,0,0,0.03)] dark:bg-[#1a1a1a] border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] rounded-lg text-sm text-[#1a1a1a] dark:text-white focus:outline-none focus:ring-2 focus:ring-[rgba(68,133,209,0.2)] focus:border-[#4485d1] transition-all"
                 />
                 <button
                     onClick={() => validateKey(provider, keys[provider])}
                     disabled={testingProvider === provider || !keys[provider] || (Date.now() - lastTestTime[provider] < 5000)}
-                    className="px-3 py-2 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] hover:bg-[rgba(0,0,0,0.06)] dark:hover:bg-[#222222] text-[#666666] dark:text-[#a0a0a0] rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="px-2.5 py-1.5 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] hover:bg-[rgba(0,0,0,0.06)] dark:hover:bg-[#222222] text-[#666666] dark:text-[#a0a0a0] rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     title={Date.now() - lastTestTime[provider] < 5000 ? "Wait before testing again" : "Test API Connection"}
                 >
-                    {testingProvider === provider ? <Loader2 size={16} className="animate-spin" /> : <Play size={16} />}
+                    {testingProvider === provider ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
                 </button>
             </div>
-            <p className="text-[10px] text-[#666666] dark:text-[#a0a0a0]">{desc}</p>
+            <p className="text-[12px] text-[#666666] dark:text-[#a0a0a0]">{desc}</p>
         </div>
     );
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-white dark:bg-[#222222] w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="bg-white dark:bg-[#222222] w-full max-w-md rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[75vh]">
                 {/* Header */}
-                <div className="px-6 py-4 border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] flex items-center justify-between bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a]">
+                <div className="px-4 py-2.5 border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] flex items-center justify-between bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a]">
                     <div className="flex items-center gap-2">
-                        <div className="p-2 bg-[rgba(68,133,209,0.1)] text-[#4485d1] rounded-lg">
-                            <Key size={18} />
+                        <div className="p-1.5 bg-[rgba(68,133,209,0.1)] text-[#4485d1] rounded-lg">
+                            <Key size={14} />
                         </div>
-                        <h2 className="font-semibold text-[#1a1a1a] dark:text-white">Configuration</h2>
+                        <h2 className="text-sm font-semibold text-[#1a1a1a] dark:text-white">Configuration</h2>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-[rgba(0,0,0,0.06)] dark:hover:bg-[#222222] rounded-full text-[#a0a0a0] transition-colors">
-                        <X size={18} />
+                    <button onClick={onClose} className="p-1.5 hover:bg-[rgba(0,0,0,0.06)] dark:hover:bg-[#222222] rounded-full text-[#a0a0a0] transition-colors">
+                        <X size={16} />
                     </button>
                 </div>
 
                 {/* Content */}
-                <div className="p-6 overflow-y-auto space-y-6 flex-1">
-                    <div className="bg-[rgba(68,133,209,0.1)] border border-[rgba(68,133,209,0.2)] dark:border-[rgba(68,133,209,0.3)] rounded-lg p-3 flex gap-3">
-                        <ShieldCheck size={18} className="text-[#4485d1] flex-shrink-0 mt-0.5" />
+                <div className="p-4 overflow-y-auto space-y-4 flex-1">
+                    <div className="bg-[rgba(68,133,209,0.1)] border border-[rgba(68,133,209,0.2)] dark:border-[rgba(68,133,209,0.3)] rounded-lg p-2 flex gap-2">
+                        <ShieldCheck size={14} className="text-[#4485d1] flex-shrink-0 mt-0.5" />
                         <p className="text-xs text-[#1a1a1a] dark:text-white leading-relaxed">
                             API Keys are stored locally on your device.
                         </p>
                     </div>
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                         {renderApiInput('Google Gemini', 'google', 'AIzaSy...', 'Required for Gemini models & TTS.')}
                         {renderApiInput('Groq', 'groq', 'gsk_...', 'Required for Llama 3 models.')}
                         {renderApiInput('OpenAI', 'openai', 'sk-...', 'Required for GPT-4o models.')}
                     </div>
 
                     {/* Local Models Section */}
-                    <div className="border-t border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] pt-6">
-                        <div className="flex items-center gap-2 mb-3">
-                            <Cpu size={16} className="text-purple-600" />
+                    <div className="border-t border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] pt-4">
+                        <div className="flex items-center gap-1.5 mb-2">
+                            <Cpu size={12} className="text-[#666666] dark:text-[#a0a0a0]" />
                             <h3 className="text-xs font-bold text-[#666666] dark:text-[#a0a0a0] uppercase tracking-wider">Local Models (Ollama)</h3>
                         </div>
                         <LocalModelsStatus />
@@ -227,24 +227,21 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                 </div>
 
                 {/* Footer */}
-                <div className="px-6 py-4 border-t border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] flex justify-end gap-3 flex-shrink-0">
+                <div className="px-4 py-2.5 border-t border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] flex justify-end gap-2 flex-shrink-0">
                     <button 
                         onClick={onClose}
-                        className="px-4 py-2 text-sm font-medium text-[#666666] dark:text-[#a0a0a0] hover:text-[#1a1a1a] dark:hover:text-white hover:bg-[rgba(0,0,0,0.06)] dark:hover:bg-[#222222] rounded-lg transition-colors"
+                        className="px-3 py-1.5 text-xs font-medium text-[#666666] dark:text-[#a0a0a0] hover:text-[#1a1a1a] dark:hover:text-white hover:bg-[rgba(0,0,0,0.06)] dark:hover:bg-[#222222] rounded-lg transition-colors"
                     >
                         Cancel
                     </button>
                     <button 
                         onClick={handleSave}
-                        className={`
-                            px-4 py-2 text-sm font-medium text-white rounded-lg shadow-sm flex items-center gap-2 transition-all
-                            ${showSuccess ? 'bg-green-600 hover:bg-green-700' : 'bg-[#4485d1] hover:bg-[#3674c1]'}
-                        `}
+                        className="px-3 py-1.5 text-xs font-medium text-white rounded-lg shadow-sm flex items-center gap-1.5 transition-all bg-[#4485d1] hover:bg-[#3674c1]"
                     >
                         {showSuccess ? (
                             <>Saved!</>
                         ) : (
-                            <><Save size={16} /> Save & Apply</>
+                            <><Save size={12} /> Save & Apply</>
                         )}
                     </button>
                 </div>
@@ -286,73 +283,73 @@ const LocalModelsStatus: React.FC = () => {
     }, []);
 
     return (
-        <div className="space-y-3">
-            <div className="bg-purple-50 border border-purple-100 rounded-lg p-3 flex gap-3">
+        <div className="space-y-2">
+            <div className="bg-[rgba(0,0,0,0.03)] dark:bg-[#1a1a1a] border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] rounded-lg p-2 flex gap-2">
                 <div className="flex-1">
-                    <p className="text-xs text-purple-800 leading-relaxed">
+                    <p className="text-xs text-[#1a1a1a] dark:text-white leading-relaxed">
                         <strong>Offline AI Models:</strong> Use Code Llama locally when you hit quota limits. No API keys needed.
                     </p>
                 </div>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex gap-1.5">
                 <button
                     onClick={testConnection}
                     disabled={isTesting}
-                    className="flex-1 px-3 py-2 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-lg text-xs font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                    className="flex-1 px-2.5 py-1.5 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] hover:bg-[rgba(0,0,0,0.06)] dark:hover:bg-[#222222] text-[#666666] dark:text-[#a0a0a0] rounded-lg text-xs font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
                 >
                     {isTesting ? (
                         <>
-                            <Loader2 size={12} className="animate-spin" />
+                            <Loader2 size={10} className="animate-spin" />
                             Testing...
                         </>
                     ) : (
                         <>
-                            <Cpu size={12} />
+                            <Cpu size={10} />
                             Test Connection
                         </>
                     )}
                 </button>
                 <button
                     onClick={() => setShowSetupGuide(!showSetupGuide)}
-                    className="flex-1 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-2"
+                    className="flex-1 px-2.5 py-1.5 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] hover:bg-[rgba(0,0,0,0.06)] dark:hover:bg-[#222222] text-[#666666] dark:text-[#a0a0a0] rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5"
                 >
-                    <ExternalLink size={12} />
+                    <ExternalLink size={10} />
                     Setup Guide
                 </button>
             </div>
 
             {isConnected ? (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                    <div className="flex items-center gap-2 mb-2">
-                        <CheckCircle size={14} className="text-green-600" />
-                        <span className="text-xs font-bold text-green-700">Ollama Connected</span>
+                <div className="bg-[rgba(0,0,0,0.03)] dark:bg-[#1a1a1a] border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] rounded-lg p-2">
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                        <CheckCircle size={12} className="text-[#4485d1]" />
+                        <span className="text-xs font-bold text-[#1a1a1a] dark:text-white">Ollama Connected</span>
                     </div>
                     {models.length > 0 ? (
-                        <div className="text-xs text-green-700 space-y-1">
+                        <div className="text-xs text-[#666666] dark:text-[#a0a0a0] space-y-0.5">
                             <p className="font-medium">Available Models:</p>
                             <ul className="list-disc list-inside space-y-0.5">
                                 {models.map(model => (
-                                    <li key={model} className="text-green-600">{model}</li>
+                                    <li key={model} className="text-[#1a1a1a] dark:text-white">{model}</li>
                                 ))}
                             </ul>
                         </div>
                     ) : (
-                        <p className="text-xs text-green-700">Ollama is running but no models found. Run: <code className="bg-green-100 px-1 rounded text-[9px]">ollama create codellama -f codellama.Modelfile</code></p>
+                        <p className="text-xs text-[#666666] dark:text-[#a0a0a0]">Ollama is running but no models found. Run: <code className="bg-[rgba(0,0,0,0.06)] dark:bg-[#2a2a2a] px-1 rounded text-[12px]">ollama create codellama -f codellama.Modelfile</code></p>
                     )}
                 </div>
             ) : (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                    <div className="flex items-center gap-2 mb-2">
-                        <AlertCircle size={14} className="text-red-600" />
-                        <span className="text-xs font-bold text-red-700">Ollama Not Connected</span>
+                <div className="bg-[rgba(0,0,0,0.03)] dark:bg-[#1a1a1a] border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] rounded-lg p-2">
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                        <AlertCircle size={12} className="text-[#666666] dark:text-[#a0a0a0]" />
+                        <span className="text-xs font-bold text-[#1a1a1a] dark:text-white">Ollama Not Connected</span>
                     </div>
-                    <p className="text-xs text-red-700 mb-2">Make sure Ollama is installed and running on http://localhost:11434</p>
+                    <p className="text-xs text-[#666666] dark:text-[#a0a0a0] mb-1.5">Make sure Ollama is installed and running on http://localhost:11434</p>
                     <a 
                         href="https://ollama.ai" 
                         target="_blank" 
                         rel="noopener noreferrer"
-                        className="text-xs text-red-600 hover:text-red-800 underline flex items-center gap-1"
+                        className="text-xs text-[#4485d1] hover:text-[#3674c1] underline flex items-center gap-1"
                     >
                         Download Ollama <ExternalLink size={10} />
                     </a>
@@ -360,15 +357,15 @@ const LocalModelsStatus: React.FC = () => {
             )}
 
             {showSetupGuide && (
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-xs text-gray-700 space-y-2 max-h-[200px] overflow-y-auto">
-                    <p className="font-bold text-gray-800">Quick Setup:</p>
-                    <ol className="list-decimal list-inside space-y-1 text-gray-600">
+                <div className="bg-[rgba(0,0,0,0.03)] dark:bg-[#1a1a1a] border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] rounded-lg p-2 text-xs text-[#666666] dark:text-[#a0a0a0] space-y-1.5 max-h-[150px] overflow-y-auto">
+                    <p className="font-bold text-[#1a1a1a] dark:text-white">Quick Setup:</p>
+                    <ol className="list-decimal list-inside space-y-0.5">
                         <li>Install Ollama from ollama.ai</li>
                         <li>Place model files in F:\Automations\Models\</li>
-                        <li>Run: <code className="bg-white px-1 rounded">ollama create codellama -f codellama.Modelfile</code></li>
+                        <li>Run: <code className="bg-[rgba(0,0,0,0.06)] dark:bg-[#2a2a2a] px-1 rounded text-[12px]">ollama create codellama -f codellama.Modelfile</code></li>
                         <li>Click "Test Connection" above</li>
                     </ol>
-                    <p className="text-gray-500 italic mt-2">See LOCAL_MODELS_SETUP.md for detailed instructions</p>
+                    <p className="italic mt-1.5">See LOCAL_MODELS_SETUP.md for detailed instructions</p>
                 </div>
             )}
         </div>

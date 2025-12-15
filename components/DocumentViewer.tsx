@@ -385,7 +385,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
                                             ${isHighlightRow ? "bg-amber-100 dark:bg-amber-900/30 ring-2 ring-inset ring-amber-400 dark:ring-amber-600 z-10 relative" : ""}
                                         `}
                                     >
-                                        <td className={`px-1 py-1 w-8 select-none text-[10px] text-right border-r border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] bg-[rgba(0,0,0,0.03)] dark:bg-[#1a1a1a] ${isHighlightRow ? "text-amber-700 dark:text-amber-400 font-bold" : "text-[#999999] dark:text-[#666666]"}`}>
+                                        <td className={`px-1 py-1 w-8 select-none text-[12px] text-right border-r border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] bg-[rgba(0,0,0,0.03)] dark:bg-[#1a1a1a] ${isHighlightRow ? "text-amber-700 dark:text-amber-400 font-bold" : "text-[#999999] dark:text-[#666666]"}`}>
                                             {visualRowNumber}
                                         </td>
                                         {row.map((cell, cIdx) => (
@@ -476,7 +476,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
   return (
     <div className="flex flex-col h-full w-full bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] border-l border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)]">
       {/* Header */}
-      <div className="flex-none h-[55px] bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] px-4 flex items-center justify-between shadow-sm z-20">
+      <div className="flex-none h-[65px] bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] px-4 flex items-center justify-between shadow-sm z-20">
         <div className="flex items-center gap-3 overflow-hidden">
             <div className={`p-1.5 rounded ${file.type === 'pdf' ? 'bg-rose-50 text-rose-500' : file.type === 'excel' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-500'}`}>
                 {getFileIcon()}
@@ -484,9 +484,9 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
             <div className="flex flex-col overflow-hidden">
                 <h3 className="font-semibold text-[#1a1a1a] dark:text-white text-sm truncate max-w-[200px]" title={file.name}>{file.name}</h3>
                 {isPdf ? (
-                    <span className="text-[10px] text-[#666666] dark:text-[#a0a0a0] font-medium">Page {pageNumber} of {numPages}</span>
+                    <span className="text-[12px] text-[#666666] dark:text-[#a0a0a0] font-medium">Page {pageNumber} of {numPages}</span>
                 ) : (
-                    <span className="text-[10px] text-[#666666] dark:text-[#a0a0a0] font-medium">
+                    <span className="text-[12px] text-[#666666] dark:text-[#a0a0a0] font-medium">
                         {file.type === 'excel' && location ? location : (file.type === 'excel' ? 'Spreadsheet View' : 'Text View')}
                     </span>
                 )}
@@ -496,9 +496,9 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
         <div className="flex items-center gap-3">
              <div className="flex items-center bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] rounded-lg p-0.5 border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)]">
                  <button onClick={handleZoomOut} className="p-1.5 hover:bg-white dark:hover:bg-[#222222] hover:shadow-sm rounded-md text-[#666666] dark:text-[#a0a0a0] transition-all"><ZoomOut size={14} /></button>
-                 <span className="text-[10px] w-10 text-center font-medium text-[#666666] dark:text-[#a0a0a0]">{Math.round(currentScaleDisplay * 100)}%</span>
+                 <span className="text-[12px] w-10 text-center font-medium text-[#666666] dark:text-[#a0a0a0]">{Math.round(currentScaleDisplay * 100)}%</span>
                  <button onClick={handleZoomIn} className="p-1.5 hover:bg-white dark:hover:bg-[#222222] hover:shadow-sm rounded-md text-[#666666] dark:text-[#a0a0a0] transition-all"><ZoomIn size={14} /></button>
-                 {isPdf && <button onClick={handleResetZoom} className="p-1.5 hover:bg-white dark:hover:bg-[#222222] hover:shadow-sm rounded-md text-[#666666] dark:text-[#a0a0a0] transition-all text-[10px]" title="Reset">⟲</button>}
+                 {isPdf && <button onClick={handleResetZoom} className="p-1.5 hover:bg-white dark:hover:bg-[#222222] hover:shadow-sm rounded-md text-[#666666] dark:text-[#a0a0a0] transition-all text-[12px]" title="Reset">⟲</button>}
              </div>
              <div className="h-4 w-px bg-[rgba(0,0,0,0.15)] dark:bg-[rgba(255,255,255,0.05)]"></div>
              <button onClick={onClose} className="p-2 hover:bg-red-50 dark:hover:bg-red-900/30 text-[#a0a0a0] hover:text-[#ef4444] rounded-lg transition-colors" title="Close Viewer">

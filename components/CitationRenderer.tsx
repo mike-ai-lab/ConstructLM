@@ -32,7 +32,7 @@ const parseInline = (text: string): React.ReactNode[] => {
   }).flat();
 };
 
-const SimpleMarkdown: React.FC<{ text: string; block?: boolean }> = ({ text, block = true }) => {
+const SimpleMarkdown: React.FC<{ text: string; block?: boolean; files?: ProcessedFile[]; onViewDocument?: (fileName: string, page?: number, quote?: string, location?: string) => void }> = ({ text, block = true, files, onViewDocument }) => {
   // Normalize incoming <br> to newline
   const processedText = text.replace(/<br\s*\/?>/gi, '\n');
   const lines = processedText.split('\n');
@@ -60,7 +60,9 @@ const SimpleMarkdown: React.FC<{ text: string; block?: boolean }> = ({ text, blo
             <thead className="bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a]">
               <tr>
                 {tableLines[0].split('|').filter(c => c.trim()).map((cell, idx) => (
-                  <th key={idx} className="border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.2)] px-2 py-1 text-left font-semibold text-[#1a1a1a] dark:text-white">{cell.trim()}</th>
+                  <th key={idx} className="border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.2)] px-2 py-1 text-left font-semibold text-[#1a1a1a] dark:text-white">
+                    {files && onViewDocument ? <TableCellWithCitations text={cell.trim()} files={files} onViewDocument={onViewDocument} /> : cell.trim()}
+                  </th>
                 ))}
               </tr>
             </thead>
@@ -68,7 +70,9 @@ const SimpleMarkdown: React.FC<{ text: string; block?: boolean }> = ({ text, blo
               {tableLines.slice(2).map((row, rowIdx) => (
                 <tr key={rowIdx} className="hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#222222]">
                   {row.split('|').filter(c => c.trim()).map((cell, cellIdx) => (
-                    <td key={cellIdx} className="border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.2)] px-2 py-1">{cell.trim()}</td>
+                    <td key={cellIdx} className="border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.2)] px-2 py-1">
+                      {files && onViewDocument ? <TableCellWithCitations text={cell.trim()} files={files} onViewDocument={onViewDocument} /> : cell.trim()}
+                    </td>
                   ))}
                 </tr>
               ))}
@@ -185,7 +189,7 @@ const CitationRenderer: React.FC<CitationRendererProps> = ({ text, files, onView
           // Render inline so chips remain on the same line
           return (
             <span key={`txt-${index}`} className="align-baseline">
-              <SimpleMarkdown text={part} block={false} />
+              <SimpleMarkdown text={part} block={false} files={files} onViewDocument={onViewDocument} />
             </span>
           );
         }
@@ -194,7 +198,38 @@ const CitationRenderer: React.FC<CitationRendererProps> = ({ text, files, onView
   );
 };
 
-// --- CITATION CHIP & PORTAL (unchanged behavior, slight tweaks for inline) ---
+// Helper component to render table cells with citations
+const TableCellWithCitations: React.FC<{ text: string; files: ProcessedFile[]; onViewDocument: (fileName: string, page?: number, quote?: string, location?: string) => void }> = ({ text, files, onViewDocument }) => {
+  const parts = text.split(SPLIT_REGEX).filter(p => p !== undefined && p !== null);
+  
+  return (
+    <>
+      {parts.map((part, index) => {
+        const match = part.match(MATCH_REGEX);
+        if (match) {
+          citationCounter++;
+          const fileName = match[1].trim();
+          const location = match[2].trim();
+          const quote = match[3].trim();
+          return (
+            <CitationChip
+              key={`cell-cit-${index}-${citationCounter}`}
+              index={citationCounter - 1}
+              fileName={fileName}
+              location={location}
+              quote={quote}
+              files={files}
+              onViewDocument={onViewDocument}
+            />
+          );
+        }
+        return <span key={`cell-txt-${index}`}>{part}</span>;
+      })}
+    </>
+  );
+};
+
+// --- CITATION CHIP & PORTAL ---
 interface CitationChipProps {
   index: number;
   fileName: string;
@@ -240,7 +275,7 @@ const CitationChip: React.FC<CitationChipProps> = ({ index, fileName, location, 
       <sup
         ref={triggerRef}
         onClick={handleToggle}
-        className={`inline-flex items-center justify-center w-5 h-5 text-[9px] font-bold rounded-full cursor-pointer transition-all mx-0.5
+        className={`inline-flex items-center justify-center w-5 h-5 text-[12px] font-bold rounded-full cursor-pointer transition-all mx-0.5
           ${isOpen
             ? 'bg-blue-600 dark:bg-blue-500 text-white scale-110'
             : 'bg-blue-500 dark:bg-blue-600 text-white hover:scale-110'
@@ -334,7 +369,7 @@ const CitationPortal: React.FC<CitationPortalProps> = ({ onClose, coords, fileNa
         <div className="flex items-center gap-1.5 overflow-hidden min-w-0">
           <BookOpen size={12} className="text-blue-600 flex-shrink-0" />
           <span className="font-medium text-xs text-[#1a1a1a] dark:text-white truncate" title={fileName}>{fileName}</span>
-          <span className="text-[9px] text-[#666666] dark:text-[#a0a0a0]">• {location}</span>
+          <span className="text-[12px] text-[#666666] dark:text-[#a0a0a0]">• {location}</span>
         </div>
         <div className="flex items-center gap-0.5 flex-shrink-0">
           <button onClick={onOpenFull} className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/30" title="Open Full"><Maximize2 size={12} /></button>
@@ -349,13 +384,13 @@ const CitationPortal: React.FC<CitationPortalProps> = ({ onClose, coords, fileNa
         )}
       </div>
       <div className="bg-white dark:bg-[#2a2a2a] px-2 py-1.5 border-t border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] flex-shrink-0 flex items-center justify-between">
-        <p className="text-[10px] text-[#666666] dark:text-[#a0a0a0] italic line-clamp-2 flex-1">"{quote}"</p>
+        <p className="text-[12px] text-[#666666] dark:text-[#a0a0a0] italic line-clamp-2 flex-1">"{quote}"</p>
         {isPdfMode && (
           <div className="flex items-center gap-1 ml-2 flex-shrink-0">
             <button onClick={() => pdfZoomHandlerRef.current?.handleZoom(0.2)} className="p-1 hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#222222] rounded" title="Zoom In">+</button>
-            <span className="text-[10px] px-1 text-[#666666] dark:text-[#a0a0a0]">{Math.round(pdfScale * 100)}%</span>
+            <span className="text-[12px] px-1 text-[#666666] dark:text-[#a0a0a0]">{Math.round(pdfScale * 100)}%</span>
             <button onClick={() => pdfZoomHandlerRef.current?.handleZoom(-0.2)} className="p-1 hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#222222] rounded" title="Zoom Out">−</button>
-            <button onClick={() => pdfZoomHandlerRef.current?.handleReset()} className="p-1 hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#222222] rounded text-[10px]" title="Reset">⟲</button>
+            <button onClick={() => pdfZoomHandlerRef.current?.handleReset()} className="p-1 hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#222222] rounded text-[12px]" title="Reset">⟲</button>
           </div>
         )}
       </div>
@@ -594,7 +629,7 @@ const TextContextViewer: React.FC<{ file?: ProcessedFile; quote: string; locatio
         
         return (
           <div className="p-3 space-y-2">
-            <div className="text-[10px] text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wider mb-2">{location}</div>
+            <div className="text-[12px] text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wider mb-2">{location}</div>
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <tbody>
@@ -616,7 +651,7 @@ const TextContextViewer: React.FC<{ file?: ProcessedFile; quote: string; locatio
   return (
     <div className="p-4 space-y-4">
       <div className="text-sm leading-relaxed text-[#666666] dark:text-[#a0a0a0] bg-white dark:bg-[#2a2a2a] p-4 rounded-lg border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] font-serif shadow-sm">
-        <div className="mb-2 text-[10px] text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wider">{location || "Excerpt"}</div>
+        <div className="mb-2 text-[12px] text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wider">{location || "Excerpt"}</div>
         <span className="bg-yellow-100 dark:bg-yellow-600/40 text-[#1a1a1a] dark:text-white p-1 rounded italic">"{quote}"</span>
       </div>
     </div>
