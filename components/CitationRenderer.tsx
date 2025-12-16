@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { BookOpen, ChevronRight, Quote, X, Maximize2, Loader2 } from 'lucide-react';
+import { BookOpen, ChevronRight, Quote, X, Maximize2, Loader2, ChevronDown } from 'lucide-react';
 import { ProcessedFile } from '../types';
 
 interface CitationRendererProps {
@@ -155,6 +155,28 @@ const SimpleMarkdown: React.FC<{ text: string; block?: boolean; files?: Processe
   }
 };
 
+// --- THINKING BLOCK COMPONENT ---
+const ThinkingBlock: React.FC<{ content: string }> = ({ content }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  
+  return (
+    <div className="my-3">
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="flex items-center gap-2 text-[#666666] dark:text-[#a0a0a0] hover:text-[#333333] dark:hover:text-[#cccccc] transition-colors mb-2"
+      >
+        {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+        <span className="text-xs italic">Model Reasoning</span>
+      </button>
+      {isExpanded && (
+        <div className="border-l-2 border-[#cccccc] dark:border-[#444444] pl-4 italic text-[#666666] dark:text-[#a0a0a0] text-sm">
+          <SimpleMarkdown text={content} block={true} />
+        </div>
+      )}
+    </div>
+  );
+};
+
 // --- MAIN CITATION RENDERER ---
 const CitationRenderer: React.FC<CitationRendererProps> = ({ text, files, onViewDocument }) => {
   if (!text) return null;
@@ -163,12 +185,28 @@ const CitationRenderer: React.FC<CitationRendererProps> = ({ text, files, onView
   // Decode HTML entities first
   const decodedText = text.replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
   
+  // Extract thinking blocks
+  const thinkRegex = /<think>([\s\S]*?)<\/think>/g;
+  const thinkingBlocks: { content: string; index: number }[] = [];
+  let match;
+  let textWithoutThinking = decodedText;
+  
+  while ((match = thinkRegex.exec(decodedText)) !== null) {
+    thinkingBlocks.push({ content: match[1].trim(), index: match.index });
+  }
+  
+  // Remove thinking blocks from text
+  textWithoutThinking = decodedText.replace(thinkRegex, '');
+  
   // Remove newlines around citations to keep them inline
-  const cleanedText = decodedText.replace(/\n*((?:\{\{|【)citation:.*?(?:\}\}|】))\n*/g, '$1');
+  const cleanedText = textWithoutThinking.replace(/\n*((?:\{\{|【)citation:.*?(?:\}\}|】))\n*/g, '$1');
   const rawParts = cleanedText.split(SPLIT_REGEX).filter(p => p !== undefined && p !== null);
 
   return (
     <div className="text-sm leading-relaxed">
+      {thinkingBlocks.map((block, idx) => (
+        <ThinkingBlock key={`think-${idx}`} content={block.content} />
+      ))}
       {rawParts.map((part, index) => {
         const match = part.match(MATCH_REGEX);
         if (match) {

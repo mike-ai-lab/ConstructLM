@@ -6,28 +6,55 @@ import { LOCAL_MODELS, updateLocalModelsStatus } from "./localModelService";
 export const MODEL_REGISTRY: ModelConfig[] = [
   // --- Google Gemini Models (Free Tier Available) ---
   {
-    id: 'gemini-2.0-flash-exp',
-    name: 'Gemini 2.0 Flash',
+    id: 'gemini-2.5-flash',
+    name: 'Gemini 2.5 Flash',
     provider: 'google',
-    contextWindow: 1000000,
-    apiKeyEnv: 'API_KEY',
+    contextWindow: 1048576,
+    apiKeyEnv: 'GEMINI_API_KEY',
     supportsImages: true,
     supportsFilesApi: true,
-    maxInputWords: 750000,
-    maxOutputWords: 8192,
-    description: "Balanced performance for large documents.",
+    maxInputWords: 786432,
+    maxOutputWords: 49152,
+    description: "Latest stable. Fast and versatile.",
     capacityTag: 'High'
   },
   {
-    id: 'gemini-1.5-flash',
-    name: 'Gemini 1.5 Flash',
+    id: 'gemini-2.5-flash-lite',
+    name: 'Gemini 2.5 Flash-Lite',
     provider: 'google',
-    contextWindow: 1000000,
-    apiKeyEnv: 'API_KEY',
+    contextWindow: 1048576,
+    apiKeyEnv: 'GEMINI_API_KEY',
     supportsImages: true,
-    maxInputWords: 750000,
-    maxOutputWords: 8192,
-    description: "Previous generation. Best for large documents.",
+    supportsFilesApi: true,
+    maxInputWords: 786432,
+    maxOutputWords: 49152,
+    description: "Lightweight and efficient.",
+    capacityTag: 'High'
+  },
+  {
+    id: 'gemini-2.5-pro',
+    name: 'Gemini 2.5 Pro',
+    provider: 'google',
+    contextWindow: 1048576,
+    apiKeyEnv: 'GEMINI_API_KEY',
+    supportsImages: true,
+    supportsFilesApi: true,
+    maxInputWords: 786432,
+    maxOutputWords: 49152,
+    description: "Most capable. Higher rate limits.",
+    capacityTag: 'High'
+  },
+  {
+    id: 'gemini-2.0-flash',
+    name: 'Gemini 2.0 Flash',
+    provider: 'google',
+    contextWindow: 1048576,
+    apiKeyEnv: 'GEMINI_API_KEY',
+    supportsImages: true,
+    supportsFilesApi: true,
+    maxInputWords: 786432,
+    maxOutputWords: 6144,
+    description: "Stable 2.0 generation.",
     capacityTag: 'High'
   },
   
@@ -39,6 +66,7 @@ export const MODEL_REGISTRY: ModelConfig[] = [
     contextWindow: 131072,
     apiKeyEnv: 'GROQ_API_KEY',
     supportsImages: false,
+    supportsThinking: true,
     maxInputWords: 98304,
     maxOutputWords: 24576,
     description: "Very smart, large context window.",
@@ -63,6 +91,7 @@ export const MODEL_REGISTRY: ModelConfig[] = [
     contextWindow: 131072,
     apiKeyEnv: 'GROQ_API_KEY',
     supportsImages: false,
+    supportsThinking: true,
     maxInputWords: 98304,
     maxOutputWords: 30720,
     description: "Alibaba's powerful model with large output.",
@@ -192,7 +221,7 @@ export const MODEL_REGISTRY: ModelConfig[] = [
   }
 ];
 
-export const DEFAULT_MODEL_ID = 'gemini-2.0-flash-exp';
+export const DEFAULT_MODEL_ID = 'gemini-2.5-flash';
 
 /**
  * Get all available models (online + local)

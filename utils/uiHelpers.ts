@@ -284,11 +284,18 @@ export const createMessageContextMenu = (messageElement: HTMLElement, messageTex
       icon: 'fas fa-copy',
       action: async () => {
         try {
-          await navigator.clipboard.writeText(messageText);
-          showToast('Message copied to clipboard', 'success');
+          const textarea = document.createElement('textarea');
+          textarea.value = messageText;
+          textarea.style.position = 'fixed';
+          textarea.style.opacity = '0';
+          document.body.appendChild(textarea);
+          textarea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textarea);
+          showToast('Message copied', 'success');
         } catch (err) {
           console.error('Failed to copy message:', err);
-          showToast('Failed to copy message', 'error');
+          showToast('Failed to copy', 'error');
         }
       }
     },

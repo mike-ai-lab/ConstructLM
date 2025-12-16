@@ -36,6 +36,7 @@ export interface ModelConfig {
   contextWindow: number;
   apiKeyEnv: string;
   supportsImages: boolean;
+  supportsThinking?: boolean;
   description: string;
   capacityTag: 'Low' | 'Medium' | 'High';
   maxInputWords?: number;

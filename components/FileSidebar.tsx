@@ -234,8 +234,8 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
           onClick={() => setActiveTab('files')}
           className={`flex-1 h-full px-4 text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2 ${
             activeTab === 'files' 
-              ? 'text-[#1a1a1a] dark:text-white bg-[rgba(0,0,0,0.06)] dark:bg-[rgba(255,255,255,0.06)]' 
-              : 'text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[rgba(255,255,255,0.03)]'
+              ? 'text-[#333333] dark:text-[#cccccc]' 
+              : 'text-[#666666] dark:text-[#a0a0a0]'
           }`}
         >
           <Files size={14} />
@@ -245,8 +245,8 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
           onClick={() => setActiveTab('chats')}
           className={`flex-1 h-full px-4 text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2 ${
             activeTab === 'chats' 
-              ? 'text-[#1a1a1a] dark:text-white bg-[rgba(0,0,0,0.06)] dark:bg-[rgba(255,255,255,0.06)]' 
-              : 'text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[rgba(255,255,255,0.03)]'
+              ? 'text-[#333333] dark:text-[#cccccc]' 
+              : 'text-[#666666] dark:text-[#a0a0a0]'
           }`}
         >
           <MessageCircle size={14} />
@@ -259,7 +259,7 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
         {activeTab === 'files' ? (
           <div className="flex flex-col min-h-0 w-full relative box-border">
             {/* Toolbar */}
-            <div className="px-4 py-2 flex-shrink-0 border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] bg-transparent">
+            <div className="px-4 py-2 flex-shrink-0 bg-transparent">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                    <span className="text-[12px] font-medium text-[#666666] dark:text-[#a0a0a0]">{files.length} sources</span>

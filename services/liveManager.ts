@@ -12,11 +12,11 @@ interface LiveConfig {
 export class LiveManager {
     private ai: GoogleGenAI;
     private sessionPromise: Promise<any> | null = null;
-    private inputContext: AudioContext | null = null;
-    private outputContext: AudioContext | null = null;
+    private audioContext: AudioContext | null = null;
     private isConnecting = false;
     private inputSource: MediaStreamAudioSourceNode | null = null;
     private processor: ScriptProcessorNode | null = null;
+    private mediaRecorder: MediaRecorder | null = null;
     private outputNode: GainNode | null = null;
     private nextStartTime = 0;
     private isConnected = false;
@@ -24,6 +24,7 @@ export class LiveManager {
     private activeSources = new Set<AudioBufferSourceNode>();
     private isMuted = false;
     private config: LiveConfig | null = null;
+    public analyser: AnalyserNode | null = null;
 
     constructor() {
         const apiKey = getApiKey();
@@ -44,23 +45,28 @@ export class LiveManager {
         this.isConnecting = true;
 
         try{
-            console.log("[LiveManager] Initializing AudioContexts...");
-            this.inputContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: INPUT_SAMPLE_RATE });
-            console.log("[LiveManager DEBUG] Input context created, state:", this.inputContext.state);
-            this.outputContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: LIVE_SAMPLE_RATE });
-            console.log("[LiveManager DEBUG] Output context created, state:", this.outputContext.state);
+            console.log("[LiveManager] Initializing AudioContext...");
+            // CRITICAL: Use system default sample rate (48kHz) - don't force 16kHz
+            this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
             
-            this.outputNode = this.outputContext.createGain();
-            this.outputNode.connect(this.outputContext.destination);
-            console.log("[LiveManager DEBUG] Output node connected");
+            if (this.audioContext.state === 'suspended') {
+                await this.audioContext.resume();
+            }
+            
+            console.log("[LiveManager] AudioContext created at", this.audioContext.sampleRate, "Hz");
+            
+            this.outputNode = this.audioContext.createGain();
+            this.outputNode.connect(this.audioContext.destination);
 
             console.log("[LiveManager] Requesting Microphone Access...");
             console.log("[LiveManager DEBUG] Calling getUserMedia...");
+            // Request both audio input AND output (like browser "Sound" permission)
             this.stream = await navigator.mediaDevices.getUserMedia({ 
                 audio: {
                     echoCancellation: true,
                     noiseSuppression: true,
-                    autoGainControl: true
+                    autoGainControl: true,
+                    sampleRate: 48000
                 } 
             });
             console.log("[LiveManager DEBUG] Microphone granted, tracks:", this.stream.getTracks().length);
@@ -69,38 +75,35 @@ export class LiveManager {
             this.sessionPromise = this.ai.live.connect({
                 model: 'gemini-2.5-flash-native-audio-preview-09-2025',
                 callbacks: {
-                    onopen: () => {
+                    onopen: async () => {
                         console.log("[LiveManager] Session OPEN");
                         console.log("[LiveManager DEBUG] Setting isConnected=true, isConnecting=false");
                         this.isConnecting = false;
                         this.isConnected = true;
-                        console.log("[LiveManager DEBUG] Calling startAudioInputStream(), stream=", !!this.stream, "inputContext=", !!this.inputContext, "sessionPromise=", !!this.sessionPromise);
-                        this.startAudioInputStream();
+                        console.log("[LiveManager DEBUG] Calling startAudioInputStream(), stream=", !!this.stream, "audioContext=", !!this.audioContext, "sessionPromise=", !!this.sessionPromise);
+                        await this.startAudioInputStream();
                     },
                     onmessage: async (message: LiveServerMessage) => {
                         console.log("[LiveManager DEBUG] Message received:", JSON.stringify(message).substring(0, 200));
                         
                         if (message.setupComplete) {
-                            console.log("[LiveManager] Setup complete - sending initial greeting request");
-                            this.sessionPromise?.then(session => {
-                                session.sendRealtimeInput({ text: "Say hello and introduce yourself briefly." });
-                            });
+                            console.log("[LiveManager] Setup complete - ready for audio input");
                             return;
                         }
                         
                         if (message.serverContent?.interrupted) {
                             console.log("[LiveManager] Interrupted by user");
                             this.stopAllAudio();
-                            if (this.outputContext) this.nextStartTime = this.outputContext.currentTime;
+                            if (this.audioContext) this.nextStartTime = this.audioContext.currentTime;
                             return;
                         }
 
                         const base64Audio = message.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
-                        if (base64Audio && this.outputContext && this.outputNode) {
+                        if (base64Audio && this.audioContext && this.outputNode) {
                             console.log("[LiveManager DEBUG] Received audio response, length:", base64Audio.length);
                             try {
                                 const pcmData = base64ToUint8Array(base64Audio);
-                                const audioBuffer = await decodeAudioData(pcmData, this.outputContext, LIVE_SAMPLE_RATE);
+                                const audioBuffer = await decodeAudioData(pcmData, this.audioContext, LIVE_SAMPLE_RATE);
                                 
                                 const channelData = audioBuffer.getChannelData(0);
                                 let sum = 0;
@@ -148,52 +151,60 @@ export class LiveManager {
         }
     }
 
-    private startAudioInputStream() {
-        console.log("[LiveManager DEBUG] startAudioInputStream called, inputContext=", !!this.inputContext, "stream=", !!this.stream, "sessionPromise=", !!this.sessionPromise);
-        if (!this.inputContext || !this.stream || !this.sessionPromise) {
-            console.error("[LiveManager ERROR] Cannot start audio input - missing:", {
-                inputContext: !!this.inputContext,
-                stream: !!this.stream,
-                sessionPromise: !!this.sessionPromise
-            });
-            return;
-        }
+    private async startAudioInputStream() {
+        if (!this.audioContext || !this.stream || !this.sessionPromise) return;
 
         console.log("[LiveManager] Starting Audio Input Stream");
-        this.inputSource = this.inputContext.createMediaStreamSource(this.stream);
-        this.processor = this.inputContext.createScriptProcessor(512, 1, 1);
-
-        let audioChunkCount = 0;
+        
+        this.inputSource = this.audioContext.createMediaStreamSource(this.stream);
+        
+        this.analyser = this.audioContext.createAnalyser();
+        this.analyser.fftSize = 256;
+        this.analyser.smoothingTimeConstant = 0.5;
+        
+        // Use smaller buffer to reduce processing load
+        this.processor = this.audioContext.createScriptProcessor(2048, 1, 1);
+        
+        const contextSampleRate = this.audioContext.sampleRate;
+        const targetSampleRate = 16000;
+        
+        let chunkCount = 0;
+        let skipCounter = 0;
+        
         this.processor.onaudioprocess = (e) => {
             try {
-            if (!this.sessionPromise || !this.inputContext) return;
-            const inputData = e.inputBuffer.getChannelData(0);
-            
-            // Calculate volume to detect speech
-            let sum = 0;
-            for(let i=0; i<inputData.length; i++) sum += Math.abs(inputData[i]);
-            const avgVolume = sum / inputData.length;
-            
-            // Report input volume for visualization
-            if (this.config?.onAudioInput) {
-                this.config.onAudioInput(avgVolume * 50);
-            }
-            
-            audioChunkCount++;
-            if (audioChunkCount % 100 === 0) {
-                console.log("[LiveManager DEBUG] Audio chunk", audioChunkCount, "volume:", avgVolume.toFixed(4), "muted:", this.isMuted);
-            }
-            
-            const pcmData = new Int16Array(inputData.length);
-            for (let i = 0; i < inputData.length; i++) {
-                const s = Math.max(-1, Math.min(1, inputData[i]));
-                pcmData[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-            }
-
-            const uint8 = new Uint8Array(pcmData.buffer);
-            const base64 = arrayBufferToBase64(uint8.buffer);
-
-            if (!this.isMuted) {
+                if (!this.isConnected || this.isMuted) return;
+                
+                // Throttle: Process every other chunk to reduce load
+                skipCounter++;
+                if (skipCounter % 2 !== 0) return;
+                
+                const inputData = e.inputBuffer.getChannelData(0);
+                
+                // Resample from system rate (48kHz) to 16kHz
+                const ratio = contextSampleRate / targetSampleRate;
+                const newLength = Math.floor(inputData.length / ratio);
+                const resampled = new Float32Array(newLength);
+                
+                for (let i = 0; i < newLength; i++) {
+                    resampled[i] = inputData[Math.floor(i * ratio)];
+                }
+                
+                // Convert to PCM16
+                const pcmData = new Int16Array(resampled.length);
+                for (let i = 0; i < resampled.length; i++) {
+                    const s = Math.max(-1, Math.min(1, resampled[i]));
+                    pcmData[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+                }
+                
+                const uint8 = new Uint8Array(pcmData.buffer);
+                const base64 = arrayBufferToBase64(uint8.buffer);
+                
+                chunkCount++;
+                if (chunkCount === 1 || chunkCount % 50 === 0) {
+                    console.log(`[LiveManager DEBUG] Sent ${chunkCount} audio chunks`);
+                }
+                
                 this.sessionPromise?.then(session => {
                     if (session && this.isConnected) {
                         session.sendRealtimeInput({
@@ -204,30 +215,34 @@ export class LiveManager {
                         });
                     }
                 }).catch(err => {
-                    console.error("[LiveManager ERROR] Send audio error:", err);
+                    console.error("[LiveManager ERROR] Failed to send audio:", err);
                 });
-            }
             } catch (err) {
                 console.error("[LiveManager ERROR] Audio processing error:", err);
             }
         };
-
-        this.inputSource.connect(this.processor);
-        // Connect to dummy gain node to enable processing without Electron crash
-        const dummyGain = this.inputContext.createGain();
-        dummyGain.gain.value = 0;
+        
+        // CRITICAL: Connection order matters
+        this.inputSource.connect(this.analyser);
+        this.analyser.connect(this.processor);
+        
+        // CRITICAL FIX: Connect processor to destination (required for Electron)
+        const dummyGain = this.audioContext.createGain();
+        dummyGain.gain.value = 0; // Mute local playback
         this.processor.connect(dummyGain);
-        console.log("[LiveManager DEBUG] Audio input stream connected successfully");
+        dummyGain.connect(this.audioContext.destination);
+        
+        console.log("[LiveManager] Audio input connected at", contextSampleRate, "Hz, resampling to 16kHz");
     }
 
     private queueAudio(buffer: AudioBuffer) {
-        if (!this.outputContext || !this.outputNode) return;
+        if (!this.audioContext || !this.outputNode) return;
 
-        const source = this.outputContext.createBufferSource();
+        const source = this.audioContext.createBufferSource();
         source.buffer = buffer;
         source.connect(this.outputNode);
 
-        const currentTime = this.outputContext.currentTime;
+        const currentTime = this.audioContext.currentTime;
         
         if (this.nextStartTime < currentTime) {
             this.nextStartTime = currentTime + 0.05;
@@ -270,9 +285,29 @@ export class LiveManager {
 
     private cleanup() {
         console.log("[LiveManager DEBUG] cleanup() called, isConnected=", this.isConnected, "isConnecting=", this.isConnecting);
-        if (this.isConnecting) {
-            console.log("[LiveManager DEBUG] Still connecting, skipping cleanup");
-            return;
+        
+        // CRITICAL: Stop processing immediately
+        this.isConnected = false;
+        this.isConnecting = false;
+        
+        // Stop processor first to prevent more audio chunks
+        if (this.processor) {
+            console.log("[LiveManager DEBUG] Stopping processor");
+            this.processor.onaudioprocess = null;
+            try { this.processor.disconnect(); } catch(e) {}
+            this.processor = null;
+        }
+        
+        if (this.analyser) {
+            console.log("[LiveManager DEBUG] Disconnecting analyser");
+            try { this.analyser.disconnect(); } catch(e) {}
+            this.analyser = null;
+        }
+        
+        if (this.inputSource) {
+            console.log("[LiveManager DEBUG] Disconnecting input source");
+            try { this.inputSource.disconnect(); } catch(e) {}
+            this.inputSource = null;
         }
         
         if (this.stream) {
@@ -280,29 +315,21 @@ export class LiveManager {
             this.stream.getTracks().forEach(t => t.stop());
             this.stream = null;
         }
-        if (this.processor) {
-            console.log("[LiveManager DEBUG] Disconnecting processor");
-            try { this.processor.disconnect(); } catch(e) {}
-            this.processor = null;
+        
+        if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+            console.log("[LiveManager DEBUG] Stopping MediaRecorder");
+            try { this.mediaRecorder.stop(); } catch(e) {}
+            this.mediaRecorder = null;
         }
-        if (this.inputSource) {
-            console.log("[LiveManager DEBUG] Disconnecting input source");
-            try { this.inputSource.disconnect(); } catch(e) {}
-            this.inputSource = null;
+        
+        if (this.audioContext && this.audioContext.state !== 'closed') {
+            console.log("[LiveManager DEBUG] Closing audio context");
+            try { this.audioContext.close(); } catch(e) {}
+            this.audioContext = null;
         }
-        if (this.inputContext && this.inputContext.state !== 'closed') {
-            console.log("[LiveManager DEBUG] Closing input context");
-            try { this.inputContext.close(); } catch(e) {}
-            this.inputContext = null;
-        }
-        if (this.outputContext && this.outputContext.state !== 'closed') {
-            console.log("[LiveManager DEBUG] Closing output context");
-            try { this.outputContext.close(); } catch(e) {}
-            this.outputContext = null;
-        }
+        
         this.sessionPromise = null;
         this.nextStartTime = 0;
-        this.isConnected = false;
         console.log("[LiveManager DEBUG] cleanup() complete");
     }
 }

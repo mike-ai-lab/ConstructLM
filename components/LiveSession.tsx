@@ -15,8 +15,6 @@ const LiveSession: React.FC<LiveSessionProps> = ({ onClose }) => {
     const isInitializedRef = useRef(false);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const animationRef = useRef<number | null>(null);
-    const analyserRef = useRef<AnalyserNode | null>(null);
-    const audioContextRef = useRef<AudioContext | null>(null);
     const dataArrayRef = useRef<Uint8Array | null>(null);
 
     useEffect(() => {
@@ -41,23 +39,9 @@ const LiveSession: React.FC<LiveSessionProps> = ({ onClose }) => {
             onError: () => {
                 setStatus('error');
             }
-        }).then(async () => {
+        }).then(() => {
             console.log("[LiveSession DEBUG] Connection successful");
             setStatus('connected');
-            
-            // Setup audio analyser for waveform
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                audioContextRef.current = new AudioContext();
-                const source = audioContextRef.current.createMediaStreamSource(stream);
-                analyserRef.current = audioContextRef.current.createAnalyser();
-                analyserRef.current.fftSize = 256;
-                analyserRef.current.smoothingTimeConstant = 0.75;
-                dataArrayRef.current = new Uint8Array(analyserRef.current.frequencyBinCount) as Uint8Array;
-                source.connect(analyserRef.current);
-            } catch (err) {
-                console.error("Failed to setup audio analyser:", err);
-            }
         }).catch((err) => {
             console.error("[LiveSession DEBUG] Connection failed:", err);
             setStatus('error');
@@ -80,17 +64,23 @@ const LiveSession: React.FC<LiveSessionProps> = ({ onClose }) => {
 
     // Waveform drawing
     useEffect(() => {
-        if (!canvasRef.current || status !== 'connected' || !analyserRef.current || !dataArrayRef.current) return;
+        if (!canvasRef.current || status !== 'connected') return;
         
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
         const draw = () => {
-            if (!analyserRef.current || !dataArrayRef.current) return;
-            
             animationRef.current = requestAnimationFrame(draw);
-            analyserRef.current.getByteFrequencyData(dataArrayRef.current as Uint8Array);
+            
+            const manager = managerRef.current;
+            if (!manager || !manager.analyser) return;
+            
+            if (!dataArrayRef.current || dataArrayRef.current.length !== manager.analyser.frequencyBinCount) {
+                dataArrayRef.current = new Uint8Array(manager.analyser.frequencyBinCount);
+            }
+            
+            manager.analyser.getByteFrequencyData(dataArrayRef.current as any);
             
             const dpr = window.devicePixelRatio || 1;
             const rect = canvas.getBoundingClientRect();
@@ -103,7 +93,7 @@ const LiveSession: React.FC<LiveSessionProps> = ({ onClose }) => {
             
             ctx.clearRect(0, 0, width, height);
             
-            const bufferLength = analyserRef.current.frequencyBinCount;
+            const bufferLength = manager.analyser.frequencyBinCount;
             const numBars = Math.floor(bufferLength * 0.5);
             const totalBarPlusSpacingWidth = width / numBars;
             const barWidth = Math.max(1, Math.floor(totalBarPlusSpacingWidth * 0.7));
@@ -134,7 +124,7 @@ const LiveSession: React.FC<LiveSessionProps> = ({ onClose }) => {
         };
     }, [status]);
 
-    // Cleanup on actual unmount - DON'T reset isInitializedRef
+    // Cleanup on actual unmount
     useEffect(() => {
         return () => {
             console.log("[LiveSession DEBUG] Component unmounting - cleaning up manager");
@@ -142,11 +132,8 @@ const LiveSession: React.FC<LiveSessionProps> = ({ onClose }) => {
                 managerRef.current.disconnect();
                 managerRef.current = null;
             }
-            if (audioContextRef.current) {
-                audioContextRef.current.close();
-                audioContextRef.current = null;
-            }
-            // Don't reset isInitializedRef - it should persist
+            // Reset to allow fresh connection next time
+            isInitializedRef.current = false;
         };
     }, []);
 

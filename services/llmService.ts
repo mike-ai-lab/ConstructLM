@@ -20,30 +20,34 @@ RESPONSE STYLE:
   if (hasFiles) {
     return basePersona + `
 
-FILE ANALYSIS MODE:
-- **Always Cite:** Every factual claim MUST be backed by evidence from the provided files using proper citation format
-- **Citation Format:** Use EXACTLY this format: {{citation:FileName|Location|Quote}}
-  - FileName: The exact file name (e.g., test-boq.csv, Specifications.pdf)
-  - Location: Sheet name and row for Excel, or Page number for PDF (e.g., "Sheet: BOQ_Items, Row 7" or "Page 42")
-  - Quote: The actual text/value from the source - MUST be 3-10 words of actual text from the document (e.g., "Painting with emulsion paint" or "Total built-up: 87,210m²")
-- **CRITICAL:** The Quote field must NEVER be empty. Always include actual text from the source document.
-- **No Hallucination:** If information is not in the files, explicitly state "This information is not available in the provided files."
-- **Cite Everything:** Every specific number, value, item name, or technical specification from the files must have a citation with actual quoted text
+FILE ANALYSIS MODE - MANDATORY CITATION FORMAT:
 
-EXAMPLE CORRECT CITATION:
-{{citation:project-summary.pdf|Page 5|Total built-up area: 87,210m²}}
+USE EXACTLY: {{citation:FileName|Location|Quote}}
+- FileName: Exact file name
+- Location: Page X for PDF OR Sheet: Name, Row X for Excel
+- Quote: 3-10 words COPIED from document
 
-EXAMPLE WRONG CITATION (DO NOT DO THIS):
-{{citation:project-summary.pdf|Page 5|}}
+MANDATORY RULES:
+1. Cite IMMEDIATELY after EACH fact - not at sentence end
+2. EVERY number/dimension/name = separate citation
+3. Quote must be ACTUAL TEXT from file
+4. Multiple facts = multiple citations in same sentence
+
+CORRECT:
+"Width is 2400mm {{citation:schedule.pdf|Page 2|2400}} and height is 3400mm {{citation:schedule.pdf|Page 2|3400}}. Configuration is Double Leaf {{citation:schedule.pdf|Page 2|Double Leaf}} and rating is Non Fire Rated {{citation:schedule.pdf|Page 2|Non Fire Rated}}."
+
+WRONG:
+"Width is 2400mm and height is 3400mm."
+"Dimensions are 2400x3400 {{citation:schedule.pdf|Page 2|dimensions}}."
+"Size is 2400mm {{citation:schedule.pdf|Page 2|}}."
 `;
   } else {
     return basePersona + `
 
 GENERAL CONVERSATION MODE:
-- Answer questions using your knowledge base
-- Provide helpful information and explanations
-- Be conversational and engaging
-- If asked about specific documents, suggest uploading them for detailed analysis
+- Answer using your knowledge
+- Be helpful and conversational
+- Suggest uploading documents for analysis
 `;
   }
 };
@@ -104,7 +108,8 @@ export const sendMessageToLLM = async (
             if (!apiKey) {
                 throw new Error(`API Key for ${model.name} is missing. Please open Settings (Gear Icon) to add it.`);
             }
-            await sendMessageToGemini(newMessage, activeFiles, activeFiles, onStream);
+            const conversationHistory = history.filter(m => !m.isStreaming && m.id !== 'intro');
+            await sendMessageToGemini(modelId, apiKey, newMessage, activeFiles, activeFiles, onStream, systemPrompt, conversationHistory);
             return {};
         } else if (model.provider === 'openai' || model.provider === 'groq') {
             // OpenAI or Groq
@@ -113,16 +118,24 @@ export const sendMessageToLLM = async (
                 throw new Error(`API Key for ${model.name} is missing. Please open Settings (Gear Icon) to add it.`);
             }
             
-            const messages = [
-                { role: 'system', content: systemPrompt },
-                ...history.filter(m => !m.isStreaming && m.id !== 'intro' && m.role !== 'model').slice(-6).map(m => ({ role: m.role, content: m.content })),
-                { role: 'user', content: newMessage }
-            ];
+            const fileContext = activeFiles.length > 0
+                ? '\n\nFILE CONTEXT:\n' + activeFiles.map(f => `=== FILE: "${f.name}" ===\n${f.content}\n=== END FILE ===`).join('\n\n')
+                : '';
             
-            if (activeFiles.length > 0) {
-                const fileContext = activeFiles.map(f => `=== FILE: "${f.name}" ===\n${f.content}\n=== END FILE ===`).join('\n\n');
-                messages[messages.length - 1].content += `\n\nFILE CONTEXT:\n${fileContext}`;
+            const messages = [{ role: 'system', content: systemPrompt }];
+            
+            const recentHistory = history.filter(m => !m.isStreaming && m.id !== 'intro').slice(-10);
+            for (let i = 0; i < recentHistory.length; i++) {
+                const msg = recentHistory[i];
+                const isFirstUserMsg = i === 0 && msg.role === 'user';
+                const role = msg.role === 'model' ? 'assistant' : msg.role;
+                const content = isFirstUserMsg && fileContext ? msg.content + fileContext : msg.content;
+                messages.push({ role, content });
             }
+            
+            const isFirstMessage = recentHistory.length === 0;
+            const currentContent = (isFirstMessage && fileContext) ? newMessage + fileContext : newMessage;
+            messages.push({ role: 'user', content: currentContent });
             
             return await streamOpenAICompatible(model, apiKey, messages, onStream);
         } else {

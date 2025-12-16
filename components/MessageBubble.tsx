@@ -68,15 +68,15 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, files, onViewDoc
 
         {/* Content */}
         <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
-          <div className="flex items-center gap-2 mb-1.5 opacity-0 group-hover:opacity-100 transition-opacity px-1">
-             <span className="text-[12px] font-bold text-[#1a1a1a] dark:text-white uppercase tracking-widest">
+          <div className="flex items-center gap-2 mb-1.5 px-1">
+             <span className="text-[12px] font-bold text-[#666666] dark:text-[#a0a0a0] uppercase tracking-widest">
                  {isUser ? 'You' : (message.modelId || 'AI')}
              </span>
              {!isUser && !message.isStreaming && (
                  <button 
                     onClick={handlePlayAudio}
                     disabled={isLoadingAudio}
-                    className="p-1 hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] rounded text-[#a0a0a0] hover:text-[#4485d1] transition-colors"
+                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] rounded text-[#a0a0a0] hover:text-[#4485d1] transition-all"
                     title="Read Aloud"
                  >
                     {isLoadingAudio ? <Loader2 size={12} className="animate-spin" /> : (isPlaying ? <StopCircle size={12} /> : <Volume2 size={12} />)}

@@ -22,6 +22,7 @@ import { useUIHelpersInit, useToast } from './hooks/useUIHelpers';
 import { contextMenuManager, createInputContextMenu } from './utils/uiHelpers';
 
 
+
 interface ViewState {
   fileId: string;
   page?: number;
@@ -72,6 +73,7 @@ const App: React.FC = () => {
   const [mentionIndex, setMentionIndex] = useState(0);
   const [isInputDragOver, setIsInputDragOver] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const [inputHeight, setInputHeight] = useState(56);
 
   // Live Mode State
   const [isLiveMode, setIsLiveMode] = useState(false);
@@ -87,6 +89,8 @@ const App: React.FC = () => {
   // Drawing State
   const [drawingState, setDrawingState] = useState<DrawingState>(drawingService.getState());
   const [showColorPicker, setShowColorPicker] = useState(false);
+
+
 
   // Mind Map State
   const [mindMapData, setMindMapData] = useState<any>(null);
@@ -262,13 +266,17 @@ const App: React.FC = () => {
 
   const scrollToBottom = () => {
     if (!userHasScrolled) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
     }
   };
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    // Only auto-scroll for new messages, not streaming updates
+    const lastMsg = messages[messages.length - 1];
+    if (!lastMsg?.isStreaming) {
+      scrollToBottom();
+    }
+  }, [messages.length, userHasScrolled]);
 
   useEffect(() => {
     const container = messagesContainerRef.current;
@@ -561,6 +569,8 @@ const App: React.FC = () => {
 
     try {
       let accumText = "";
+      let updateTimer: NodeJS.Timeout | null = null;
+      
       const usage = await sendMessageToLLM(
           activeModelId,
           messages,
@@ -568,13 +578,26 @@ const App: React.FC = () => {
           activeContextFiles, 
           (chunk) => {
               accumText += chunk;
-              setMessages(prev => prev.map(msg => 
-                  msg.id === modelMsgId 
-                  ? { ...msg, content: accumText } 
-                  : msg
-              ));
+              
+              // Debounce updates to reduce jumpiness
+              if (updateTimer) clearTimeout(updateTimer);
+              updateTimer = setTimeout(() => {
+                setMessages(prev => prev.map(msg => 
+                    msg.id === modelMsgId 
+                    ? { ...msg, content: accumText } 
+                    : msg
+                ));
+              }, 50);
           }
       );
+      
+      // Final update
+      if (updateTimer) clearTimeout(updateTimer);
+      setMessages(prev => prev.map(msg => 
+          msg.id === modelMsgId 
+          ? { ...msg, content: accumText } 
+          : msg
+      ));
       
       // Update message with usage stats
       if (usage && (usage.inputTokens || usage.outputTokens)) {
@@ -735,14 +758,15 @@ const App: React.FC = () => {
   const handleCloseLiveSession = useCallback(() => {
     setIsLiveMode(false);
   }, []);
+
+  // Detect if running in Electron
+  const isElectron = typeof window !== 'undefined' && !!(window as any).electron;
   
   return (
     <div className="flex h-screen w-full bg-white dark:bg-[#1a1a1a] overflow-hidden text-sm relative">
+      {/* LIVE MODE - BROWSER ONLY */}
       {isLiveMode && (
-        <>
-          <div style={{position: 'fixed', top: 0, left: 0, zIndex: 99999, background: 'red', color: 'white', padding: '10px'}}>LIVE MODE ACTIVE</div>
-          <LiveSession onClose={handleCloseLiveSession} />
-        </>
+        <LiveSession onClose={handleCloseLiveSession} />
       )}
       {isCallingEffect && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] flex items-center justify-center">
@@ -893,19 +917,24 @@ const App: React.FC = () => {
                                      className={`w-full text-left px-3 py-2.5 rounded-lg transition-colors ${activeModelId === model.id ? 'bg-[rgba(68,133,209,0.1)]' : 'hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a]'}`}
                                  >
                                      <div className="flex items-center justify-between gap-2">
-                                        <div className="flex items-center gap-2">
-                                          <div className={`w-2 h-2 rounded-full ${model.provider === 'google' ? 'bg-blue-500' : 'bg-orange-500'}`} />
-                                          <span className="text-sm font-medium text-[#1a1a1a] dark:text-white">{model.name}</span>
+                                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                                          <div className={`w-2 h-2 rounded-full flex-shrink-0 ${model.provider === 'google' ? 'bg-blue-500' : 'bg-orange-500'}`} />
+                                          <span className="text-sm font-medium text-[#1a1a1a] dark:text-white truncate">{model.name}</span>
+                                          {model.supportsThinking && (
+                                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 font-semibold flex-shrink-0">Thinks</span>
+                                          )}
                                         </div>
-                                        {isRateLimited ? (
-                                          <span className="text-[12px] px-1.5 py-0.5 rounded bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 font-mono">▽{timeDisplay}</span>
-                                        ) : (
-                                          <span className={`text-[12px] px-1.5 py-0.5 rounded ${
-                                            model.capacityTag === 'High' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' :
-                                            model.capacityTag === 'Medium' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400' :
-                                            'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
-                                          }`}>{model.capacityTag}</span>
-                                        )}
+                                        <div className="flex-shrink-0">
+                                          {isRateLimited ? (
+                                            <span className="text-[12px] px-1.5 py-0.5 rounded bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 font-mono">▽{timeDisplay}</span>
+                                          ) : (
+                                            <span className={`text-[12px] px-1.5 py-0.5 rounded ${
+                                              model.capacityTag === 'High' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' :
+                                              model.capacityTag === 'Medium' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400' :
+                                              'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+                                            }`}>{model.capacityTag}</span>
+                                          )}
+                                        </div>
                                      </div>
                                      <div className="text-[12px] text-[#666666] dark:text-[#a0a0a0] pl-4 mt-0.5">{model.description}</div>
                                      {model.maxInputWords && model.maxOutputWords && (
@@ -923,8 +952,9 @@ const App: React.FC = () => {
              </div>
           </div>
           <div className="flex items-center gap-3">
-            {/* Live Call Button */}
-            <button
+            {/* Live Call Button - BROWSER ONLY */}
+            {!isElectron && (
+              <button
               onClick={() => {
                 if (!isCallingEffect && !isLiveMode) {
                   setIsCallingEffect(true);
@@ -944,6 +974,7 @@ const App: React.FC = () => {
             >
               <Phone size={18} className={isCallingEffect ? 'animate-bounce' : ''} />
             </button>
+            )}
             {/* New Chat Button */}
             <button
               onClick={handleCreateChat}
@@ -1108,7 +1139,7 @@ const App: React.FC = () => {
 
         {/* Messages */}
         <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 scroll-smooth bg-white dark:bg-[#1a1a1a]">
-            <div className="max-w-3xl mx-auto w-full pb-[100px]">
+            <div className="max-w-3xl mx-auto w-full" style={{ paddingBottom: `${inputHeight + 100}px` }}>
                 {messages.map((msg) => (
                     <MessageBubble 
                         key={msg.id} 
@@ -1222,6 +1253,8 @@ const App: React.FC = () => {
                     <FileText size={20} />
                 </label>
 
+
+
                 <textarea
                     ref={inputRef}
                     onContextMenu={(e) => {
@@ -1295,7 +1328,9 @@ const App: React.FC = () => {
                     onInput={(e) => {
                       const target = e.target as HTMLTextAreaElement;
                       target.style.height = 'auto';
-                      target.style.height = Math.min(target.scrollHeight, 230) + 'px';
+                      const newHeight = Math.min(target.scrollHeight, 230);
+                      target.style.height = newHeight + 'px';
+                      setInputHeight(newHeight + 32);
                     }}
                 />
                 
@@ -1322,8 +1357,8 @@ const App: React.FC = () => {
           className="fixed bottom-2 text-center pointer-events-none z-[9997]"
           style={{
             left: isMobile ? '16px' : (isSidebarOpen ? `${sidebarWidth + 16}px` : '16px'),
-            right: '16px',
-            transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+            right: activeFile ? (isMobile ? '16px' : `${viewerWidth + 16}px`) : '16px',
+            transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1), right 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
           }}
         >
           <span className="text-[#666666] dark:text-[#a0a0a0] text-xs">AI can make mistakes. Please verify citations.</span>

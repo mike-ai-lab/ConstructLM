@@ -20,12 +20,23 @@ function createWindow() {
     show: false
   });
 
+  // Handle all media permissions for audio input/output
   mainWindow.webContents.session.setPermissionRequestHandler((webContents, permission, callback) => {
-    if (permission === 'media') {
+    const allowedPermissions = ['media', 'microphone', 'audioCapture', 'mediaKeySystem'];
+    if (allowedPermissions.includes(permission)) {
       callback(true);
     } else {
       callback(false);
     }
+  });
+
+  // Handle permission checks
+  mainWindow.webContents.session.setPermissionCheckHandler((webContents, permission, requestingOrigin, details) => {
+    const allowedPermissions = ['media', 'microphone', 'audioCapture', 'mediaKeySystem'];
+    if (allowedPermissions.includes(permission)) {
+      return true;
+    }
+    return false;
   });
 
   mainWindow.once('ready-to-show', () => {
@@ -45,7 +56,14 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  // CRITICAL: Enable audio features
   app.commandLine.appendSwitch('enable-features', 'WebRTCPipeWireCapturer');
+  app.commandLine.appendSwitch('enable-usermedia-screen-capturing');
+  app.commandLine.appendSwitch('auto-select-desktop-capture-source', 'Entire screen');
+  
+  // Disable sandbox for audio to work properly in dev mode
+  app.commandLine.appendSwitch('no-sandbox');
+  
   createWindow();
 });
 

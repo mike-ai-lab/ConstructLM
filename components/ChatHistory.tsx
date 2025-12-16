@@ -49,7 +49,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="px-4 h-[50px] flex items-center justify-between flex-shrink-0 border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)]">
+      <div className="px-4 h-[50px] flex items-center justify-between flex-shrink-0">
         <span className="text-[12px] font-medium text-[#666666] dark:text-[#a0a0a0]">{chats.length} chats</span>
         <button
           onClick={onCreateChat}
