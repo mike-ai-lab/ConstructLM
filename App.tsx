@@ -6,10 +6,10 @@ import MessageBubble from './components/MessageBubble';
 import DocumentViewer from './components/DocumentViewer';
 import LiveSession from './components/LiveSession';
 import { sendMessageToLLM } from './services/llmService';
-import { initializeGemini } from './services/geminiService';
+import { initializeGemini, getApiKey } from './services/geminiService';
 import { MODEL_REGISTRY, DEFAULT_MODEL_ID, getRateLimitCooldown, clearRateLimitCooldown } from './services/modelRegistry';
 import SettingsModal from './components/SettingsModal';
-import { Send, Menu, Sparkles, X, FileText, Database, PanelLeft, PanelLeftOpen, Mic, Settings, Cpu, ChevronDown, Camera, Highlighter, Edit3, Trash2, Palette, Minus, Plus, Check, Network, Image, Moon, Sun, Phone } from 'lucide-react';
+import { Send, Menu, Sparkles, X, FileText, Database, PanelLeft, PanelLeftOpen, Mic, Settings, Cpu, ChevronDown, Camera, Highlighter, Edit3, Trash2, Palette, Minus, Plus, Check, Network, Image, Moon, Sun, Phone, HelpCircle } from 'lucide-react';
 import { snapshotService, Snapshot } from './services/snapshotService';
 
 import { drawingService, DrawingTool, DRAWING_COLORS, DrawingState } from './services/drawingService';
@@ -19,7 +19,9 @@ import { generateMindMapData } from './services/mindMapService';
 import { mindMapCache } from './services/mindMapCache';
 import GraphicsLibrary from './components/GraphicsLibrary';
 import { useUIHelpersInit, useToast } from './hooks/useUIHelpers';
-import { contextMenuManager, createInputContextMenu } from './utils/uiHelpers';
+import { contextMenuManager, createInputContextMenu, showToast } from './utils/uiHelpers';
+import HelpDocumentation from './components/HelpDocumentation';
+import { dataExportService } from './services/dataExportService';
 
 
 
@@ -39,7 +41,6 @@ const MIN_CHAT_WIDTH = 600;
 const App: React.FC = () => {
   // Initialize UI helpers
   useUIHelpersInit();
-  const { showToast } = useToast();
   
 
   
@@ -79,8 +80,11 @@ const App: React.FC = () => {
   const [isLiveMode, setIsLiveMode] = useState(false);
   const [isCallingEffect, setIsCallingEffect] = useState(false);
   const [activeModelId, setActiveModelId] = useState<string>(DEFAULT_MODEL_ID);
+  const [isRecording, setIsRecording] = useState(false);
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
   const [showModelMenu, setShowModelMenu] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
   const [showGraphicsLibrary, setShowGraphicsLibrary] = useState(false);
   const modelMenuRef = useRef<HTMLDivElement>(null);
@@ -338,17 +342,18 @@ const App: React.FC = () => {
     }
   };
 
-  const saveCurrentChat = () => {
+  const saveCurrentChat = (updateTimestamp: boolean = false) => {
     if (!currentChatId) return;
     
+    const existingChat = chats.find(c => c.id === currentChatId);
     const chat: ChatSession = {
       id: currentChatId,
       name: generateChatName(messages),
       modelId: activeModelId,
       messages,
       fileIds: [],
-      createdAt: chats.find(c => c.id === currentChatId)?.createdAt || Date.now(),
-      updatedAt: Date.now()
+      createdAt: existingChat?.createdAt || Date.now(),
+      updatedAt: updateTimestamp ? Date.now() : (existingChat?.updatedAt || Date.now())
     };
     
     chatRegistry.saveChat(chat);
@@ -403,6 +408,7 @@ const App: React.FC = () => {
     if (chatId === currentChatId) return;
     saveCurrentChat(); // Save current chat first
     loadChat(chatId);
+    // Don't update chat order just by selecting - only when sending messages
   };
 
   const handleDeleteChat = (chatId: string) => {
@@ -441,10 +447,10 @@ const App: React.FC = () => {
     if (viewState?.fileId === id) setViewState(null);
   };
 
-  // Auto-save chat when messages or files change
+  // Auto-save chat when messages or files change (without updating timestamp)
   useEffect(() => {
     if (currentChatId && messages.length > 1) { // Don't save just the intro message
-      const timeoutId = setTimeout(saveCurrentChat, 1000);
+      const timeoutId = setTimeout(() => saveCurrentChat(false), 1000);
       return () => clearTimeout(timeoutId);
     }
   }, [messages, files, activeModelId]);
@@ -622,6 +628,8 @@ const App: React.FC = () => {
             ? { ...msg, isStreaming: false } 
             : msg
         ));
+        // Update timestamp only when sending messages
+        saveCurrentChat(true);
     }
   };
 
@@ -643,29 +651,26 @@ const App: React.FC = () => {
 
   const handleTakeSnapshot = async () => {
     try {
-      const messagesContainer = document.querySelector('.flex-1.overflow-y-auto');
-      if (!messagesContainer) throw new Error('Messages container not found');
+      // Target the specific messages container in the chat area
+      const messagesContainer = document.querySelector('.max-w-3xl.mx-auto.w-full');
+      if (!messagesContainer) {
+        showToast('Messages container not found', 'error');
+        return;
+      }
       
       const context = {
         fileCount: files.length,
         messageCount: messages.length
       };
+      
+      showToast('Taking snapshot...', 'info');
       const snapshot = await snapshotService.takeSnapshot(messagesContainer as HTMLElement, context);
       setSnapshots(snapshotService.getSnapshots());
-      // Show brief success message
-      const toast = document.createElement('div');
-      toast.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-[9999] snapshot-ignore';
-      toast.textContent = 'Snapshot saved!';
-      document.body.appendChild(toast);
-      setTimeout(() => document.body.removeChild(toast), 2000);
-    } catch (error) {
+      showToast('Snapshot saved!', 'success');
+    } catch (error: any) {
       console.error('Failed to take snapshot:', error);
-      // Show error message
-      const toast = document.createElement('div');
-      toast.className = 'fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-[9999] snapshot-ignore';
-      toast.textContent = 'Failed to take snapshot';
-      document.body.appendChild(toast);
-      setTimeout(() => document.body.removeChild(toast), 2000);
+      const errorMessage = error?.message || 'Failed to take snapshot';
+      showToast(errorMessage, 'error');
     }
   };
 
@@ -676,13 +681,10 @@ const App: React.FC = () => {
   const handleCopySnapshot = async (snapshot: Snapshot) => {
     try {
       await snapshotService.copyToClipboard(snapshot);
-      const toast = document.createElement('div');
-      toast.className = 'fixed top-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg z-[9999]';
-      toast.textContent = 'Copied to clipboard!';
-      document.body.appendChild(toast);
-      setTimeout(() => document.body.removeChild(toast), 2000);
-    } catch (error) {
+      showToast('Copied to clipboard!', 'success');
+    } catch (error: any) {
       console.error('Failed to copy snapshot:', error);
+      showToast('Failed to copy snapshot', 'error');
     }
   };
 
@@ -735,11 +737,8 @@ const App: React.FC = () => {
       setMindMapFileName(file.name);
     } catch (error: any) {
       console.error('Mind map generation error:', error);
-      const toast = document.createElement('div');
-      toast.className = 'fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-[9999]';
-      toast.textContent = (error as Error).message || 'Failed to generate mind map';
-      document.body.appendChild(toast);
-      setTimeout(() => document.body.removeChild(toast), 3000);
+      const errorMessage = (error as Error).message || 'Failed to generate mind map';
+      showToast(errorMessage, 'error');
     } finally {
       setIsGeneratingMindMap(false);
     }
@@ -758,6 +757,78 @@ const App: React.FC = () => {
   const handleCloseLiveSession = useCallback(() => {
     setIsLiveMode(false);
   }, []);
+
+  const handleToggleRecording = async () => {
+    if (isRecording) {
+      if (mediaRecorder) {
+        mediaRecorder.stop();
+        setIsRecording(false);
+      }
+    } else {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const recorder = new MediaRecorder(stream);
+        const chunks: Blob[] = [];
+        
+        recorder.ondataavailable = (e) => {
+          if (e.data.size > 0) chunks.push(e.data);
+        };
+        
+        recorder.onstop = async () => {
+          const audioBlob = new Blob(chunks, { type: 'audio/webm' });
+          stream.getTracks().forEach(track => track.stop());
+          await transcribeAudio(audioBlob);
+        };
+        
+        recorder.start();
+        setMediaRecorder(recorder);
+        setIsRecording(true);
+      } catch (error) {
+        console.error('Failed to start recording:', error);
+        showToast('Failed to access microphone', 'error');
+      }
+    }
+  };
+
+  const transcribeAudio = async (audioBlob: Blob) => {
+    try {
+      showToast('Transcribing audio...', 'info');
+      const arrayBuffer = await audioBlob.arrayBuffer();
+      const base64Audio = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+      
+      const apiKey = getApiKey();
+      if (!apiKey) {
+        showToast('Please set your API key in .env.local', 'error');
+        return;
+      }
+      
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
+              parts: [
+                { text: 'Transcribe this audio accurately.' },
+                { inlineData: { mimeType: 'audio/webm', data: base64Audio } }
+              ]
+            }]
+          })
+        }
+      );
+      
+      const result = await response.json();
+      const transcription = result.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      setInput(prev => prev + (prev ? ' ' : '') + transcription);
+      showToast('Transcription complete', 'success');
+    } catch (error) {
+      console.error('Transcription error:', error);
+      showToast('Failed to transcribe audio', 'error');
+    }
+  };
+
+
 
   // Detect if running in Electron
   const isElectron = typeof window !== 'undefined' && !!(window as any).electron;
@@ -785,6 +856,7 @@ const App: React.FC = () => {
         </div>
       )}
       {isSettingsOpen && <SettingsModal onClose={() => setIsSettingsOpen(false)} />}
+      {isHelpOpen && <HelpDocumentation onClose={() => setIsHelpOpen(false)} />}
       {isGeneratingMindMap && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center">
           <div className="bg-white rounded-2xl shadow-2xl p-8 flex flex-col items-center gap-4">
@@ -897,7 +969,7 @@ const App: React.FC = () => {
                  </button>
                  
                  {showModelMenu && (
-                     <div className="absolute top-full left-0 mt-2 w-72 bg-white dark:bg-[#222222] rounded-xl shadow-xl border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] overflow-hidden z-[100]">
+                     <div className="absolute top-full left-0 mt-2 w-72 bg-white dark:bg-[#222222] rounded-xl shadow-xl border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] overflow-hidden z-[1000]">
                          <div className="px-3 py-2 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] text-[12px] font-bold text-[#666666] dark:text-[#a0a0a0] uppercase">Select Model</div>
                          <div className="max-h-[400px] overflow-y-auto p-1">
                              {MODEL_REGISTRY.map(model => {
@@ -1130,8 +1202,16 @@ const App: React.FC = () => {
                 <Sun size={18} className="!hidden dark:!block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" style={{ color: '#ffffff' }} />
             </button>
             <button 
+              onClick={() => setIsHelpOpen(true)}
+              className="p-2 text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] hover:text-[#1a1a1a] dark:hover:text-white rounded-full transition-colors"
+              title="Help & Documentation"
+            >
+                <HelpCircle size={18} />
+            </button>
+            <button 
               onClick={() => setIsSettingsOpen(true)}
               className="p-2 text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] hover:text-[#1a1a1a] dark:hover:text-white rounded-full transition-colors"
+              title="Settings"
             >
                 <Settings size={18} />
             </button>
@@ -1156,7 +1236,7 @@ const App: React.FC = () => {
 
         
         {/* Floating Input Area */}
-        {!mindMapData && !isSettingsOpen && !isCallingEffect && (
+        {!mindMapData && !isSettingsOpen && !isCallingEffect && !isHelpOpen && (
         <>
         {/* Solid background layer */}
         <div 
@@ -1254,6 +1334,17 @@ const App: React.FC = () => {
                 >
                     <FileText size={20} />
                 </label>
+                <button
+                    onClick={handleToggleRecording}
+                    className={`absolute left-12 p-2 rounded-full transition-colors ${
+                      isRecording 
+                        ? 'text-red-500 bg-red-100 dark:bg-red-900/30 animate-pulse' 
+                        : 'text-[#a0a0a0] hover:text-[#4485d1] hover:bg-[rgba(68,133,209,0.1)]'
+                    }`}
+                    title={isRecording ? 'Stop recording' : 'Voice input'}
+                >
+                    <Mic size={20} />
+                </button>
 
 
 
@@ -1326,7 +1417,7 @@ const App: React.FC = () => {
                     disabled={isGenerating}
                     autoComplete="off"
                     rows={1}
-                    style={{ height: 'auto', paddingLeft: '56px', paddingRight: '56px' }}
+                    style={{ height: 'auto', paddingLeft: '106px', paddingRight: '56px' }}
                     onInput={(e) => {
                       const target = e.target as HTMLTextAreaElement;
                       target.style.height = 'auto';
@@ -1354,7 +1445,7 @@ const App: React.FC = () => {
         )}
 
         {/* Footer Text - Independent Element */}
-        {!mindMapData && !isSettingsOpen && !isCallingEffect && (
+        {!mindMapData && !isSettingsOpen && !isCallingEffect && !isHelpOpen && (
         <div 
           className="fixed bottom-2 text-center pointer-events-none z-[9997]"
           style={{

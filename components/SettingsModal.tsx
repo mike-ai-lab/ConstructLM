@@ -1,8 +1,9 @@
 
-import React, { useState, useEffect } from 'react';
-import { X, Save, Key, ShieldCheck, CheckCircle, Loader2, Play, AlertCircle, Cpu, ExternalLink } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, Save, Key, ShieldCheck, CheckCircle, Loader2, Play, AlertCircle, Cpu, ExternalLink, Download, Upload, Database, Trash2 } from 'lucide-react';
 import { saveApiKey, getStoredApiKey } from '../services/modelRegistry';
 import { checkOllamaConnection, getAvailableOllamaModels, getLocalModelSetupInstructions } from '../services/localModelService';
+import { dataExportService } from '../services/dataExportService';
 
 interface SettingsModalProps {
     onClose: () => void;
@@ -11,6 +12,8 @@ interface SettingsModalProps {
 type Provider = 'google' | 'openai' | 'groq';
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
+    const modalRef = useRef<HTMLDivElement>(null);
+    
     // API Keys State
     const [keys, setKeys] = useState({
         google: '',
@@ -40,6 +43,25 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
             groq: getStoredApiKey('GROQ_API_KEY')
         });
     }, []);
+
+    // Handle click outside to close
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
+                onClose();
+            }
+        };
+        
+        // Delay attachment to avoid closing on the same click that opened it
+        const timeoutId = setTimeout(() => {
+            document.addEventListener('mousedown', handleClickOutside);
+        }, 100);
+        
+        return () => {
+            clearTimeout(timeoutId);
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [onClose]);
 
     const validateKey = async (provider: Provider, key: string) => {
         if (!key.trim()) {
@@ -155,6 +177,63 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
         }, 800);
     };
 
+    const handleExportData = async () => {
+        await dataExportService.exportData();
+    };
+
+    const handleImportData = () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.zip';
+        input.onchange = async (e) => {
+            const file = (e.target as HTMLInputElement).files?.[0];
+            if (file) {
+                await dataExportService.importData(file);
+            }
+        };
+        input.click();
+    };
+
+    const handleClearAppData = () => {
+        const confirmed = confirm(
+            'Clear All App Data?\n\n' +
+            'This will permanently delete:\n' +
+            '• All chat conversations\n' +
+            '• All mind maps\n' +
+            '• All snapshots\n' +
+            '• API keys and settings\n\n' +
+            'This action cannot be undone. Continue?'
+        );
+        
+        if (confirmed) {
+            const doubleConfirm = confirm(
+                'Are you absolutely sure?\n\n' +
+                'This will reset ConstructLM to a brand new state.\n' +
+                'All your data will be lost forever.'
+            );
+            
+            if (doubleConfirm) {
+                // Clear all localStorage data
+                localStorage.clear();
+                
+                // Clear IndexedDB data
+                if ('indexedDB' in window) {
+                    indexedDB.deleteDatabase('constructlm_mindmap_cache');
+                    indexedDB.deleteDatabase('constructlm_snapshots');
+                }
+                
+                // Show success message
+                const toast = document.createElement('div');
+                toast.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-[9999]';
+                toast.textContent = 'App data cleared! Refreshing...';
+                document.body.appendChild(toast);
+                
+                // Refresh page after short delay
+                setTimeout(() => window.location.reload(), 1500);
+            }
+        }
+    };
+
     const renderApiInput = (label: string, provider: Provider, placeholder: string, desc: string) => (
         <div className="space-y-1">
             <div className="flex justify-between items-center">
@@ -192,7 +271,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-white dark:bg-[#222222] w-full max-w-md rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[75vh]">
+            <div ref={modalRef} className="bg-white dark:bg-[#222222] w-full max-w-md rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[75vh]">
                 {/* Header */}
                 <div className="px-4 py-2.5 border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] flex items-center justify-between bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a]">
                     <div className="flex items-center gap-2">
@@ -218,6 +297,46 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                         {renderApiInput('Google Gemini', 'google', 'AIzaSy...', 'Required for Gemini models & TTS.')}
                         {renderApiInput('Groq', 'groq', 'gsk_...', 'Required for Llama 3 models.')}
                         {renderApiInput('OpenAI', 'openai', 'sk-...', 'Required for GPT-4o models.')}
+                    </div>
+
+                    {/* Data Management Section */}
+                    <div className="border-t border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] pt-4">
+                        <div className="flex items-center gap-1.5 mb-2">
+                            <Database size={12} className="text-[#666666] dark:text-[#a0a0a0]" />
+                            <h3 className="text-xs font-bold text-[#666666] dark:text-[#a0a0a0] uppercase tracking-wider">Data Management</h3>
+                        </div>
+                        <div className="bg-[rgba(0,0,0,0.03)] dark:bg-[#1a1a1a] border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] rounded-lg p-2 flex gap-2 mb-3">
+                            <div className="flex-1">
+                                <p className="text-xs text-[#1a1a1a] dark:text-white leading-relaxed">
+                                    <strong>Backup & Restore:</strong> Export all your chats, mind maps, settings, and snapshots to a ZIP file for safe keeping.
+                                </p>
+                            </div>
+                        </div>
+                        <div className="space-y-1.5">
+                            <div className="flex gap-1.5">
+                                <button
+                                    onClick={handleExportData}
+                                    className="flex-1 px-2.5 py-1.5 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] hover:bg-[rgba(0,0,0,0.06)] dark:hover:bg-[#222222] text-[#666666] dark:text-[#a0a0a0] rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5"
+                                >
+                                    <Download size={10} />
+                                    Export Data
+                                </button>
+                                <button
+                                    onClick={handleImportData}
+                                    className="flex-1 px-2.5 py-1.5 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] hover:bg-[rgba(0,0,0,0.06)] dark:hover:bg-[#222222] text-[#666666] dark:text-[#a0a0a0] rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5"
+                                >
+                                    <Upload size={10} />
+                                    Import Data
+                                </button>
+                            </div>
+                            <button
+                                onClick={handleClearAppData}
+                                className="w-full px-2.5 py-1.5 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5"
+                            >
+                                <Trash2 size={10} />
+                                Clear All App Data
+                            </button>
+                        </div>
                     </div>
 
                     {/* Local Models Section */}

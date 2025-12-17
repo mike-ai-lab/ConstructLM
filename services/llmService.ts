@@ -223,9 +223,56 @@ const streamOpenAICompatible = async (
     onStream: (chunk: string) => void
 ): Promise<{ inputTokens?: number; outputTokens?: number; totalTokens?: number }> => {
 
+    const requestBody = {
+        model: model.id,
+        messages: messages,
+        stream: true,
+        temperature: 0.2
+    };
+
+    // Use Electron proxy if available
+    if ((window as any).electron) {
+        try {
+            let result;
+            if (model.provider === 'groq') {
+                result = await (window as any).electron.proxyGroq(apiKey, requestBody);
+            } else if (model.provider === 'openai') {
+                result = await (window as any).electron.proxyOpenai(apiKey, requestBody);
+            }
+            
+            if (result && !result.ok) {
+                throw new Error(`API Error ${result.status}: ${result.error || 'Unknown error'}`);
+            }
+            
+            // Handle streaming response from Electron proxy
+            if (result && result.data) {
+                // For non-streaming response, simulate streaming
+                const content = result.data.choices?.[0]?.message?.content || '';
+                if (content) {
+                    // Simulate streaming by chunking the response
+                    const words = content.split(' ');
+                    for (let i = 0; i < words.length; i++) {
+                        const chunk = (i === 0 ? '' : ' ') + words[i];
+                        onStream(chunk);
+                        await new Promise(resolve => setTimeout(resolve, 20)); // Small delay for streaming effect
+                    }
+                }
+                
+                return {
+                    inputTokens: result.data.usage?.prompt_tokens || 0,
+                    outputTokens: result.data.usage?.completion_tokens || 0,
+                    totalTokens: result.data.usage?.total_tokens || 0
+                };
+            }
+        } catch (error: any) {
+            console.error(`[${model.provider}] Electron proxy error:`, error);
+            throw error;
+        }
+    }
+
+    // Fallback to direct API calls with CORS proxy for browser
     let baseUrl = 'https://api.openai.com/v1/chat/completions';
     if (model.provider === 'groq') {
-        // Use CORS proxy for development
         baseUrl = 'https://corsproxy.io/?' + encodeURIComponent('https://api.groq.com/openai/v1/chat/completions');
     }
 
@@ -236,12 +283,7 @@ const streamOpenAICompatible = async (
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${apiKey}`
             },
-            body: JSON.stringify({
-                model: model.id,
-                messages: messages,
-                stream: true,
-                temperature: 0.2
-            })
+            body: JSON.stringify(requestBody)
         });
 
         if (!response.ok) {

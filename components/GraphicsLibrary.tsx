@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, Image, Trash2, Download, Copy, Eye } from 'lucide-react';
 import { Snapshot } from '../services/snapshotService';
 import { mindMapCache } from '../services/mindMapCache';
@@ -23,15 +23,37 @@ const GraphicsLibrary: React.FC<GraphicsLibraryProps> = ({
   onOpenMindMap
 }) => {
   const [activeTab, setActiveTab] = useState<'mindmaps' | 'snapshots'>('mindmaps');
+  const libraryRef = useRef<HTMLDivElement>(null);
 
   const mindMaps = Object.values(mindMapCache.getAll());
+
+  // Handle click outside to close
+  useEffect(() => {
+    if (!isOpen) return;
+    
+    const handleClickOutside = (event: MouseEvent) => {
+      if (libraryRef.current && !libraryRef.current.contains(event.target as Node)) {
+        onClose();
+      }
+    };
+    
+    // Delay attachment to avoid closing on the same click that opened it
+    const timeoutId = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside);
+    }, 100);
+    
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
   const totalCount = mindMaps.length + snapshots.length;
 
   return (
-    <div className="absolute top-full right-0 mt-2 w-72 bg-white dark:bg-[#222222] rounded-xl shadow-xl border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] overflow-hidden z-[100] max-h-[400px] flex flex-col">
+    <div ref={libraryRef} className="absolute top-full right-0 mt-2 w-72 bg-white dark:bg-[#222222] rounded-xl shadow-xl border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] overflow-hidden z-[100] max-h-[400px] flex flex-col">
       <div className="px-3 py-2 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] text-[12px] font-bold text-[#666666] dark:text-[#a0a0a0] uppercase flex items-center justify-between">
         <span>Graphics Library</span>
         <span className="text-[#666666] dark:text-[#a0a0a0]">{totalCount}</span>

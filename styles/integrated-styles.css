@@ -581,12 +581,14 @@ html.dark .floating-send-button:hover {
 .toast-container {
   position: fixed;
   top: 20px;
-  right: 20px;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 9999;
   display: flex;
   flex-direction: column;
   gap: 8px;
   pointer-events: none;
+  align-items: center;
 }
 
 .toast {
@@ -600,7 +602,7 @@ html.dark .floating-send-button:hover {
   border: 1px solid var(--color-border);
   backdrop-filter: blur(10px);
   box-shadow: var(--shadow-md);
-  transform: translateX(100%);
+  transform: translateY(-100%);
   animation: slideInToast 0.3s ease-out forwards;
   min-width: 200px;
   max-width: 400px;
@@ -622,17 +624,17 @@ html.dark .floating-send-button:hover {
 }
 
 @keyframes slideInToast {
-  to { transform: translateX(0); }
+  to { transform: translateY(0); }
 }
 
 @keyframes slideOutToast {
-  to { transform: translateX(100%); }
+  to { transform: translateY(-100%); }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .toast {
     animation: none;
-    transform: translateX(0);
+    transform: translateY(0);
   }
   .toast.removing {
     opacity: 0;
@@ -843,6 +845,64 @@ html.dark .action-button {
   :root {
     --color-border-light: rgba(0, 0, 0, 0.3);
     --color-border-dark: rgba(255, 255, 255, 0.3);
+  }
+}
+
+/* ========================================
+   DOCUMENTATION NAVIGATION
+   ======================================== */
+
+.documentation-nav-button {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-origin: center;
+}
+
+.documentation-nav-button:hover {
+  transform: scale(1.02);
+}
+
+.documentation-nav-button.active {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(68, 133, 209, 0.2);
+}
+
+.documentation-content {
+  scroll-behavior: smooth;
+}
+
+/* Smooth section transitions */
+.documentation-section {
+  opacity: 0;
+  transform: translateY(10px);
+  animation: documentationSectionFadeIn 0.3s ease-out forwards;
+}
+
+@keyframes documentationSectionFadeIn {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .documentation-nav-button {
+    transition: none;
+    transform: none;
+  }
+  
+  .documentation-nav-button:hover,
+  .documentation-nav-button.active {
+    transform: none;
+  }
+  
+  .documentation-content {
+    scroll-behavior: auto;
+  }
+  
+  .documentation-section {
+    animation: none;
+    opacity: 1;
+    transform: none;
   }
 }
 

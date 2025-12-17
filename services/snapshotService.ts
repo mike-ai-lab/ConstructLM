@@ -27,20 +27,56 @@ class SnapshotService {
   }
 
   async takeSnapshot(element?: HTMLElement, context?: any): Promise<Snapshot> {
+    const snapshotId = `SNAPSHOT_${Date.now()}`;
+    console.log(`[${snapshotId}] Starting snapshot capture`);
+    
     const targetElement = element || document.body;
+    
+    // Load html2canvas if not available
     if (!window.html2canvas) {
-      throw new Error('html2canvas library not loaded');
+      console.log(`[${snapshotId}] Loading html2canvas library...`);
+      try {
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+        document.head.appendChild(script);
+        
+        await new Promise((resolve, reject) => {
+          const timeout = setTimeout(() => {
+            reject(new Error('html2canvas loading timeout'));
+          }, 10000);
+          
+          script.onload = () => {
+            clearTimeout(timeout);
+            // Wait a bit for the library to initialize
+            setTimeout(resolve, 100);
+          };
+          script.onerror = () => {
+            clearTimeout(timeout);
+            reject(new Error('Failed to load html2canvas script'));
+          };
+        });
+        
+        console.log(`[${snapshotId}] html2canvas loaded successfully`);
+      } catch (error) {
+        console.error(`[${snapshotId}] Failed to load html2canvas:`, error);
+        throw new Error('Failed to load screenshot library. Please check your internet connection.');
+      }
     }
+    
+    console.log(`[${snapshotId}] Capturing element:`, targetElement.tagName, targetElement.className);
     
     const canvas = await window.html2canvas(targetElement, {
       useCORS: true,
       allowTaint: true,
-      scale: 2, // Higher quality
+      scale: 1, // Reduced scale for better compatibility
       backgroundColor: '#ffffff',
       logging: false,
       removeContainer: true,
       imageTimeout: 15000,
+      width: targetElement.scrollWidth,
+      height: targetElement.scrollHeight,
       onclone: (clonedDoc) => {
+        console.log(`[${snapshotId}] Document cloned for rendering`);
         // Ensure fonts are loaded in cloned document
         const style = clonedDoc.createElement('style');
         style.textContent = `
@@ -58,9 +94,18 @@ class SnapshotService {
                false;
       }
     });
+    
+    console.log(`[${snapshotId}] Canvas created:`, canvas.width, 'x', canvas.height);
 
     // Use high quality PNG with better compression
-    const dataUrl = canvas.toDataURL('image/png', 1.0);
+    const dataUrl = canvas.toDataURL('image/png', 0.9);
+    console.log(`[${snapshotId}] Data URL created, length:`, dataUrl.length);
+    
+    if (dataUrl.length < 100) {
+      console.error(`[${snapshotId}] Data URL too short, likely failed:`, dataUrl);
+      throw new Error('Failed to generate snapshot image data');
+    }
+    
     const snapshot: Snapshot = {
       id: Date.now().toString(),
       timestamp: Date.now(),
@@ -77,6 +122,12 @@ class SnapshotService {
         messageCount: context?.messageCount || 0
       }
     };
+    
+    console.log(`[${snapshotId}] Snapshot created:`, {
+      id: snapshot.id,
+      name: snapshot.name,
+      dataUrlLength: snapshot.dataUrl.length
+    });
 
     this.snapshots.unshift(snapshot);
     this.saveSnapshots();
@@ -93,12 +144,23 @@ class SnapshotService {
   }
 
   downloadSnapshot(snapshot: Snapshot): void {
+    const downloadId = `DOWNLOAD_${Date.now()}`;
+    console.log(`[${downloadId}] Starting snapshot download:`, snapshot.name);
+    
+    if (!snapshot.dataUrl || snapshot.dataUrl.length < 100) {
+      console.error(`[${downloadId}] Invalid snapshot data:`, snapshot.dataUrl?.length || 0);
+      alert('Cannot download: Snapshot data is corrupted or missing');
+      return;
+    }
+    
     const link = document.createElement('a');
     link.download = `${snapshot.name.replace(/[^a-zA-Z0-9]/g, '_')}.png`;
     link.href = snapshot.dataUrl;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    
+    console.log(`[${downloadId}] Download initiated`);
   }
 
   async copyToClipboard(snapshot: Snapshot): Promise<void> {
@@ -126,6 +188,15 @@ class SnapshotService {
     } catch (e) {
       console.warn('Failed to load snapshots:', e);
       this.snapshots = [];
+    }
+  }
+
+  importSnapshots(snapshots: Snapshot[]): void {
+    try {
+      this.snapshots = snapshots;
+      this.saveSnapshots();
+    } catch (e) {
+      console.warn('Failed to import snapshots:', e);
     }
   }
 }

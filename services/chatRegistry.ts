@@ -34,16 +34,61 @@ class ChatRegistryService {
       const stored = localStorage.getItem(this.STORAGE_KEY);
       if (!stored) return [];
       const chats: ChatSession[] = JSON.parse(stored);
-      return chats.map(chat => ({
+      return chats.filter(chat => chat && chat.id).map(chat => ({
         id: chat.id,
-        name: chat.name,
-        modelId: chat.modelId,
-        messageCount: chat.messages.length,
-        createdAt: chat.createdAt,
-        updatedAt: chat.updatedAt
+        name: chat.name || 'Untitled Chat',
+        modelId: chat.modelId || 'gemini-2.0-flash-exp',
+        messageCount: (chat.messages || []).length,
+        createdAt: chat.createdAt || Date.now(),
+        updatedAt: chat.updatedAt || Date.now()
       }));
     } catch (error) {
       console.error('Error loading chats:', error);
+      return [];
+    }
+  }
+
+  getAllFullChats(): ChatSession[] {
+    const exportId = `CHAT_EXPORT_${Date.now()}`;
+    console.log(`[${exportId}] Getting all full chats for export`);
+    
+    try {
+      const stored = localStorage.getItem(this.STORAGE_KEY);
+      console.log(`[${exportId}] Raw localStorage data:`, stored ? 'exists' : 'null');
+      
+      if (!stored) {
+        console.log(`[${exportId}] No stored chats found`);
+        return [];
+      }
+      
+      const chats: ChatSession[] = JSON.parse(stored);
+      console.log(`[${exportId}] Parsed ${chats.length} chats from storage`);
+      
+      const fullChats = chats.filter(chat => chat && chat.id).map((chat, index) => {
+        const fullChat = {
+          id: chat.id,
+          name: chat.name || 'Untitled Chat',
+          modelId: chat.modelId || 'gemini-2.0-flash-exp',
+          messages: chat.messages || [],
+          fileIds: chat.fileIds || [],
+          createdAt: chat.createdAt || Date.now(),
+          updatedAt: chat.updatedAt || Date.now()
+        };
+        
+        console.log(`[${exportId}] Full chat ${index}:`, {
+          id: fullChat.id,
+          name: fullChat.name,
+          messageCount: fullChat.messages.length
+        });
+        
+        return fullChat;
+      });
+      
+      console.log(`[${exportId}] Returning ${fullChats.length} full chats`);
+      return fullChats;
+      
+    } catch (error) {
+      console.error(`[${exportId}] Error loading full chats:`, error);
       return [];
     }
   }
@@ -53,7 +98,19 @@ class ChatRegistryService {
       const stored = localStorage.getItem(this.STORAGE_KEY);
       if (!stored) return null;
       const chats: ChatSession[] = JSON.parse(stored);
-      return chats.find(chat => chat.id === chatId) || null;
+      const chat = chats.find(chat => chat && chat.id === chatId);
+      if (!chat) return null;
+      
+      // Ensure chat has required properties
+      return {
+        id: chat.id,
+        name: chat.name || 'Untitled Chat',
+        modelId: chat.modelId || 'gemini-2.0-flash-exp',
+        messages: chat.messages || [],
+        fileIds: chat.fileIds || [],
+        createdAt: chat.createdAt || Date.now(),
+        updatedAt: chat.updatedAt || Date.now()
+      };
     } catch (error) {
       console.error('Error loading chat:', error);
       return null;
@@ -165,6 +222,63 @@ class ChatRegistryService {
     } catch (error) {
       console.error('Error loading files:', error);
       return [];
+    }
+  }
+
+  importChats(chats: any[]): void {
+    const importId = `CHAT_IMPORT_${Date.now()}`;
+    console.log(`[${importId}] Starting chat import with ${chats.length} chats`);
+    
+    try {
+      if (!Array.isArray(chats)) {
+        console.error(`[${importId}] Invalid chats data - not an array:`, typeof chats);
+        return;
+      }
+      
+      console.log(`[${importId}] Raw chat data sample:`, chats.slice(0, 2));
+      
+      // Validate and clean chat data
+      const validChats = chats.filter((chat, index) => {
+        const isValid = chat && chat.id && chat.messages;
+        if (!isValid) {
+          console.warn(`[${importId}] Invalid chat at index ${index}:`, {
+            hasChat: !!chat,
+            hasId: chat?.id,
+            hasMessages: chat?.messages,
+            chat: chat
+          });
+        }
+        return isValid;
+      }).map((chat, index) => {
+        const processed = {
+          id: chat.id,
+          name: chat.name || `Imported Chat ${index + 1}`,
+          modelId: chat.modelId || 'gemini-2.0-flash-exp',
+          messages: Array.isArray(chat.messages) ? chat.messages : [],
+          fileIds: Array.isArray(chat.fileIds) ? chat.fileIds : [],
+          createdAt: chat.createdAt || Date.now(),
+          updatedAt: chat.updatedAt || Date.now()
+        };
+        
+        console.log(`[${importId}] Processed chat ${index}:`, {
+          id: processed.id,
+          name: processed.name,
+          messageCount: processed.messages.length
+        });
+        
+        return processed;
+      });
+      
+      console.log(`[${importId}] Storing ${validChats.length} valid chats to localStorage`);
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(validChats));
+      
+      // Verify storage
+      const stored = localStorage.getItem(this.STORAGE_KEY);
+      const parsed = stored ? JSON.parse(stored) : [];
+      console.log(`[${importId}] Verification: ${parsed.length} chats stored successfully`);
+      
+    } catch (error) {
+      console.error(`[${importId}] Error importing chats:`, error);
     }
   }
 }

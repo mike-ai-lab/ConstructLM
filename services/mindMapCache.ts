@@ -47,5 +47,13 @@ export const mindMapCache = {
 
   clear() {
     localStorage.removeItem(STORAGE_KEY);
+  },
+
+  importAll(data: Record<string, CachedMindMap>) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch (e) {
+      console.warn('Failed to import mind maps:', e);
+    }
   }
 };

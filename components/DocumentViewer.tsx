@@ -354,12 +354,29 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
       for (let i = 1; i < parts.length; i += 2) {
           const sheetName = parts[i];
           const csvContent = parts[i + 1] || "";
+          const lines = csvContent.trim().split('\n');
           
-          const rows = csvContent.trim().split('\n').map(row => {
-              // Detect delimiter: tab or comma
-              const delimiter = row.includes('\t') ? '\t' : ',';
-              return row.split(delimiter).map(cell => cell.replace(/^"|"$/g, ''));
+          const delimiter = lines[0]?.includes('\t') ? '\t' : ',';
+          const rows = lines.map(row => {
+              const cells: string[] = [];
+              let current = '';
+              let inQuotes = false;
+              
+              for (let j = 0; j < row.length; j++) {
+                  const char = row[j];
+                  if (char === '"') {
+                      inQuotes = !inQuotes;
+                  } else if (char === delimiter && !inQuotes) {
+                      cells.push(current);
+                      current = '';
+                  } else {
+                      current += char;
+                  }
+              }
+              cells.push(current);
+              return cells;
           });
+
 
           const isTargetSheet = targetSheet && sheetName.toLowerCase().includes(targetSheet);
 
@@ -383,11 +400,11 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
                                         id={isHighlightRow ? "excel-highlight-row" : undefined}
                                         className={`
                                             transition-colors duration-500
-                                            ${isHeaderRow ? "bg-[rgba(0,0,0,0.03)] dark:bg-[#1a1a1a] font-semibold text-[#1a1a1a] dark:text-white sticky top-0 z-20" : "text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#222222]"}
+                                            ${isHeaderRow ? "bg-gray-100 dark:bg-[#1a1a1a] font-semibold text-[#1a1a1a] dark:text-white sticky top-0 z-20" : "text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#222222]"}
                                             ${isHighlightRow ? "bg-amber-100 dark:bg-amber-900/30 ring-2 ring-inset ring-amber-400 dark:ring-amber-600 z-10 relative" : ""}
                                         `}
                                     >
-                                        <td className={`px-1 py-1 w-8 select-none text-[12px] text-right border-r border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] bg-[rgba(0,0,0,0.03)] dark:bg-[#1a1a1a] ${isHighlightRow ? "text-amber-700 dark:text-amber-400 font-bold" : "text-[#999999] dark:text-[#666666]"}`}>
+                                        <td className={`px-1 py-1 w-8 select-none text-[12px] text-right border-r border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] ${isHeaderRow ? "bg-gray-100 dark:bg-[#1a1a1a]" : "bg-[rgba(0,0,0,0.03)] dark:bg-[#1a1a1a]"} ${isHighlightRow ? "text-amber-700 dark:text-amber-400 font-bold" : "text-[#999999] dark:text-[#666666]"}`}>
                                             {visualRowNumber}
                                         </td>
                                         {row.map((cell, cIdx) => (

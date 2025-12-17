@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { BookOpen, ChevronRight, Quote, X, Maximize2, Loader2, ChevronDown } from 'lucide-react';
 import { ProcessedFile } from '../types';
@@ -9,8 +9,8 @@ interface CitationRendererProps {
   onViewDocument: (fileName: string, page?: number, quote?: string, location?: string) => void;
 }
 
-const SPLIT_REGEX = /((?:\{\{|【)citation:[^}】]*(?:\}\}|】))/g;
-const MATCH_REGEX = /(?:\{\{|【)citation:([^|]*?)\|([^|]*?)\|([^}】]*?)(?:\}\}|】)/s;
+const SPLIT_REGEX = /((?:\{\{|【)citation:.*?\|.*?\|.*?(?:\}\}|】))/g;
+const MATCH_REGEX = /(?:\{\{|【)citation:(.*?)\|(.*?)\|(.*?)(?:\}\}|】)/;
 
 let citationCounter = 0;
 const resetCitationCounter = () => { citationCounter = 0; };
@@ -18,7 +18,7 @@ const resetCitationCounter = () => { citationCounter = 0; };
 // --- HELPER: Handle Table Splitting with Citations ---
 const safeSplitTableLine = (line: string): string[] => {
   const placeholders: string[] = [];
-  const citationRegex = /(?:\{\{|【)citation:[^}】]+(?:\}\}|】)/g;
+  const citationRegex = /(?:\{\{|【)citation:.*?\|.*?\|.*?(?:\}\}|】)/g;
   
   const maskedLine = line.replace(citationRegex, (match) => {
     placeholders.push(match);
@@ -84,16 +84,15 @@ const SimpleMarkdown: React.FC<{ text: string; block?: boolean; files?: Processe
         j++;
       }
       
-      const delimiter = tableLines[0].includes('\t') ? '\t' : ',';
       const headers = safeSplitTableLine(tableLines[0]);
       
       const tableEl = (
         <div key={`table-${i}`} className="overflow-x-auto my-3">
           <table className="min-w-full border-collapse border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.2)] text-xs">
-            <thead className="bg-gray-100 dark:bg-[#2a2a2a] sticky top-0 z-10">
+            <thead className="bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a]">
               <tr>
                 {headers.map((cell, idx) => (
-                  <th key={idx} className="border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.2)] px-2 py-1 text-left font-semibold text-[#1a1a1a] dark:text-white bg-gray-100 dark:bg-[#2a2a2a]">
+                  <th key={idx} className="border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.2)] px-2 py-1 text-left font-semibold text-[#1a1a1a] dark:text-white">
                     {files && onViewDocument ? <TableCellWithCitations text={cell} files={files} onViewDocument={onViewDocument} /> : cell}
                   </th>
                 ))}
@@ -163,32 +162,13 @@ const SimpleMarkdown: React.FC<{ text: string; block?: boolean; files?: Processe
     }
 
     if (trimmed.match(/^[-*]\s/)) {
-      const content = trimmed.replace(/^[-*]\s/, '');
-      const parts = content.split(SPLIT_REGEX).filter(p => p !== undefined && p !== null);
-      const contentElements = parts.map((part, partIdx) => {
-        const citMatch = part.match(MATCH_REGEX);
-        if (citMatch) {
-          citationCounter++;
-          return (
-            <CitationChip
-              key={`li-cit-${i}-${partIdx}`}
-              index={citationCounter - 1}
-              fileName={citMatch[1].trim()}
-              location={citMatch[2].trim()}
-              quote={citMatch[3].trim()}
-              files={files || []}
-              onViewDocument={onViewDocument || (() => {})}
-            />
-          );
-        }
-        return <span key={`li-txt-${i}-${partIdx}`}>{parseInline(part)}</span>;
-      });
-      elements.push(
+      const li = (
         <div key={`li-${i}`} className="flex gap-2.5 ml-0 my-1">
           <span className="text-[#666666] dark:text-[#a0a0a0] mt-1.5 flex-shrink-0">•</span>
-          <span className="leading-7 flex-1">{contentElements}</span>
+          <span className="leading-7 flex-1">{parseInline(trimmed.replace(/^[-*]\s/, ''))}</span>
         </div>
       );
+      elements.push(li);
       i++;
       continue;
     }
@@ -196,30 +176,10 @@ const SimpleMarkdown: React.FC<{ text: string; block?: boolean; files?: Processe
     if (trimmed.match(/^\d+\.\s/)) {
       const match = trimmed.match(/^(\d+)\.\s/);
       const num = match ? match[1] : '1';
-      const content = trimmed.replace(/^\d+\.\s/, '');
-      const parts = content.split(SPLIT_REGEX).filter(p => p !== undefined && p !== null);
-      const contentElements = parts.map((part, partIdx) => {
-        const citMatch = part.match(MATCH_REGEX);
-        if (citMatch) {
-          citationCounter++;
-          return (
-            <CitationChip
-              key={`ol-cit-${i}-${partIdx}`}
-              index={citationCounter - 1}
-              fileName={citMatch[1].trim()}
-              location={citMatch[2].trim()}
-              quote={citMatch[3].trim()}
-              files={files || []}
-              onViewDocument={onViewDocument || (() => {})}
-            />
-          );
-        }
-        return <span key={`ol-txt-${i}-${partIdx}`}>{parseInline(part)}</span>;
-      });
       elements.push(
         <div key={`ol-${i}`} className="flex gap-2.5 ml-0 my-1">
           <span className="font-medium text-[#666666] dark:text-[#a0a0a0] mt-0.5 min-w-[1.5em] flex-shrink-0">{num}.</span>
-          <span className="leading-7 flex-1">{contentElements}</span>
+          <span className="leading-7 flex-1">{parseInline(trimmed.replace(/^\d+\.\s/, ''))}</span>
         </div>
       );
       i++;
@@ -315,7 +275,7 @@ const CitationRenderer: React.FC<CitationRendererProps> = ({ text, files, onView
   resetCitationCounter();
 
   // Decode HTML entities first
-  let decodedText = text.replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+  const decodedText = text.replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
   
   // Extract thinking blocks
   const thinkRegex = /<think>([\s\S]*?)<\/think>/g;
@@ -331,18 +291,7 @@ const CitationRenderer: React.FC<CitationRendererProps> = ({ text, files, onView
   textWithoutThinking = decodedText.replace(thinkRegex, '');
   
   // Remove newlines around citations to keep them inline
-  const cleanedText = textWithoutThinking.replace(/\n*((?:\{\{|【)citation:[^}】]+(?:\}\}|】))\n*/g, '$1');
-
-  // Extract unique source files from citations
-  const citationMatches = cleanedText.match(/(?:\{\{|【)citation:[^}】]+(?:\}\}|】)/g) || [];
-  const sourceFiles = new Set<string>();
-  
-  citationMatches.forEach((citation: string) => {
-    const match = citation.match(MATCH_REGEX);
-    if (match) {
-      sourceFiles.add(match[1].trim());
-    }
-  });
+  const cleanedText = textWithoutThinking.replace(/\n*((?:\{\{|【)citation:.*?(?:\}\}|】))\n*/g, '$1');
 
   return (
     <div className="text-sm leading-relaxed">
@@ -350,46 +299,13 @@ const CitationRenderer: React.FC<CitationRendererProps> = ({ text, files, onView
         <ThinkingBlock key={`think-${idx}`} content={block.content} />
       ))}
       <SimpleMarkdown text={cleanedText} block={true} files={files} onViewDocument={onViewDocument} />
-      {sourceFiles.size > 0 && (
-        <div className="mt-4 pt-3 border-t border-[rgba(0,0,0,0.1)] dark:border-[rgba(255,255,255,0.1)]">
-          <div className="text-xs text-[#666666] dark:text-[#a0a0a0] flex items-center gap-2">
-            <span className="font-medium">Sources:</span>
-            {Array.from(sourceFiles).map((fileName, idx) => (
-              <span key={fileName} className="inline-flex items-center">
-                {idx > 0 && <span className="mx-1">•</span>}
-                <span className="font-mono">{fileName}</span>
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 };
 
-const parseCSVLine = (line: string, delimiter: string) => {
-  const cells: string[] = [];
-  let current = '';
-  let inQuotes = false;
-  
-  for (let j = 0; j < line.length; j++) {
-      const char = line[j];
-      if (char === '"') {
-          inQuotes = !inQuotes;
-      } else if (char === delimiter && !inQuotes) {
-          cells.push(current);
-          current = '';
-      } else {
-          current += char;
-      }
-  }
-  cells.push(current);
-  return cells;
-};
-
 // Helper component to render table cells with citations
 const TableCellWithCitations: React.FC<{ text: string; files: ProcessedFile[]; onViewDocument: (fileName: string, page?: number, quote?: string, location?: string) => void }> = ({ text, files, onViewDocument }) => {
-  let decodedText = text.replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+  const decodedText = text.replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
   const parts = decodedText.split(SPLIT_REGEX).filter(p => p !== undefined && p !== null);
   
   return (
@@ -433,43 +349,35 @@ const CitationChip: React.FC<CitationChipProps> = ({ index, fileName, location, 
   const [isOpen, setIsOpen] = useState(false);
   const triggerRef = useRef<HTMLSpanElement>(null);
   const [coords, setCoords] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
-  const [isInTable, setIsInTable] = useState(false);
-
-  const updateCoords = useCallback(() => {
-    if (triggerRef.current) {
-      const rect = triggerRef.current.getBoundingClientRect();
-      setCoords({ top: rect.bottom + 8, left: rect.left - 20 });
-    }
-  }, []);
 
   const handleToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!isOpen && triggerRef.current) {
-      const tableParent = triggerRef.current.closest('table');
-      setIsInTable(!!tableParent);
-      updateCoords();
+      const rect = triggerRef.current.getBoundingClientRect();
+      const vh = window.innerHeight;
+      const vw = window.innerWidth;
+      const popupHeight = Math.min(vh * 0.7, 500);
+      const popupWidth = 450;
+
+      let top = rect.bottom + 8;
+      let left = rect.left - 20;
+
+      if (top + popupHeight > vh - 20) {
+        top = Math.max(20, rect.top - popupHeight - 8);
+      }
+      if (left + popupWidth > vw - 20) {
+        left = vw - popupWidth - 20;
+      }
+      left = Math.max(20, left);
+      top = Math.max(20, top);
+
+      setCoords({ top, left });
     }
     setIsOpen(!isOpen);
   };
 
-  useEffect(() => {
-    if (!isOpen || !isInTable) return;
-    
-    let rafId: number;
-    const handleScroll = () => {
-      if (rafId) cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(updateCoords);
-    };
-    
-    window.addEventListener('scroll', handleScroll, true);
-    return () => {
-      window.removeEventListener('scroll', handleScroll, true);
-      if (rafId) cancelAnimationFrame(rafId);
-    };
-  }, [isOpen, isInTable, updateCoords]);
-
   return (
-    <span className="inline-block relative">
+    <span className="inline-block">
       <sup
         ref={triggerRef}
         onClick={handleToggle}
@@ -482,44 +390,24 @@ const CitationChip: React.FC<CitationChipProps> = ({ index, fileName, location, 
         {index + 1}
       </sup>
       {isOpen && (
-        isInTable ? (
-          <CitationPortal
-            onClose={() => setIsOpen(false)}
-            coords={coords}
-            fileName={fileName}
-            location={location}
-            quote={quote}
-            files={files}
-            triggerRef={triggerRef}
-            onOpenFull={() => {
-              let page = 1;
-              if (location) {
-                const pageMatch = location.match(/Page\s*(\d+)/i);
-                if (pageMatch) page = parseInt(pageMatch[1], 10);
-              }
-              onViewDocument(fileName, page, quote, location);
-              setIsOpen(false);
-            }}
-          />
-        ) : (
-          <CitationPopup
-            onClose={() => setIsOpen(false)}
-            fileName={fileName}
-            location={location}
-            quote={quote}
-            files={files}
-            triggerRef={triggerRef}
-            onOpenFull={() => {
-              let page = 1;
-              if (location) {
-                const pageMatch = location.match(/Page\s*(\d+)/i);
-                if (pageMatch) page = parseInt(pageMatch[1], 10);
-              }
-              onViewDocument(fileName, page, quote, location);
-              setIsOpen(false);
-            }}
-          />
-        )
+        <CitationPortal
+          onClose={() => setIsOpen(false)}
+          coords={coords}
+          fileName={fileName}
+          location={location}
+          quote={quote}
+          files={files}
+          triggerRef={triggerRef}
+          onOpenFull={() => {
+            let page = 1;
+            if (location) {
+              const pageMatch = location.match(/Page\s*(\d+)/i);
+              if (pageMatch) page = parseInt(pageMatch[1], 10);
+            }
+            onViewDocument(fileName, page, quote, location);
+            setIsOpen(false);
+          }}
+        />
       )}
     </span>
   );
@@ -573,8 +461,8 @@ const CitationPortal: React.FC<CitationPortalProps> = ({ onClose, coords, fileNa
   return createPortal(
     <div
       ref={popoverRef}
-      className="fixed z-[10000] w-[450px] max-w-[90vw] bg-white dark:bg-[#222222] text-[#1a1a1a] dark:text-white rounded-lg shadow-2xl border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] flex flex-col overflow-hidden animate-in fade-in duration-150"
-      style={{ top: coords.top, left: coords.left, maxHeight: 'min(40vh, 400px)' }}
+      className="absolute z-[9999] w-[450px] max-w-[90vw] bg-white dark:bg-[#222222] text-[#1a1a1a] dark:text-white rounded-lg shadow-2xl border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] flex flex-col overflow-hidden animate-in fade-in duration-150"
+      style={{ top: coords.top, left: coords.left, maxHeight: 'min(70vh, 500px)' }}
       role="dialog"
       aria-modal="true"
       aria-label={`Citation for ${fileName}`}
@@ -610,97 +498,6 @@ const CitationPortal: React.FC<CitationPortalProps> = ({ onClose, coords, fileNa
       </div>
     </div>,
     document.body
-  );
-};
-
-interface CitationPopupProps {
-  onClose: () => void;
-  fileName: string;
-  location: string;
-  quote: string;
-  files: ProcessedFile[];
-  triggerRef: React.RefObject<HTMLSpanElement>;
-  onOpenFull: () => void;
-}
-
-const CitationPopup: React.FC<CitationPopupProps> = ({ onClose, fileName, location, quote, files, triggerRef, onOpenFull }) => {
-  const popoverRef = useRef<HTMLDivElement>(null);
-  const [file, setFile] = useState<ProcessedFile | undefined>(undefined);
-  const [pdfPageNumber, setPdfPageNumber] = useState<number | null>(null);
-  const [pdfScale, setPdfScale] = useState(1);
-  const pdfZoomHandlerRef = useRef<{ handleZoom: (delta: number) => void; handleReset: () => void } | undefined>(undefined);
-
-  useEffect(() => {
-    const foundFile = files.find(f => f.name === fileName);
-    setFile(foundFile);
-    if (foundFile?.type === 'pdf' && location) {
-      const pageMatch = location.match(/Page\s*(\d+)/i);
-      if (pageMatch) {
-        setPdfPageNumber(parseInt(pageMatch[1], 10));
-      } else {
-        setPdfPageNumber(1);
-      }
-    } else {
-      setPdfPageNumber(null);
-    }
-  }, [fileName, files, location]);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (popoverRef.current && !popoverRef.current.contains(event.target as Node) && triggerRef.current && !triggerRef.current.contains(event.target as Node)) {
-        onClose();
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [onClose, triggerRef]);
-
-  const isPdfMode = file?.type === 'pdf' && pdfPageNumber !== null;
-
-  return (
-    <div
-      ref={popoverRef}
-      className="absolute z-[150] w-[450px] max-w-[90vw] bg-white dark:bg-[#222222] text-[#1a1a1a] dark:text-white rounded-lg shadow-2xl border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] flex flex-col overflow-hidden animate-in fade-in duration-150"
-      style={{ 
-        top: '100%', 
-        left: '-20px', 
-        marginTop: '8px',
-        maxHeight: 'min(40vh, 400px)'
-      }}
-      role="dialog"
-      aria-modal="true"
-      aria-label={`Citation for ${fileName}`}
-    >
-      <div className="bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] px-3 py-1.5 border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] flex items-center justify-between flex-shrink-0">
-        <div className="flex items-center gap-1.5 overflow-hidden min-w-0">
-          <BookOpen size={12} className="text-blue-600 flex-shrink-0" />
-          <span className="font-medium text-xs text-[#1a1a1a] dark:text-white truncate" title={fileName}>{fileName}</span>
-          <span className="text-[12px] text-[#666666] dark:text-[#a0a0a0]">• {location}</span>
-        </div>
-        <div className="flex items-center gap-0.5 flex-shrink-0">
-          <button onClick={onOpenFull} className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/30" title="Open Full"><Maximize2 size={12} /></button>
-          <button onClick={onClose} className="text-[#666666] dark:text-[#a0a0a0] hover:text-[#1a1a1a] dark:hover:text-white p-1 rounded hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#222222]"><X size={12} /></button>
-        </div>
-      </div>
-      <div className="bg-[rgba(0,0,0,0.03)] dark:bg-[#1a1a1a] overflow-hidden relative flex-1">
-        {isPdfMode && file?.fileHandle ? (
-          <PdfPagePreview file={file.fileHandle} pageNumber={pdfPageNumber as number} quote={quote} onScaleChange={setPdfScale} zoomHandlerRef={pdfZoomHandlerRef} />
-        ) : (
-          <TextContextViewer file={file} quote={quote} location={location} />
-        )}
-      </div>
-      <div className="bg-white dark:bg-[#2a2a2a] px-2 py-1.5 border-t border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] flex-shrink-0 flex items-center justify-between">
-        <p className="text-[12px] text-[#666666] dark:text-[#a0a0a0] italic line-clamp-2 flex-1">"{quote}"</p>
-        {isPdfMode && (
-          <div className="flex items-center gap-1 ml-2 flex-shrink-0">
-            <button onClick={() => pdfZoomHandlerRef.current?.handleZoom(0.2)} className="p-1 hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#222222] rounded" title="Zoom In">+</button>
-            <span className="text-[12px] px-1 text-[#666666] dark:text-[#a0a0a0]">{Math.round(pdfScale * 100)}%</span>
-            <button onClick={() => pdfZoomHandlerRef.current?.handleZoom(-0.2)} className="p-1 hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#222222] rounded" title="Zoom Out">−</button>
-            <button onClick={() => pdfZoomHandlerRef.current?.handleReset()} className="p-1 hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#222222] rounded text-[12px]" title="Reset">⟲</button>
-          </div>
-        )}
-      </div>
-    </div>
   );
 };
 
@@ -941,38 +738,21 @@ const TextContextViewer: React.FC<{ file?: ProcessedFile; quote: string; locatio
       
       const headerLine = lines[sheetStartIdx];
       const delimiter = headerLine?.includes('\t') ? '\t' : ',';
+      const headers = headerLine?.split(delimiter).map(c => c.replace(/^"|"$/g, '').trim()) || [];
       
-      const parseCSVLine = (line: string) => {
-          const cells: string[] = [];
-          let current = '';
-          let inQuotes = false;
-          
-          for (let j = 0; j < line.length; j++) {
-              const char = line[j];
-              if (char === '"') {
-                  inQuotes = !inQuotes;
-              } else if (char === delimiter && !inQuotes) {
-                  cells.push(current.trim());
-                  current = '';
-              } else {
-                  current += char;
-              }
-          }
-          cells.push(current.trim());
-          return cells;
-      };
-      
-      const headers = parseCSVLine(headerLine || '');
       const dataLines = lines.slice(sheetStartIdx + 1).filter(l => l && !l.includes('[META:') && !l.includes('---') && !l.includes('[Sheet:'));
-      const rows = dataLines.map(line => parseCSVLine(line));
+      const rows = dataLines.map(line => {
+        const lineDelimiter = line.includes('\t') ? '\t' : ',';
+        return line.split(lineDelimiter).map(c => c.replace(/^"|"$/g, '').trim());
+      });
       
       return (
         <div ref={tableRef} className="overflow-auto p-2" style={{ maxHeight: '400px' }}>
           <table className="w-full text-xs border-collapse">
-            <thead className="sticky top-0 bg-gray-100 dark:bg-[#2a2a2a] z-10">
+            <thead className="sticky top-0 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] z-10">
               <tr>
                 {headers.map((h, idx) => (
-                  <th key={idx} className="border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.2)] px-2 py-1.5 text-left font-semibold text-[#1a1a1a] dark:text-white whitespace-nowrap bg-gray-100 dark:bg-[#2a2a2a]">{h}</th>
+                  <th key={idx} className="border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.2)] px-2 py-1.5 text-left font-semibold text-[#1a1a1a] dark:text-white whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>

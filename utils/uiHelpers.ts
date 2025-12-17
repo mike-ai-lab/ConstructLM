@@ -277,67 +277,111 @@ export const createInputContextMenu = (inputElement: HTMLInputElement | HTMLText
 // Message Context Menu
 export const createMessageContextMenu = (messageElement: HTMLElement, messageText: string): ContextMenuItem[] => {
   const hasCodeBlocks = messageElement.querySelectorAll('pre code').length > 0;
+  const selection = window.getSelection();
+  const hasSelection = selection && selection.toString().trim().length > 0;
   
-  return [
-    {
-      label: 'Copy Message',
+  const menuItems: ContextMenuItem[] = [];
+  
+  // Add copy selection if text is selected
+  if (hasSelection) {
+    menuItems.push({
+      label: 'Copy Selection',
       icon: 'fas fa-copy',
-      action: async () => {
-        try {
-          const textarea = document.createElement('textarea');
-          textarea.value = messageText;
-          textarea.style.position = 'fixed';
-          textarea.style.opacity = '0';
-          document.body.appendChild(textarea);
-          textarea.select();
-          document.execCommand('copy');
-          document.body.removeChild(textarea);
-          showToast('Message copied', 'success');
-        } catch (err) {
-          console.error('Failed to copy message:', err);
-          showToast('Failed to copy', 'error');
-        }
-      }
-    },
-    {
-      label: 'Select All',
-      icon: 'fas fa-select-all',
       action: () => {
-        const selection = window.getSelection();
-        const range = document.createRange();
-        range.selectNodeContents(messageElement);
-        selection?.removeAllRanges();
-        selection?.addRange(range);
-      }
-    },
-    ...(hasCodeBlocks ? [
-      { divider: true },
-      {
-        label: 'Copy Code',
-        icon: 'fas fa-code',
-        action: async () => {
-          const codeBlocks = messageElement.querySelectorAll('pre code');
-          const codeText = Array.from(codeBlocks).map(block => block.textContent).join('\n\n');
-          try {
-            await navigator.clipboard.writeText(codeText);
-            showToast('Code copied to clipboard', 'success');
-          } catch (err) {
-            console.error('Failed to copy code:', err);
-            showToast('Failed to copy code', 'error');
+        try {
+          const selectedText = selection.toString();
+          
+          // Use execCommand which is more reliable for this use case
+          const textarea = document.createElement('textarea');
+          textarea.value = selectedText;
+          textarea.style.position = 'fixed';
+          textarea.style.left = '-9999px';
+          textarea.style.top = '-9999px';
+          document.body.appendChild(textarea);
+          textarea.focus();
+          textarea.select();
+          
+          const successful = document.execCommand('copy');
+          document.body.removeChild(textarea);
+          
+          if (successful) {
+            showToast('Selection copied', 'success');
+          } else {
+            throw new Error('Copy command failed');
           }
-        }
-      },
-      {
-        label: 'Download Code',
-        icon: 'fas fa-download',
-        action: () => {
-          const codeBlocks = messageElement.querySelectorAll('pre code');
-          const codeText = Array.from(codeBlocks).map(block => block.textContent).join('\n\n');
-          downloadTextAsFile(codeText, 'code.txt');
+        } catch (err) {
+          console.error('Failed to copy selection:', err);
+          showToast('Failed to copy selection', 'error');
         }
       }
-    ] : [])
-  ];
+    });
+  }
+  
+  // Add copy message
+  menuItems.push({
+    label: 'Copy Message',
+    icon: 'fas fa-copy',
+    action: async () => {
+      try {
+        const textarea = document.createElement('textarea');
+        textarea.value = messageText;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        showToast('Message copied', 'success');
+      } catch (err) {
+        console.error('Failed to copy message:', err);
+        showToast('Failed to copy', 'error');
+      }
+    }
+  });
+  
+  // Add select all
+  menuItems.push({
+    label: 'Select All',
+    icon: 'fas fa-select-all',
+    action: () => {
+      const selection = window.getSelection();
+      const range = document.createRange();
+      range.selectNodeContents(messageElement);
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+    }
+  });
+  
+  // Add code-related options if code blocks exist
+  if (hasCodeBlocks) {
+    menuItems.push({ divider: true });
+    menuItems.push({
+      label: 'Copy Code',
+      icon: 'fas fa-code',
+      action: async () => {
+        const codeBlocks = messageElement.querySelectorAll('pre code');
+        const codeText = Array.from(codeBlocks).map(block => block.textContent).join('\n\n');
+        try {
+          await navigator.clipboard.writeText(codeText);
+          showToast('Code copied to clipboard', 'success');
+        } catch (err) {
+          console.error('Failed to copy code:', err);
+          showToast('Failed to copy code', 'error');
+        }
+      }
+    });
+    menuItems.push({
+      label: 'Download Code',
+      icon: 'fas fa-download',
+      action: () => {
+        const codeBlocks = messageElement.querySelectorAll('pre code');
+        const codeText = Array.from(codeBlocks).map(block => block.textContent).join('\n\n');
+        downloadTextAsFile(codeText, 'code.txt');
+      }
+    });
+  }
+  
+  return menuItems;
 };
 
 // Toast Notifications

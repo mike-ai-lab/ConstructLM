@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, protocol } from 'electron';
+import { app, BrowserWindow, ipcMain, protocol, Menu } from 'electron';
 import path from 'path';
 import { net } from 'electron';
 
@@ -64,6 +64,53 @@ app.whenReady().then(() => {
   // Disable sandbox for audio to work properly in dev mode
   app.commandLine.appendSwitch('no-sandbox');
   
+  // Set custom menu
+  const template = [
+    {
+      label: 'ConstructLM',
+      submenu: [
+        { role: 'about' },
+        { type: 'separator' },
+        { role: 'quit' }
+      ]
+    },
+    {
+      label: 'Edit',
+      submenu: [
+        { role: 'undo' },
+        { role: 'redo' },
+        { type: 'separator' },
+        { role: 'cut' },
+        { role: 'copy' },
+        { role: 'paste' },
+        { role: 'selectall' }
+      ]
+    },
+    {
+      label: 'View',
+      submenu: [
+        { role: 'reload' },
+        { role: 'toggledevtools' },
+        { type: 'separator' },
+        { role: 'resetzoom' },
+        { role: 'zoomin' },
+        { role: 'zoomout' },
+        { type: 'separator' },
+        { role: 'togglefullscreen' }
+      ]
+    },
+    {
+      label: 'Window',
+      submenu: [
+        { role: 'minimize' },
+        { role: 'close' }
+      ]
+    }
+  ];
+  
+  const menu = Menu.buildFromTemplate(template as any);
+  Menu.setApplicationMenu(menu);
+  
   createWindow();
 });
 
@@ -84,16 +131,29 @@ ipcMain.handle('get-app-version', () => app.getVersion());
 // Proxy handlers for API requests
 ipcMain.handle('proxy-groq', async (event, { key, body }) => {
   try {
+    // Force non-streaming for Electron to avoid complexity
+    const requestBody = { ...body, stream: false };
+    
     const response = await net.fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${key}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(body)
+      body: JSON.stringify(requestBody)
     });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      return { 
+        ok: false, 
+        status: response.status, 
+        error: errorData.error?.message || response.statusText 
+      };
+    }
+    
     const data = await response.json();
-    return { ok: response.ok, status: response.status, data };
+    return { ok: true, status: response.status, data };
   } catch (error: any) {
     return { ok: false, error: error.message };
   }
@@ -101,16 +161,29 @@ ipcMain.handle('proxy-groq', async (event, { key, body }) => {
 
 ipcMain.handle('proxy-openai', async (event, { key, body }) => {
   try {
+    // Force non-streaming for Electron to avoid complexity
+    const requestBody = { ...body, stream: false };
+    
     const response = await net.fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${key}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(body)
+      body: JSON.stringify(requestBody)
     });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      return { 
+        ok: false, 
+        status: response.status, 
+        error: errorData.error?.message || response.statusText 
+      };
+    }
+    
     const data = await response.json();
-    return { ok: response.ok, status: response.status, data };
+    return { ok: true, status: response.status, data };
   } catch (error: any) {
     return { ok: false, error: error.message };
   }
