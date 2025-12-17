@@ -845,3 +845,41 @@ html.dark .action-button {
     --color-border-dark: rgba(255, 255, 255, 0.3);
   }
 }
+
+/* ========================================
+   CITATION MARKERS (Inline Style)
+   ======================================== */
+
+.citation-marker {
+  display: inline;
+  padding: 1px 4px;
+  margin: 0 1px;
+  background: rgba(68, 133, 209, 0.12);
+  color: #4485d1;
+  border-radius: 3px;
+  font-size: 0.8em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  vertical-align: baseline;
+  line-height: inherit;
+  border: 1px solid rgba(68, 133, 209, 0.2);
+}
+
+html.dark .citation-marker {
+  background: rgba(68, 133, 209, 0.15);
+  color: #6ba3e8;
+  border-color: rgba(68, 133, 209, 0.25);
+}
+
+.citation-marker:hover {
+  background: rgba(68, 133, 209, 0.2);
+  border-color: rgba(68, 133, 209, 0.4);
+  transform: none;
+}
+
+html.dark .citation-marker:hover {
+  background: rgba(68, 133, 209, 0.25);
+  border-color: rgba(68, 133, 209, 0.5);
+}

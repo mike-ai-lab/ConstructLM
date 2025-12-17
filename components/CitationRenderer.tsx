@@ -15,20 +15,49 @@ const MATCH_REGEX = /(?:\{\{|【)citation:(.*?)\|(.*?)\|(.*?)(?:\}\}|】)/;
 let citationCounter = 0;
 const resetCitationCounter = () => { citationCounter = 0; };
 
+// --- HELPER: Handle Table Splitting with Citations ---
+const safeSplitTableLine = (line: string): string[] => {
+  const placeholders: string[] = [];
+  const citationRegex = /(?:\{\{|【)citation:.*?\|.*?\|.*?(?:\}\}|】)/g;
+  
+  const maskedLine = line.replace(citationRegex, (match) => {
+    placeholders.push(match);
+    return `__CITATION_MASK_${placeholders.length - 1}__`;
+  });
+
+  return maskedLine
+    .split('|')
+    .filter(cell => cell.trim())
+    .map(cell => {
+      return cell.trim().replace(/__CITATION_MASK_(\d+)__/g, (_, index) => {
+        return placeholders[parseInt(index, 10)];
+      });
+    });
+};
+
 // --- INLINE MARKDOWN HELPERS ---
 const parseInline = (text: string): React.ReactNode[] => {
+  // Handle bold (**text**)
   const parts = text.split(/(\*\*.*?\*\*)/g);
   return parts.map((part, index) => {
     if (part.startsWith('**') && part.endsWith('**')) {
       return <strong key={index} className="font-semibold text-[#1a1a1a] dark:text-white">{part.slice(2, -2)}</strong>;
     }
-    const italicParts = part.split(/(\*[^\s].*?\*)/g);
+    // Handle italic (*text*) - but not ** which is already handled
+    const italicParts = part.split(/((?<!\*)\*(?!\*)[^\s*].*?(?<!\*)\*(?!\*))/g);
     return italicParts.map((sub, subIdx) => {
-      if (sub.startsWith('*') && sub.endsWith('*') && sub.length > 2) {
-        return <em key={`${index}-${subIdx}`} className="text-[#1a1a1a] dark:text-white">{sub.slice(1, -1)}</em>;
+      if (sub.startsWith('*') && sub.endsWith('*') && sub.length > 2 && !sub.startsWith('**')) {
+        return <em key={`${index}-${subIdx}`} className="italic text-[#1a1a1a] dark:text-white">{sub.slice(1, -1)}</em>;
       }
-      return sub;
-    });
+      // Handle inline code (`code`)
+      const codeParts = sub.split(/(`[^`]+`)/g);
+      return codeParts.map((code, codeIdx) => {
+        if (code.startsWith('`') && code.endsWith('`')) {
+          return <code key={`${index}-${subIdx}-${codeIdx}`} className="px-1.5 py-0.5 bg-[rgba(0,0,0,0.06)] dark:bg-[#2a2a2a] rounded text-[13px] font-mono text-[#1a1a1a] dark:text-white">{code.slice(1, -1)}</code>;
+        }
+        return code;
+      });
+    }).flat();
   }).flat();
 };
 
@@ -54,28 +83,34 @@ const SimpleMarkdown: React.FC<{ text: string; block?: boolean; files?: Processe
         tableLines.push(lines[j]);
         j++;
       }
+      
+      const headers = safeSplitTableLine(tableLines[0]);
+      
       const tableEl = (
         <div key={`table-${i}`} className="overflow-x-auto my-3">
           <table className="min-w-full border-collapse border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.2)] text-xs">
             <thead className="bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a]">
               <tr>
-                {tableLines[0].split('|').filter(c => c.trim()).map((cell, idx) => (
+                {headers.map((cell, idx) => (
                   <th key={idx} className="border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.2)] px-2 py-1 text-left font-semibold text-[#1a1a1a] dark:text-white">
-                    {files && onViewDocument ? <TableCellWithCitations text={cell.trim()} files={files} onViewDocument={onViewDocument} /> : cell.trim()}
+                    {files && onViewDocument ? <TableCellWithCitations text={cell} files={files} onViewDocument={onViewDocument} /> : cell}
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {tableLines.slice(2).map((row, rowIdx) => (
-                <tr key={rowIdx} className="hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#222222]">
-                  {row.split('|').filter(c => c.trim()).map((cell, cellIdx) => (
-                    <td key={cellIdx} className="border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.2)] px-2 py-1">
-                      {files && onViewDocument ? <TableCellWithCitations text={cell.trim()} files={files} onViewDocument={onViewDocument} /> : cell.trim()}
-                    </td>
-                  ))}
-                </tr>
-              ))}
+              {tableLines.slice(2).map((row, rowIdx) => {
+                const cells = safeSplitTableLine(row);
+                return (
+                  <tr key={rowIdx} className="hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#222222]">
+                    {cells.map((cell, cellIdx) => (
+                      <td key={cellIdx} className="border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.2)] px-2 py-1">
+                        {files && onViewDocument ? <TableCellWithCitations text={cell} files={files} onViewDocument={onViewDocument} /> : cell}
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -98,8 +133,15 @@ const SimpleMarkdown: React.FC<{ text: string; block?: boolean; files?: Processe
       continue;
     }
 
+    if (trimmed.startsWith('#### ')) {
+      const h4 = <h4 key={`h4-${i}`} className="text-sm font-semibold text-[#1a1a1a] dark:text-white mt-2 mb-1">{parseInline(trimmed.slice(5))}</h4>;
+      elements.push(h4);
+      i++;
+      continue;
+    }
+
     if (trimmed.startsWith('### ')) {
-      const h3 = <h3 key={`h3-${i}`} className="text-sm font-bold text-[#1a1a1a] dark:text-white mt-3 mb-1">{parseInline(trimmed.slice(4))}</h3>;
+      const h3 = <h3 key={`h3-${i}`} className="text-[15px] font-semibold text-[#1a1a1a] dark:text-white mt-3 mb-1.5">{parseInline(trimmed.slice(4))}</h3>;
       elements.push(h3);
       i++;
       continue;
@@ -112,11 +154,18 @@ const SimpleMarkdown: React.FC<{ text: string; block?: boolean; files?: Processe
       continue;
     }
 
+    if (trimmed.startsWith('# ')) {
+      const h1 = <h1 key={`h1-${i}`} className="text-lg font-bold text-[#1a1a1a] dark:text-white mt-5 mb-2.5">{parseInline(trimmed.slice(2))}</h1>;
+      elements.push(h1);
+      i++;
+      continue;
+    }
+
     if (trimmed.match(/^[-*]\s/)) {
       const li = (
-        <div key={`li-${i}`} className="flex gap-2 ml-1 relative pl-3">
-          <span className="absolute left-0 top-1.5 w-1 h-1 bg-[#666666] dark:bg-[#a0a0a0] rounded-full"></span>
-          <span className="leading-relaxed">{parseInline(trimmed.replace(/^[-*]\s/, ''))}</span>
+        <div key={`li-${i}`} className="flex gap-2.5 ml-0 my-1">
+          <span className="text-[#666666] dark:text-[#a0a0a0] mt-1.5 flex-shrink-0">•</span>
+          <span className="leading-7 flex-1">{parseInline(trimmed.replace(/^[-*]\s/, ''))}</span>
         </div>
       );
       elements.push(li);
@@ -128,30 +177,73 @@ const SimpleMarkdown: React.FC<{ text: string; block?: boolean; files?: Processe
       const match = trimmed.match(/^(\d+)\.\s/);
       const num = match ? match[1] : '1';
       elements.push(
-        <div key={`ol-${i}`} className="flex gap-2 ml-1">
-          <span className="font-mono text-xs text-[#666666] dark:text-[#a0a0a0] mt-0.5 min-w-[1.2em]">{num}.</span>
-          <span className="leading-relaxed">{parseInline(trimmed.replace(/^\d+\.\s/, ''))}</span>
+        <div key={`ol-${i}`} className="flex gap-2.5 ml-0 my-1">
+          <span className="font-medium text-[#666666] dark:text-[#a0a0a0] mt-0.5 min-w-[1.5em] flex-shrink-0">{num}.</span>
+          <span className="leading-7 flex-1">{parseInline(trimmed.replace(/^\d+\.\s/, ''))}</span>
         </div>
       );
       i++;
       continue;
     }
 
-    // Normal paragraph/line
-    // For block mode we render a div paragraph, for inline mode we push inline content (span)
+    // Code blocks (```)
+    if (trimmed.startsWith('```')) {
+      const codeLines = [trimmed.slice(3)];
+      let j = i + 1;
+      while (j < lines.length && !lines[j].trim().startsWith('```')) {
+        codeLines.push(lines[j]);
+        j++;
+      }
+      if (j < lines.length) j++; // Skip closing ```
+      
+      const codeContent = codeLines.join('\n').trim();
+      elements.push(
+        <pre key={`code-${i}`} className="bg-[rgba(0,0,0,0.06)] dark:bg-[#2a2a2a] rounded-lg p-3 my-2 overflow-x-auto">
+          <code className="text-[13px] font-mono text-[#1a1a1a] dark:text-white">{codeContent}</code>
+        </pre>
+      );
+      i = j;
+      continue;
+    }
+
+    // Normal paragraph/line - handle citations
+    const lineContent = lines[i];
+    const lineParts = lineContent.split(SPLIT_REGEX).filter(p => p !== undefined && p !== null);
+    const lineElements = lineParts.map((part, partIdx) => {
+      const citMatch = part.match(MATCH_REGEX);
+      if (citMatch) {
+        citationCounter++;
+        const fileName = citMatch[1].trim();
+        const location = citMatch[2].trim();
+        const quote = citMatch[3].trim();
+        return (
+          <CitationChip
+            key={`line-cit-${i}-${partIdx}`}
+            index={citationCounter - 1}
+            fileName={fileName}
+            location={location}
+            quote={quote}
+            files={files || []}
+            onViewDocument={onViewDocument || (() => {})}
+          />
+        );
+      }
+      return <span key={`line-txt-${i}-${partIdx}`}>{parseInline(part)}</span>;
+    });
+    
     if (block) {
-      elements.push(<div key={`p-${i}`} className="leading-relaxed">{parseInline(lines[i])}</div>);
+      elements.push(<div key={`p-${i}`} className="leading-7 my-1">{lineElements}</div>);
     } else {
-      elements.push(<span key={`span-${i}`} className="leading-relaxed">{parseInline(lines[i])}</span>);
+      elements.push(<span key={`span-${i}`} className="leading-7">{lineElements}</span>);
     }
     i++;
   }
 
   if (block) {
-    return <div className="space-y-1.5 text-[#1a1a1a] dark:text-white">{elements}</div>;
+    return <div className="space-y-2 text-[#1a1a1a] dark:text-white">{elements}</div>;
   } else {
     // Inline: wrap all children in a single span so they flow inline
-    return <span className="text-[#1a1a1a] dark:text-white">{elements}</span>;
+    return <span className="text-[#1a1a1a] dark:text-white leading-7">{elements}</span>;
   }
 };
 
@@ -200,41 +292,13 @@ const CitationRenderer: React.FC<CitationRendererProps> = ({ text, files, onView
   
   // Remove newlines around citations to keep them inline
   const cleanedText = textWithoutThinking.replace(/\n*((?:\{\{|【)citation:.*?(?:\}\}|】))\n*/g, '$1');
-  const rawParts = cleanedText.split(SPLIT_REGEX).filter(p => p !== undefined && p !== null);
 
   return (
     <div className="text-sm leading-relaxed">
       {thinkingBlocks.map((block, idx) => (
         <ThinkingBlock key={`think-${idx}`} content={block.content} />
       ))}
-      {rawParts.map((part, index) => {
-        const match = part.match(MATCH_REGEX);
-        if (match) {
-          citationCounter++;
-          const fileName = match[1].trim();
-          const location = match[2].trim();
-          const quote = match[3].trim();
-          return (
-            <CitationChip
-              key={`cit-${index}-${fileName}-${citationCounter}`}
-              index={citationCounter - 1}
-              fileName={fileName}
-              location={location}
-              quote={quote}
-              files={files}
-              onViewDocument={onViewDocument}
-            />
-          );
-        } else {
-          if (!part) return null;
-          // Render inline so chips remain on the same line
-          return (
-            <span key={`txt-${index}`} className="align-baseline">
-              <SimpleMarkdown text={part} block={false} files={files} onViewDocument={onViewDocument} />
-            </span>
-          );
-        }
-      })}
+      <SimpleMarkdown text={cleanedText} block={true} files={files} onViewDocument={onViewDocument} />
     </div>
   );
 };
@@ -245,7 +309,7 @@ const TableCellWithCitations: React.FC<{ text: string; files: ProcessedFile[]; o
   const parts = decodedText.split(SPLIT_REGEX).filter(p => p !== undefined && p !== null);
   
   return (
-    <>
+    <span className="inline">
       {parts.map((part, index) => {
         const match = part.match(MATCH_REGEX);
         if (match) {
@@ -265,9 +329,9 @@ const TableCellWithCitations: React.FC<{ text: string; files: ProcessedFile[]; o
             />
           );
         }
-        return <span key={`cell-txt-${index}`}>{part}</span>;
+        return <span key={`cell-txt-${index}`} className="inline">{part}</span>;
       })}
-    </>
+    </span>
   );
 };
 
@@ -313,16 +377,12 @@ const CitationChip: React.FC<CitationChipProps> = ({ index, fileName, location, 
   };
 
   return (
-    <>
+    <span className="inline-block">
       <sup
         ref={triggerRef}
         onClick={handleToggle}
-        className={`inline-flex items-center justify-center w-5 h-5 text-[12px] font-bold rounded-full cursor-pointer transition-all mx-0.5
-          ${isOpen
-            ? 'bg-blue-600 dark:bg-blue-500 text-white scale-110'
-            : 'bg-blue-500 dark:bg-blue-600 text-white hover:scale-110'
-          }`}
-        style={{ verticalAlign: 'super', lineHeight: '20px', aspectRatio: '1' }}
+        className="citation-marker"
+        data-citation-index={index}
         title={`${fileName} - ${location}`}
         aria-expanded={isOpen}
         role="button"
@@ -349,7 +409,7 @@ const CitationChip: React.FC<CitationChipProps> = ({ index, fileName, location, 
           }}
         />
       )}
-    </>
+    </span>
   );
 };
 
