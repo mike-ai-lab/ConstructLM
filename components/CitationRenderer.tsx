@@ -9,8 +9,8 @@ interface CitationRendererProps {
   onViewDocument: (fileName: string, page?: number, quote?: string, location?: string) => void;
 }
 
-const SPLIT_REGEX = /((?:\{\{|【)citation:.*?\|.*?\|.*?(?:\}\}|】))/g;
-const MATCH_REGEX = /(?:\{\{|【)citation:(.*?)\|(.*?)\|(.*?)(?:\}\}|】)/;
+const SPLIT_REGEX = /((?:\{\{|【)citation:[^}】]*(?:\}\}|】))/g;
+const MATCH_REGEX = /(?:\{\{|【)citation:([^|]*?)\|([^|]*?)\|([^}】]*?)(?:\}\}|】)/s;
 
 let citationCounter = 0;
 const resetCitationCounter = () => { citationCounter = 0; };
@@ -18,7 +18,7 @@ const resetCitationCounter = () => { citationCounter = 0; };
 // --- HELPER: Handle Table Splitting with Citations ---
 const safeSplitTableLine = (line: string): string[] => {
   const placeholders: string[] = [];
-  const citationRegex = /(?:\{\{|【)citation:.*?\|.*?\|.*?(?:\}\}|】)/g;
+  const citationRegex = /(?:\{\{|【)citation:[^}】]+(?:\}\}|】)/g;
   
   const maskedLine = line.replace(citationRegex, (match) => {
     placeholders.push(match);
@@ -84,15 +84,16 @@ const SimpleMarkdown: React.FC<{ text: string; block?: boolean; files?: Processe
         j++;
       }
       
+      const delimiter = tableLines[0].includes('\t') ? '\t' : ',';
       const headers = safeSplitTableLine(tableLines[0]);
       
       const tableEl = (
         <div key={`table-${i}`} className="overflow-x-auto my-3">
           <table className="min-w-full border-collapse border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.2)] text-xs">
-            <thead className="bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a]">
+            <thead className="bg-gray-100 dark:bg-[#2a2a2a] sticky top-0 z-10">
               <tr>
                 {headers.map((cell, idx) => (
-                  <th key={idx} className="border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.2)] px-2 py-1 text-left font-semibold text-[#1a1a1a] dark:text-white">
+                  <th key={idx} className="border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.2)] px-2 py-1 text-left font-semibold text-[#1a1a1a] dark:text-white bg-gray-100 dark:bg-[#2a2a2a]">
                     {files && onViewDocument ? <TableCellWithCitations text={cell} files={files} onViewDocument={onViewDocument} /> : cell}
                   </th>
                 ))}
@@ -162,13 +163,32 @@ const SimpleMarkdown: React.FC<{ text: string; block?: boolean; files?: Processe
     }
 
     if (trimmed.match(/^[-*]\s/)) {
-      const li = (
+      const content = trimmed.replace(/^[-*]\s/, '');
+      const parts = content.split(SPLIT_REGEX).filter(p => p !== undefined && p !== null);
+      const contentElements = parts.map((part, partIdx) => {
+        const citMatch = part.match(MATCH_REGEX);
+        if (citMatch) {
+          citationCounter++;
+          return (
+            <CitationChip
+              key={`li-cit-${i}-${partIdx}`}
+              index={citationCounter - 1}
+              fileName={citMatch[1].trim()}
+              location={citMatch[2].trim()}
+              quote={citMatch[3].trim()}
+              files={files || []}
+              onViewDocument={onViewDocument || (() => {})}
+            />
+          );
+        }
+        return <span key={`li-txt-${i}-${partIdx}`}>{parseInline(part)}</span>;
+      });
+      elements.push(
         <div key={`li-${i}`} className="flex gap-2.5 ml-0 my-1">
           <span className="text-[#666666] dark:text-[#a0a0a0] mt-1.5 flex-shrink-0">•</span>
-          <span className="leading-7 flex-1">{parseInline(trimmed.replace(/^[-*]\s/, ''))}</span>
+          <span className="leading-7 flex-1">{contentElements}</span>
         </div>
       );
-      elements.push(li);
       i++;
       continue;
     }
@@ -176,10 +196,30 @@ const SimpleMarkdown: React.FC<{ text: string; block?: boolean; files?: Processe
     if (trimmed.match(/^\d+\.\s/)) {
       const match = trimmed.match(/^(\d+)\.\s/);
       const num = match ? match[1] : '1';
+      const content = trimmed.replace(/^\d+\.\s/, '');
+      const parts = content.split(SPLIT_REGEX).filter(p => p !== undefined && p !== null);
+      const contentElements = parts.map((part, partIdx) => {
+        const citMatch = part.match(MATCH_REGEX);
+        if (citMatch) {
+          citationCounter++;
+          return (
+            <CitationChip
+              key={`ol-cit-${i}-${partIdx}`}
+              index={citationCounter - 1}
+              fileName={citMatch[1].trim()}
+              location={citMatch[2].trim()}
+              quote={citMatch[3].trim()}
+              files={files || []}
+              onViewDocument={onViewDocument || (() => {})}
+            />
+          );
+        }
+        return <span key={`ol-txt-${i}-${partIdx}`}>{parseInline(part)}</span>;
+      });
       elements.push(
         <div key={`ol-${i}`} className="flex gap-2.5 ml-0 my-1">
           <span className="font-medium text-[#666666] dark:text-[#a0a0a0] mt-0.5 min-w-[1.5em] flex-shrink-0">{num}.</span>
-          <span className="leading-7 flex-1">{parseInline(trimmed.replace(/^\d+\.\s/, ''))}</span>
+          <span className="leading-7 flex-1">{contentElements}</span>
         </div>
       );
       i++;
@@ -275,7 +315,7 @@ const CitationRenderer: React.FC<CitationRendererProps> = ({ text, files, onView
   resetCitationCounter();
 
   // Decode HTML entities first
-  const decodedText = text.replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+  let decodedText = text.replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
   
   // Extract thinking blocks
   const thinkRegex = /<think>([\s\S]*?)<\/think>/g;
@@ -291,7 +331,7 @@ const CitationRenderer: React.FC<CitationRendererProps> = ({ text, files, onView
   textWithoutThinking = decodedText.replace(thinkRegex, '');
   
   // Remove newlines around citations to keep them inline
-  const cleanedText = textWithoutThinking.replace(/\n*((?:\{\{|【)citation:.*?(?:\}\}|】))\n*/g, '$1');
+  const cleanedText = textWithoutThinking.replace(/\n*((?:\{\{|【)citation:[^}】]+(?:\}\}|】))\n*/g, '$1');
 
   return (
     <div className="text-sm leading-relaxed">
@@ -303,9 +343,29 @@ const CitationRenderer: React.FC<CitationRendererProps> = ({ text, files, onView
   );
 };
 
+const parseCSVLine = (line: string, delimiter: string) => {
+  const cells: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  
+  for (let j = 0; j < line.length; j++) {
+      const char = line[j];
+      if (char === '"') {
+          inQuotes = !inQuotes;
+      } else if (char === delimiter && !inQuotes) {
+          cells.push(current);
+          current = '';
+      } else {
+          current += char;
+      }
+  }
+  cells.push(current);
+  return cells;
+};
+
 // Helper component to render table cells with citations
 const TableCellWithCitations: React.FC<{ text: string; files: ProcessedFile[]; onViewDocument: (fileName: string, page?: number, quote?: string, location?: string) => void }> = ({ text, files, onViewDocument }) => {
-  const decodedText = text.replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+  let decodedText = text.replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
   const parts = decodedText.split(SPLIT_REGEX).filter(p => p !== undefined && p !== null);
   
   return (
@@ -738,21 +798,38 @@ const TextContextViewer: React.FC<{ file?: ProcessedFile; quote: string; locatio
       
       const headerLine = lines[sheetStartIdx];
       const delimiter = headerLine?.includes('\t') ? '\t' : ',';
-      const headers = headerLine?.split(delimiter).map(c => c.replace(/^"|"$/g, '').trim()) || [];
       
+      const parseCSVLine = (line: string) => {
+          const cells: string[] = [];
+          let current = '';
+          let inQuotes = false;
+          
+          for (let j = 0; j < line.length; j++) {
+              const char = line[j];
+              if (char === '"') {
+                  inQuotes = !inQuotes;
+              } else if (char === delimiter && !inQuotes) {
+                  cells.push(current.trim());
+                  current = '';
+              } else {
+                  current += char;
+              }
+          }
+          cells.push(current.trim());
+          return cells;
+      };
+      
+      const headers = parseCSVLine(headerLine || '');
       const dataLines = lines.slice(sheetStartIdx + 1).filter(l => l && !l.includes('[META:') && !l.includes('---') && !l.includes('[Sheet:'));
-      const rows = dataLines.map(line => {
-        const lineDelimiter = line.includes('\t') ? '\t' : ',';
-        return line.split(lineDelimiter).map(c => c.replace(/^"|"$/g, '').trim());
-      });
+      const rows = dataLines.map(line => parseCSVLine(line));
       
       return (
         <div ref={tableRef} className="overflow-auto p-2" style={{ maxHeight: '400px' }}>
           <table className="w-full text-xs border-collapse">
-            <thead className="sticky top-0 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] z-10">
+            <thead className="sticky top-0 bg-gray-100 dark:bg-[#2a2a2a] z-10">
               <tr>
                 {headers.map((h, idx) => (
-                  <th key={idx} className="border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.2)] px-2 py-1.5 text-left font-semibold text-[#1a1a1a] dark:text-white whitespace-nowrap">{h}</th>
+                  <th key={idx} className="border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.2)] px-2 py-1.5 text-left font-semibold text-[#1a1a1a] dark:text-white whitespace-nowrap bg-gray-100 dark:bg-[#2a2a2a]">{h}</th>
                 ))}
               </tr>
             </thead>
