@@ -369,7 +369,7 @@ const CitationPortal: React.FC<CitationPortalProps> = ({ onClose, coords, fileNa
   const [file, setFile] = useState<ProcessedFile | undefined>(undefined);
   const [pdfPageNumber, setPdfPageNumber] = useState<number | null>(null);
   const [pdfScale, setPdfScale] = useState(1);
-  const pdfZoomHandlerRef = useRef<{ handleZoom: (delta: number) => void; handleReset: () => void }>();
+  const pdfZoomHandlerRef = useRef<{ handleZoom: (delta: number) => void; handleReset: () => void } | undefined>(undefined);
 
   useEffect(() => {
     const foundFile = files.find(f => f.name === fileName);
@@ -642,51 +642,72 @@ const PdfPagePreview: React.FC<{ file: File; pageNumber: number; quote?: string;
 
 // --- TEXT CONTEXT VIEWER ---
 const TextContextViewer: React.FC<{ file?: ProcessedFile; quote: string; location: string }> = ({ file, quote, location }) => {
-  // Check if it's Excel and extract row data
+  const tableRef = useRef<HTMLDivElement | null>(null);
+  
+  useEffect(() => {
+    const scrollToRow = () => {
+      if (tableRef.current) {
+        const highlightedRow = tableRef.current.querySelector('.highlighted-row');
+        if (highlightedRow) {
+          highlightedRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          return true;
+        }
+      }
+      return false;
+    };
+    
+    if (!scrollToRow()) {
+      setTimeout(scrollToRow, 100);
+    }
+  }, [file, location]);
+  
   if (file?.type === 'excel' && location) {
     const rowMatch = location.match(/Row\s*(\d+)/i);
     const sheetMatch = location.match(/Sheet:\s*([^,]+)/i);
     
     if (rowMatch && file.content) {
-      const rowNum = parseInt(rowMatch[1], 10);
+      const targetRowNum = parseInt(rowMatch[1], 10);
       const sheetName = sheetMatch ? sheetMatch[1].trim() : null;
       const lines = file.content.split('\n');
       
-      // Find the sheet section
       let sheetStartIdx = 0;
       if (sheetName) {
         const sheetHeaderIdx = lines.findIndex(l => l.includes(`[Sheet: ${sheetName}]`));
         if (sheetHeaderIdx >= 0) sheetStartIdx = sheetHeaderIdx + 1;
       }
       
-      // Get headers (first line after sheet header)
       const headerLine = lines[sheetStartIdx];
-      const headers = headerLine?.split('\t').map(c => c.replace(/^"|"$/g, '').trim()) || [];
+      const delimiter = headerLine?.includes('\t') ? '\t' : ',';
+      const headers = headerLine?.split(delimiter).map(c => c.replace(/^"|"$/g, '').trim()) || [];
       
-      // Get target row (relative to sheet start)
-      const targetLine = lines[sheetStartIdx + rowNum];
+      const dataLines = lines.slice(sheetStartIdx + 1).filter(l => l && !l.includes('[META:') && !l.includes('---') && !l.includes('[Sheet:'));
+      const rows = dataLines.map(line => {
+        const lineDelimiter = line.includes('\t') ? '\t' : ',';
+        return line.split(lineDelimiter).map(c => c.replace(/^"|"$/g, '').trim());
+      });
       
-      if (targetLine && !targetLine.includes('[META:') && !targetLine.includes('---')) {
-        const cells = targetLine.split('\t').map(c => c.replace(/^"|"$/g, '').trim());
-        
-        return (
-          <div className="p-3 space-y-2">
-            <div className="text-[12px] text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wider mb-2">{location}</div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <tbody>
-                  {cells.map((cell, idx) => (
-                    cell && <tr key={idx} className="border-b border-[rgba(0,0,0,0.1)] dark:border-[rgba(255,255,255,0.1)] last:border-0">
-                      <td className="py-1.5 pr-3 font-semibold text-[#666666] dark:text-[#a0a0a0] align-top">{headers[idx] || `Col ${idx + 1}`}:</td>
-                      <td className="py-1.5 text-[#1a1a1a] dark:text-white">{cell}</td>
-                    </tr>
+      return (
+        <div ref={tableRef} className="overflow-auto p-2" style={{ maxHeight: '400px' }}>
+          <table className="w-full text-xs border-collapse">
+            <thead className="sticky top-0 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] z-10">
+              <tr>
+                {headers.map((h, idx) => (
+                  <th key={idx} className="border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.2)] px-2 py-1.5 text-left font-semibold text-[#1a1a1a] dark:text-white whitespace-nowrap">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, rowIdx) => (
+                <tr key={rowIdx} className={`${rowIdx + 2 === targetRowNum ? 'highlighted-row bg-yellow-100 dark:bg-yellow-600/40' : 'hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#222222]'}`}>
+                  {row.map((cell, cellIdx) => (
+                    <td key={cellIdx} className="border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.2)] px-2 py-1.5 text-[#1a1a1a] dark:text-white">{cell}</td>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        );
-      }
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
     }
   }
   

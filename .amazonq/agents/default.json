@@ -8,7 +8,7 @@
     "**/build/**",
     "**/.cache/**"
   ],
-  "amazonQ.workspaceContext.enabled": false,
+  "amazonQ.workspaceContext.enabled": true,
   "amazonQ.localIndexing.enabled": false,
   "amazonQ.codeAnalysis.enabled": false,
   "amazonQ.mcp.enabled": false,

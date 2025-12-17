@@ -251,10 +251,11 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
         
         if (!tryScroll()) {
             setTimeout(tryScroll, 100);
-            setTimeout(tryScroll, 500); 
+            setTimeout(tryScroll, 300);
+            setTimeout(tryScroll, 600);
         }
     }
-  }, [highlightQuote, location, isPdf, file]);
+  }, [highlightQuote, location, isPdf, file, textScale]);
 
   const getFileIcon = () => {
       if (file.type === 'pdf') return <FileText size={18} />;
@@ -368,12 +369,13 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
                       <FileSpreadsheet size={14} className={isTargetSheet ? "text-blue-600 dark:text-blue-400" : "text-emerald-600 dark:text-emerald-400"}/> 
                       {sheetName}
                   </h4>
-                  <div className={`overflow-x-auto border rounded-lg shadow-sm ${isTargetSheet ? 'border-blue-200 dark:border-blue-800' : 'border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)]'}`}>
+                  <div className={`overflow-auto border rounded-lg shadow-sm ${isTargetSheet ? 'border-blue-200 dark:border-blue-800' : 'border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)]'}`} style={{ maxHeight: '600px' }}>
                       <table className="w-full table-auto divide-y divide-[rgba(0,0,0,0.15)] dark:divide-[rgba(255,255,255,0.05)] text-xs">
                           <tbody className="bg-white dark:bg-[#2a2a2a] divide-y divide-[rgba(0,0,0,0.15)] dark:divide-[rgba(255,255,255,0.05)]">
                               {rows.map((row, rIdx) => {
                                   const visualRowNumber = rIdx + 1;
                                   const isHighlightRow = isTargetSheet && (visualRowNumber === targetRow);
+                                  const isHeaderRow = rIdx === 0;
 
                                   return (
                                     <tr 
@@ -381,7 +383,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
                                         id={isHighlightRow ? "excel-highlight-row" : undefined}
                                         className={`
                                             transition-colors duration-500
-                                            ${rIdx === 0 ? "bg-[rgba(0,0,0,0.03)] dark:bg-[#1a1a1a] font-semibold text-[#1a1a1a] dark:text-white sticky top-0 z-20" : "text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#222222]"}
+                                            ${isHeaderRow ? "bg-[rgba(0,0,0,0.03)] dark:bg-[#1a1a1a] font-semibold text-[#1a1a1a] dark:text-white sticky top-0 z-20" : "text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#222222]"}
                                             ${isHighlightRow ? "bg-amber-100 dark:bg-amber-900/30 ring-2 ring-inset ring-amber-400 dark:ring-amber-600 z-10 relative" : ""}
                                         `}
                                     >

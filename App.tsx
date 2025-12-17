@@ -889,7 +889,7 @@ const App: React.FC = () => {
              <div className="relative" ref={modelMenuRef}>
                  <button 
                     onClick={() => setShowModelMenu(!showModelMenu)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] hover:bg-[rgba(0,0,0,0.06)] dark:hover:bg-[#222222] rounded-full text-xs font-medium text-[#1a1a1a] dark:text-white transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] hover:bg-[rgba(0,0,0,0.06)] dark:hover:bg-[#222222] rounded-full text-xs font-medium text-[#1a1a1a] dark:text-white"
                  >
                      <Cpu size={14} />
                      <span className="max-w-[120px] truncate">{activeModel.name}</span>
@@ -1122,11 +1122,12 @@ const App: React.FC = () => {
             </div>
             <button 
               onClick={() => document.documentElement.classList.toggle('dark')}
-              className="p-2 text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] hover:text-[#1a1a1a] dark:hover:text-white rounded-full transition-colors"
+              className="p-2 hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] rounded-full relative"
               title="Toggle Theme"
+              style={{ width: '34px', height: '34px' }}
             >
-                <Moon size={18} className="dark:hidden" />
-                <Sun size={18} className="hidden dark:block" />
+                <Moon size={18} className="dark:!hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" style={{ color: '#666666' }} />
+                <Sun size={18} className="!hidden dark:!block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" style={{ color: '#ffffff' }} />
             </button>
             <button 
               onClick={() => setIsSettingsOpen(true)}
@@ -1159,23 +1160,24 @@ const App: React.FC = () => {
         <>
         {/* Solid background layer */}
         <div 
-          className="fixed bottom-0 bg-white dark:bg-[#1a1a1a] pointer-events-none transition-all duration-300"
+          className="fixed bottom-0 bg-white dark:bg-[#1a1a1a] pointer-events-none"
           style={{
             left: isMobile ? '16px' : (isSidebarOpen ? `${sidebarWidth + 16}px` : '16px'),
             right: activeFile ? (isMobile ? '16px' : `${viewerWidth + 16}px`) : '16px',
             height: '140px',
-            zIndex: 149
+            zIndex: 149,
+            transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1), right 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
           }}
         />
         {/* Gradient layer */}
-        <div 
-          className="fixed bottom-[140px] pointer-events-none transition-all duration-300"
+        <div
+          className="input-gradient-layer fixed bottom-[140px] pointer-events-none"
           style={{
             left: isMobile ? '16px' : (isSidebarOpen ? `${sidebarWidth + 16}px` : '16px'),
             right: activeFile ? (isMobile ? '16px' : `${viewerWidth + 16}px`) : '16px',
             height: '30px',
             zIndex: 149,
-            background: `linear-gradient(to top, ${document.documentElement.classList.contains('dark') ? '#1a1a1a' : '#ffffff'} 0%, transparent 100%)`
+            transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1), right 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
           }}
         />
         <div 

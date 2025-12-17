@@ -6,6 +6,19 @@ import { LOCAL_MODELS, updateLocalModelsStatus } from "./localModelService";
 export const MODEL_REGISTRY: ModelConfig[] = [
   // --- Google Gemini Models (Free Tier Available) ---
   {
+    id: 'gemini-flash-latest',
+    name: 'Gemini Flash (Latest)',
+    provider: 'google',
+    contextWindow: 1048576,
+    apiKeyEnv: 'GEMINI_API_KEY',
+    supportsImages: true,
+    supportsFilesApi: true,
+    maxInputWords: 786432,
+    maxOutputWords: 49152,
+    description: "Latest stable Flash. Excellent for documents.",
+    capacityTag: 'High'
+  },
+  {
     id: 'gemini-2.5-flash',
     name: 'Gemini 2.5 Flash',
     provider: 'google',
