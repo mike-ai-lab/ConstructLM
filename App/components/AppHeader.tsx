@@ -1,7 +1,7 @@
 import React from 'react';
 import { Sparkles, PanelLeft, PanelLeftOpen, Cpu, ChevronDown, Phone, Plus, Edit3, Highlighter, Trash2, Check, Minus, Camera, Image, Moon, Sun, HelpCircle, Settings } from 'lucide-react';
-import { MODEL_REGISTRY } from '../services/modelRegistry';
-import { DRAWING_COLORS } from '../services/drawingService';
+import { MODEL_REGISTRY } from '../../services/modelRegistry';
+import { DRAWING_COLORS } from '../../services/drawingService';
 
 interface AppHeaderProps {
   isMobile: boolean;
