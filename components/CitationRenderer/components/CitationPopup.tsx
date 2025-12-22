@@ -60,9 +60,21 @@ const CitationPopup: React.FC<CitationPopupProps> = ({
       const popupWidth = 450;
       const popupHeight = Math.min(400, window.innerHeight * 0.4);
       const margin = 8;
+      const headerHeight = 65;
+      
+      // Close popup if trigger is above header
+      if (triggerRect.top < headerHeight) {
+        onClose();
+        return;
+      }
       
       let top = triggerRect.bottom + margin;
       let left = triggerRect.left - 20;
+      
+      // Ensure popup stays below header
+      if (top < headerHeight + margin) {
+        top = headerHeight + margin;
+      }
       
       // Adjust horizontal position if overflowing right
       if (left + popupWidth > window.innerWidth - margin) {
@@ -78,11 +90,11 @@ const CitationPopup: React.FC<CitationPopupProps> = ({
       if (top + popupHeight > window.innerHeight - margin) {
         // Try to position above the trigger
         const topAbove = triggerRect.top - popupHeight - margin;
-        if (topAbove >= margin) {
+        if (topAbove >= headerHeight + margin) {
           top = topAbove;
         } else {
-          // If doesn't fit above either, position at top with max available height
-          top = margin;
+          // If doesn't fit above either, position below header
+          top = headerHeight + margin;
         }
       }
       
@@ -97,7 +109,7 @@ const CitationPopup: React.FC<CitationPopupProps> = ({
       window.removeEventListener('resize', updatePosition);
       window.removeEventListener('scroll', updatePosition, true);
     };
-  }, [triggerRef, isInTable, coords]);
+  }, [triggerRef, isInTable, coords, onClose]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
