@@ -114,7 +114,7 @@ const CitationPopup: React.FC<CitationPopupProps> = ({
   const popupContent = (
     <div
       ref={popoverRef}
-      className={`fixed z-[10000] w-[450px] max-w-[90vw] bg-white dark:bg-[#222222] text-[#1a1a1a] dark:text-white rounded-lg shadow-2xl border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] flex flex-col overflow-hidden animate-in fade-in duration-150`}
+      className={`fixed z-[50] w-[450px] max-w-[90vw] bg-white dark:bg-[#222222] text-[#1a1a1a] dark:text-white rounded-lg shadow-2xl border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] flex flex-col overflow-hidden animate-in fade-in duration-150`}
       style={{ 
         top: position?.top ?? (coords?.top ?? 0), 
         left: position?.left ?? (coords?.left ?? 0), 
