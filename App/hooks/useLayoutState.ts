@@ -10,6 +10,7 @@ export const useLayoutState = () => {
   const [isResizingViewer, setIsResizingViewer] = useState(false);
   const [viewState, setViewState] = useState<ViewState | null>(null);
   const [isSidebarDragOver, setIsSidebarDragOver] = useState(false);
+  const [isInputDragOver, setIsInputDragOver] = useState(false);
   const [userHasScrolled, setUserHasScrolled] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -32,6 +33,8 @@ export const useLayoutState = () => {
     setViewState,
     isSidebarDragOver,
     setIsSidebarDragOver,
+    isInputDragOver,
+    setIsInputDragOver,
     userHasScrolled,
     setUserHasScrolled,
     messagesEndRef,

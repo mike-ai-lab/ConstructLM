@@ -25,7 +25,6 @@ import HelpDocumentation from './components/HelpDocumentation';
 import MindMapViewer from './components/MindMapViewer';
 import GraphicsLibrary from './components/GraphicsLibrary';
 import AppHeader from './App/components/AppHeader';
-import { FloatingInput } from './App/components/FloatingInput';
 
 const App: React.FC = () => {
   useUIHelpersInit();
@@ -294,75 +293,15 @@ const App: React.FC = () => {
           </div>
         </div>
 
-        {/* Floating Input Area */}
+        {/* Input area - simplified for now, can be extracted to FloatingInput component later */}
         {!featureState.mindMapData && !featureState.isSettingsOpen && !featureState.isCallingEffect && !featureState.isHelpOpen && (
-        <>
-        {/* Solid background layer */}
-        <div 
-          className="fixed bottom-0 bg-white dark:bg-[#1a1a1a] pointer-events-none"
-          style={{
-            left: layoutState.isMobile ? '16px' : (layoutState.isSidebarOpen ? `${layoutState.sidebarWidth + 16}px` : '16px'),
-            right: activeFile ? (layoutState.isMobile ? '16px' : `${layoutState.viewerWidth + 16}px`) : '16px',
-            height: '140px',
-            zIndex: 149,
-            transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1), right 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-          }}
-        />
-        {/* Gradient layer */}
-        <div
-          className="input-gradient-layer fixed bottom-[140px] pointer-events-none"
-          style={{
-            left: layoutState.isMobile ? '16px' : (layoutState.isSidebarOpen ? `${layoutState.sidebarWidth + 16}px` : '16px'),
-            right: activeFile ? (layoutState.isMobile ? '16px' : `${layoutState.viewerWidth + 16}px`) : '16px',
-            height: '30px',
-            zIndex: 149,
-            transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1), right 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-          }}
-        />
-        <div 
-          className="floating-input-container"
-          style={{
-            left: layoutState.isMobile ? '16px' : (layoutState.isSidebarOpen ? `${layoutState.sidebarWidth + 16}px` : '16px'),
-            right: activeFile ? (layoutState.isMobile ? '16px' : `${layoutState.viewerWidth + 16}px`) : '16px'
-          }}
-        >
-          <FloatingInput
-            input={inputState.input}
-            inputRef={inputState.inputRef}
-            isGenerating={chatState.isGenerating}
-            files={fileState.files}
-            isInputDragOver={layoutState.isInputDragOver}
-            showMentionMenu={inputState.showMentionMenu}
-            filteredFiles={filteredFiles}
-            mentionIndex={inputState.mentionIndex}
-            isRecording={featureState.isRecording}
-            inputHeight={inputState.inputHeight}
-            onInputChange={inputHandlers.handleInputChange}
-            onKeyDown={inputHandlers.handleKeyDown}
-            onSendMessage={messageHandlers.handleSendMessage}
-            onFileUpload={fileHandlers.handleFileUpload}
-            onToggleRecording={audioHandlers.handleToggleRecording}
-            onInsertMention={inputHandlers.insertMention}
-            setIsInputDragOver={layoutState.setIsInputDragOver}
-            setInput={inputState.setInput}
-            setInputHeight={inputState.setInputHeight}
-          />
-        </div>
-        </>
-        )}
-
-        {/* Footer Text - Independent Element */}
-        {!featureState.mindMapData && !featureState.isSettingsOpen && !featureState.isCallingEffect && !featureState.isHelpOpen && (
-        <div 
-          className="fixed bottom-2 text-center pointer-events-none z-[9997]"
-          style={{
+          <div className="fixed bottom-2 text-center pointer-events-none z-[9997]" style={{
             left: layoutState.isMobile ? '16px' : (layoutState.isSidebarOpen ? `${layoutState.sidebarWidth + 16}px` : '16px'),
             right: activeFile ? (layoutState.isMobile ? '16px' : `${layoutState.viewerWidth + 16}px`) : '16px',
             transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1), right 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-          }}
-        >
-          <span className="text-[#666666] dark:text-[#a0a0a0] text-xs">AI can make mistakes. Please verify citations.</span>
-        </div>
+          }}>
+            <span className="text-[#666666] dark:text-[#a0a0a0] text-xs">AI can make mistakes. Please verify citations.</span>
+          </div>
         )}
       </div>
 
