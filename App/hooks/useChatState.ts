@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Message } from '../types';
-import { ChatMetadata } from '../services/chatRegistry';
+import { Message } from '../../types';
+import { ChatMetadata } from '../../services/chatRegistry';
 
 export const useChatState = () => {
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);

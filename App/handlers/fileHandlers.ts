@@ -1,5 +1,5 @@
-import { ProcessedFile } from '../types';
-import { parseFile } from '../services/fileParser';
+import { ProcessedFile } from '../../types';
+import { parseFile } from '../../services/fileParser';
 import { ViewState } from '../types';
 
 export const createFileHandlers = (

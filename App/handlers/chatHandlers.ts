@@ -1,5 +1,5 @@
-import { Message } from '../types';
-import { chatRegistry, ChatSession, ChatMetadata } from '../services/chatRegistry';
+import { Message } from '../../types';
+import { chatRegistry, ChatSession, ChatMetadata } from '../../services/chatRegistry';
 
 export const createChatHandlers = (
   currentChatId: string | null,

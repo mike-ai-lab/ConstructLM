@@ -1,5 +1,5 @@
-import { getApiKey } from '../services/geminiService';
-import { showToast } from '../utils/uiHelpers';
+import { getApiKey } from '../../services/geminiService';
+import { showToast } from '../../utils/uiHelpers';
 
 export const createAudioHandlers = (
   isRecording: boolean,

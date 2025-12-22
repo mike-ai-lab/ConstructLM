@@ -1,5 +1,5 @@
 import React from 'react';
-import { ProcessedFile } from '../types';
+import { ProcessedFile } from '../../types';
 
 export const createInputHandlers = (
   input: string,

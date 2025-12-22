@@ -1,5 +1,5 @@
-import { Message, ProcessedFile } from '../types';
-import { sendMessageToLLM } from '../services/llmService';
+import { Message, ProcessedFile } from '../../types';
+import { sendMessageToLLM } from '../../services/llmService';
 
 export const createMessageHandlers = (
   input: string,

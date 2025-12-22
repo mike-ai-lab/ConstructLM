@@ -1,9 +1,9 @@
-import { ProcessedFile } from '../types';
-import { snapshotService, Snapshot } from '../services/snapshotService';
-import { drawingService, DrawingTool, DRAWING_COLORS, DrawingState } from '../services/drawingService';
-import { generateMindMapData } from '../services/mindMapService';
-import { mindMapCache } from '../services/mindMapCache';
-import { showToast } from '../utils/uiHelpers';
+import { ProcessedFile } from '../../types';
+import { snapshotService, Snapshot } from '../../services/snapshotService';
+import { drawingService, DrawingTool, DRAWING_COLORS, DrawingState } from '../../services/drawingService';
+import { generateMindMapData } from '../../services/mindMapService';
+import { mindMapCache } from '../../services/mindMapCache';
+import { showToast } from '../../utils/uiHelpers';
 
 export const createFeatureHandlers = (
   files: ProcessedFile[],

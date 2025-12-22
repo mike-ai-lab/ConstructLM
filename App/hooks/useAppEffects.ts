@@ -1,10 +1,10 @@
 import { useEffect } from 'react';
-import { initializeGemini } from '../services/geminiService';
-import { snapshotService } from '../services/snapshotService';
-import { chatRegistry } from '../services/chatRegistry';
-import { drawingService } from '../services/drawingService';
-import { MODEL_REGISTRY, getRateLimitCooldown, DEFAULT_MODEL_ID } from '../services/modelRegistry';
-import { Message } from '../types';
+import { initializeGemini } from '../../services/geminiService';
+import { snapshotService } from '../../services/snapshotService';
+import { chatRegistry } from '../../services/chatRegistry';
+import { drawingService } from '../../services/drawingService';
+import { MODEL_REGISTRY, getRateLimitCooldown, DEFAULT_MODEL_ID } from '../../services/modelRegistry';
+import { Message } from '../../types';
 
 export const useAppEffects = (
   setSnapshots: any,
