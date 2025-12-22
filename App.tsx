@@ -93,6 +93,7 @@ const App: React.FC = () => {
   // Drawing State
   const [drawingState, setDrawingState] = useState<DrawingState>(drawingService.getState());
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const [showToolPicker, setShowToolPicker] = useState(false);
 
 
 
@@ -803,7 +804,7 @@ const App: React.FC = () => {
       }
       
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -818,10 +819,18 @@ const App: React.FC = () => {
         }
       );
       
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+      
       const result = await response.json();
       const transcription = result.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      setInput(prev => prev + (prev ? ' ' : '') + transcription);
-      showToast('Transcription complete', 'success');
+      if (transcription) {
+        setInput(prev => prev + (prev ? ' ' : '') + transcription);
+        showToast('Transcription complete', 'success');
+      } else {
+        showToast('No transcription returned', 'error');
+      }
     } catch (error) {
       console.error('Transcription error:', error);
       showToast('Failed to transcribe audio', 'error');
@@ -1056,45 +1065,60 @@ const App: React.FC = () => {
               <Plus size={18} />
             </button>
             {/* Drawing Tools */}
-            <button
-              onClick={() => handleDrawingToolChange('highlighter')}
-              className={`p-2 rounded-full transition-colors ${
-                drawingState.tool === 'highlighter'
-                  ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400'
-                  : 'text-[#a0a0a0] hover:text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20'
-              }`}
-              title="Highlighter"
-            >
-              <Highlighter size={18} />
-            </button>
-            <button
-              onClick={() => handleDrawingToolChange('pen')}
-              className={`p-2 rounded-full transition-colors ${
-                drawingState.tool === 'pen'
-                  ? 'bg-[rgba(68,133,209,0.1)] text-[#4485d1]'
-                  : 'text-[#a0a0a0] hover:text-[#4485d1] hover:bg-[rgba(68,133,209,0.1)]'
-              }`}
-              title="Drawing Pen"
-            >
-              <Edit3 size={18} />
-            </button>
-            
-            {drawingState.isActive && (
+            <div className="relative">
               <button
-                onClick={() => handleDrawingToolChange('none')}
-                className="p-2 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/40 rounded-full transition-colors"
-                title="Done Drawing"
+                onClick={() => setShowToolPicker(!showToolPicker)}
+                className={`p-2 rounded-full transition-colors ${
+                  drawingState.tool === 'highlighter'
+                    ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400'
+                    : drawingState.tool === 'pen'
+                    ? 'bg-[rgba(68,133,209,0.1)] text-[#4485d1]'
+                    : 'text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a]'
+                }`}
+                title="Drawing Tools"
               >
-                <Check size={18} />
+                {drawingState.tool === 'highlighter' ? <Highlighter size={18} /> : drawingState.tool === 'pen' ? <Edit3 size={18} /> : <Edit3 size={18} />}
               </button>
-            )}
-            <button
-              onClick={handleClearAll}
-              className="p-2 text-[#a0a0a0] hover:bg-red-100 dark:hover:bg-red-900/30 hover:text-[#ef4444] rounded-full transition-colors"
-              title="Clear All"
-            >
-              <Trash2 size={18} />
-            </button>
+              
+              {showToolPicker && (
+                <div className="absolute top-full right-0 mt-2 bg-white dark:bg-[#222222] rounded-lg shadow-lg border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] p-2 z-50 flex gap-1">
+                  <button
+                    onClick={() => { handleDrawingToolChange('pen'); setShowToolPicker(false); }}
+                    className={`p-2 rounded-full transition-all hover:scale-110 ${
+                      drawingState.tool === 'pen' ? 'bg-[rgba(68,133,209,0.2)] text-[#4485d1] scale-110' : 'text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a]'
+                    }`}
+                    title="Pen"
+                  >
+                    <Edit3 size={18} />
+                  </button>
+                  <button
+                    onClick={() => { handleDrawingToolChange('highlighter'); setShowToolPicker(false); }}
+                    className={`p-2 rounded-full transition-all hover:scale-110 ${
+                      drawingState.tool === 'highlighter' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 scale-110' : 'text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a]'
+                    }`}
+                    title="Highlighter"
+                  >
+                    <Highlighter size={18} />
+                  </button>
+                  <button
+                    onClick={() => { handleClearAll(); setShowToolPicker(false); }}
+                    className="p-2 rounded-full text-[#a0a0a0] hover:bg-red-100 dark:hover:bg-red-900/30 hover:text-[#ef4444] transition-all hover:scale-110"
+                    title="Clear All"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                  {drawingState.isActive && (
+                    <button
+                      onClick={() => { handleDrawingToolChange('none'); setShowToolPicker(false); }}
+                      className="p-2 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/40 transition-all hover:scale-110"
+                      title="Done"
+                    >
+                      <Check size={18} />
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
             
             {/* Drawing Controls - Show when drawing is active */}
             {drawingState.isActive && drawingState.tool !== 'none' && (

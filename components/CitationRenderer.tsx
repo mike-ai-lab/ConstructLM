@@ -438,7 +438,30 @@ const CitationChip: React.FC<CitationChipProps> = ({ index, fileName, location, 
   const updateCoords = useCallback(() => {
     if (triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
-      setCoords({ top: rect.bottom + 8, left: rect.left - 20 });
+      const viewportHeight = window.innerHeight;
+      const viewportWidth = window.innerWidth;
+      const popupHeight = Math.min(viewportHeight * 0.6, 600);
+      const popupWidth = Math.min(viewportWidth * 0.9, 450);
+      
+      let top = rect.bottom + 8;
+      let left = rect.left - 20;
+      
+      // Adjust if overflows bottom
+      if (top + popupHeight > viewportHeight) {
+        top = Math.max(10, rect.top - popupHeight - 8);
+      }
+      
+      // Adjust if overflows right
+      if (left + popupWidth > viewportWidth) {
+        left = viewportWidth - popupWidth - 10;
+      }
+      
+      // Adjust if overflows left
+      if (left < 10) {
+        left = 10;
+      }
+      
+      setCoords({ top, left });
     }
   }, []);
 
@@ -578,6 +601,7 @@ const CitationPortal: React.FC<CitationPortalProps> = ({ onClose, coords, fileNa
       role="dialog"
       aria-modal="true"
       aria-label={`Citation for ${fileName}`}
+      onWheel={(e) => e.stopPropagation()}
     >
       <div className="bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] px-3 py-1.5 border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-1.5 overflow-hidden min-w-0">
@@ -590,7 +614,7 @@ const CitationPortal: React.FC<CitationPortalProps> = ({ onClose, coords, fileNa
           <button onClick={onClose} className="text-[#666666] dark:text-[#a0a0a0] hover:text-[#1a1a1a] dark:hover:text-white p-1 rounded hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#222222]"><X size={12} /></button>
         </div>
       </div>
-      <div className="bg-[rgba(0,0,0,0.03)] dark:bg-[#1a1a1a] overflow-hidden relative flex-1">
+      <div className="bg-[rgba(0,0,0,0.03)] dark:bg-[#1a1a1a] relative flex-1 overflow-y-auto overscroll-contain" onWheel={(e) => e.stopPropagation()}>
         {isPdfMode && file?.fileHandle ? (
           <PdfPagePreview file={file.fileHandle} pageNumber={pdfPageNumber as number} quote={quote} onScaleChange={setPdfScale} zoomHandlerRef={pdfZoomHandlerRef} />
         ) : (
@@ -670,6 +694,7 @@ const CitationPopup: React.FC<CitationPopupProps> = ({ onClose, fileName, locati
       role="dialog"
       aria-modal="true"
       aria-label={`Citation for ${fileName}`}
+      onWheel={(e) => e.stopPropagation()}
     >
       <div className="bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] px-3 py-1.5 border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-1.5 overflow-hidden min-w-0">
@@ -682,7 +707,7 @@ const CitationPopup: React.FC<CitationPopupProps> = ({ onClose, fileName, locati
           <button onClick={onClose} className="text-[#666666] dark:text-[#a0a0a0] hover:text-[#1a1a1a] dark:hover:text-white p-1 rounded hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#222222]"><X size={12} /></button>
         </div>
       </div>
-      <div className="bg-[rgba(0,0,0,0.03)] dark:bg-[#1a1a1a] overflow-hidden relative flex-1">
+      <div className="bg-[rgba(0,0,0,0.03)] dark:bg-[#1a1a1a] relative flex-1 overflow-y-auto overscroll-contain" onWheel={(e) => e.stopPropagation()}>
         {isPdfMode && file?.fileHandle ? (
           <PdfPagePreview file={file.fileHandle} pageNumber={pdfPageNumber as number} quote={quote} onScaleChange={setPdfScale} zoomHandlerRef={pdfZoomHandlerRef} />
         ) : (
@@ -821,6 +846,7 @@ const PdfPagePreview: React.FC<{ file: File; pageNumber: number; quote?: string;
   };
 
   const handleWheel = (e: React.WheelEvent) => {
+    e.stopPropagation();
     e.preventDefault();
     const delta = -e.deltaY * 0.003;
     const newScale = Math.min(Math.max(0.5, scale + delta), 8);
@@ -967,7 +993,7 @@ const TextContextViewer: React.FC<{ file?: ProcessedFile; quote: string; locatio
       const rows = dataLines.map(line => parseCSVLine(line));
       
       return (
-        <div ref={tableRef} className="overflow-auto p-2" style={{ maxHeight: '400px' }}>
+    <div ref={tableRef} className="overflow-auto p-2" style={{ maxHeight: '400px' }} onWheel={(e) => e.stopPropagation()}>
           <table className="w-full text-xs border-collapse">
             <thead className="sticky top-0 bg-gray-100 dark:bg-[#2a2a2a] z-10">
               <tr>
