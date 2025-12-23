@@ -15,8 +15,13 @@ app.post('/api/proxy/groq', async (req, res) => {
       },
       body: JSON.stringify(req.body)
     });
-    const data = await response.json();
-    res.status(response.status).json(data);
+    
+    // Stream the response
+    res.status(response.status);
+    response.headers.forEach((value, key) => {
+      res.setHeader(key, value);
+    });
+    response.body.pipe(res);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -32,8 +37,13 @@ app.post('/api/proxy/openai', async (req, res) => {
       },
       body: JSON.stringify(req.body)
     });
-    const data = await response.json();
-    res.status(response.status).json(data);
+    
+    // Stream the response
+    res.status(response.status);
+    response.headers.forEach((value, key) => {
+      res.setHeader(key, value);
+    });
+    response.body.pipe(res);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

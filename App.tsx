@@ -210,32 +210,25 @@ const App: React.FC = () => {
 
       {/* LEFT SIDEBAR */}
       <div 
-        className={`fixed md:relative z-40 h-full bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] flex flex-col transition-all duration-300 ease-in-out border-r border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] md:border-r-0 ${layoutState.isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} ${!layoutState.isSidebarOpen && !layoutState.isMobile ? 'md:w-0 md:opacity-0 md:overflow-hidden' : ''}`}
-        style={{ width: layoutState.isMobile ? '85%' : (layoutState.isSidebarOpen ? layoutState.sidebarWidth : 0) }}
+        className={`fixed md:relative z-40 h-full bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] flex flex-col border-r border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] md:border-r-0 ${layoutState.isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} ${!layoutState.isSidebarOpen && !layoutState.isMobile ? 'md:w-0 md:opacity-0 md:overflow-hidden' : ''}`}
+        style={{ 
+          width: layoutState.isMobile ? '85%' : (layoutState.isSidebarOpen ? layoutState.sidebarWidth : 0)
+        }}
       >
-        <div className="h-full flex flex-col relative w-full">
-          {layoutState.isMobile && (
-            <button onClick={() => layoutState.setIsSidebarOpen(false)} className="absolute top-3 right-3 p-1 text-gray-400">
-              <X size={20} />
-            </button>
-          )}
-          <div className={`flex flex-col h-full w-full ${!layoutState.isSidebarOpen && !layoutState.isMobile ? 'hidden' : 'block'}`}>
-            <FileSidebar 
-              files={fileState.files} 
-              onUpload={fileHandlers.handleFileUpload} 
-              onRemove={fileHandlers.handleRemoveFile}
-              isProcessing={fileState.isProcessingFiles}
-              onGenerateMindMap={featureHandlers.handleGenerateMindMap}
-              chats={chatState.chats}
-              activeChatId={chatState.currentChatId}
-              onSelectChat={chatHandlers.handleSelectChat}
-              onCreateChat={chatHandlers.handleCreateChat}
-              onDeleteChat={chatHandlers.handleDeleteChat}
-              isDragOver={layoutState.isSidebarDragOver}
-              onDragStateChange={layoutState.setIsSidebarDragOver}
-            />
-          </div>
-        </div>
+        <FileSidebar 
+          files={fileState.files} 
+          onUpload={fileHandlers.handleFileUpload} 
+          onRemove={fileHandlers.handleRemoveFile}
+          isProcessing={fileState.isProcessingFiles}
+          onGenerateMindMap={featureHandlers.handleGenerateMindMap}
+          chats={chatState.chats}
+          activeChatId={chatState.currentChatId}
+          onSelectChat={chatHandlers.handleSelectChat}
+          onCreateChat={chatHandlers.handleCreateChat}
+          onDeleteChat={chatHandlers.handleDeleteChat}
+          isDragOver={layoutState.isSidebarDragOver}
+          onDragStateChange={layoutState.setIsSidebarDragOver}
+        />
       </div>
 
       {!layoutState.isMobile && layoutState.isSidebarOpen && !featureState.mindMapData && !featureState.isGeneratingMindMap && (
@@ -299,28 +292,25 @@ const App: React.FC = () => {
         <>
         {/* Solid background layer */}
         <div 
-          className="fixed bottom-0 bg-white dark:bg-[#1a1a1a] pointer-events-none"
+          className="fixed bottom-0 bg-white dark:bg-[#1a1a1a] pointer-events-none z-20"
           style={{
             left: layoutState.isMobile ? '16px' : (layoutState.isSidebarOpen ? `${layoutState.sidebarWidth + 16}px` : '16px'),
             right: activeFile ? (layoutState.isMobile ? '16px' : `${layoutState.viewerWidth + 16}px`) : '16px',
             height: '140px',
-            zIndex: 149,
             transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1), right 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
           }}
         />
-        {/* Gradient layer */}
         <div
-          className="input-gradient-layer fixed bottom-[140px] pointer-events-none"
+          className="input-gradient-layer fixed bottom-[140px] pointer-events-none z-20"
           style={{
             left: layoutState.isMobile ? '16px' : (layoutState.isSidebarOpen ? `${layoutState.sidebarWidth + 16}px` : '16px'),
             right: activeFile ? (layoutState.isMobile ? '16px' : `${layoutState.viewerWidth + 16}px`) : '16px',
             height: '30px',
-            zIndex: 149,
             transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1), right 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
           }}
         />
         <div 
-          className="floating-input-container"
+          className="floating-input-container z-20"
           style={{
             left: layoutState.isMobile ? '16px' : (layoutState.isSidebarOpen ? `${layoutState.sidebarWidth + 16}px` : '16px'),
             right: activeFile ? (layoutState.isMobile ? '16px' : `${layoutState.viewerWidth + 16}px`) : '16px'
@@ -354,7 +344,7 @@ const App: React.FC = () => {
         {/* Footer Text - Independent Element */}
         {!featureState.mindMapData && !featureState.isSettingsOpen && !featureState.isCallingEffect && !featureState.isHelpOpen && (
         <div 
-          className="fixed bottom-2 text-center pointer-events-none z-[9997]"
+          className="fixed bottom-2 text-center pointer-events-none z-20"
           style={{
             left: layoutState.isMobile ? '16px' : (layoutState.isSidebarOpen ? `${layoutState.sidebarWidth + 16}px` : '16px'),
             right: activeFile ? (layoutState.isMobile ? '16px' : `${layoutState.viewerWidth + 16}px`) : '16px',
@@ -373,7 +363,7 @@ const App: React.FC = () => {
       {/* RIGHT DOCUMENT VIEWER */}
       {activeFile && (
         <div 
-          className="fixed md:relative z-30 h-full bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] flex flex-col shadow-2xl md:shadow-none border-l border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] animate-in slide-in-from-right duration-300"
+          className="fixed md:relative z-30 h-full bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] flex flex-col shadow-2xl md:shadow-none border-l border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)]"
           style={{ 
             width: layoutState.isMobile ? '100%' : layoutState.viewerWidth,
             maxWidth: MAX_VIEWER_WIDTH,

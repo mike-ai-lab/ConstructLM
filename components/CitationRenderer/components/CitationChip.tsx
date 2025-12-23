@@ -20,27 +20,7 @@ const CitationChip: React.FC<CitationChipProps> = ({ index, fileName, location, 
   const updateCoords = useCallback(() => {
     if (triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
-      const viewportHeight = window.innerHeight;
-      const viewportWidth = window.innerWidth;
-      const popupHeight = Math.min(viewportHeight * 0.6, 600);
-      const popupWidth = Math.min(viewportWidth * 0.9, 450);
-      
-      let top = rect.bottom + 8;
-      let left = rect.left - 20;
-      
-      if (top + popupHeight > viewportHeight) {
-        top = Math.max(10, rect.top - popupHeight - 8);
-      }
-      
-      if (left + popupWidth > viewportWidth) {
-        left = viewportWidth - popupWidth - 10;
-      }
-      
-      if (left < 10) {
-        left = 10;
-      }
-      
-      setCoords({ top, left });
+      setCoords({ top: rect.bottom + 8, left: rect.left - 20 });
     }
   }, []);
 

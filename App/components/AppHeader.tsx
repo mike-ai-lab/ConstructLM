@@ -41,7 +41,7 @@ interface AppHeaderProps {
 
 const AppHeader: React.FC<AppHeaderProps> = (props) => {
   return (
-    <header className="h-[65px] flex-none border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] flex items-center justify-between px-6 bg-white/80 dark:bg-[#1a1a1a]/80 backdrop-blur-sm z-10 min-w-0 overflow-visible">
+    <header className="h-[65px] flex-none border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] flex items-center justify-between px-6 bg-white dark:bg-[#1a1a1a] z-50 min-w-0 overflow-visible">
       <div className="flex items-center gap-2 min-w-0 flex-shrink">
         {!props.isMobile && (
           <button 

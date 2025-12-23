@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { initializeGemini } from '../../services/geminiService';
 import { snapshotService } from '../../services/snapshotService';
 import { chatRegistry } from '../../services/chatRegistry';
@@ -163,40 +163,86 @@ export const useAppEffects = (
     return () => container.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Resizing logic
+  // --- REFACTOR START: Resizer Logic ---
+  
+  // Use refs to track current widths/state without triggering re-binds of the event listener
+  const sidebarWidthRef = useRef(sidebarWidth);
+  const isSidebarOpenRef = useRef(isSidebarOpen);
+
   useEffect(() => {
+    sidebarWidthRef.current = sidebarWidth;
+  }, [sidebarWidth]);
+
+  useEffect(() => {
+    isSidebarOpenRef.current = isSidebarOpen;
+  }, [isSidebarOpen]);
+
+  useEffect(() => {
+    if (!isResizingSidebar && !isResizingViewer) return;
+
     const handleMouseMove = (e: MouseEvent) => {
+      // 1. Sidebar Resizing
       if (isResizingSidebar) {
-        setSidebarWidth(Math.max(MIN_SIDEBAR_WIDTH, Math.min(e.clientX, MAX_SIDEBAR_WIDTH)));
+        e.preventDefault();
+        // Basic clamp between Min and Max sidebar width
+        let newWidth = Math.max(MIN_SIDEBAR_WIDTH, Math.min(e.clientX, MAX_SIDEBAR_WIDTH));
+        
+        // Optional: Prevent sidebar from getting too large if it crushes the rest of the app
+        // (Assumes a safe buffer, though we prioritize the Viewer logic below)
+        const maxSafeWidth = window.innerWidth - MIN_CHAT_WIDTH - 50; 
+        newWidth = Math.min(newWidth, maxSafeWidth);
+
+        setSidebarWidth(newWidth);
       }
+
+      // 2. Viewer Resizing (The source of the "squashed input" bug)
       if (isResizingViewer) {
-        const newWidth = window.innerWidth - e.clientX;
-        const sidebarSpace = isSidebarOpen ? sidebarWidth : 0;
-        const availableWidth = window.innerWidth - sidebarSpace - MIN_CHAT_WIDTH;
-        const maxAllowed = Math.min(MAX_VIEWER_WIDTH, availableWidth);
-        setViewerWidth(Math.max(MIN_VIEWER_WIDTH, Math.min(newWidth, maxAllowed)));
+        e.preventDefault();
+        const rawNewWidth = window.innerWidth - e.clientX;
+        
+        // Calculate the maximum width the viewer is LEGALLY allowed to have 
+        // while preserving the Sidebar (if open) and the Minimum Chat Width.
+        const sidebarSpace = isSidebarOpenRef.current ? sidebarWidthRef.current : 0;
+        const maxAllowedWidth = window.innerWidth - sidebarSpace - MIN_CHAT_WIDTH;
+
+        // First, apply standard constraints (Min/Max for the Viewer itself)
+        let clampedWidth = Math.max(MIN_VIEWER_WIDTH, Math.min(rawNewWidth, MAX_VIEWER_WIDTH));
+
+        // CRITICAL FIX: If the calculated width exceeds the available space (crushing the input),
+        // we force it down to the maxAllowedWidth.
+        // This ensures the Chat Input always has at least MIN_CHAT_WIDTH.
+        clampedWidth = Math.min(clampedWidth, maxAllowedWidth);
+
+        // Edge case: If the window is extremely small, maxAllowedWidth might be negative.
+        // We ensure we don't return a negative width.
+        clampedWidth = Math.max(0, clampedWidth);
+
+        setViewerWidth(clampedWidth);
       }
     };
 
     const handleMouseUp = () => {
       setIsResizingSidebar(false);
       setIsResizingViewer(false);
-      document.body.style.cursor = 'default';
-      document.body.style.userSelect = 'auto';
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
     };
 
-    if (isResizingSidebar || isResizingViewer) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = 'col-resize';
-      document.body.style.userSelect = 'none';
-    }
-
+    // Apply styles to indicate resizing
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    
+    document.addEventListener('mousemove', handleMouseMove, { passive: false });
+    document.addEventListener('mouseup', handleMouseUp);
+    
     return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
     };
-  }, [isResizingSidebar, isResizingViewer]);
+  }, [isResizingSidebar, isResizingViewer, MIN_SIDEBAR_WIDTH, MAX_SIDEBAR_WIDTH, MIN_VIEWER_WIDTH, MAX_VIEWER_WIDTH, MIN_CHAT_WIDTH]);
+  // --- REFACTOR END ---
 
   // Auto-save chat
   useEffect(() => {

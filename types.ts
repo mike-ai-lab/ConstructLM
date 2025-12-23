@@ -32,7 +32,7 @@ export interface Citation {
 export interface ModelConfig {
   id: string;
   name: string;
-  provider: 'google' | 'groq' | 'openai' | 'local';
+  provider: 'google' | 'groq' | 'openai' | 'local' | 'aws';
   contextWindow: number;
   apiKeyEnv: string;
   supportsImages: boolean;
@@ -44,6 +44,7 @@ export interface ModelConfig {
   supportsFilesApi?: boolean;
   isLocal?: boolean;
   isAvailable?: boolean;
+  awsRegion?: string;
 }
 
 // Declare external library types loaded via CDN

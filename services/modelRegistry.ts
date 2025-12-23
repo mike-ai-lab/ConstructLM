@@ -231,6 +231,60 @@ export const MODEL_REGISTRY: ModelConfig[] = [
     maxOutputWords: 16384,
     description: "Cost-effective and fast.",
     capacityTag: 'High'
+  },
+
+  // --- AWS Bedrock Models ---
+  {
+    id: 'anthropic.claude-3-5-sonnet-20241022-v2:0',
+    name: 'Claude 3.5 Sonnet v2',
+    provider: 'aws',
+    contextWindow: 200000,
+    apiKeyEnv: 'AWS_ACCESS_KEY_ID',
+    supportsImages: true,
+    maxInputWords: 150000,
+    maxOutputWords: 8192,
+    description: "Best for coding & analysis. ~$3/1M tokens.",
+    capacityTag: 'High',
+    awsRegion: 'us-east-1'
+  },
+  {
+    id: 'anthropic.claude-3-haiku-20240307-v1:0',
+    name: 'Claude 3 Haiku',
+    provider: 'aws',
+    contextWindow: 200000,
+    apiKeyEnv: 'AWS_ACCESS_KEY_ID',
+    supportsImages: true,
+    maxInputWords: 150000,
+    maxOutputWords: 4096,
+    description: "Fast & cheap. ~$0.25/1M tokens.",
+    capacityTag: 'High',
+    awsRegion: 'us-east-1'
+  },
+  {
+    id: 'meta.llama3-70b-instruct-v1:0',
+    name: 'Llama 3 70B',
+    provider: 'aws',
+    contextWindow: 8192,
+    apiKeyEnv: 'AWS_ACCESS_KEY_ID',
+    supportsImages: false,
+    maxInputWords: 6144,
+    maxOutputWords: 2048,
+    description: "Open source, good quality. ~$0.99/1M tokens.",
+    capacityTag: 'Medium',
+    awsRegion: 'us-east-1'
+  },
+  {
+    id: 'mistral.mistral-large-2402-v1:0',
+    name: 'Mistral Large',
+    provider: 'aws',
+    contextWindow: 32000,
+    apiKeyEnv: 'AWS_ACCESS_KEY_ID',
+    supportsImages: false,
+    maxInputWords: 24000,
+    maxOutputWords: 8192,
+    description: "European model, multilingual. ~$4/1M tokens.",
+    capacityTag: 'High',
+    awsRegion: 'us-east-1'
   }
 ];
 

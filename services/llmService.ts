@@ -1,9 +1,10 @@
 
 import { Message, ProcessedFile, ModelConfig } from "../types";
-import { getModel, getApiKeyForModel, setRateLimitCooldown } from "./modelRegistry";
+import { getModel, getApiKeyForModel, setRateLimitCooldown, getStoredApiKey } from "./modelRegistry";
 import { sendMessageToGemini } from "./geminiService";
 import { streamLocalModel } from "./localModelService";
 import { ragService } from "./ragService";
+import { streamAWSBedrock } from "./awsBedrockService";
 
 // --- System Prompt Construction ---
 export const constructBaseSystemPrompt = (hasFiles: boolean = false) => {
@@ -154,6 +155,40 @@ export const sendMessageToLLM = async (
             messages.push({ role: 'user', content: currentContent });
             
             return await streamOpenAICompatible(model, apiKey, messages, onStream);
+        } else if (model.provider === 'aws') {
+            // AWS Bedrock
+            const accessKeyId = getApiKeyForModel(model);
+            const secretAccessKey = getStoredApiKey('AWS_SECRET_ACCESS_KEY');
+            
+            if (!accessKeyId || !secretAccessKey) {
+                throw new Error(`AWS credentials missing. Please add AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY in Settings.`);
+            }
+            
+            const fileContext = activeFiles.length > 0
+                ? '\n\nFILE CONTEXT:\n' + activeFiles.map(f => `=== FILE: "${f.name}" ===\n${f.content}\n=== END FILE ===`).join('\n\n')
+                : '';
+            
+            const messages = [{ role: 'system', content: systemPrompt }];
+            
+            const recentHistory = history.filter(m => !m.isStreaming && m.id !== 'intro').slice(-10);
+            for (let i = 0; i < recentHistory.length; i++) {
+                const msg = recentHistory[i];
+                const isFirstUserMsg = i === 0 && msg.role === 'user';
+                const role = msg.role === 'model' ? 'assistant' : msg.role;
+                const content = isFirstUserMsg && fileContext ? msg.content + fileContext : msg.content;
+                messages.push({ role, content });
+            }
+            
+            const isFirstMessage = recentHistory.length === 0;
+            const currentContent = (isFirstMessage && fileContext) ? newMessage + fileContext : newMessage;
+            messages.push({ role: 'user', content: currentContent });
+            
+            return await streamAWSBedrock(
+                model.id,
+                { accessKeyId, secretAccessKey, region: model.awsRegion || 'us-east-1' },
+                messages,
+                onStream
+            );
         } else {
             throw new Error(`Provider ${model.provider} not implemented yet.`);
         }
@@ -279,7 +314,20 @@ const streamOpenAICompatible = async (
     // Fallback to direct API calls with CORS proxy for browser
     let baseUrl = 'https://api.openai.com/v1/chat/completions';
     if (model.provider === 'groq') {
-        baseUrl = 'https://corsproxy.io/?' + encodeURIComponent('https://api.groq.com/openai/v1/chat/completions');
+        const requestSize = new Blob([JSON.stringify(requestBody)]).size;
+        if (requestSize > 900000) { // 900KB limit (below 1MB)
+            throw new Error(
+                `**Request Too Large:** Your message exceeds the browser limit (${(requestSize / 1024).toFixed(0)}KB).\n\n` +
+                `**Solutions:**\n` +
+                `1. Use the Desktop App (Electron) for unlimited file sizes\n` +
+                `2. Reduce file context or use @mentions for specific files\n` +
+                `3. Switch to Gemini models (no size limit in browser)`
+            );
+        }
+        // Use local proxy server instead of corsproxy.io
+        baseUrl = 'http://localhost:3002/api/proxy/groq';
+    } else if (model.provider === 'openai') {
+        baseUrl = 'http://localhost:3002/api/proxy/openai';
     }
 
     try {
@@ -370,6 +418,17 @@ const streamOpenAICompatible = async (
             throw new Error(
                 `**Connection Error:** Cannot reach ${model.name} API.\n\n` +
                 `Check your internet connection or try switching to Gemini models.`
+            );
+        }
+        
+        // Handle CORS proxy errors
+        if (error.message?.includes('403') && error.message?.includes('corsproxy')) {
+            throw new Error(
+                `**File Size Limit:** Request exceeds 1MB browser limit.\n\n` +
+                `**Solutions:**\n` +
+                `1. Use Desktop App (no size limits)\n` +
+                `2. Reduce file attachments\n` +
+                `3. Switch to Gemini models`
             );
         }
         

@@ -9,7 +9,7 @@ interface SettingsModalProps {
     onClose: () => void;
 }
 
-type Provider = 'google' | 'openai' | 'groq';
+type Provider = 'google' | 'openai' | 'groq' | 'aws';
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
     const modalRef = useRef<HTMLDivElement>(null);
@@ -18,7 +18,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
     const [keys, setKeys] = useState({
         google: '',
         openai: '',
-        groq: ''
+        groq: '',
+        aws: '',
+        awsSecret: ''
     });
     
     // Testing States
@@ -26,21 +28,25 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
     const [testResults, setTestResults] = useState<Record<Provider, { success: boolean; message: string } | null>>({
         google: null,
         openai: null,
-        groq: null
+        groq: null,
+        aws: null
     });
 
     const [showSuccess, setShowSuccess] = useState(false);
     const [lastTestTime, setLastTestTime] = useState<Record<Provider, number>>({
         google: 0,
         openai: 0,
-        groq: 0
+        groq: 0,
+        aws: 0
     });
 
     useEffect(() => {
         setKeys({
             google: getStoredApiKey('API_KEY'),
             openai: getStoredApiKey('OPENAI_API_KEY'),
-            groq: getStoredApiKey('GROQ_API_KEY')
+            groq: getStoredApiKey('GROQ_API_KEY'),
+            aws: getStoredApiKey('AWS_ACCESS_KEY_ID'),
+            awsSecret: getStoredApiKey('AWS_SECRET_ACCESS_KEY')
         });
     }, []);
 
@@ -169,6 +175,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
         saveApiKey('API_KEY', keys.google);
         saveApiKey('OPENAI_API_KEY', keys.openai);
         saveApiKey('GROQ_API_KEY', keys.groq);
+        saveApiKey('AWS_ACCESS_KEY_ID', keys.aws);
+        saveApiKey('AWS_SECRET_ACCESS_KEY', keys.awsSecret);
         
         setShowSuccess(true);
         setTimeout(() => {
@@ -297,6 +305,26 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                         {renderApiInput('Google Gemini', 'google', 'AIzaSy...', 'Required for Gemini models & TTS.')}
                         {renderApiInput('Groq', 'groq', 'gsk_...', 'Required for Llama 3 models.')}
                         {renderApiInput('OpenAI', 'openai', 'sk-...', 'Required for GPT-4o models.')}
+                        
+                        {/* AWS Credentials */}
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-[#666666] dark:text-[#a0a0a0] uppercase tracking-wider">AWS Bedrock</label>
+                            <input 
+                                type="text" 
+                                value={keys.aws}
+                                onChange={e => setKeys({...keys, aws: e.target.value})}
+                                placeholder="AKIA..."
+                                className="w-full px-2.5 py-1.5 bg-[rgba(0,0,0,0.03)] dark:bg-[#1a1a1a] border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] rounded-lg text-sm text-[#1a1a1a] dark:text-white focus:outline-none focus:ring-2 focus:ring-[rgba(68,133,209,0.2)] focus:border-[#4485d1] transition-all"
+                            />
+                            <input 
+                                type="password" 
+                                value={keys.awsSecret}
+                                onChange={e => setKeys({...keys, awsSecret: e.target.value})}
+                                placeholder="Secret Access Key"
+                                className="w-full px-2.5 py-1.5 bg-[rgba(0,0,0,0.03)] dark:bg-[#1a1a1a] border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] rounded-lg text-sm text-[#1a1a1a] dark:text-white focus:outline-none focus:ring-2 focus:ring-[rgba(68,133,209,0.2)] focus:border-[#4485d1] transition-all"
+                            />
+                            <p className="text-[12px] text-[#666666] dark:text-[#a0a0a0]">For Claude 3.5 Sonnet & other AWS models. Uses your $100 credits.</p>
+                        </div>
                     </div>
 
                     {/* Data Management Section */}

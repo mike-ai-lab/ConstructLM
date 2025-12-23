@@ -33,7 +33,6 @@ const CitationPopup: React.FC<CitationPopupProps> = ({
   const [pdfPageNumber, setPdfPageNumber] = useState<number | null>(null);
   const [pdfScale, setPdfScale] = useState(1);
   const pdfZoomHandlerRef = useRef<{ handleZoom: (delta: number) => void; handleReset: () => void } | undefined>(undefined);
-  const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
 
   useEffect(() => {
     const foundFile = files.find(f => f.name === fileName);
@@ -51,59 +50,6 @@ const CitationPopup: React.FC<CitationPopupProps> = ({
   }, [fileName, files, location]);
 
   useEffect(() => {
-    if (!popoverRef.current || !triggerRef.current) return;
-    
-    const updatePosition = () => {
-      if (!triggerRef.current || !popoverRef.current) return;
-
-      const triggerRect = triggerRef.current.getBoundingClientRect();
-      const popupWidth = 450;
-      const popupHeight = Math.min(400, window.innerHeight * 0.4);
-      const margin = 8;
-      const headerHeight = 65;
-
-      let top = triggerRect.bottom + margin;
-      let left = triggerRect.left - 20;
-
-      // Clamp below header (DO NOT CLOSE)
-      if (top < headerHeight + margin) {
-        top = headerHeight + margin;
-      }
-
-      // Right overflow
-      if (left + popupWidth > window.innerWidth - margin) {
-        left = window.innerWidth - popupWidth - margin;
-      }
-
-      // Left overflow
-      if (left < margin) {
-        left = margin;
-      }
-
-      // Bottom overflow → try above trigger
-      if (top + popupHeight > window.innerHeight - margin) {
-        const topAbove = triggerRect.top - popupHeight - margin;
-        if (topAbove >= headerHeight + margin) {
-          top = topAbove;
-        } else {
-          top = headerHeight + margin;
-        }
-      }
-
-      setPosition({ top, left });
-    };
-    
-    updatePosition();
-    window.addEventListener('resize', updatePosition);
-    window.addEventListener('scroll', updatePosition, true);
-    
-    return () => {
-      window.removeEventListener('resize', updatePosition);
-      window.removeEventListener('scroll', updatePosition, true);
-    };
-  }, [triggerRef, isInTable, coords]);
-
-  useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (popoverRef.current && !popoverRef.current.contains(event.target as Node) && triggerRef.current && !triggerRef.current.contains(event.target as Node)) {
         onClose();
@@ -118,11 +64,16 @@ const CitationPopup: React.FC<CitationPopupProps> = ({
   const popupContent = (
     <div
       ref={popoverRef}
-      className={`fixed z-[50] w-[450px] max-w-[90vw] bg-white dark:bg-[#222222] text-[#1a1a1a] dark:text-white rounded-lg shadow-2xl border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] flex flex-col overflow-hidden animate-in fade-in duration-150`}
-      style={{ 
-        top: position?.top ?? (coords?.top ?? 0), 
-        left: position?.left ?? (coords?.left ?? 0), 
-        maxHeight: 'min(40vh, 400px)'
+      className={`${isInTable ? 'fixed' : 'absolute'} z-[40] w-[450px] max-w-[90vw] bg-white dark:bg-[#222222] text-[#1a1a1a] dark:text-white rounded-lg shadow-2xl border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] flex flex-col overflow-hidden animate-in fade-in duration-150`}
+      style={isInTable ? { 
+        top: coords?.top, 
+        left: coords?.left, 
+        maxHeight: 'min(80vh, 600px)' 
+      } : { 
+        top: '100%', 
+        left: '-20px', 
+        marginTop: '8px',
+        maxHeight: 'min(50vh, 500px)'
       }}
       role="dialog"
       aria-modal="true"
@@ -161,7 +112,7 @@ const CitationPopup: React.FC<CitationPopupProps> = ({
     </div>
   );
 
-  return createPortal(popupContent, document.body);
+  return isInTable ? createPortal(popupContent, document.body) : popupContent;
 };
 
 export default CitationPopup;
