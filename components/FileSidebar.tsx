@@ -1,7 +1,7 @@
 import React, { useRef, useState, useMemo, useEffect } from 'react'; 
 import { ProcessedFile } from '../types';
 import { ChatMetadata } from '../services/chatRegistry';
-import { FileText, FileSpreadsheet, File as FileIcon, X, Loader2, FolderOpen, Plus, ChevronRight, ChevronDown, Folder, Image, MessageCircle, Files, BookOpen, Minus, Network } from 'lucide-react';
+import { FileText, FileSpreadsheet, File as FileIcon, X, Loader2, FolderOpen, Plus, ChevronRight, ChevronDown, Folder, Image, MessageCircle, Files, BookOpen, Minus, Network, List, GitBranch } from 'lucide-react';
 import ChatHistory from './ChatHistory';
 import DocumentViewer from './DocumentViewer';
 
@@ -20,6 +20,15 @@ interface FileSidebarProps {
   onDragStateChange: (isDragging: boolean) => void;
 }
 
+const removeFolder = (folderPath: string, files: ProcessedFile[], onRemove: (id: string) => void) => {
+  files.forEach(file => {
+    const path = file.path || file.name;
+    if (path.startsWith(folderPath + '/')) {
+      onRemove(file.id);
+    }
+  });
+};
+
 interface TreeNode {
   name: string;
   type: 'folder' | 'file';
@@ -37,6 +46,7 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
   const folderInputRef = useRef<HTMLInputElement>(null);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState<'files' | 'chats'>('files');
+  const [fileViewTab, setFileViewTab] = useState<'all' | 'folders'>('all');
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -68,6 +78,9 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
       files.forEach(file => {
           const path = file.path || file.name;
           const parts = path.split('/');
+          
+          if (parts.length === 1) return;
+          
           let currentLevel = root;
           let currentPath = "";
 
@@ -93,6 +106,15 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
       return root;
   }, [files]);
 
+  const standaloneFiles = useMemo(() => {
+      return files.filter(file => {
+          const path = file.path || file.name;
+          return !path.includes('/');
+      });
+  }, [files]);
+
+  const hasTreeStructure = Object.keys(fileTree).length > 0;
+
   const [previewFileId, setPreviewFileId] = useState<string | null>(null);
   
   const totalTokens = files.reduce((acc, f) => acc + (f.tokenCount || 0), 0);
@@ -115,19 +137,33 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
         })
         .map((node) => {
           if (node.type === 'folder') {
+              const isExpanded = expandedFolders.has(node.path);
               return (
                   <div key={node.path} className="select-none">
                       <div 
-                        className="flex items-center gap-2 px-2 py-1.5 hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] rounded cursor-pointer text-[#1a1a1a] dark:text-white"
-                        style={{ paddingLeft: `${depth * 12 + 8}px` }}
-                        onClick={() => toggleFolder(node.path)}
+                        className="flex items-center gap-1.5 px-2 py-1.5 hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] rounded cursor-pointer text-[#1a1a1a] dark:text-white group"
+                        style={{ paddingLeft: `${depth * 16 + 8}px` }}
                       >
-                          {expandedFolders.has(node.path) ? <ChevronDown size={14} className="text-[#a0a0a0]"/> : <ChevronRight size={14} className="text-[#a0a0a0]"/>}
-                          <Folder size={14} className="text-blue-400 fill-blue-50" />
-                          <span className="text-xs font-medium truncate">{node.name}</span>
+                          <div className="w-3 h-3 flex items-center justify-center flex-shrink-0" onClick={() => toggleFolder(node.path)}>
+                            {isExpanded ? <ChevronDown size={12} className="text-[#666666] dark:text-[#a0a0a0]"/> : <ChevronRight size={12} className="text-[#666666] dark:text-[#a0a0a0]"/>}
+                          </div>
+                          <Folder size={13} className="text-amber-500 flex-shrink-0" onClick={() => toggleFolder(node.path)} />
+                          <span className="text-xs font-semibold truncate flex-1" onClick={() => toggleFolder(node.path)}>{node.name}</span>
+                          <span className="text-[10px] text-[#a0a0a0] opacity-0 group-hover:opacity-100">
+                            {Object.keys(node.children).length}
+                          </span>
+                          <button
+                              onClick={(e) => { e.stopPropagation(); removeFolder(node.path, files, onRemove); }}
+                              className="opacity-0 group-hover:opacity-100 p-0.5 text-[#a0a0a0] hover:text-[#ef4444] rounded transition-all flex-shrink-0"
+                              title="Remove folder"
+                          >
+                              <X size={11} />
+                          </button>
                       </div>
-                      {expandedFolders.has(node.path) && (
-                          <div>{renderTree(node.children, depth + 1)}</div>
+                      {isExpanded && (
+                          <div className="border-l border-[rgba(0,0,0,0.1)] dark:border-[rgba(255,255,255,0.05)] ml-3" style={{ marginLeft: `${depth * 16 + 16}px` }}>
+                            {renderTree(node.children, depth + 1)}
+                          </div>
                       )}
                   </div>
               );
@@ -143,53 +179,47 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
                       e.dataTransfer.effectAllowed = 'copy';
                     }}
                     className={`
-                        group relative flex items-center gap-2 px-2 py-2 rounded-md transition-all cursor-grab active:cursor-grabbing
+                        group relative flex items-center gap-1.5 px-2 py-1.5 rounded-md transition-all cursor-grab active:cursor-grabbing
                         ${file.status === 'error' ? 'bg-red-50 dark:bg-red-900/20' : 'hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a]'}
                     `}
-                    style={{ marginLeft: `${depth * 12 + 8}px` }}
+                    style={{ marginLeft: `${depth * 16 + 8}px` }}
                 >
+                    <div className="w-3 h-3 flex-shrink-0" />
                     <div className="flex-shrink-0">
                         {file.status === 'processing' ? <Loader2 size={12} className="animate-spin text-blue-500"/> : getIcon(file)}
                     </div>
                     
                     <div className="flex flex-col min-w-0 flex-1">
-                        <span className={`text-xs ${file.status === 'error' ? 'text-red-700' : 'text-[#1a1a1a] dark:text-white font-medium'}`} title={file.name}>
+                        <span className={`text-xs truncate ${file.status === 'error' ? 'text-red-700' : 'text-[#1a1a1a] dark:text-white font-medium'}`} title={file.name}>
                         {file.name}
                         </span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[12px] text-[#666666] dark:text-[#a0a0a0]">
-                            {file.tokenCount ? `~${(file.tokenCount / 1000).toFixed(1)}k tokens` : 'Processing...'}
-                          </span>
-                          {file.uploadedAt && (
-                            <span className="text-[12px] text-[#a0a0a0]">
-                              {new Date(file.uploadedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
-                            </span>
-                          )}
-                        </div>
+                        <span className="text-[10px] text-[#666666] dark:text-[#a0a0a0] whitespace-nowrap">
+                          {file.tokenCount ? `~${(file.tokenCount / 1000).toFixed(1)}k` : 'Processing...'}
+                        </span>
                     </div>
 
                     <button
                         onClick={(e) => { e.stopPropagation(); setPreviewFileId(file.id); }}
-                        className="opacity-0 group-hover:opacity-100 p-1 text-[#a0a0a0] hover:text-[#4485d1] rounded transition-all"
+                        className="opacity-0 group-hover:opacity-100 p-0.5 text-[#a0a0a0] hover:text-[#4485d1] rounded transition-all flex-shrink-0"
                         title="Preview"
                     >
-                        <BookOpen size={12} />
+                        <BookOpen size={11} />
                     </button>
                     {onGenerateMindMap && (
                       <button
                           onClick={(e) => { e.stopPropagation(); onGenerateMindMap(file.id); }}
-                          className="opacity-0 group-hover:opacity-100 p-1 text-[#a0a0a0] hover:text-purple-500 rounded transition-all"
+                          className="opacity-0 group-hover:opacity-100 p-0.5 text-[#a0a0a0] hover:text-purple-500 rounded transition-all flex-shrink-0"
                           title="Generate Mind Map"
                       >
-                          <Network size={12} />
+                          <Network size={11} />
                       </button>
                     )}
                     <button
                         onClick={() => onRemove(file.id)}
-                        className="opacity-0 group-hover:opacity-100 p-1 text-[#a0a0a0] hover:text-[#ef4444] rounded transition-all"
+                        className="opacity-0 group-hover:opacity-100 p-0.5 text-[#a0a0a0] hover:text-[#ef4444] rounded transition-all flex-shrink-0"
                         title="Remove source"
                     >
-                        <X size={12} />
+                        <X size={11} />
                     </button>
                 </div>
              );
@@ -267,7 +297,7 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
           <div className="flex flex-col min-h-0 w-full relative box-border">
             {/* Toolbar */}
             <div className="px-4 py-2 flex-shrink-0 bg-transparent">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                    <span className="text-[12px] font-medium text-[#666666] dark:text-[#a0a0a0]">{files.length} sources</span>
                    {files.length > 0 && (
@@ -293,6 +323,22 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
                   </button>
                 </div>
               </div>
+              {hasTreeStructure && (
+                <div className="flex gap-1 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] rounded p-0.5">
+                  <button
+                    onClick={() => setFileViewTab('all')}
+                    className={`flex-1 px-2 py-1 rounded text-[10px] font-semibold uppercase transition-colors ${fileViewTab === 'all' ? 'bg-white dark:bg-[#1a1a1a] text-[#4485d1]' : 'text-[#666666] dark:text-[#a0a0a0]'}`}
+                  >
+                    Files Only
+                  </button>
+                  <button
+                    onClick={() => setFileViewTab('folders')}
+                    className={`flex-1 px-2 py-1 rounded text-[10px] font-semibold uppercase transition-colors ${fileViewTab === 'folders' ? 'bg-white dark:bg-[#1a1a1a] text-[#4485d1]' : 'text-[#666666] dark:text-[#a0a0a0]'}`}
+                  >
+                    Folders
+                  </button>
+                </div>
+              )}
             </div>
             
             <div className="hidden">
@@ -335,7 +381,68 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
                 </div>
               ) : (
                 <div className="space-y-0.5 pb-8">
-                    {renderTree(fileTree)}
+                    {fileViewTab === 'folders' ? (
+                      renderTree(fileTree)
+                    ) : (
+                      standaloneFiles.map(file => (
+                      <div
+                          key={file.id}
+                          draggable
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData('text/plain', `@${file.name}`);
+                            e.dataTransfer.effectAllowed = 'copy';
+                          }}
+                          className={`
+                              group relative flex items-center gap-2 px-2 py-2 rounded-md transition-all cursor-grab active:cursor-grabbing mx-2
+                              ${file.status === 'error' ? 'bg-red-50 dark:bg-red-900/20' : 'hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a]'}
+                          `}
+                      >
+                          <div className="flex-shrink-0">
+                              {file.status === 'processing' ? <Loader2 size={12} className="animate-spin text-blue-500"/> : getIcon(file)}
+                          </div>
+                          
+                          <div className="flex flex-col min-w-0 flex-1">
+                              <span className={`text-xs truncate ${file.status === 'error' ? 'text-red-700' : 'text-[#1a1a1a] dark:text-white font-medium'}`} title={file.name}>
+                              {file.name}
+                              </span>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-[12px] text-[#666666] dark:text-[#a0a0a0] whitespace-nowrap">
+                                  {file.tokenCount ? `~${(file.tokenCount / 1000).toFixed(1)}k tokens` : 'Processing...'}
+                                </span>
+                                {file.uploadedAt && (
+                                  <span className="text-[12px] text-[#a0a0a0] whitespace-nowrap">
+                                    {new Date(file.uploadedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                                  </span>
+                                )}
+                              </div>
+                          </div>
+
+                          <button
+                              onClick={(e) => { e.stopPropagation(); setPreviewFileId(file.id); }}
+                              className="opacity-0 group-hover:opacity-100 p-0.5 text-[#a0a0a0] hover:text-[#4485d1] rounded transition-all flex-shrink-0"
+                              title="Preview"
+                          >
+                              <BookOpen size={12} />
+                          </button>
+                          {onGenerateMindMap && (
+                            <button
+                                onClick={(e) => { e.stopPropagation(); onGenerateMindMap(file.id); }}
+                                className="opacity-0 group-hover:opacity-100 p-0.5 text-[#a0a0a0] hover:text-purple-500 rounded transition-all flex-shrink-0"
+                                title="Generate Mind Map"
+                            >
+                                <Network size={12} />
+                            </button>
+                          )}
+                          <button
+                              onClick={() => onRemove(file.id)}
+                              className="opacity-0 group-hover:opacity-100 p-0.5 text-[#a0a0a0] hover:text-[#ef4444] rounded transition-all flex-shrink-0"
+                              title="Remove source"
+                          >
+                              <X size={12} />
+                          </button>
+                      </div>
+                        ))
+                    )}
                 </div>
               )}
             </div>

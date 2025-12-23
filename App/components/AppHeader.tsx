@@ -47,15 +47,33 @@ interface AppHeaderProps {
   handleOpenMindMapFromLibrary: (fileId: string, modelId: string, data: any, fileName: string) => void;
   notesCount?: number;
   onOpenNotebook?: () => void;
-  activeTab?: 'chat' | 'notebook' | 'todos' | 'reminders';
-  onTabChange?: (tab: 'chat' | 'notebook' | 'todos' | 'reminders') => void;
+  activeTab?: 'chat' | 'notebook' | 'todos';
+  onTabChange?: (tab: 'chat' | 'notebook' | 'todos') => void;
   todosCount?: number;
   remindersCount?: number;
+  isViewerOpen?: boolean;
+  onCloseViewer?: () => void;
 }
 
 const AppHeader: React.FC<AppHeaderProps> = (props) => {
+  const [isCompact, setIsCompact] = React.useState(false);
+  const headerRef = React.useRef<HTMLElement>(null);
+  
+  React.useEffect(() => {
+    const header = headerRef.current;
+    if (!header) return;
+    
+    const observer = new ResizeObserver(() => {
+      const width = header.offsetWidth;
+      setIsCompact(width < 900);
+    });
+    
+    observer.observe(header);
+    return () => observer.disconnect();
+  }, []);
+  
   return (
-    <header className="h-[65px] flex-none border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] flex items-center justify-between px-3 md:px-6 bg-white dark:bg-[#1a1a1a] min-w-0 gap-2 relative z-40">
+    <header ref={headerRef} className="h-[65px] flex-none border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] flex items-center justify-between px-3 md:px-6 bg-white dark:bg-[#1a1a1a] min-w-0 gap-2 relative z-40">
       <div className="flex items-center gap-2 min-w-0 flex-shrink">
         {!props.isMobile && (
           <button onClick={() => props.setIsSidebarOpen(!props.isSidebarOpen)} className="p-1.5 text-gray-400 hover:bg-gray-100 rounded-md transition-colors flex-shrink-0">
@@ -113,29 +131,27 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
         <button onClick={() => props.onTabChange?.('chat')} className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${props.activeTab === 'chat' ? 'bg-blue-600 text-white' : 'text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[#222222]'}`}>
           <MessageSquare size={14} />
         </button>
-        <button onClick={() => props.onTabChange?.('notebook')} className={`w-8 h-8 rounded-full flex items-center justify-center transition-all relative ${props.activeTab === 'notebook' ? 'bg-[#25b5cd] text-white' : 'text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[#222222]'}`}>
+        <button onClick={() => { props.onTabChange?.('notebook'); if (props.isViewerOpen) props.onCloseViewer?.(); }} className={`w-8 h-8 rounded-full flex items-center justify-center transition-all relative ${props.activeTab === 'notebook' ? 'bg-[#25b5cd] text-white' : 'text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[#222222]'}`}>
           <BookMarked size={14} />
           {props.notesCount && props.notesCount > 0 && props.activeTab !== 'notebook' && (
             <span className="absolute -top-1 -right-1 bg-[#25b5cd] text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-semibold">{props.notesCount > 99 ? '99+' : props.notesCount}</span>
           )}
         </button>
-        <button onClick={() => props.onTabChange?.('todos')} className={`w-8 h-8 rounded-full flex items-center justify-center transition-all relative ${props.activeTab === 'todos' ? 'bg-green-600 text-white' : 'text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[#222222]'}`}>
+        <button onClick={() => { props.onTabChange?.('todos'); if (props.isViewerOpen) props.onCloseViewer?.(); }} className={`w-8 h-8 rounded-full flex items-center justify-center transition-all relative ${props.activeTab === 'todos' ? 'bg-green-600 text-white' : 'text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[#222222]'}`}>
           <CheckSquare size={14} />
           {props.todosCount && props.todosCount > 0 && props.activeTab !== 'todos' && (
             <span className="absolute -top-1 -right-1 bg-green-600 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">{props.todosCount > 99 ? '99+' : props.todosCount}</span>
           )}
         </button>
-        <button onClick={() => props.onTabChange?.('reminders')} className={`w-8 h-8 rounded-full flex items-center justify-center transition-all relative ${props.activeTab === 'reminders' ? 'bg-red-600 text-white' : 'text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[#222222]'}`}>
+        <button disabled className={`w-8 h-8 rounded-full flex items-center justify-center transition-all relative opacity-50 text-[#666666] dark:text-[#a0a0a0] group`} title="Coming Soon!" style={{ cursor: 'default' }}>
           <Bell size={14} />
-          {props.remindersCount && props.remindersCount > 0 && props.activeTab !== 'reminders' && (
-            <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">{props.remindersCount > 99 ? '99+' : props.remindersCount}</span>
-          )}
+          <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[8px] bg-gradient-to-r from-orange-500 to-pink-500 text-white px-2 py-0.5 rounded-full whitespace-nowrap font-bold shadow-lg opacity-0 group-hover:opacity-100 transition-opacity">Coming Soon!</span>
         </button>
       </div>
 
-      <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
+      <div className="flex items-center gap-1 md:gap-2 flex-shrink-0 pl-20">
         {/* Drawing Tools - Only show on chat tab */}
-        {props.activeTab === 'chat' && (
+        {props.activeTab === 'chat' && !isCompact && (
           <>
             {/* Drawing Tool Picker */}
             <div className="relative" ref={props.toolPickerRef}>
@@ -249,7 +265,8 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
                     <button
                       onClick={() => props.handleStrokeWidthChange(-1)}
                       disabled={props.drawingState.strokeWidth <= 1}
-                      className="p-1 text-[#a0a0a0] hover:text-[#1a1a1a] dark:hover:text-white disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors"
+                      className="p-1 text-[#a0a0a0] hover:text-[#1a1a1a] dark:hover:text-white disabled:opacity-50 rounded transition-colors"
+                      style={{ cursor: props.drawingState.strokeWidth <= 1 ? 'default' : 'pointer' }}
                       title="Decrease stroke width"
                     >
                       <Minus size={14} />
@@ -265,7 +282,8 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
                     <button
                       onClick={() => props.handleStrokeWidthChange(1)}
                       disabled={props.drawingState.strokeWidth >= 10}
-                      className="p-1 text-[#a0a0a0] hover:text-[#1a1a1a] dark:hover:text-white disabled:opacity-50 disabled:cursor-not-allowed rounded transition-colors"
+                      className="p-1 text-[#a0a0a0] hover:text-[#1a1a1a] dark:hover:text-white disabled:opacity-50 rounded transition-colors"
+                      style={{ cursor: props.drawingState.strokeWidth >= 10 ? 'default' : 'pointer' }}
                       title="Increase stroke width"
                     >
                       <Plus size={14} />
@@ -291,7 +309,11 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
                 <Trash2 size={16} />
               </button>
             )}
+          </>
+        )}
 
+        {props.activeTab === 'chat' && !isCompact && (
+          <>
             {/* Take Snapshot */}
             <button
               onClick={props.handleTakeSnapshot}
@@ -333,7 +355,6 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
             </div>
           </>
         )}
-
         <button onClick={() => document.documentElement.classList.toggle('dark')} className="p-1.5 md:p-2 hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] rounded-full relative flex-shrink-0" style={{ width: '30px', height: '30px' }}>
           <Moon size={16} className="dark:!hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" style={{ color: '#666666' }} />
           <Sun size={16} className="!hidden dark:!block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" style={{ color: '#ffffff' }} />

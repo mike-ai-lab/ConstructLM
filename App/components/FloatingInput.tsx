@@ -312,8 +312,9 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
             onClick={onSendMessage}
             disabled={!input.trim() || isGenerating}
             className={`floating-send-button ${
-              !input.trim() || isGenerating ? 'opacity-50 cursor-not-allowed' : ''
+              !input.trim() || isGenerating ? 'opacity-50' : ''
             }`}
+            style={{ cursor: (!input.trim() || isGenerating) ? 'default' : 'pointer' }}
           >
             {isGenerating ? <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" /> : <Send size={16} />}
           </button>

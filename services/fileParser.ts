@@ -1,6 +1,8 @@
 import { ProcessedFile } from '../types';
 import { compressText } from './compressionService';
 
+const MAX_PDF_PAGES = 200;
+
 export const generateId = () => Math.random().toString(36).substr(2, 9);
 
 export const parseFile = async (file: File): Promise<ProcessedFile> => {
@@ -75,7 +77,6 @@ const extractPdfText = async (file: File): Promise<string> => {
   try {
     const arrayBuffer = await file.arrayBuffer();
     
-    // Ensure the global worker/lib logic has finished
     if (window.pdfWorkerReady) {
         try {
             await window.pdfWorkerReady;
@@ -84,21 +85,21 @@ const extractPdfText = async (file: File): Promise<string> => {
         }
     }
 
-    // Now check if library exists
     if (!window.pdfjsLib) {
         throw new Error("PDF.js library failed to load. Please check your internet connection or try refreshing.");
     }
 
-    // Use Uint8Array and provide CMap params to avoid "Invalid PDF structure"
     const pdf = await window.pdfjsLib.getDocument({ 
         data: new Uint8Array(arrayBuffer),
         cMapUrl: 'https://unpkg.com/pdfjs-dist@3.11.174/cmaps/',
         cMapPacked: true,
     }).promise;
     
-    let fullText = `[METADATA: PDF "${file.name}", ${pdf.numPages}p]\n`;
+    const totalPages = pdf.numPages;
+    const pagesToProcess = Math.min(totalPages, MAX_PDF_PAGES);
+    let fullText = `[METADATA: PDF "${file.name}", ${totalPages}p${totalPages > MAX_PDF_PAGES ? ` (processing first ${MAX_PDF_PAGES})` : ''}]\n`;
 
-    for (let i = 1; i <= pdf.numPages; i++) {
+    for (let i = 1; i <= pagesToProcess; i++) {
       const page = await pdf.getPage(i);
       const textContent = await page.getTextContent();
       const pageText = textContent.items
@@ -109,6 +110,12 @@ const extractPdfText = async (file: File): Promise<string> => {
       if (pageText.trim()) {
         fullText += `--- [Page ${i}] ---\n${pageText}\n`;
       }
+      
+      page.cleanup();
+    }
+    
+    if (totalPages > MAX_PDF_PAGES) {
+      fullText += `\n[NOTE: This PDF has ${totalPages} pages. Only the first ${MAX_PDF_PAGES} pages were processed.]`;
     }
 
     return fullText;

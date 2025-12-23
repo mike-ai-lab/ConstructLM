@@ -15,7 +15,6 @@ const HelpDocumentation: React.FC<HelpDocumentationProps> = ({ onClose }) => {
     { id: 'chat', title: 'Chat Features', icon: MessageSquare },
     { id: 'notebook', title: 'Notebook', icon: FileText },
     { id: 'todos', title: 'Tasks & Todos', icon: MessageSquare },
-    { id: 'reminders', title: 'Reminders', icon: MessageSquare },
     { id: 'mindmap', title: 'Mind Maps', icon: Network },
     { id: 'live', title: 'Live Mode', icon: Phone },
     { id: 'graphics', title: 'Graphics Library', icon: Image },
@@ -86,7 +85,6 @@ const HelpDocumentation: React.FC<HelpDocumentationProps> = ({ onClose }) => {
             {activeSection === 'chat' && <ChatFeatures />}
             {activeSection === 'notebook' && <NotebookFeature />}
             {activeSection === 'todos' && <TodosFeature />}
-            {activeSection === 'reminders' && <RemindersFeature />}
             {activeSection === 'mindmap' && <MindMaps />}
             {activeSection === 'live' && <LiveMode />}
             {activeSection === 'graphics' && <GraphicsLibrary />}

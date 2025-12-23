@@ -43,12 +43,14 @@ const App: React.FC = () => {
 
   const [notes, setNotes] = React.useState<Note[]>([]);
   const [noteCounter, setNoteCounter] = React.useState(1);
-  const [activeTab, setActiveTab] = React.useState<'chat' | 'notebook' | 'todos' | 'reminders'>('chat');
+  const [activeTab, setActiveTab] = React.useState<'chat' | 'notebook' | 'todos'>('chat');
   const [todos, setTodos] = React.useState<Todo[]>([]);
   const [reminders, setReminders] = React.useState<Reminder[]>([]);
   const [sources, setSources] = React.useState<Source[]>([]);
   const [toastMessage, setToastMessage] = React.useState<{ message: string; id: string } | null>(null);
   const [triggeredReminder, setTriggeredReminder] = React.useState<Reminder | null>(null);
+  const [uploadFeedback, setUploadFeedback] = React.useState<{ uploaded: number; skipped: number; skippedFiles: string[] } | null>(null);
+  const [uploadProgress, setUploadProgress] = React.useState<{ current: number; total: number; currentFile: string } | null>(null);
 
   React.useEffect(() => {
     const saved = localStorage.getItem('notes');
@@ -414,7 +416,9 @@ const App: React.FC = () => {
     fileState.setFiles,
     fileState.setIsProcessingFiles,
     layoutState.viewState,
-    layoutState.setViewState
+    layoutState.setViewState,
+    setUploadFeedback,
+    setUploadProgress
   );
 
   const messageHandlers = createMessageHandlers(
@@ -575,6 +579,40 @@ const App: React.FC = () => {
           </button>
         </div>
       )}
+      {uploadProgress && (
+        <div className="fixed top-20 right-4 z-[80] bg-blue-600 text-white px-4 py-3 rounded-lg shadow-xl">
+          <div className="flex items-center gap-3">
+            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            <div>
+              <p className="text-sm font-semibold">Processing files...</p>
+              <p className="text-xs opacity-90">{uploadProgress.current} / {uploadProgress.total} - {uploadProgress.currentFile}</p>
+            </div>
+          </div>
+        </div>
+      )}
+      {uploadFeedback && (
+        <div className="fixed top-20 right-4 z-[80] bg-white dark:bg-[#222222] border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] px-4 py-3 rounded-lg shadow-xl max-w-sm">
+          <div className="flex items-start gap-2">
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-[#1a1a1a] dark:text-white mb-1">Upload Complete</p>
+              <p className="text-xs text-[#666666] dark:text-[#a0a0a0]">
+                ✓ {uploadFeedback.uploaded} files uploaded
+                {uploadFeedback.skipped > 0 && ` • ${uploadFeedback.skipped} skipped`}
+              </p>
+              {uploadFeedback.skipped > 0 && uploadFeedback.skippedFiles.length <= 5 && (
+                <div className="mt-2 text-[10px] text-[#a0a0a0] space-y-0.5">
+                  {uploadFeedback.skippedFiles.map((file, i) => (
+                    <div key={i} className="truncate">• {file}</div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <button onClick={() => setUploadFeedback(null)} className="text-[#a0a0a0] hover:text-[#1a1a1a] dark:hover:text-white">
+              <X size={14} />
+            </button>
+          </div>
+        </div>
+      )}
       {featureState.isLiveMode && <LiveSession onClose={handleCloseLiveSession} />}
       {featureState.isCallingEffect && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] flex items-center justify-center">
@@ -704,6 +742,8 @@ const App: React.FC = () => {
           onOpenNotebook={() => setActiveTab('notebook')}
           activeTab={activeTab}
           onTabChange={setActiveTab}
+          isViewerOpen={!!activeFile}
+          onCloseViewer={() => layoutState.setViewState(null)}
         />
 
         {activeTab === 'chat' ? (
@@ -733,16 +773,6 @@ const App: React.FC = () => {
               onDeleteTodo={handleDeleteTodo}
               onUpdateTodo={handleUpdateTodo}
               onDeleteSubtask={handleDeleteSubtask}
-            />
-          </div>
-        ) : activeTab === 'reminders' ? (
-          <div className="flex-1 overflow-hidden">
-            <Reminders
-              reminders={reminders}
-              onAddReminder={handleAddReminder}
-              onDeleteReminder={handleDeleteReminder}
-              onUpdateReminder={handleUpdateReminder}
-              onShowToast={handleShowToast}
             />
           </div>
         ) : (
