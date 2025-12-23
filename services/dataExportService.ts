@@ -9,6 +9,8 @@ interface ExportData {
   chats: any[];
   mindMaps: any;
   snapshots: any[];
+  notes: any[];
+  noteCounter: number;
 }
 
 class DataExportService {
@@ -23,12 +25,15 @@ class DataExportService {
       const chats = chatRegistry.getAllFullChats();
       const mindMaps = mindMapCache.getAll();
       const snapshots = snapshotService.getSnapshots();
+      const notes = JSON.parse(localStorage.getItem('notes') || '[]');
+      const noteCounter = parseInt(localStorage.getItem('noteCounter') || '1');
       
       console.log(`[${exportId}] Export data collected:`, {
         settingsKeys: Object.keys(settings),
         chatsCount: chats.length,
         mindMapsCount: Object.keys(mindMaps).length,
-        snapshotsCount: snapshots.length
+        snapshotsCount: snapshots.length,
+        notesCount: notes.length
       });
       
       // Collect all data
@@ -38,7 +43,9 @@ class DataExportService {
         settings,
         chats,
         mindMaps,
-        snapshots
+        snapshots,
+        notes,
+        noteCounter
       };
 
       // Create ZIP file
@@ -71,7 +78,7 @@ class DataExportService {
     }
   }
 
-  async importData(file: File): Promise<void> {
+  async importData(file: File, mode: 'replace' | 'merge' = 'replace'): Promise<void> {
     try {
       const importId = `IMPORT_${Date.now()}`;
       console.log(`[${importId}] Starting data import from file:`, file.name);
@@ -105,35 +112,55 @@ class DataExportService {
       }
       
       // Confirm import
+      const modeText = mode === 'merge' ? 'merge with' : 'replace';
       const confirmed = confirm(
         `Import backup from ${new Date(importData.timestamp).toLocaleDateString()}?\n\n` +
-        `This will replace:\n` +
-        `• ${importData.chats.length} chats\n` +
-        `• ${Object.keys(importData.mindMaps).length} mind maps\n` +
-        `• ${importData.snapshots.length} snapshots\n` +
-        `• All settings\n\n` +
-        `Current data will be lost. Continue?`
+        `This will ${modeText}:\n` +
+        `• ${importData.chats?.length || 0} chats\n` +
+        `• ${Object.keys(importData.mindMaps || {}).length} mind maps\n` +
+        `• ${importData.snapshots?.length || 0} snapshots\n` +
+        `• ${importData.notes?.length || 0} notes\n` +
+        `• Settings\n\n` +
+        (mode === 'replace' ? 'Current data will be lost. ' : 'Data will be merged. ') +
+        'Continue?'
       );
       
       if (!confirmed) return;
       
-      console.log(`[${importId}] Starting data restoration...`);
+      console.log(`[${importId}] Starting data restoration (${mode} mode)...`);
       
       // Import settings
       console.log(`[${importId}] Restoring settings...`);
       this.restoreSettings(importData.settings);
       
-      // Import chats
-      console.log(`[${importId}] Importing ${importData.chats.length} chats...`);
-      chatRegistry.importChats(importData.chats);
-      
-      // Import mind maps
-      console.log(`[${importId}] Importing ${Object.keys(importData.mindMaps).length} mind maps...`);
-      mindMapCache.importAll(importData.mindMaps);
+      if (mode === 'replace') {
+        // Replace mode: clear existing data
+        console.log(`[${importId}] Clearing existing data...`);
+        chatRegistry.importChats(importData.chats || []);
+        mindMapCache.importAll(importData.mindMaps || {});
+        localStorage.setItem('notes', JSON.stringify(importData.notes || []));
+        localStorage.setItem('noteCounter', (importData.noteCounter || 1).toString());
+      } else {
+        // Merge mode: combine with existing data
+        console.log(`[${importId}] Merging with existing data...`);
+        const existingChats = chatRegistry.getAllFullChats();
+        const mergedChats = [...existingChats, ...(importData.chats || [])];
+        chatRegistry.importChats(mergedChats);
+        
+        const existingMindMaps = mindMapCache.getAll();
+        const mergedMindMaps = { ...existingMindMaps, ...(importData.mindMaps || {}) };
+        mindMapCache.importAll(mergedMindMaps);
+        
+        const existingNotes = JSON.parse(localStorage.getItem('notes') || '[]');
+        const existingCounter = parseInt(localStorage.getItem('noteCounter') || '1');
+        const mergedNotes = [...existingNotes, ...(importData.notes || [])];
+        localStorage.setItem('notes', JSON.stringify(mergedNotes));
+        localStorage.setItem('noteCounter', Math.max(existingCounter, importData.noteCounter || 1).toString());
+      }
       
       // Import snapshots with images
       const snapshotsWithImages = await Promise.all(
-        importData.snapshots.map(async (snapshot) => {
+        (importData.snapshots || []).map(async (snapshot) => {
           const imageFile = zip.file(`snapshots/${snapshot.id}.png`);
           if (imageFile) {
             const imageBlob = await imageFile.async('blob');
@@ -144,9 +171,14 @@ class DataExportService {
         })
       );
       
-      snapshotService.importSnapshots(snapshotsWithImages);
+      if (mode === 'replace') {
+        snapshotService.importSnapshots(snapshotsWithImages);
+      } else {
+        const existingSnapshots = snapshotService.getSnapshots();
+        snapshotService.importSnapshots([...existingSnapshots, ...snapshotsWithImages]);
+      }
       
-      this.showToast('Data imported successfully! Please refresh the page.', 'success');
+      this.showToast(`Data ${mode === 'merge' ? 'merged' : 'imported'} successfully! Refreshing...`, 'success');
       
       // Refresh page after short delay
       setTimeout(() => window.location.reload(), 2000);

@@ -199,7 +199,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
         input.onchange = async (e) => {
             const file = (e.target as HTMLInputElement).files?.[0];
             if (file) {
-                await dataExportService.importData(file);
+                const mode = confirm(
+                    'Import Mode:\n\n' +
+                    'Click OK to MERGE with existing data\n' +
+                    'Click Cancel to REPLACE all data\n\n' +
+                    'Merge: Combines imported data with current data\n' +
+                    'Replace: Deletes current data and imports backup'
+                ) ? 'merge' : 'replace';
+                await dataExportService.importData(file, mode);
             }
         };
         input.click();
@@ -339,7 +346,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                         <div className="bg-[rgba(0,0,0,0.03)] dark:bg-[#1a1a1a] border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] rounded-lg p-2 flex gap-2 mb-3">
                             <div className="flex-1">
                                 <p className="text-xs text-[#1a1a1a] dark:text-white leading-relaxed">
-                                    <strong>Backup & Restore:</strong> Export all your chats, mind maps, settings, and snapshots to a ZIP file for safe keeping.
+                                    <strong>Backup & Restore:</strong> Export all your chats, mind maps, notes, settings, and snapshots. Import with merge or replace options.
                                 </p>
                             </div>
                         </div>

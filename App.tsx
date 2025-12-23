@@ -23,8 +23,10 @@ import LiveSession from './components/LiveSession';
 import SettingsModal from './components/SettingsModal';
 import HelpDocumentation from './components/HelpDocumentation';
 import MindMapViewer from './components/MindMapViewer';
+import Notebook from './components/Notebook';
 import AppHeader from './App/components/AppHeader';
 import { FloatingInput } from './App/components/FloatingInput';
+import { Note } from './types';
 
 const App: React.FC = () => {
   useUIHelpersInit();
@@ -34,6 +36,60 @@ const App: React.FC = () => {
   const layoutState = useLayoutState();
   const inputState = useInputState();
   const featureState = useFeatureState();
+
+  const [notes, setNotes] = React.useState<Note[]>([]);
+  const [showNotebook, setShowNotebook] = React.useState(false);
+  const [noteCounter, setNoteCounter] = React.useState(1);
+
+  React.useEffect(() => {
+    const saved = localStorage.getItem('notes');
+    const savedCounter = localStorage.getItem('noteCounter');
+    if (saved) setNotes(JSON.parse(saved));
+    if (savedCounter) setNoteCounter(parseInt(savedCounter));
+  }, []);
+
+  const handleSaveNote = (content: string, modelId?: string, messageId?: string) => {
+    const newNote: Note = {
+      id: Date.now().toString(),
+      noteNumber: noteCounter,
+      content,
+      timestamp: Date.now(),
+      modelId,
+      chatId: chatState.currentChatId,
+      messageId
+    };
+    const updated = [newNote, ...notes];
+    setNotes(updated);
+    localStorage.setItem('notes', JSON.stringify(updated));
+    setNoteCounter(noteCounter + 1);
+    localStorage.setItem('noteCounter', (noteCounter + 1).toString());
+  };
+
+  const handleDeleteNote = (id: string) => {
+    const updated = notes.filter(n => n.id !== id);
+    setNotes(updated);
+    localStorage.setItem('notes', JSON.stringify(updated));
+  };
+
+  const handleUpdateNote = (id: string, updates: Partial<Note>) => {
+    const updated = notes.map(n => n.id === id ? { ...n, ...updates } : n);
+    setNotes(updated);
+    localStorage.setItem('notes', JSON.stringify(updated));
+  };
+
+  const handleNavigateToMessage = (chatId: string, messageId: string) => {
+    if (chatId !== chatState.currentChatId) {
+      chatHandlers.handleSelectChat(chatId);
+    }
+    setTimeout(() => {
+      const msgElement = document.querySelector(`[data-message-id="${messageId}"]`);
+      if (msgElement) {
+        msgElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        msgElement.classList.add('highlight-flash');
+        setTimeout(() => msgElement.classList.remove('highlight-flash'), 2000);
+      }
+    }, 100);
+  };
 
   // Initialize activeModelId
   React.useEffect(() => {
@@ -214,6 +270,7 @@ const App: React.FC = () => {
       )}
       {featureState.isSettingsOpen && <SettingsModal onClose={() => featureState.setIsSettingsOpen(false)} />}
       {featureState.isHelpOpen && <HelpDocumentation onClose={() => featureState.setIsHelpOpen(false)} />}
+      {showNotebook && <Notebook notes={notes} onClose={() => setShowNotebook(false)} onDeleteNote={handleDeleteNote} onUpdateNote={handleUpdateNote} onNavigateToMessage={handleNavigateToMessage} files={fileState.files} onViewDocument={fileHandlers.handleViewDocument} />}
       {featureState.isGeneratingMindMap && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center">
           <div className="bg-white rounded-2xl shadow-2xl p-8 flex flex-col items-center gap-4">
@@ -316,6 +373,8 @@ const App: React.FC = () => {
           handleCopySnapshot={featureHandlers.handleCopySnapshot}
           handleDeleteSnapshot={featureHandlers.handleDeleteSnapshot}
           handleOpenMindMapFromLibrary={featureHandlers.handleOpenMindMapFromLibrary}
+          notesCount={notes.length}
+          onOpenNotebook={() => setShowNotebook(true)}
         />
 
         <div ref={layoutState.messagesContainerRef} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 scroll-smooth bg-white dark:bg-[#1a1a1a]">
@@ -326,6 +385,8 @@ const App: React.FC = () => {
                 message={msg} 
                 files={fileState.files} 
                 onViewDocument={fileHandlers.handleViewDocument}
+                onSaveNote={msg.role === 'model' ? (content, modelId) => handleSaveNote(content, modelId, msg.id) : undefined}
+                noteNumber={notes.find(n => n.messageId === msg.id)?.noteNumber}
               />
             ))}
             <div ref={layoutState.messagesEndRef} className="snapshot-ignore" />

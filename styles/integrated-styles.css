@@ -535,6 +535,37 @@ html.dark .message-context-menu {
   background: var(--color-text-secondary);
 }
 
+/* Global scrollbar theming */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+html.dark ::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
 /* ========================================
    LOADING STATES
    ======================================== */
@@ -980,4 +1011,14 @@ html.dark .citation-marker[aria-expanded="true"] {
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3),
                 0 0 0 0 rgba(192, 192, 192, 0);
   }
+}
+
+@keyframes highlightFlash {
+  0%, 100% { background-color: transparent; }
+  50% { background-color: rgba(68, 133, 209, 0.2); }
+}
+
+.highlight-flash {
+  animation: highlightFlash 2s ease-in-out;
+  border-radius: 1rem;
 }

@@ -25,6 +25,20 @@ export interface Message {
   };
 }
 
+export interface Note {
+  id: string;
+  noteNumber: number;
+  content: string;
+  timestamp: number;
+  modelId?: string;
+  title?: string;
+  tags?: string[];
+  category?: string;
+  isFavorite?: boolean;
+  chatId?: string;
+  messageId?: string;
+}
+
 export interface Citation {
   file: string;
   snippet: string;

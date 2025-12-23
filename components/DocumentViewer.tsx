@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { ProcessedFile } from '../types';
-import { X, ZoomIn, ZoomOut, FileText, FileSpreadsheet, File as FileIcon } from 'lucide-react';
+import { X, ZoomIn, ZoomOut, FileText, FileSpreadsheet, File as FileIcon, Table } from 'lucide-react';
 import PdfViewer from './DocumentViewer/PdfViewer';
 import ExcelViewer from './DocumentViewer/ExcelViewer';
+import CsvViewer from './DocumentViewer/CsvViewer';
 import TextViewer from './DocumentViewer/TextViewer';
 
 interface DocumentViewerProps {
@@ -36,6 +37,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
   const getFileIcon = () => {
     if (file.type === 'pdf') return <FileText size={18} />;
     if (file.type === 'excel') return <FileSpreadsheet size={18} />;
+    if (file.type === 'csv') return <Table size={18} />;
     return <FileIcon size={18} />;
   };
 
@@ -45,13 +47,13 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
     <div className="flex flex-col h-full w-full bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] border-l border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)]">
       <div className="flex-none h-[65px] bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] px-4 flex items-center justify-between shadow-sm z-20">
         <div className="flex items-center gap-3 overflow-hidden">
-          <div className={`p-1.5 rounded ${file.type === 'pdf' ? 'bg-rose-50 text-rose-500' : file.type === 'excel' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-500'}`}>
+          <div className={`p-1.5 rounded ${file.type === 'pdf' ? 'bg-rose-50 text-rose-500' : file.type === 'excel' ? 'bg-emerald-50 text-emerald-600' : file.type === 'csv' ? 'bg-blue-50 text-blue-600' : 'bg-slate-50 text-slate-500'}`}>
             {getFileIcon()}
           </div>
           <div className="flex flex-col overflow-hidden">
             <h3 className="font-semibold text-[#1a1a1a] dark:text-white text-sm truncate max-w-[200px]" title={file.name}>{file.name}</h3>
             <span className="text-[12px] text-[#666666] dark:text-[#a0a0a0] font-medium">
-              {file.type === 'excel' && location ? location : (file.type === 'excel' ? 'Spreadsheet View' : file.type === 'pdf' ? 'PDF View' : 'Text View')}
+              {file.type === 'excel' && location ? location : (file.type === 'excel' ? 'Spreadsheet View' : file.type === 'pdf' ? 'PDF View' : file.type === 'csv' ? 'CSV Table' : 'Text View')}
             </span>
           </div>
         </div>
@@ -89,7 +91,13 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, 
           textScale={textScale}
         />
       )}
-      {!isPdf && file.type !== 'excel' && (
+      {file.type === 'csv' && (
+        <CsvViewer 
+          file={file} 
+          textScale={textScale}
+        />
+      )}
+      {!isPdf && file.type !== 'excel' && file.type !== 'csv' && (
         <TextViewer 
           file={file} 
           highlightQuote={highlightQuote}

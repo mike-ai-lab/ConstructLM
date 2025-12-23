@@ -16,6 +16,7 @@ const CitationChip: React.FC<CitationChipProps> = ({ index, fileName, location, 
   const triggerRef = useRef<HTMLSpanElement>(null);
   const [coords, setCoords] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const [isInTable, setIsInTable] = useState(false);
+  const fileExists = files.find(f => f.name === fileName);
 
   const updateCoords = useCallback(() => {
     if (triggerRef.current) {
@@ -51,6 +52,7 @@ const CitationChip: React.FC<CitationChipProps> = ({ index, fileName, location, 
   }, [isOpen, isInTable, updateCoords]);
 
   const handleOpenFull = () => {
+    if (!fileExists) return;
     let page = 1;
     if (location) {
       const pageMatch = location.match(/Page\s*(\d+)/i);
@@ -84,6 +86,7 @@ const CitationChip: React.FC<CitationChipProps> = ({ index, fileName, location, 
           onOpenFull={handleOpenFull}
           isInTable={isInTable}
           coords={coords}
+          fileNotFound={!fileExists}
         />
       )}
     </span>

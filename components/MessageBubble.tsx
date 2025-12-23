@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Message, ProcessedFile } from '../types';
-import { Sparkles, User, Volume2, Loader2, StopCircle } from 'lucide-react';
+import { Sparkles, User, Volume2, Loader2, StopCircle, BookmarkPlus } from 'lucide-react';
 import CitationRenderer from './CitationRenderer';
 import { generateSpeech } from '../services/geminiService';
 import { decodeAudioData } from '../services/audioUtils';
@@ -11,9 +11,11 @@ interface MessageBubbleProps {
   message: Message;
   files: ProcessedFile[];
   onViewDocument: (fileName: string, page?: number, quote?: string, location?: string) => void;
+  onSaveNote?: (content: string, modelId?: string) => void;
+  noteNumber?: number;
 }
 
-const MessageBubble: React.FC<MessageBubbleProps> = ({ message, files, onViewDocument }) => {
+const MessageBubble: React.FC<MessageBubbleProps> = ({ message, files, onViewDocument, onSaveNote, noteNumber }) => {
   const isUser = message.role === 'user';
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoadingAudio, setIsLoadingAudio] = useState(false);
@@ -58,7 +60,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, files, onViewDoc
   };
 
   return (
-    <div className={`flex w-full mb-8 ${isUser ? 'justify-end' : 'justify-start'}`}>
+    <div className={`flex w-full mb-8 ${isUser ? 'justify-end' : 'justify-start'}`} data-message-id={message.id}>
       <div className={`flex max-w-[90%] md:max-w-[85%] ${isUser ? 'flex-row-reverse' : 'flex-row'} gap-4 group`}>
         {/* Avatar */}
         <div className={`flex-shrink-0 ${
@@ -79,15 +81,22 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, files, onViewDoc
              <span className="text-[12px] font-bold text-[#666666] dark:text-[#a0a0a0] uppercase tracking-widest">
                  {isUser ? 'You' : (message.modelId || 'AI')}
              </span>
+             {noteNumber && (
+               <span className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 font-semibold">
+                 Note #{noteNumber}
+               </span>
+             )}
              {!isUser && !message.isStreaming && (
-                 <button 
-                    onClick={handlePlayAudio}
-                    disabled={isLoadingAudio}
-                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] rounded text-[#a0a0a0] hover:text-[#4485d1] transition-all"
-                    title="Read Aloud"
-                 >
-                    {isLoadingAudio ? <Loader2 size={12} className="animate-spin" /> : (isPlaying ? <StopCircle size={12} /> : <Volume2 size={12} />)}
-                 </button>
+                 <>
+                   <button 
+                      onClick={handlePlayAudio}
+                      disabled={isLoadingAudio}
+                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] rounded text-[#a0a0a0] hover:text-[#4485d1] transition-all"
+                      title="Read Aloud"
+                   >
+                      {isLoadingAudio ? <Loader2 size={12} className="animate-spin" /> : (isPlaying ? <StopCircle size={12} /> : <Volume2 size={12} />)}
+                   </button>
+                 </>
              )}
           </div>
           
@@ -97,6 +106,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, files, onViewDoc
                 ? 'bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] text-[#1a1a1a] dark:text-white rounded-tr-sm' 
                 : 'text-[#1a1a1a] dark:text-white'
              }
+             ${noteNumber ? 'border-l-4 border-yellow-500' : ''}
           `}>
             {message.isStreaming && !isUser && (
                  <div className="absolute -left-5 top-4">
@@ -145,6 +155,21 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, files, onViewDoc
               <span>Out: {message.usage.outputTokens.toLocaleString()} tokens</span>
               <span className="font-semibold">Total: {message.usage.totalTokens.toLocaleString()}</span>
             </div>
+          )}
+          {noteNumber && (
+            <div className="text-[10px] text-yellow-700 dark:text-yellow-400 mt-1.5 px-1 font-mono flex items-center gap-2">
+              Saved as Note #{noteNumber}
+            </div>
+          )}
+          {!isUser && !message.isStreaming && onSaveNote && !noteNumber && (
+            <button
+              onClick={() => onSaveNote(message.content, message.modelId)}
+              className="opacity-0 group-hover:opacity-100 mt-1.5 px-1 flex items-center gap-1 text-[#a0a0a0] hover:text-yellow-600 transition-all text-xs"
+              title="Save as Note"
+            >
+              <BookmarkPlus size={12} />
+              <span>Save as Note</span>
+            </button>
           )}
         </div>
       </div>

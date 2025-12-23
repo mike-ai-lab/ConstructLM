@@ -15,15 +15,14 @@ interface CitationPopupProps {
   onOpenFull: () => void;
   isInTable: boolean;
   coords?: { top: number; left: number };
+  fileNotFound?: boolean;
 }
 
 /**
  * Layout constants
- * Adjust SIDE_PANEL_WIDTH if your UI changes
  */
 const POPUP_WIDTH = 450;
 const VIEWPORT_PADDING = 8;
-const SIDE_PANEL_WIDTH = 280; // left / right panels when opened
 const MAX_HEIGHT = 'min(40vh, 400px)';
 
 const CitationPopup: React.FC<CitationPopupProps> = ({
@@ -36,6 +35,7 @@ const CitationPopup: React.FC<CitationPopupProps> = ({
   onOpenFull,
   isInTable,
   coords,
+  fileNotFound,
 }) => {
   const popoverRef = useRef<HTMLDivElement>(null);
 
@@ -47,7 +47,7 @@ const CitationPopup: React.FC<CitationPopupProps> = ({
     handleReset: () => void;
   }>(undefined);
 
-  const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
+  const [position, setPosition] = useState<{ top: number; left: number; width?: number } | null>(null);
   const isPdfMode = file?.type === 'pdf' && pdfPageNumber !== null;
 
   /* ---------------- File Resolution ---------------- */
@@ -69,29 +69,25 @@ const CitationPopup: React.FC<CitationPopupProps> = ({
   const calculatePosition = useCallback(() => {
     if (!coords) return;
 
-    const viewportWidth = window.innerWidth;
+    const chatContainer = document.querySelector('.flex-1.flex.flex-col.h-full.relative.bg-white');
+    if (!chatContainer) return;
 
-    const safeLeftBoundary = SIDE_PANEL_WIDTH + VIEWPORT_PADDING;
-    const safeRightBoundary =
-      viewportWidth - SIDE_PANEL_WIDTH - VIEWPORT_PADDING;
-
-    const availableWidth = safeRightBoundary - safeLeftBoundary;
+    const chatRect = chatContainer.getBoundingClientRect();
+    const availableWidth = chatRect.width - VIEWPORT_PADDING * 2;
     const effectiveWidth = Math.min(POPUP_WIDTH, availableWidth);
 
     let left = coords.left;
+    const rightEdge = left + effectiveWidth;
 
-    if (left + effectiveWidth > safeRightBoundary) {
-      left = safeRightBoundary - effectiveWidth;
+    if (rightEdge > chatRect.right - VIEWPORT_PADDING) {
+      left = chatRect.right - effectiveWidth - VIEWPORT_PADDING;
     }
 
-    if (left < safeLeftBoundary) {
-      left = safeLeftBoundary;
+    if (left < chatRect.left + VIEWPORT_PADDING) {
+      left = chatRect.left + VIEWPORT_PADDING;
     }
 
-    setPosition({
-      top: coords.top,
-      left,
-    });
+    setPosition({ top: coords.top, left, width: effectiveWidth });
   }, [coords]);
 
   useLayoutEffect(() => {
@@ -145,8 +141,7 @@ const CitationPopup: React.FC<CitationPopupProps> = ({
         animate-in fade-in duration-150
       `}
       style={{
-        width: POPUP_WIDTH,
-        maxWidth: `calc(100vw - ${(SIDE_PANEL_WIDTH * 2) + VIEWPORT_PADDING * 2}px)`,
+        width: position?.width || POPUP_WIDTH,
         maxHeight: MAX_HEIGHT,
         ...(isInTable
           ? { top: position?.top ?? 0, left: position?.left ?? 0 }
@@ -200,9 +195,15 @@ const CitationPopup: React.FC<CitationPopupProps> = ({
 
       {/* Footer */}
       <div className="px-2 py-1.5 border-t bg-white dark:bg-[#2a2a2a] flex items-center justify-between">
-        <p className="text-xs italic text-[#666] dark:text-[#a0a0a0] line-clamp-2">
-          "{quote}"
-        </p>
+        {fileNotFound ? (
+          <p className="text-xs text-gray-400 dark:text-gray-500">
+            Source file not found. Upload to view references.
+          </p>
+        ) : (
+          <p className="text-xs italic text-[#666] dark:text-[#a0a0a0] line-clamp-2">
+            "{quote}"
+          </p>
+        )}
 
         {isPdfMode && (
           <div className="flex items-center gap-1 ml-2">
