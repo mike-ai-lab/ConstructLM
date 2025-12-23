@@ -25,10 +25,11 @@ import HelpDocumentation from './components/HelpDocumentation';
 import MindMapViewer from './components/MindMapViewer';
 import Notebook from './components/Notebook';
 import TodoList from './components/TodoList';
-import Reminders from './components/Reminders';
+// import Sources from './components/Sources';
 import AppHeader from './App/components/AppHeader';
 import { FloatingInput } from './App/components/FloatingInput';
-import { Note, Todo, Reminder } from './types';
+import Reminders from './components/Reminders';
+import { Note, Todo, Reminder, Source } from './types';
 
 const App: React.FC = () => {
   useUIHelpersInit();
@@ -44,6 +45,7 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = React.useState<'chat' | 'notebook' | 'todos' | 'reminders'>('chat');
   const [todos, setTodos] = React.useState<Todo[]>([]);
   const [reminders, setReminders] = React.useState<Reminder[]>([]);
+  const [sources, setSources] = React.useState<Source[]>([]);
   const [toastMessage, setToastMessage] = React.useState<{ message: string; id: string } | null>(null);
 
   React.useEffect(() => {
@@ -51,10 +53,12 @@ const App: React.FC = () => {
     const savedCounter = localStorage.getItem('noteCounter');
     const savedTodos = localStorage.getItem('todos');
     const savedReminders = localStorage.getItem('reminders');
+    const savedSources = localStorage.getItem('sources');
     if (saved) setNotes(JSON.parse(saved));
     if (savedCounter) setNoteCounter(parseInt(savedCounter));
     if (savedTodos) setTodos(JSON.parse(savedTodos));
     if (savedReminders) setReminders(JSON.parse(savedReminders));
+    if (savedSources) setSources(JSON.parse(savedSources));
   }, []);
 
   const handleSaveNote = (content: string, modelId?: string, messageId?: string) => {
@@ -72,6 +76,18 @@ const App: React.FC = () => {
     localStorage.setItem('notes', JSON.stringify(updated));
     setNoteCounter(noteCounter + 1);
     localStorage.setItem('noteCounter', (noteCounter + 1).toString());
+  };
+
+  const handleUnsaveNote = (messageId: string) => {
+    const noteToDelete = notes.find(n => n.messageId === messageId);
+    const updated = notes.filter(n => n.messageId !== messageId);
+    setNotes(updated);
+    localStorage.setItem('notes', JSON.stringify(updated));
+    
+    if (noteToDelete && noteToDelete.noteNumber === noteCounter - 1) {
+      setNoteCounter(noteCounter - 1);
+      localStorage.setItem('noteCounter', (noteCounter - 1).toString());
+    }
   };
 
   const handleDeleteNote = (id: string) => {
@@ -150,6 +166,36 @@ const App: React.FC = () => {
     setTimeout(() => setToastMessage(null), 10000);
   };
 
+  const handleAddSource = async (url: string) => {
+    const newSource: Source = { id: Date.now().toString(), url, status: 'pending', timestamp: Date.now(), chatId: chatState.currentChatId };
+    const updated = [newSource, ...sources];
+    setSources(updated);
+    localStorage.setItem('sources', JSON.stringify(updated));
+    
+    try {
+      const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+      const data = await response.json();
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(data.contents, 'text/html');
+      const title = doc.querySelector('title')?.textContent || url;
+      const content = doc.body.textContent?.slice(0, 5000) || '';
+      
+      const updatedSource = { ...newSource, title, content, status: 'fetched' as const };
+      setSources(prev => prev.map(s => s.id === newSource.id ? updatedSource : s));
+      localStorage.setItem('sources', JSON.stringify(sources.map(s => s.id === newSource.id ? updatedSource : s)));
+    } catch (error) {
+      const errorSource = { ...newSource, status: 'error' as const };
+      setSources(prev => prev.map(s => s.id === newSource.id ? errorSource : s));
+      localStorage.setItem('sources', JSON.stringify(sources.map(s => s.id === newSource.id ? errorSource : s)));
+    }
+  };
+
+  const handleDeleteSource = (id: string) => {
+    const updated = sources.filter(s => s.id !== id);
+    setSources(updated);
+    localStorage.setItem('sources', JSON.stringify(updated));
+  };
+
   // Initialize activeModelId
   React.useEffect(() => {
     if (!featureState.activeModelId) {
@@ -186,7 +232,8 @@ const App: React.FC = () => {
     chatState.setIsGenerating,
     featureState.activeModelId,
     inputState.setShowMentionMenu,
-    chatHandlers.saveCurrentChat
+    chatHandlers.saveCurrentChat,
+    sources
   );
 
   const filteredFiles = fileState.files.filter(f => f.name.toLowerCase().includes(inputState.mentionQuery));
@@ -457,9 +504,11 @@ const App: React.FC = () => {
                 <MessageBubble 
                   key={msg.id} 
                   message={msg} 
-                  files={fileState.files} 
+                  files={fileState.files}
+                  sources={sources}
                   onViewDocument={fileHandlers.handleViewDocument}
-                  onSaveNote={msg.role === 'model' ? (content, modelId) => handleSaveNote(content, modelId, msg.id) : undefined}
+                  onSaveNote={msg.role === 'model' && msg.id !== 'intro' ? (content, modelId) => handleSaveNote(content, modelId, msg.id) : undefined}
+                  onUnsaveNote={msg.role === 'model' && msg.id !== 'intro' ? handleUnsaveNote : undefined}
                   noteNumber={notes.find(n => n.messageId === msg.id)?.noteNumber}
                 />
               ))}
@@ -515,6 +564,7 @@ const App: React.FC = () => {
               mentionIndex={inputState.mentionIndex}
               isRecording={featureState.isRecording}
               inputHeight={inputState.inputHeight}
+              sources={sources}
               onInputChange={inputHandlers.handleInputChange}
               onKeyDown={inputHandlers.handleKeyDown}
               onSendMessage={messageHandlers.handleSendMessage}
@@ -524,6 +574,8 @@ const App: React.FC = () => {
               setIsInputDragOver={layoutState.setIsInputDragOver}
               setInput={inputState.setInput}
               setInputHeight={inputState.setInputHeight}
+              onAddSource={handleAddSource}
+              onDeleteSource={handleDeleteSource}
             />
             <p className="text-[#666666] dark:text-[#a0a0a0] text-xs text-center mt-2">AI can make mistakes. Please verify citations.</p>
           </div>

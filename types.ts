@@ -61,6 +61,16 @@ export interface Reminder {
   messageId?: string;
 }
 
+export interface Source {
+  id: string;
+  url: string;
+  title?: string;
+  content?: string;
+  status: 'pending' | 'fetched' | 'error';
+  timestamp: number;
+  chatId?: string;
+}
+
 export interface Citation {
   file: string;
   snippet: string;

@@ -7,44 +7,51 @@ import { ragService } from "./ragService";
 import { streamAWSBedrock } from "./awsBedrockService";
 
 // --- System Prompt Construction ---
-export const constructBaseSystemPrompt = (hasFiles: boolean = false) => {
+export const constructBaseSystemPrompt = (hasFiles: boolean = false, hasSources: boolean = false, sources: any[] = []) => {
+  if (hasSources && sources.length > 0) {
+    const sourcesList = sources.map((s, i) => `[${i + 1}] ${s.title || s.url}: ${s.url}`).join('\n');
+    return `You are ConstructLM, an intelligent AI assistant.
+
+CRITICAL SOURCE RESTRICTION
+YOU MUST ONLY USE INFORMATION FROM THE PROVIDED SOURCES BELOW.
+DO NOT USE ANY EXTERNAL KNOWLEDGE OR INFORMATION NOT IN THESE SOURCES.
+IF THE ANSWER IS NOT IN THE SOURCES, SAY "I cannot find this information in the provided sources."
+
+PROVIDED SOURCES:
+${sourcesList}
+
+MANDATORY CITATION RULES:
+1. EVERY SINGLE FACT must have a citation immediately after it
+2. Use format: {{citation:SourceTitle|URL|Quote}}
+3. Quote must be 3-10 words copied EXACTLY from source
+4. NO EXCEPTIONS - every statement needs a citation
+
+EXAMPLE:
+"The feature was released in 2024 {{citation:Product Blog|https://example.com|released in 2024}}."
+
+IF YOU WRITE ANY FACT WITHOUT A CITATION, YOU HAVE FAILED.
+REMEMBER: ONLY use information from the provided sources. Every fact MUST have a citation.`;
+  }
+  
   if (hasFiles) {
     return `You are ConstructLM, an intelligent AI assistant with expertise in construction, engineering, and technical documentation analysis.
 
-🚨 CRITICAL CITATION REQUIREMENT 🚨
-YOU MUST PROVIDE CITATIONS FOR EVERY SINGLE FACT, NUMBER, OR DATA POINT FROM THE DOCUMENTS.
-NO EXCEPTIONS. EVERY STATEMENT ABOUT THE DOCUMENT CONTENT MUST HAVE A CITATION.
+MANDATORY CITATION RULES:
+1. EVERY SINGLE FACT, NUMBER, OR DATA POINT must have a citation immediately after it
+2. Use format: {{citation:FileName|Location|Quote}}
+3. Quote must be 3-10 words copied EXACTLY from document
+4. NO EXCEPTIONS - every statement about document content needs a citation
 
-CITATION FORMAT (ABSOLUTELY MANDATORY):
-- Use EXACTLY this format: {{citation:FileName|Location|Quote}}
+CITATION FORMAT:
 - FileName: Exact file name (e.g., cutlist2.csv, spec.pdf)
-- Location: 
-  * For CSV/Excel: "Sheet: SheetName, Row X" (e.g., "Sheet: Parts List, Row 5")
-  * For PDF: "Page X" (e.g., "Page 12")
-- Quote: 3-10 words COPIED EXACTLY from the document (NEVER leave this empty)
+- Location: For CSV/Excel: "Sheet: SheetName, Row X" | For PDF: "Page X"
+- Quote: 3-10 words COPIED EXACTLY from the document
 
-CITATION PLACEMENT - INLINE AFTER EVERY FACT:
-✓ CORRECT: "The total number of parts is 27 {{citation:cutlist2.csv|Sheet: Summary, Row 1|Total Parts: 27}} and they use 3 boards {{citation:cutlist2.csv|Sheet: Summary, Row 2|Total Boards: 3}}."
-✓ CORRECT: "Part #1 is the Back board {{citation:cutlist2.csv|Sheet: Parts, Row 2|Back board}} with dimensions 500mm {{citation:cutlist2.csv|Sheet: Parts, Row 2|Width: 500mm}} x 800mm {{citation:cutlist2.csv|Sheet: Parts, Row 2|Height: 800mm}}."
-✗ WRONG: "The total number of parts is 27." (NO CITATION)
-✗ WRONG: "Total Parts: 27 {{citation:cutlist2.csv|Sheet: Summary, Row 1|}}" (EMPTY QUOTE)
-✗ WRONG: Listing facts without inline citations
+EXAMPLES:
+"The total is 27 {{citation:cutlist2.csv|Sheet: Summary, Row 1|Total Parts: 27}} and uses 3 boards {{citation:cutlist2.csv|Sheet: Summary, Row 2|Total Boards: 3}}."
+"Width is 500mm {{citation:file.csv|Sheet: Parts, Row 2|Width (mm): 500}}."
 
-EXAMPLES OF REQUIRED CITATIONS:
-- Numbers: "The waste percentage is 20% {{citation:file.csv|Sheet: Boards, Row 3|Waste %: 20%}}"
-- Names: "The material is Plywood_19mm {{citation:file.csv|Sheet: Parts, Row 5|Material: Plywood_19mm}}"
-- Measurements: "Width is 500mm {{citation:file.csv|Sheet: Parts, Row 2|Width (mm): 500}}"
-- Any data point: "Board #1 {{citation:file.csv|Sheet: Boards, Row 2|Board#: 1}} contains 12 parts {{citation:file.csv|Sheet: Boards, Row 2|Parts Count: 12}}"
-
-RESPONSE FORMATTING:
-- Use clear markdown formatting
-- Use ## for main section headers
-- Use ### for subsection headers
-- Use **bold** for emphasis
-- Use bullet points (-) for lists
-- Write in clear, well-structured paragraphs
-- ALWAYS cite inline immediately after each fact
-
+IF YOU WRITE ANY FACT WITHOUT A CITATION, YOU HAVE FAILED.
 REMEMBER: If you mention ANY data from the document, you MUST cite it immediately with the exact quote from the source.`;
   } else {
     return `You are ConstructLM, an intelligent AI assistant with expertise in construction, engineering, and general knowledge.
@@ -75,7 +82,8 @@ export const sendMessageToLLM = async (
   history: Message[],
   newMessage: string,
   activeFiles: ProcessedFile[],
-  onStream: (chunk: string, thinking?: string) => void
+  onStream: (chunk: string, thinking?: string) => void,
+  activeSources: any[] = []
 ): Promise<{ inputTokens?: number; outputTokens?: number; totalTokens?: number }> => {
     const model = getModel(modelId);
 
@@ -93,7 +101,16 @@ export const sendMessageToLLM = async (
         console.log('[RAG] Search failed, continuing without RAG context:', error);
     }
 
-    const systemPrompt = constructBaseSystemPrompt(activeFiles.length > 0) + ragContext;
+    const systemPrompt = constructBaseSystemPrompt(activeFiles.length > 0, activeSources.length > 0, activeSources) + ragContext;
+
+    // Add source context if available
+    let sourceContext = '';
+    if (activeSources.length > 0) {
+        sourceContext = '\n\nSOURCE CONTENT:\n' + 
+            activeSources.filter(s => s.content).map((s, i) => 
+                `=== SOURCE [${i + 1}]: "${s.title || s.url}" (${s.url}) ===\n${s.content}\n=== END SOURCE ===`
+            ).join('\n\n');
+    }
 
     // Dispatch to provider
     try {
@@ -115,6 +132,10 @@ export const sendMessageToLLM = async (
                     .join('\n\n');
                 
                 messages[messages.length - 1].content += `\n\n${fileContext}`;
+            }
+            
+            if (sourceContext) {
+                messages[messages.length - 1].content += `\n\n${sourceContext}`;
             }
             
             await streamLocalModel(localModel.modelName, messages, onStream);
@@ -139,6 +160,8 @@ export const sendMessageToLLM = async (
                 ? '\n\nFILE CONTEXT:\n' + activeFiles.map(f => `=== FILE: "${f.name}" ===\n${f.content}\n=== END FILE ===`).join('\n\n')
                 : '';
             
+            const fullContext = fileContext + sourceContext;
+            
             const messages = [{ role: 'system', content: systemPrompt }];
             
             const recentHistory = history.filter(m => !m.isStreaming && m.id !== 'intro').slice(-10);
@@ -146,12 +169,12 @@ export const sendMessageToLLM = async (
                 const msg = recentHistory[i];
                 const isFirstUserMsg = i === 0 && msg.role === 'user';
                 const role = msg.role === 'model' ? 'assistant' : msg.role;
-                const content = isFirstUserMsg && fileContext ? msg.content + fileContext : msg.content;
+                const content = isFirstUserMsg && fullContext ? msg.content + fullContext : msg.content;
                 messages.push({ role, content });
             }
             
             const isFirstMessage = recentHistory.length === 0;
-            const currentContent = (isFirstMessage && fileContext) ? newMessage + fileContext : newMessage;
+            const currentContent = (isFirstMessage && fullContext) ? newMessage + fullContext : newMessage;
             messages.push({ role: 'user', content: currentContent });
             
             return await streamOpenAICompatible(model, apiKey, messages, onStream);
@@ -168,6 +191,8 @@ export const sendMessageToLLM = async (
                 ? '\n\nFILE CONTEXT:\n' + activeFiles.map(f => `=== FILE: "${f.name}" ===\n${f.content}\n=== END FILE ===`).join('\n\n')
                 : '';
             
+            const fullContext = fileContext + sourceContext;
+            
             const messages = [{ role: 'system', content: systemPrompt }];
             
             const recentHistory = history.filter(m => !m.isStreaming && m.id !== 'intro').slice(-10);
@@ -175,12 +200,12 @@ export const sendMessageToLLM = async (
                 const msg = recentHistory[i];
                 const isFirstUserMsg = i === 0 && msg.role === 'user';
                 const role = msg.role === 'model' ? 'assistant' : msg.role;
-                const content = isFirstUserMsg && fileContext ? msg.content + fileContext : msg.content;
+                const content = isFirstUserMsg && fullContext ? msg.content + fullContext : msg.content;
                 messages.push({ role, content });
             }
             
             const isFirstMessage = recentHistory.length === 0;
-            const currentContent = (isFirstMessage && fileContext) ? newMessage + fileContext : newMessage;
+            const currentContent = (isFirstMessage && fullContext) ? newMessage + fullContext : newMessage;
             messages.push({ role: 'user', content: currentContent });
             
             return await streamAWSBedrock(

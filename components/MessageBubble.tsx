@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Message, ProcessedFile } from '../types';
-import { Sparkles, User, Volume2, Loader2, StopCircle, BookmarkPlus } from 'lucide-react';
+import { Sparkles, User, Volume2, Loader2, StopCircle, BookmarkPlus, FileText, ExternalLink } from 'lucide-react';
 import CitationRenderer from './CitationRenderer';
 import { generateSpeech } from '../services/geminiService';
 import { decodeAudioData } from '../services/audioUtils';
@@ -10,12 +10,14 @@ import { InteractiveBlob } from './InteractiveBlob';
 interface MessageBubbleProps {
   message: Message;
   files: ProcessedFile[];
+  sources: any[];
   onViewDocument: (fileName: string, page?: number, quote?: string, location?: string) => void;
   onSaveNote?: (content: string, modelId?: string) => void;
+  onUnsaveNote?: (messageId: string) => void;
   noteNumber?: number;
 }
 
-const MessageBubble: React.FC<MessageBubbleProps> = ({ message, files, onViewDocument, onSaveNote, noteNumber }) => {
+const MessageBubble: React.FC<MessageBubbleProps> = ({ message, files, sources, onViewDocument, onSaveNote, onUnsaveNote, noteNumber }) => {
   const isUser = message.role === 'user';
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoadingAudio, setIsLoadingAudio] = useState(false);
@@ -143,6 +145,33 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, files, onViewDoc
                         files={files} 
                         onViewDocument={onViewDocument}
                     />
+                    
+                    {/* Sources Bar */}
+                    {(files.length > 0 || sources.length > 0) && (
+                      <div className="mt-4 pt-3 border-t border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)]">
+                        <div className="text-[10px] font-semibold text-[#666666] dark:text-[#a0a0a0] uppercase mb-2">Sources Used</div>
+                        <div className="flex flex-wrap gap-2">
+                          {files.filter(f => message.content.includes(f.name)).map(file => (
+                            <div key={file.id} className="flex items-center gap-1 px-2 py-1 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] rounded text-[10px] border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)]">
+                              <FileText size={10} className="text-[#a0a0a0]" />
+                              <span className="text-[#1a1a1a] dark:text-white">{file.name}</span>
+                            </div>
+                          ))}
+                          {sources.filter(s => s.status === 'fetched').map(source => (
+                            <a
+                              key={source.id}
+                              href={source.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-1 px-2 py-1 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] rounded text-[10px] border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] hover:border-[#4485d1] transition-colors"
+                            >
+                              <ExternalLink size={10} className="text-[#a0a0a0]" />
+                              <span className="text-[#1a1a1a] dark:text-white">{source.title || source.url}</span>
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </>
               )}
             </div>
@@ -161,14 +190,20 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, files, onViewDoc
               Saved as Note #{noteNumber}
             </div>
           )}
-          {!isUser && !message.isStreaming && onSaveNote && !noteNumber && (
+          {!isUser && !message.isStreaming && onSaveNote && (
             <button
-              onClick={() => onSaveNote(message.content, message.modelId)}
-              className="opacity-0 group-hover:opacity-100 mt-1.5 px-1 flex items-center gap-1 text-[#a0a0a0] hover:text-yellow-600 transition-all text-xs"
-              title="Save as Note"
+              onClick={() => {
+                if (noteNumber && onUnsaveNote) {
+                  onUnsaveNote(message.id);
+                } else {
+                  onSaveNote(message.content, message.modelId);
+                }
+              }}
+              className="mt-1.5 px-1 flex items-center gap-1 text-[#a0a0a0] hover:text-yellow-600 transition-all text-xs"
+              title={noteNumber ? "Unsave Note" : "Save as Note"}
             >
               <BookmarkPlus size={12} />
-              <span>Save as Note</span>
+              <span>{noteNumber ? "Unsave" : "Save as Note"}</span>
             </button>
           )}
         </div>

@@ -1,5 +1,5 @@
-import React from 'react';
-import { Send, FileText, Mic, Sparkles, Database } from 'lucide-react';
+import React, { useState } from 'react';
+import { Send, FileText, Mic, Sparkles, Database, Link, X } from 'lucide-react';
 import { ProcessedFile } from '../../types';
 import { contextMenuManager, createInputContextMenu } from '../../utils/uiHelpers';
 
@@ -14,6 +14,7 @@ interface FloatingInputProps {
   mentionIndex: number;
   isRecording: boolean;
   inputHeight: number;
+  sources: any[];
   onInputChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
   onKeyDown: (e: React.KeyboardEvent) => void;
   onSendMessage: () => void;
@@ -23,6 +24,8 @@ interface FloatingInputProps {
   setIsInputDragOver: (value: boolean) => void;
   setInput: (value: string) => void;
   setInputHeight: (value: number) => void;
+  onAddSource: (url: string) => void;
+  onDeleteSource: (id: string) => void;
 }
 
 export const FloatingInput: React.FC<FloatingInputProps> = ({
@@ -36,6 +39,7 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
   mentionIndex,
   isRecording,
   inputHeight,
+  sources,
   onInputChange,
   onKeyDown,
   onSendMessage,
@@ -44,10 +48,101 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
   onInsertMention,
   setIsInputDragOver,
   setInput,
-  setInputHeight
+  setInputHeight,
+  onAddSource,
+  onDeleteSource
 }) => {
+  const [showSourceInput, setShowSourceInput] = useState(false);
+  const [sourceUrl, setSourceUrl] = useState('');
+  const [showSourceMenu, setShowSourceMenu] = useState(false);
+
+  const defaultSources = [
+    { name: 'Wikipedia', url: 'https://en.wikipedia.org' },
+    { name: 'Stack Overflow', url: 'https://stackoverflow.com' },
+    { name: 'GitHub', url: 'https://github.com' }
+  ];
   return (
     <div className="w-full relative">
+      {/* Source Links Display */}
+      {sources.length > 0 && (
+        <div className="mb-2 flex flex-wrap gap-2">
+          {sources.map((source) => (
+            <div key={source.id} className="flex items-center gap-1 px-2 py-1 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] rounded text-xs border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)]">
+              <Link size={10} className="text-[#a0a0a0]" />
+              <span className="text-[#1a1a1a] dark:text-white truncate max-w-[200px]">{source.title || source.url}</span>
+              <button onClick={() => onDeleteSource(source.id)} className="text-[#a0a0a0] hover:text-[#1a1a1a] dark:hover:text-white">
+                <X size={10} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Source Input Popup */}
+      {showSourceInput && (
+        <div className="absolute bottom-full left-0 mb-2 flex gap-2 z-50">
+          <input
+            type="url"
+            value={sourceUrl}
+            onChange={(e) => setSourceUrl(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && sourceUrl.trim()) {
+                onAddSource(sourceUrl.trim());
+                setSourceUrl('');
+                setShowSourceInput(false);
+              } else if (e.key === 'Escape') {
+                setShowSourceInput(false);
+                setSourceUrl('');
+              }
+            }}
+            placeholder="Enter source URL..."
+            className="w-[300px] px-3 py-2 text-sm bg-white dark:bg-[#1a1a1a] border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4485d1]"
+            autoFocus
+          />
+          <button
+            onClick={() => {
+              if (sourceUrl.trim()) {
+                onAddSource(sourceUrl.trim());
+                setSourceUrl('');
+                setShowSourceInput(false);
+              }
+            }}
+            className="px-3 py-2 bg-[#4485d1] text-white rounded-lg hover:bg-[#3a75c1] text-sm"
+          >
+            Add
+          </button>
+        </div>
+      )}
+
+      {/* Source Menu Popup */}
+      {showSourceMenu && (
+        <div className="absolute bottom-full left-0 mb-2 bg-white dark:bg-[#1a1a1a] border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] rounded-lg p-2 shadow-lg z-50">
+          <div className="text-xs font-medium text-[#666666] dark:text-[#a0a0a0] mb-2 px-2">Quick Sources</div>
+          {defaultSources.map((source) => (
+            <button
+              key={source.url}
+              onClick={() => {
+                onAddSource(source.url);
+                setShowSourceMenu(false);
+              }}
+              className="w-full text-left px-3 py-2 text-sm hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] rounded transition-colors text-[#1a1a1a] dark:text-white whitespace-nowrap"
+            >
+              {source.name}
+            </button>
+          ))}
+          <div className="border-t border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] mt-2 pt-2">
+            <button
+              onClick={() => {
+                setShowSourceMenu(false);
+                setShowSourceInput(true);
+              }}
+              className="w-full text-left px-3 py-2 text-sm hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] rounded transition-colors text-[#4485d1]"
+            >
+              + Custom URL
+            </button>
+          </div>
+        </div>
+      )}
       {/* Context Indicator */}
       {isInputDragOver && (
         <div className="absolute -top-8 left-1/2 -translate-x-1/2 text-xs font-medium bg-[#4485d1] text-white px-3 py-1.5 rounded-full shadow-lg animate-bounce">
@@ -125,6 +220,13 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
         >
           <Mic size={20} />
         </button>
+        <button
+          onClick={() => setShowSourceMenu(!showSourceMenu)}
+          className="absolute left-[88px] p-2 rounded-full text-[#a0a0a0] hover:text-[#4485d1] hover:bg-[rgba(68,133,209,0.1)] transition-colors"
+          title="Add source link"
+        >
+          <Link size={20} />
+        </button>
 
         <textarea
           ref={inputRef}
@@ -195,7 +297,7 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
           disabled={isGenerating}
           autoComplete="off"
           rows={1}
-          style={{ height: 'auto', paddingLeft: '106px', paddingRight: '56px' }}
+          style={{ height: 'auto', paddingLeft: '130px', paddingRight: '56px' }}
           onInput={(e) => {
             const target = e.target as HTMLTextAreaElement;
             target.style.height = 'auto';

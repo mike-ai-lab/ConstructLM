@@ -11,7 +11,8 @@ export const createMessageHandlers = (
   setIsGenerating: (generating: boolean) => void,
   activeModelId: string,
   setShowMentionMenu: (show: boolean) => void,
-  saveCurrentChat: (updateTimestamp: boolean) => void
+  saveCurrentChat: (updateTimestamp: boolean) => void,
+  sources: any[] = []
 ) => {
   const handleSendMessage = async () => {
     if (!input.trim() || isGenerating) return;
@@ -75,11 +76,13 @@ export const createMessageHandlers = (
       let thinkingText = "";
       let updateTimer: NodeJS.Timeout | null = null;
       
+      const fetchedSources = sources.filter(s => s.status === 'fetched');
+      
       const usage = await sendMessageToLLM(
         activeModelId,
         messages,
         userMsg.content,
-        activeContextFiles, 
+        activeContextFiles,
         (chunk, thinking) => {
           accumText += chunk;
           if (thinking) thinkingText = thinking;
@@ -89,7 +92,8 @@ export const createMessageHandlers = (
               msg.id === modelMsgId ? { ...msg, content: accumText, thinking: thinkingText || undefined } : msg
             ));
           }, 50);
-        }
+        },
+        fetchedSources
       );
       
       if (updateTimer) clearTimeout(updateTimer);
