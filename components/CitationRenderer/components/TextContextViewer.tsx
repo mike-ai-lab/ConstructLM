@@ -53,7 +53,7 @@ const TextContextViewer: React.FC<TextContextViewerProps> = ({ file, quote, loca
       return (
         <div ref={tableRef} className="overflow-auto p-2" style={{ maxHeight: '400px', transform: 'scale(0.85)', transformOrigin: 'top left', width: '117.65%' }} onWheel={(e) => e.stopPropagation()}>
           <table className="w-full text-[11px] border-collapse">
-            <thead className="sticky top-0 bg-gray-100/80 dark:bg-[#2a2a2a]/80 backdrop-blur-md z-10">
+            <thead className="sticky top-0 bg-gray-100 dark:bg-[#2a2a2a] z-10">
               <tr>
                 {headers.map((h, idx) => (
                   <th key={idx} className="border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.2)] px-1.5 py-1 text-left font-semibold text-[#1a1a1a] dark:text-white whitespace-nowrap bg-gray-100 dark:bg-[#2a2a2a]">{h}</th>
@@ -62,7 +62,7 @@ const TextContextViewer: React.FC<TextContextViewerProps> = ({ file, quote, loca
             </thead>
             <tbody>
               {rows.map((row, rowIdx) => (
-                <tr key={rowIdx} className={`${rowIdx + 2 === targetRowNum ? 'highlighted-row bg-[#9ce8d6]/30 dark:bg-[#5bd8bb]/10' : 'hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#222222]'}`}>
+                <tr key={rowIdx} className={`${rowIdx + 2 === targetRowNum ? 'highlighted-row bg-yellow-100 dark:bg-yellow-600/40' : 'hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#222222]'}`}>
                   {row.map((cell, cellIdx) => (
                     <td key={cellIdx} className="border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.2)] px-1.5 py-1 text-[#1a1a1a] dark:text-white">{cell}</td>
                   ))}
@@ -77,9 +77,9 @@ const TextContextViewer: React.FC<TextContextViewerProps> = ({ file, quote, loca
   
   return (
     <div className="p-4 space-y-4">
-      <div className="text-sm leading-relaxed text-[#666666] dark:text-[#a0a0a0] bg-white/70 dark:bg-[#2a2a2a]/70 backdrop-blur-md p-4 rounded-lg border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] font-serif shadow-sm">
+      <div className="text-sm leading-relaxed text-[#666666] dark:text-[#a0a0a0] bg-white dark:bg-[#2a2a2a] p-4 rounded-lg border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] font-serif shadow-sm">
         <div className="mb-2 text-[12px] text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wider">{location || "Excerpt"}</div>
-        <span className="bg-[#9ce8d6]/30 dark:bg-[#5bd8bb]/10 text-[#1a1a1a] dark:text-white p-1 rounded italic">"{quote}"</span>
+        <span className="bg-yellow-100 dark:bg-yellow-600/40 text-[#1a1a1a] dark:text-white p-1 rounded italic">"{quote}"</span>
       </div>
     </div>
   );

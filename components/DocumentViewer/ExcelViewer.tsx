@@ -8,95 +8,48 @@ interface ExcelViewerProps {
   textScale: number;
 }
 
-const parseCSV = (text: string, delimiter: string = ','): string[][] => {
-  const rows: string[][] = [];
-  let row: string[] = [];
-  let cell = '';
-  let inQuotes = false;
-  
-  for (let i = 0; i < text.length; i++) {
-    const char = text[i];
-    const next = text[i + 1];
-    
-    if (char === '"') {
-      if (inQuotes && next === '"') {
-        cell += '"';
-        i++;
-      } else {
-        inQuotes = !inQuotes;
-      }
-    } else if (char === delimiter && !inQuotes) {
-      row.push(cell.trim());
-      cell = '';
-    } else if (char === '\n' && !inQuotes) {
-      row.push(cell.trim());
-      if (row.some(c => c)) rows.push(row);
-      row = [];
-      cell = '';
-      if (next === '\r') i++;
-    } else if (char === '\r' && next === '\n' && !inQuotes) {
-      row.push(cell.trim());
-      if (row.some(c => c)) rows.push(row);
-      row = [];
-      cell = '';
-      i++;
-    } else {
-      cell += char;
-    }
-  }
-  
-  if (cell || row.length) {
-    row.push(cell.trim());
-    if (row.some(c => c)) rows.push(row);
-  }
-  
-  return rows;
-};
-
 const ExcelViewer: React.FC<ExcelViewerProps> = ({ file, location, textScale }) => {
   useEffect(() => {
-    if (!location) return;
     const tryScroll = () => {
       const rowEl = document.getElementById('excel-highlight-row');
       if (rowEl) {
         rowEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        rowEl.classList.add('bg-amber-200');
+        setTimeout(() => rowEl.classList.remove('bg-amber-200'), 1000);
         return true;
       }
       return false;
     };
-    const timer1 = setTimeout(tryScroll, 100);
-    const timer2 = setTimeout(tryScroll, 300);
-    const timer3 = setTimeout(tryScroll, 600);
-    return () => {
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-      clearTimeout(timer3);
-    };
+    if (!tryScroll()) {
+      setTimeout(tryScroll, 100);
+      setTimeout(tryScroll, 300);
+      setTimeout(tryScroll, 600);
+    }
   }, [location]);
 
   const parseExcelContent = (content: string, highlightLoc?: string) => {
+    console.log('🔍 EXCEL CONTENT:', content.substring(0, 500));
+    console.log('🔍 CONTENT LENGTH:', content.length);
+    
     const sheetRegex = /--- \[Sheet: (.*?)\] ---/g;
     const parts = content.split(sheetRegex);
+    console.log('🔍 PARTS:', parts.length, parts.map((p, i) => `[${i}]: ${p.substring(0, 100)}`));
+    
     const elements: React.ReactNode[] = [];
     let targetSheet = "";
     let targetRow = -1;
 
     if (highlightLoc) {
-      const sheetMatch = highlightLoc.match(/Sheet:\s*['"]?([^,'";\|]+)['"]?/i);
+      const sheetMatch = highlightLoc.match(/Sheet:\s*[']?([^,'";\|]+)[']?/i);
       if (sheetMatch) targetSheet = sheetMatch[1].trim().toLowerCase();
       const rowMatch = highlightLoc.match(/(?:Row|Line)\s*[:#.]?\s*(\d+)/i);
       if (rowMatch) targetRow = parseInt(rowMatch[1], 10);
     }
 
     if (parts[0].trim()) {
-      const metaText = parts[0].trim()
-        .replace(/&quot;/g, '"')
-        .replace(/&amp;/g, '&')
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>');
       elements.push(
-        <div key="meta" className="mb-4 p-3 bg-gray-50 dark:bg-[#1e1e1e] rounded border border-gray-200 dark:border-gray-700 text-xs text-gray-600 dark:text-gray-400 font-mono whitespace-pre-wrap">
-          {metaText}
+        <div key="meta" className="mb-6 p-4 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] rounded-lg border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] text-xs text-[#666666] dark:text-[#a0a0a0] font-mono whitespace-pre-wrap">
+          {parts[0].trim()}
         </div>
       );
     }
@@ -104,66 +57,65 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({ file, location, textScale }) 
     for (let i = 1; i < parts.length; i += 2) {
       const sheetName = parts[i];
       const csvContent = parts[i + 1] || "";
-      const delimiter = csvContent.includes('\t') ? '\t' : ',';
-      const rows = parseCSV(csvContent.trim(), delimiter);
+      console.log(`📊 SHEET ${sheetName}:`, csvContent.substring(0, 200));
       
-      if (!rows.length) continue;
+      const lines = csvContent.trim().split('\n');
+      console.log(`📊 LINES COUNT:`, lines.length, 'First line:', lines[0]);
       
-      const headers = rows[0];
-      const dataRows = rows.slice(1);
-      const maxCols = Math.max(headers.length, ...dataRows.map(r => r.length));
+      const delimiter = lines[0]?.includes('\t') ? '\t' : ',';
+      console.log(`📊 DELIMITER:`, delimiter === '\t' ? 'TAB' : 'COMMA');
+      
+      const rows = lines.map(row => {
+        const cells: string[] = [];
+        let current = '';
+        let inQuotes = false;
+        for (let j = 0; j < row.length; j++) {
+          const char = row[j];
+          if (char === '"') {
+            inQuotes = !inQuotes;
+          } else if (char === delimiter && !inQuotes) {
+            cells.push(current.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&amp;/g, '&'));
+            current = '';
+          } else {
+            current += char;
+          }
+        }
+        cells.push(current.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&amp;/g, '&'));
+        return cells;
+      });
+      
+      console.log(`📊 ROWS:`, rows.length, 'First row:', rows[0]);
+      console.log(`📊 Sample cells:`, rows[1]?.slice(0, 3));
+
       const isTargetSheet = targetSheet && sheetName.toLowerCase().includes(targetSheet);
 
       elements.push(
-        <div key={i} className="mb-6">
-          <div className={`flex items-center gap-2 mb-3 px-2 py-1.5 rounded ${isTargetSheet ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
-            <FileSpreadsheet size={16} className={isTargetSheet ? "text-blue-600 dark:text-blue-400" : "text-emerald-600 dark:text-emerald-400"}/>
-            <h4 className={`text-sm font-semibold ${isTargetSheet ? 'text-blue-700 dark:text-blue-300' : 'text-gray-700 dark:text-gray-300'}`}>
-              {sheetName}
-            </h4>
-            <span className="text-xs text-gray-500 dark:text-gray-500 ml-auto">
-              {dataRows.length} rows × {maxCols} cols
-            </span>
-          </div>
-          <div className={`overflow-auto rounded-lg border ${isTargetSheet ? 'border-blue-300 dark:border-blue-700 shadow-md' : 'border-gray-300 dark:border-gray-700 shadow-sm'}`} style={{ maxHeight: '70vh' }}>
-            <table className="w-full border-collapse text-xs">
-              <thead className="sticky top-0 z-20 bg-gray-100 dark:bg-[#1a1a1a]">
-                <tr>
-                  <th className="px-2 py-2 text-right text-gray-500 dark:text-gray-500 font-medium border-b-2 border-r border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-[#0f0f0f] w-12">
-                    #
-                  </th>
-                  {headers.map((header, idx) => (
-                    <th key={idx} className="px-3 py-2 text-left font-semibold text-gray-800 dark:text-gray-200 border-b-2 border-r border-gray-300 dark:border-gray-600 last:border-r-0 whitespace-nowrap">
-                      {header || `Column ${idx + 1}`}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-[#1e1e1e]">
-                {dataRows.map((row, rIdx) => {
-                  const visualRowNumber = rIdx + 2;
-                  const isHighlightRow = isTargetSheet && visualRowNumber === targetRow;
+        <div key={i} className="mb-8">
+          <h4 className={`text-sm font-bold mb-2 px-1 flex items-center gap-2 ${isTargetSheet ? 'text-blue-700 dark:text-blue-400' : 'text-[#666666] dark:text-[#a0a0a0]'}`}>
+            <FileSpreadsheet size={14} className={isTargetSheet ? "text-blue-600 dark:text-blue-400" : "text-emerald-600 dark:text-emerald-400"}/> 
+            {sheetName}
+          </h4>
+          <div className={`overflow-auto border rounded-lg shadow-sm ${isTargetSheet ? 'border-blue-200 dark:border-blue-800' : 'border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)]'}`} style={{ maxHeight: '600px' }}>
+            <table className="w-full table-auto divide-y divide-[rgba(0,0,0,0.15)] dark:divide-[rgba(255,255,255,0.05)] text-xs">
+              <tbody className="bg-white dark:bg-[#2a2a2a] divide-y divide-[rgba(0,0,0,0.15)] dark:divide-[rgba(255,255,255,0.05)]">
+                {rows.map((row, rIdx) => {
+                  const visualRowNumber = rIdx + 1;
+                  const isHighlightRow = isTargetSheet && (visualRowNumber === targetRow);
+                  const isHeaderRow = rIdx === 0;
                   return (
-                    <tr
-                      key={rIdx}
+                    <tr 
+                      key={rIdx} 
                       id={isHighlightRow ? "excel-highlight-row" : undefined}
-                      className={`border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#252525] transition-colors ${
-                        isHighlightRow ? 'bg-amber-100 dark:bg-amber-900/30 ring-2 ring-inset ring-amber-500 dark:ring-amber-600' : ''
-                      }`}
+                      className={`transition-colors duration-500 ${isHeaderRow ? "bg-gray-100 dark:bg-[#1a1a1a] font-semibold text-[#1a1a1a] dark:text-white sticky top-0 z-20" : "text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#222222]"} ${isHighlightRow ? "bg-amber-100 dark:bg-amber-900/30 ring-2 ring-inset ring-amber-400 dark:ring-amber-600 z-10 relative" : ""}`}
                     >
-                      <td className={`px-2 py-1.5 text-right text-gray-400 dark:text-gray-600 font-mono text-[11px] border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0f0f0f] select-none ${
-                        isHighlightRow ? 'text-amber-700 dark:text-amber-400 font-bold' : ''
-                      }`}>
+                      <td className={`px-1 py-1 w-8 select-none text-[12px] text-right border-r border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] ${isHeaderRow ? "bg-gray-100 dark:bg-[#1a1a1a]" : "bg-[rgba(0,0,0,0.03)] dark:bg-[#1a1a1a]"} ${isHighlightRow ? "text-amber-700 dark:text-amber-400 font-bold" : "text-[#999999] dark:text-[#666666]"}`}>
                         {visualRowNumber}
                       </td>
-                      {Array.from({ length: maxCols }).map((_, cIdx) => {
-                        const cell = row[cIdx] || '';
-                        return (
-                          <td key={cIdx} className="px-3 py-1.5 text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-gray-700 last:border-r-0" title={cell}>
-                            {cell}
-                          </td>
-                        );
-                      })}
+                      {row.map((cell, cIdx) => (
+                        <td key={cIdx} className="px-1.5 py-1 border-r border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] last:border-none" title={cell}>
+                          {cell}
+                        </td>
+                      ))}
                     </tr>
                   );
                 })}
@@ -178,8 +130,8 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({ file, location, textScale }) 
 
   return (
     <div className="overflow-auto w-full h-full">
-      <div className="bg-white dark:bg-[#1e1e1e] w-full max-w-7xl min-h-full mx-auto p-6" style={{ fontSize: `${textScale * 0.875}rem` }}>
-        {parseExcelContent(file.content, location)}
+      <div className="bg-white dark:bg-[#2a2a2a] shadow-sm border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] w-full max-w-5xl min-h-full mx-auto my-8" style={{ fontSize: `${textScale * 0.875}rem` }}>
+        <div className="p-12">{parseExcelContent(file.content, location)}</div>
       </div>
     </div>
   );

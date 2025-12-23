@@ -17,6 +17,8 @@ export const parseFile = async (file: File): Promise<ProcessedFile> => {
     fileType = 'document';
   }
 
+  console.log(`Processing file: ${file.name}, type: ${fileType}, size: ${file.size}`);
+
   let content = '';
   let status: ProcessedFile['status'] = 'ready';
 
@@ -64,7 +66,8 @@ export const parseFile = async (file: File): Promise<ProcessedFile> => {
     status,
     tokenCount,
     fileHandle: file,
-    path: file.webkitRelativePath || ""
+    path: file.webkitRelativePath || "",
+    uploadedAt: Date.now()
   };
 };
 
@@ -135,7 +138,7 @@ const extractExcelText = async (file: File): Promise<string> => {
 
     workbook.SheetNames.forEach((sheetName: string) => {
       const sheet = workbook.Sheets[sheetName];
-      const csv = (window as any).XLSX.utils.sheet_to_csv(sheet, { blankrows: false });
+      const csv = (window as any).XLSX.utils.sheet_to_csv(sheet);
       
       if (csv && csv.trim().length > 0) {
         fullText += `--- [Sheet: ${sheetName}] ---\n${csv}\n`;

@@ -12,12 +12,25 @@ export const createFileHandlers = (
   const handleFileUpload = async (fileList: FileList) => {
     setIsProcessingFiles(true);
     const newFiles: ProcessedFile[] = [];
-    for (let i = 0; i < fileList.length; i++) {
-      const file = fileList[i];
-      if (files.some(f => f.name === file.name)) continue;
-      const processed = await parseFile(file);
-      newFiles.push(processed);
+    
+    const fileArray = Array.from(fileList);
+    
+    for (const file of fileArray) {
+      // Skip hidden files and system files
+      if (file.name.startsWith('.') || file.name.startsWith('~')) continue;
+      
+      // Skip if already exists (check by name AND path for folder uploads)
+      const filePath = (file as any).webkitRelativePath || file.name;
+      if (files.some(f => (f.path || f.name) === filePath)) continue;
+      
+      try {
+        const processed = await parseFile(file);
+        newFiles.push(processed);
+      } catch (err) {
+        console.error(`Failed to process ${file.name}:`, err);
+      }
     }
+    
     setFiles(prev => [...prev, ...newFiles]);
     setIsProcessingFiles(false);
   };

@@ -69,25 +69,12 @@ const Reminders: React.FC<RemindersProps> = ({
         ) {
           onUpdateReminder(reminder.id, { status: 'triggered' });
           onShowToast(reminder.title, reminder.id);
-          playNotificationSound();
         }
       });
-    }, 10000);
+    }, 1000);
 
     return () => clearInterval(interval);
   }, [reminders, onUpdateReminder, onShowToast]);
-
-  const playNotificationSound = () => {
-    try {
-      const audio = new Audio(
-        'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIGGS57OihUBELTKXh8bllHAU2jdXvzn0vBSh+zPDajzsKElyx6OyrWBUIQ5zd8sFuJAUuhM/z24k2CBhku+zooVARC0yl4fG5ZRwFNo3V7859LwUofsz'
-      );
-      audio.volume = 0.3;
-      audio.play().catch(() => {});
-    } catch (error) {
-      console.error('Failed to play notification sound:', error);
-    }
-  };
 
   // Calendar helpers
   const getDaysInMonth = (year: number, month: number): number => {

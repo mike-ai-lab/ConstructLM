@@ -8,6 +8,7 @@ export interface ProcessedFile {
   tokenCount?: number;
   fileHandle?: File; // Store original file for re-reading binary data (rendering PDFs)
   path?: string; // Relative path for folder uploads
+  uploadedAt?: number; // Timestamp when file was uploaded
 }
 
 export interface Message {

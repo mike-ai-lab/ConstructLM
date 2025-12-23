@@ -156,9 +156,16 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
                         <span className={`text-xs ${file.status === 'error' ? 'text-red-700' : 'text-[#1a1a1a] dark:text-white font-medium'}`} title={file.name}>
                         {file.name}
                         </span>
-                        <span className="text-[12px] text-[#666666] dark:text-[#a0a0a0]">
-                          {file.tokenCount ? `~${(file.tokenCount / 1000).toFixed(1)}k tokens` : 'Processing...'}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[12px] text-[#666666] dark:text-[#a0a0a0]">
+                            {file.tokenCount ? `~${(file.tokenCount / 1000).toFixed(1)}k tokens` : 'Processing...'}
+                          </span>
+                          {file.uploadedAt && (
+                            <span className="text-[12px] text-[#a0a0a0]">
+                              {new Date(file.uploadedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                            </span>
+                          )}
+                        </div>
                     </div>
 
                     <button
@@ -295,7 +302,7 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
                   onChange={handleFileChange}
                   multiple
                   className="hidden"
-                  accept=".pdf,.xlsx,.xls,.csv,.txt,.md,.json,.png,.jpg,.jpeg,.gif,.bmp,.webp,.doc,.docx,.ppt,.pptx" 
+                  accept=".pdf,.xlsx,.xls,.csv,.txt,.md,.json,.png,.jpg,.jpeg,.gif,.bmp,.webp,.doc,.docx,.ppt,.pptx,.xml,.html,.js,.ts,.css,.py,.java,.c,.cpp,.h,.cs" 
               />
               <input
                   type="file"
@@ -369,7 +376,7 @@ const FilePreviewViewer: React.FC<{ file: ProcessedFile; onClose: () => void }> 
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (file.type === 'pdf' && file.fileHandle instanceof File) {
+    if (file.type === 'pdf' && file.fileHandle) {
       const loadPdf = async () => {
         try {
           if (window.pdfWorkerReady) await window.pdfWorkerReady;
@@ -384,12 +391,32 @@ const FilePreviewViewer: React.FC<{ file: ProcessedFile; onClose: () => void }> 
         }
       };
       loadPdf();
+    } else if (file.type === 'excel' && file.fileHandle) {
+      const loadExcel = async () => {
+        try {
+          let attempts = 0;
+          while (!(window as any).XLSX && attempts < 50) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            attempts++;
+          }
+          setLoading(false);
+        } catch (err) {
+          console.error('Excel load error:', err);
+          setLoading(false);
+        }
+      };
+      loadExcel();
+    } else if (file.type === 'image' && file.fileHandle) {
+      setLoading(false);
     } else {
       setLoading(false);
     }
   }, [file]);
 
   const isPdf = file.type === 'pdf';
+  const isImage = file.type === 'image';
+  const isExcel = file.type === 'excel';
+  const imageUrl = isImage && file.fileHandle ? URL.createObjectURL(file.fileHandle as File) : null;
 
   return (
     <div className="flex flex-col h-full">
@@ -400,7 +427,7 @@ const FilePreviewViewer: React.FC<{ file: ProcessedFile; onClose: () => void }> 
           {isPdf && numPages > 0 && <span className="text-sm text-gray-500">({numPages} pages)</span>}
         </div>
         <div className="flex items-center gap-2">
-          {isPdf && (
+          {(isPdf || isImage) && (
             <div className="flex items-center gap-1 bg-gray-100 rounded px-2 py-1">
               <button onClick={() => setScale(s => Math.max(0.5, s - 0.1))} className="p-1 hover:bg-white rounded"><Minus size={14} /></button>
               <span className="text-xs w-12 text-center">{Math.round(scale * 100)}%</span>
@@ -419,6 +446,12 @@ const FilePreviewViewer: React.FC<{ file: ProcessedFile; onClose: () => void }> 
               <PdfPageRenderer key={i} pdf={pdfDoc} pageNum={i + 1} scale={scale} />
             ))}
           </div>
+        ) : isImage && imageUrl ? (
+          <div className="flex items-center justify-center h-full">
+            <img src={imageUrl} alt={file.name} className="max-w-full max-h-full object-contain" style={{ transform: `scale(${scale})` }} />
+          </div>
+        ) : isExcel && file.fileHandle ? (
+          <ExcelPreview file={file.fileHandle as File} />
         ) : (
           <div className="bg-white p-8 rounded max-w-4xl mx-auto">
             <pre className="whitespace-pre-wrap text-sm">{file.content}</pre>
@@ -471,6 +504,63 @@ const PdfPageRenderer: React.FC<{ pdf: any; pageNum: number; scale: number }> = 
     <div className="bg-white shadow-lg mx-auto" style={{ width: pageWidth || 'auto' }}>
       <canvas ref={canvasRef} className="block" />
       <div className="text-center text-xs text-gray-400 py-2">Page {pageNum}</div>
+    </div>
+  );
+};
+
+const ExcelPreview: React.FC<{ file: File }> = ({ file }) => {
+  const [html, setHtml] = useState<string>('');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadExcel = async () => {
+      try {
+        let attempts = 0;
+        while (!(window as any).XLSX && attempts < 50) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          attempts++;
+        }
+        
+        if (!(window as any).XLSX) {
+          setHtml('<p>Excel library failed to load</p>');
+          setLoading(false);
+          return;
+        }
+
+        const arrayBuffer = await file.arrayBuffer();
+        const workbook = (window as any).XLSX.read(arrayBuffer, { type: 'array' });
+        let fullHtml = '';
+
+        workbook.SheetNames.forEach((sheetName: string) => {
+          const sheet = workbook.Sheets[sheetName];
+          const sheetHtml = (window as any).XLSX.utils.sheet_to_html(sheet);
+          fullHtml += `<div class="mb-6"><h3 class="text-lg font-bold mb-2 text-gray-800">${sheetName}</h3>${sheetHtml}</div>`;
+        });
+
+        setHtml(fullHtml);
+        setLoading(false);
+      } catch (err) {
+        console.error('Excel preview error:', err);
+        setHtml('<p>Failed to load Excel file</p>');
+        setLoading(false);
+      }
+    };
+    loadExcel();
+  }, [file]);
+
+  if (loading) {
+    return <div className="flex items-center justify-center h-full"><Loader2 className="animate-spin" /></div>;
+  }
+
+  return (
+    <div className="bg-white p-8 rounded max-w-full mx-auto">
+      <style>{`
+        table { border-collapse: collapse; width: 100%; margin-bottom: 1rem; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f3f4f6; font-weight: 600; }
+        tr:nth-child(even) { background-color: #f9fafb; }
+      `}</style>
+      <div dangerouslySetInnerHTML={{ __html: html }} />
     </div>
   );
 };

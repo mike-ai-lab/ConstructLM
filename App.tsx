@@ -25,6 +25,7 @@ import HelpDocumentation from './components/HelpDocumentation';
 import MindMapViewer from './components/MindMapViewer';
 import Notebook from './components/Notebook';
 import TodoList from './components/TodoList';
+import ReminderOverlay from './components/ReminderOverlay';
 // import Sources from './components/Sources';
 import AppHeader from './App/components/AppHeader';
 import { FloatingInput } from './App/components/FloatingInput';
@@ -47,6 +48,7 @@ const App: React.FC = () => {
   const [reminders, setReminders] = React.useState<Reminder[]>([]);
   const [sources, setSources] = React.useState<Source[]>([]);
   const [toastMessage, setToastMessage] = React.useState<{ message: string; id: string } | null>(null);
+  const [triggeredReminder, setTriggeredReminder] = React.useState<Reminder | null>(null);
 
   React.useEffect(() => {
     const saved = localStorage.getItem('notes');
@@ -353,8 +355,10 @@ const App: React.FC = () => {
   };
 
   const handleShowToast = (message: string, reminderId: string) => {
-    setToastMessage({ message, id: reminderId });
-    setTimeout(() => setToastMessage(null), 10000);
+    const reminder = reminders.find(r => r.id === reminderId);
+    if (reminder) {
+      setTriggeredReminder(reminder);
+    }
   };
 
   const handleAddSource = async (url: string) => {
@@ -548,6 +552,20 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen w-full bg-white dark:bg-[#1a1a1a] overflow-hidden text-sm relative">
+      {triggeredReminder && (
+        <ReminderOverlay
+          reminder={triggeredReminder}
+          onDismiss={() => {
+            handleUpdateReminder(triggeredReminder.id, { status: 'dismissed' });
+            setTriggeredReminder(null);
+          }}
+          onSnooze={(minutes) => {
+            const newTime = Date.now() + minutes * 60 * 1000;
+            handleUpdateReminder(triggeredReminder.id, { reminderTime: newTime, status: 'pending' });
+            setTriggeredReminder(null);
+          }}
+        />
+      )}
       {toastMessage && toastMessage.id && (
         <div className="fixed top-20 right-4 z-[80] bg-[#f07a76] text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-in slide-in-from-top">
           <Bell size={16} />
