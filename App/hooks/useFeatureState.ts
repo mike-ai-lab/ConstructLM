@@ -22,6 +22,17 @@ export const useFeatureState = () => {
   const [isGeneratingMindMap, setIsGeneratingMindMap] = useState(false);
   
   const modelMenuRef = useRef<HTMLDivElement>(null);
+  const toolPickerRef = useRef<HTMLDivElement>(null);
+  const colorPickerRef = useRef<HTMLDivElement>(null);
+  const graphicsLibraryRef = useRef<HTMLDivElement>(null);
+
+  const wrappedSetShowModelMenu = (value: boolean | ((prev: boolean) => boolean)) => {
+    setShowModelMenu(value);
+  };
+
+  const wrappedSetShowGraphicsLibrary = (value: boolean | ((prev: boolean) => boolean)) => {
+    setShowGraphicsLibrary(value);
+  };
 
   return {
     isLiveMode,
@@ -35,7 +46,7 @@ export const useFeatureState = () => {
     mediaRecorder,
     setMediaRecorder,
     showModelMenu,
-    setShowModelMenu,
+    setShowModelMenu: wrappedSetShowModelMenu,
     isSettingsOpen,
     setIsSettingsOpen,
     isHelpOpen,
@@ -43,7 +54,7 @@ export const useFeatureState = () => {
     snapshots,
     setSnapshots,
     showGraphicsLibrary,
-    setShowGraphicsLibrary,
+    setShowGraphicsLibrary: wrappedSetShowGraphicsLibrary,
     rateLimitTimers,
     setRateLimitTimers,
     drawingState,
@@ -59,5 +70,8 @@ export const useFeatureState = () => {
     isGeneratingMindMap,
     setIsGeneratingMindMap,
     modelMenuRef,
+    toolPickerRef,
+    colorPickerRef,
+    graphicsLibraryRef,
   };
 };

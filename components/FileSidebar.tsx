@@ -229,28 +229,28 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
       )}
 
       {/* Tab Navigation */}
-      <div className="h-[65px] flex-shrink-0 flex bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a]">
+      <div className="h-[65px] flex-shrink-0 flex bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] border-b border-[rgba(0,0,0,0.1)] dark:border-[rgba(255,255,255,0.05)]">
         <button
           onClick={() => setActiveTab('files')}
-          className={`flex-1 h-full px-4 text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2 ${
+          className={`flex-1 h-full px-2 text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 min-w-0 ${
             activeTab === 'files' 
-              ? 'text-[#333333] dark:text-[#cccccc]' 
-              : 'text-[#666666] dark:text-[#a0a0a0]'
+              ? 'text-[#333333] dark:text-[#cccccc] border-b-2 border-[#4485d1]' 
+              : 'text-[#666666] dark:text-[#a0a0a0] hover:text-[#333333] dark:hover:text-[#cccccc]'
           }`}
         >
-          <Files size={14} />
-          <span>Sources</span>
+          <Files size={14} className="flex-shrink-0" />
+          <span className="truncate">Sources</span>
         </button>
         <button
           onClick={() => setActiveTab('chats')}
-          className={`flex-1 h-full px-4 text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2 ${
+          className={`flex-1 h-full px-2 text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 min-w-0 ${
             activeTab === 'chats' 
-              ? 'text-[#333333] dark:text-[#cccccc]' 
-              : 'text-[#666666] dark:text-[#a0a0a0]'
+              ? 'text-[#333333] dark:text-[#cccccc] border-b-2 border-[#4485d1]' 
+              : 'text-[#666666] dark:text-[#a0a0a0] hover:text-[#333333] dark:hover:text-[#cccccc]'
           }`}
         >
-          <MessageCircle size={14} />
-          <span>Chats</span>
+          <MessageCircle size={14} className="flex-shrink-0" />
+          <span className="truncate">Chats</span>
         </button>
       </div>
 

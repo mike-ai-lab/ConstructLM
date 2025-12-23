@@ -23,7 +23,6 @@ import LiveSession from './components/LiveSession';
 import SettingsModal from './components/SettingsModal';
 import HelpDocumentation from './components/HelpDocumentation';
 import MindMapViewer from './components/MindMapViewer';
-import GraphicsLibrary from './components/GraphicsLibrary';
 import AppHeader from './App/components/AppHeader';
 import { FloatingInput } from './App/components/FloatingInput';
 
@@ -127,6 +126,12 @@ const App: React.FC = () => {
     featureState.showModelMenu,
     featureState.setShowModelMenu,
     featureState.modelMenuRef,
+    featureState.showToolPicker,
+    featureState.setShowToolPicker,
+    featureState.toolPickerRef,
+    featureState.showColorPicker,
+    featureState.setShowColorPicker,
+    featureState.colorPickerRef,
     chatState.messages,
     layoutState.userHasScrolled,
     layoutState.messagesEndRef,
@@ -138,6 +143,50 @@ const App: React.FC = () => {
     featureState.activeModelId,
     featureState.setRateLimitTimers
   );
+
+  // Resize handler for panels
+  React.useEffect(() => {
+    if (!layoutState.isResizing) return;
+    
+    // Disable text selection during resize
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'col-resize';
+    
+    let rafId: number | null = null;
+    
+    const handleMouseMove = (e: MouseEvent) => {
+      if (rafId) return; // Skip if already scheduled
+      
+      rafId = requestAnimationFrame(() => {
+        if (layoutState.isResizing === 'left') {
+          const newWidth = Math.max(MIN_SIDEBAR_WIDTH, Math.min(MAX_SIDEBAR_WIDTH, e.clientX));
+          layoutState.setSidebarWidth(newWidth);
+        } else if (layoutState.isResizing === 'right') {
+          const newWidth = Math.max(MIN_VIEWER_WIDTH, Math.min(MAX_VIEWER_WIDTH, window.innerWidth - e.clientX));
+          layoutState.setViewerWidth(newWidth);
+        }
+        rafId = null;
+      });
+    };
+    
+    const handleMouseUp = () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      layoutState.setIsResizing(null);
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+    };
+    
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    
+    return () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+    };
+  }, [layoutState.isResizing]);
 
   const activeFile = layoutState.viewState ? fileState.files.find(f => f.id === layoutState.viewState!.fileId) : null;
   const activeModel = MODEL_REGISTRY.find(m => m.id === featureState.activeModelId) || MODEL_REGISTRY[0];
@@ -195,9 +244,8 @@ const App: React.FC = () => {
         </button>
       )}
 
-      {/* LEFT SIDEBAR */}
       <div 
-        className={`fixed md:relative z-40 h-full bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] flex flex-col border-r border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] md:border-r-0 ${layoutState.isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} ${!layoutState.isSidebarOpen && !layoutState.isMobile ? 'md:w-0 md:opacity-0 md:overflow-hidden' : ''}`}
+        className={`fixed md:relative z-40 h-full bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] flex flex-col border-r border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] ${layoutState.isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} ${!layoutState.isSidebarOpen && !layoutState.isMobile ? 'md:w-0 md:opacity-0 md:overflow-hidden' : ''} overflow-hidden`}
         style={{ 
           width: layoutState.isMobile ? '85%' : (layoutState.isSidebarOpen ? layoutState.sidebarWidth : 0)
         }}
@@ -216,6 +264,12 @@ const App: React.FC = () => {
           isDragOver={layoutState.isSidebarDragOver}
           onDragStateChange={layoutState.setIsSidebarDragOver}
         />
+        {layoutState.isSidebarOpen && !layoutState.isMobile && (
+          <div 
+            className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500 transition-colors z-50"
+            onMouseDown={() => layoutState.setIsResizing('left')}
+          />
+        )}
       </div>
 
 
@@ -241,11 +295,13 @@ const App: React.FC = () => {
           handleCreateChat={chatHandlers.handleCreateChat}
           showToolPicker={featureState.showToolPicker}
           setShowToolPicker={featureState.setShowToolPicker}
+          toolPickerRef={featureState.toolPickerRef}
           drawingState={featureState.drawingState}
           handleDrawingToolChange={featureHandlers.handleDrawingToolChange}
           handleClearAll={featureHandlers.handleClearAll}
           showColorPicker={featureState.showColorPicker}
           setShowColorPicker={featureState.setShowColorPicker}
+          colorPickerRef={featureState.colorPickerRef}
           currentColor={featureHandlers.currentColor}
           handleColorChange={featureHandlers.handleColorChange}
           handleStrokeWidthChange={featureHandlers.handleStrokeWidthChange}
@@ -256,10 +312,14 @@ const App: React.FC = () => {
           mindMapCache={mindMapCache}
           setIsHelpOpen={featureState.setIsHelpOpen}
           setIsSettingsOpen={featureState.setIsSettingsOpen}
+          handleDownloadSnapshot={featureHandlers.handleDownloadSnapshot}
+          handleCopySnapshot={featureHandlers.handleCopySnapshot}
+          handleDeleteSnapshot={featureHandlers.handleDeleteSnapshot}
+          handleOpenMindMapFromLibrary={featureHandlers.handleOpenMindMapFromLibrary}
         />
 
         <div ref={layoutState.messagesContainerRef} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 scroll-smooth bg-white dark:bg-[#1a1a1a]">
-          <div className="max-w-3xl mx-auto w-full" style={{ paddingBottom: `${inputState.inputHeight + 100}px` }}>
+          <div className="max-w-3xl mx-auto w-full" style={{ paddingBottom: `${inputState.inputHeight - 40}px` }}>
             {chatState.messages.map((msg) => (
               <MessageBubble 
                 key={msg.id} 
@@ -268,80 +328,37 @@ const App: React.FC = () => {
                 onViewDocument={fileHandlers.handleViewDocument}
               />
             ))}
-            <div ref={layoutState.messagesEndRef} className="h-4 snapshot-ignore" />
+            <div ref={layoutState.messagesEndRef} className="snapshot-ignore" />
           </div>
         </div>
 
         {/* Floating Input Area */}
         {!featureState.mindMapData && !featureState.isSettingsOpen && !featureState.isCallingEffect && !featureState.isHelpOpen && (
-        <>
-        {/* Solid background layer */}
-        <div 
-          className="fixed bottom-0 bg-white dark:bg-[#1a1a1a] pointer-events-none z-20"
-          style={{
-            left: layoutState.isMobile ? '0' : (layoutState.isSidebarOpen ? `${layoutState.sidebarWidth}px` : '0'),
-            right: activeFile ? (layoutState.isMobile ? '0' : `${layoutState.viewerWidth}px`) : '0',
-            height: '140px',
-            transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1), right 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-          }}
-        />
-        <div
-          className="input-gradient-layer fixed bottom-[140px] pointer-events-none z-20"
-          style={{
-            left: layoutState.isMobile ? '0' : (layoutState.isSidebarOpen ? `${layoutState.sidebarWidth}px` : '0'),
-            right: activeFile ? (layoutState.isMobile ? '0' : `${layoutState.viewerWidth}px`) : '0',
-            height: '30px',
-            transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1), right 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-          }}
-        />
-        <div 
-          className="floating-input-container z-20"
-          style={{
-            left: layoutState.isMobile ? '16px' : (layoutState.isSidebarOpen ? `${layoutState.sidebarWidth + 16}px` : '16px'),
-            right: activeFile ? (layoutState.isMobile ? '16px' : `${layoutState.viewerWidth + 16}px`) : '16px',
-            transform: 'translateX(0)',
-            maxWidth: '800px',
-            margin: '0 auto',
-            transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1), right 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-          }}
-        >
-          <FloatingInput
-            input={inputState.input}
-            inputRef={inputState.inputRef}
-            isGenerating={chatState.isGenerating}
-            files={fileState.files}
-            isInputDragOver={layoutState.isInputDragOver}
-            showMentionMenu={inputState.showMentionMenu}
-            filteredFiles={filteredFiles}
-            mentionIndex={inputState.mentionIndex}
-            isRecording={featureState.isRecording}
-            inputHeight={inputState.inputHeight}
-            onInputChange={inputHandlers.handleInputChange}
-            onKeyDown={inputHandlers.handleKeyDown}
-            onSendMessage={messageHandlers.handleSendMessage}
-            onFileUpload={fileHandlers.handleFileUpload}
-            onToggleRecording={audioHandlers.handleToggleRecording}
-            onInsertMention={inputHandlers.insertMention}
-            setIsInputDragOver={layoutState.setIsInputDragOver}
-            setInput={inputState.setInput}
-            setInputHeight={inputState.setInputHeight}
-          />
-        </div>
-        </>
-        )}
-
-        {/* Footer Text - Independent Element */}
-        {!featureState.mindMapData && !featureState.isSettingsOpen && !featureState.isCallingEffect && !featureState.isHelpOpen && (
-        <div 
-          className="fixed bottom-2 pointer-events-none z-20"
-          style={{
-            left: layoutState.isMobile ? '16px' : (layoutState.isSidebarOpen ? `${layoutState.sidebarWidth + 16}px` : '16px'),
-            right: activeFile ? (layoutState.isMobile ? '16px' : `${layoutState.viewerWidth + 16}px`) : '16px',
-            textAlign: 'center',
-            transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1), right 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-          }}
-        >
-          <span className="text-[#666666] dark:text-[#a0a0a0] text-xs">AI can make mistakes. Please verify citations.</span>
+        <div className="flex justify-center px-4 pb-2 w-full bg-white dark:bg-[#1a1a1a]">
+          <div className="w-full max-w-[800px]">
+            <FloatingInput
+              input={inputState.input}
+              inputRef={inputState.inputRef}
+              isGenerating={chatState.isGenerating}
+              files={fileState.files}
+              isInputDragOver={layoutState.isInputDragOver}
+              showMentionMenu={inputState.showMentionMenu}
+              filteredFiles={filteredFiles}
+              mentionIndex={inputState.mentionIndex}
+              isRecording={featureState.isRecording}
+              inputHeight={inputState.inputHeight}
+              onInputChange={inputHandlers.handleInputChange}
+              onKeyDown={inputHandlers.handleKeyDown}
+              onSendMessage={messageHandlers.handleSendMessage}
+              onFileUpload={fileHandlers.handleFileUpload}
+              onToggleRecording={audioHandlers.handleToggleRecording}
+              onInsertMention={inputHandlers.insertMention}
+              setIsInputDragOver={layoutState.setIsInputDragOver}
+              setInput={inputState.setInput}
+              setInputHeight={inputState.setInputHeight}
+            />
+            <p className="text-[#666666] dark:text-[#a0a0a0] text-xs text-center mt-2">AI can make mistakes. Please verify citations.</p>
+          </div>
         </div>
         )}
       </div>
@@ -351,14 +368,17 @@ const App: React.FC = () => {
       {/* RIGHT DOCUMENT VIEWER */}
       {activeFile && (
         <div 
-          className="fixed md:relative z-30 h-full bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] flex flex-col shadow-2xl md:shadow-none border-l border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)]"
+          className="fixed md:relative z-30 h-full bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] flex flex-col shadow-2xl md:shadow-none border-l border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] overflow-hidden"
           style={{ 
-            width: layoutState.isMobile ? '100%' : layoutState.viewerWidth,
-            maxWidth: MAX_VIEWER_WIDTH,
-            minWidth: MIN_VIEWER_WIDTH,
-            display: 'flex'
+            width: layoutState.isMobile ? '100%' : layoutState.viewerWidth
           }}
         >
+          {!layoutState.isMobile && (
+            <div 
+              className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500 transition-colors z-50"
+              onMouseDown={() => layoutState.setIsResizing('right')}
+            />
+          )}
           <DocumentViewer 
             file={activeFile} 
             initialPage={layoutState.viewState?.page} 
@@ -368,16 +388,6 @@ const App: React.FC = () => {
           />
         </div>
       )}
-      
-      <GraphicsLibrary
-        isOpen={featureState.showGraphicsLibrary}
-        onClose={() => featureState.setShowGraphicsLibrary(false)}
-        snapshots={featureState.snapshots}
-        onDownloadSnapshot={featureHandlers.handleDownloadSnapshot}
-        onCopySnapshot={featureHandlers.handleCopySnapshot}
-        onDeleteSnapshot={featureHandlers.handleDeleteSnapshot}
-        onOpenMindMap={featureHandlers.handleOpenMindMapFromLibrary}
-      />
     </div>
   );
 };

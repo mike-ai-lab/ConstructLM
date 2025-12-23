@@ -85,15 +85,15 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
                   `}
                 >
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-medium text-[#1a1a1a] dark:text-white truncate mb-1">
+                    <h3 className="text-sm font-medium text-[#1a1a1a] dark:text-white truncate mb-0.5">
                       {chat.name}
                     </h3>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[12px] text-[#666666] dark:text-[#a0a0a0]">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-[12px] text-[#666666] dark:text-[#a0a0a0] truncate">
                         {getModelName(chat.modelId)}
                       </span>
-                      <span className="text-[12px] text-[#666666] dark:text-[#a0a0a0]">•</span>
-                      <span className="text-[12px] text-[#666666] dark:text-[#a0a0a0]">
+                      <span className="text-[12px] text-[#666666] dark:text-[#a0a0a0] flex-shrink-0">•</span>
+                      <span className="text-[12px] text-[#666666] dark:text-[#a0a0a0] flex-shrink-0">
                         {formatDate(chat.updatedAt)}
                       </span>
                     </div>
@@ -102,12 +102,12 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
                   <button
                     onClick={(e) => handleDelete(chat.id, e)}
                     className={`
-                      opacity-0 group-hover:opacity-100 p-1 rounded transition-all flex-shrink-0
-                      ${deleteConfirm === chat.id ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400' : 'text-[#a0a0a0] hover:text-[#ef4444] hover:bg-red-50 dark:hover:bg-red-900/20'}
+                      opacity-0 group-hover:opacity-100 p-1.5 rounded transition-all flex-shrink-0
+                      ${deleteConfirm === chat.id ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 opacity-100' : 'text-[#a0a0a0] hover:text-[#ef4444] hover:bg-red-50 dark:hover:bg-red-900/20'}
                     `}
                     title={deleteConfirm === chat.id ? 'Click again to confirm' : 'Delete chat'}
                   >
-                    <Trash2 size={12} />
+                    <Trash2 size={14} />
                   </button>
                 </div>
               ))}

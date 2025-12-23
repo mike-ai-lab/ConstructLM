@@ -4,8 +4,9 @@ import { ViewState } from '../types';
 export const useLayoutState = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [sidebarWidth] = useState(320);
-  const [viewerWidth] = useState(600);
+  const [sidebarWidth, setSidebarWidth] = useState(288);
+  const [viewerWidth, setViewerWidth] = useState(400);
+  const [isResizing, setIsResizing] = useState<'left' | 'right' | null>(null);
   const [viewState, setViewState] = useState<ViewState | null>(null);
   const [isSidebarDragOver, setIsSidebarDragOver] = useState(false);
   const [isInputDragOver, setIsInputDragOver] = useState(false);
@@ -20,7 +21,11 @@ export const useLayoutState = () => {
     isSidebarOpen,
     setIsSidebarOpen,
     sidebarWidth,
+    setSidebarWidth,
     viewerWidth,
+    setViewerWidth,
+    isResizing,
+    setIsResizing,
     viewState,
     setViewState,
     isSidebarDragOver,
@@ -33,3 +38,4 @@ export const useLayoutState = () => {
     messagesContainerRef,
   };
 };
+

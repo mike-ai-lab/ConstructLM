@@ -1,0 +1,15 @@
+{
+  "baseColor": "#a6aed9",
+  "color1": "#e5e9ff",
+  "color2": "#10171e",
+  "color3": "#ebfff8",
+  "speed": 0.1813,
+  "noiseScale": 0.5,
+  "noiseStrength": 0.1,
+  "rotationSpeed": 0.132,
+  "metallic": 1.656,
+  "glow": 0.766,
+  "scale": 1.095,
+  "roughness": 0.115,
+  "preset": "Custom"
+}

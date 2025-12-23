@@ -72,6 +72,7 @@ export const createMessageHandlers = (
 
     try {
       let accumText = "";
+      let thinkingText = "";
       let updateTimer: NodeJS.Timeout | null = null;
       
       const usage = await sendMessageToLLM(
@@ -79,12 +80,13 @@ export const createMessageHandlers = (
         messages,
         userMsg.content,
         activeContextFiles, 
-        (chunk) => {
+        (chunk, thinking) => {
           accumText += chunk;
+          if (thinking) thinkingText = thinking;
           if (updateTimer) clearTimeout(updateTimer);
           updateTimer = setTimeout(() => {
             setMessages(prev => prev.map(msg => 
-              msg.id === modelMsgId ? { ...msg, content: accumText } : msg
+              msg.id === modelMsgId ? { ...msg, content: accumText, thinking: thinkingText || undefined } : msg
             ));
           }, 50);
         }
@@ -92,7 +94,7 @@ export const createMessageHandlers = (
       
       if (updateTimer) clearTimeout(updateTimer);
       setMessages(prev => prev.map(msg => 
-        msg.id === modelMsgId ? { ...msg, content: accumText } : msg
+        msg.id === modelMsgId ? { ...msg, content: accumText, thinking: thinkingText || undefined } : msg
       ));
       
       if (usage && (usage.inputTokens || usage.outputTokens)) {

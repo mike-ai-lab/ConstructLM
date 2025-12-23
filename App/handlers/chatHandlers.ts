@@ -60,6 +60,12 @@ export const createChatHandlers = (
   };
 
   const handleCreateChat = () => {
+    // Don't create new chat if current chat is empty (only has intro message or no messages)
+    const hasUserMessages = messages.some(m => m.role === 'user');
+    if (!hasUserMessages) {
+      return; // Current chat is empty, don't create a new one
+    }
+    
     saveCurrentChat();
     const newChat = chatRegistry.createNewChat('New Chat', activeModelId);
     setCurrentChatId(newChat.id);

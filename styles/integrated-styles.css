@@ -39,26 +39,26 @@
   --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.3);
 
   /* Light Theme Colors */
-  --color-bg-light: #ffffff;
-  --color-surface-light: rgba(0, 0, 0, 0.03);
-  --color-surface-hover-light: rgba(0, 0, 0, 0.06);
-  --color-surface-active-light: rgba(0, 0, 0, 0.1);
-  --color-text-light: #1a1a1a;
+  --color-bg-light: #F8F8FF;
+  --color-surface-light: #303030;
+  --color-surface-hover-light: rgba(3, 97, 210, 0.1);
+  --color-surface-active-light: rgba(3, 97, 210, 0.15);
+  --color-text-light: #212121;
   --color-text-secondary-light: #666666;
   --color-text-tertiary-light: #999999;
-  --color-border-light: rgba(0, 0, 0, 0.15);
-  --color-accent-light: #4485d1;
+  --color-border-light: rgba(33, 33, 33, 0.15);
+  --color-accent-light: #0361d2;
 
   /* Dark Theme Colors */
-  --color-bg-dark: #1a1a1a;
-  --color-surface-dark: #2a2a2a;
-  --color-surface-hover-dark: #222222;
-  --color-surface-active-dark: #2a2a2a;
-  --color-text-dark: #ffffff;
+  --color-bg-dark: #212121;
+  --color-surface-dark: #303030;
+  --color-surface-hover-dark: rgba(3, 97, 210, 0.1);
+  --color-surface-active-dark: rgba(3, 97, 210, 0.15);
+  --color-text-dark: #F8F8FF;
   --color-text-secondary-dark: #a0a0a0;
   --color-text-tertiary-dark: #666666;
-  --color-border-dark: rgba(255, 255, 255, 0.05);
-  --color-accent-dark: #4485d1;
+  --color-border-dark: rgba(248, 248, 255, 0.1);
+  --color-accent-dark: #0361d2;
 
   /* Current theme variables - default to light */
   --color-bg: var(--color-bg-light);
@@ -96,24 +96,21 @@ html.dark {
    ENHANCED INPUT FIELD POSITIONING
    ======================================== */
 
-.floating-input-container {
-  position: fixed;
-  bottom: 32px;
-  max-width: 800px;
-  z-index: 20;
-}
-
 .floating-input-wrapper {
   display: flex;
   align-items: center;
   width: 100%;
-  background: var(--color-surface);
+  background: #F8F8FF;
   border-radius: 50px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
   border: 1px solid var(--color-border);
   padding: 6px;
   backdrop-filter: blur(10px);
   transition: none;
+}
+
+html.dark .floating-input-wrapper {
+  background: #303030;
 }
 
 html.dark .floating-input-wrapper {
@@ -156,7 +153,7 @@ html.dark .floating-input-field::placeholder {
   justify-content: center;
   width: 32px;
   height: 32px;
-  background: #000000;
+  background: #0361d2;
   color: white;
   border-radius: 50%;
   border: none;
@@ -167,7 +164,7 @@ html.dark .floating-input-field::placeholder {
 }
 
 .floating-send-button:hover {
-  background: #1f2937;
+  background: #024fa8;
 }
 
 .floating-send-button:focus {
@@ -176,11 +173,11 @@ html.dark .floating-input-field::placeholder {
 }
 
 html.dark .floating-send-button {
-  background: var(--color-accent);
+  background: #0361d2;
 }
 
 html.dark .floating-send-button:hover {
-  filter: brightness(1.1);
+  background: #024fa8;
 }
 
 /* ========================================
@@ -231,15 +228,20 @@ html.dark .floating-send-button:hover {
 
 .context-menu {
   position: fixed;
-  background: var(--color-surface);
+  background: white;
   border: 1px solid var(--color-border);
   border-radius: var(--border-radius-md);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
   backdrop-filter: blur(10px);
   z-index: 10000;
-  min-width: 200px;
+  min-width: 160px;
   overflow: hidden;
   animation: contextMenuAppear 0.15s ease-out;
+}
+
+html.dark .context-menu {
+  background: #222222;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
 }
 
 @keyframes contextMenuAppear {
@@ -266,8 +268,7 @@ html.dark .floating-send-button:hover {
 .context-menu-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 16px;
+  padding: 8px 14px;
   color: var(--color-text);
   cursor: pointer;
   transition: all var(--transition-fast);
@@ -275,25 +276,23 @@ html.dark .floating-send-button:hover {
   background: none;
   width: 100%;
   text-align: left;
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-medium);
+  font-size: 13px;
+  font-weight: var(--font-weight-normal);
   font-family: var(--font-primary);
 }
 
 .context-menu-item:hover {
   background: var(--color-surface-hover);
   color: var(--color-accent);
-  transform: translateX(2px);
 }
 
 .context-menu-item:active {
   background: var(--color-surface-active);
 }
 
-.context-menu-item i {
-  width: 18px;
-  text-align: center;
-  color: var(--color-accent);
+.context-menu-item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .context-menu-divider {
@@ -306,10 +305,6 @@ html.dark .floating-send-button:hover {
   color: var(--color-delete);
 }
 
-.context-menu-item.danger:hover {
-  background: rgba(239, 68, 68, 0.1);
-}
-
 .context-menu-item.danger i {
   color: var(--color-delete);
 }
@@ -320,7 +315,7 @@ html.dark .floating-send-button:hover {
 
 .input-context-menu {
   position: fixed;
-  background: var(--color-surface);
+  background: white;
   border: 1px solid var(--color-border);
   border-radius: var(--border-radius-md);
   box-shadow: var(--shadow-lg);
@@ -329,6 +324,10 @@ html.dark .floating-send-button:hover {
   min-width: 160px;
   overflow: hidden;
   animation: contextMenuAppear 0.15s ease-out;
+}
+
+html.dark .input-context-menu {
+  background: #222222;
 }
 
 .input-context-menu-item {
@@ -369,7 +368,7 @@ html.dark .floating-send-button:hover {
 
 .message-context-menu {
   position: fixed;
-  background: var(--color-surface);
+  background: white;
   border: 1px solid var(--color-border);
   border-radius: var(--border-radius-md);
   box-shadow: var(--shadow-lg);
@@ -378,6 +377,10 @@ html.dark .floating-send-button:hover {
   min-width: 180px;
   overflow: hidden;
   animation: contextMenuAppear 0.15s ease-out;
+}
+
+html.dark .message-context-menu {
+  background: #222222;
 }
 
 .message-context-menu-item {
@@ -911,8 +914,8 @@ html.dark .action-button {
   display: inline;
   padding: 1px 4px;
   margin: 0 1px;
-  background: rgba(68, 133, 209, 0.12);
-  color: #4485d1;
+  background: rgba(3, 97, 210, 0.12);
+  color: #0361d2;
   border-radius: 3px;
   font-size: 0.8em;
   font-weight: 600;
@@ -921,22 +924,22 @@ html.dark .action-button {
   white-space: nowrap;
   vertical-align: baseline;
   line-height: inherit;
-  border: 1px solid rgba(68, 133, 209, 0.2);
+  border: 1px solid rgba(3, 97, 210, 0.2);
 }
 
 html.dark .citation-marker {
-  background: rgba(68, 133, 209, 0.15);
-  color: #6ba3e8;
-  border-color: rgba(68, 133, 209, 0.25);
+  background: rgba(3, 97, 210, 0.15);
+  color: #4a9eff;
+  border-color: rgba(3, 97, 210, 0.25);
 }
 
 .citation-marker:hover {
-  background: rgba(68, 133, 209, 0.2);
-  border-color: rgba(68, 133, 209, 0.4);
+  background: rgba(3, 97, 210, 0.2);
+  border-color: rgba(3, 97, 210, 0.4);
   transform: none;
 }
 
 html.dark .citation-marker:hover {
-  background: rgba(68, 133, 209, 0.25);
-  border-color: rgba(68, 133, 209, 0.5);
+  background: rgba(3, 97, 210, 0.25);
+  border-color: rgba(3, 97, 210, 0.5);
 }

@@ -21,6 +21,12 @@ export const useAppEffects = (
   showModelMenu: boolean,
   setShowModelMenu: any,
   modelMenuRef: any,
+  showToolPicker: boolean,
+  setShowToolPicker: any,
+  toolPickerRef: any,
+  showColorPicker: boolean,
+  setShowColorPicker: any,
+  colorPickerRef: any,
   messages: Message[],
   userHasScrolled: boolean,
   messagesEndRef: any,
@@ -79,17 +85,17 @@ export const useAppEffects = (
         e.preventDefault();
         handleTakeSnapshot();
       }
-      if (e.key === 'Escape' && showGraphicsLibrary) {
-        setShowGraphicsLibrary(false);
-      }
-      if (e.key === 'Escape' && showModelMenu) {
-        setShowModelMenu(false);
+      if (e.key === 'Escape') {
+        if (showGraphicsLibrary) setShowGraphicsLibrary(false);
+        if (showModelMenu) setShowModelMenu(false);
+        if (showToolPicker) setShowToolPicker(false);
+        if (showColorPicker) setShowColorPicker(false);
       }
     };
     
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showGraphicsLibrary, showModelMenu]);
+  }, [showGraphicsLibrary, showModelMenu, showToolPicker, showColorPicker]);
 
   // Rate limit timer
   useEffect(() => {
@@ -101,7 +107,10 @@ export const useAppEffects = (
           timers[model.id] = cooldown;
         }
       });
-      setRateLimitTimers(timers);
+      setRateLimitTimers(prev => {
+        const hasChanges = JSON.stringify(prev) !== JSON.stringify(timers);
+        return hasChanges ? timers : prev;
+      });
     }, 1000);
     
     return () => clearInterval(interval);
@@ -117,12 +126,11 @@ export const useAppEffects = (
       }
     };
     
-    const timeoutId = setTimeout(() => {
+    setTimeout(() => {
       document.addEventListener('mousedown', handleClickOutside);
     }, 100);
     
     return () => {
-      clearTimeout(timeoutId);
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showModelMenu]);

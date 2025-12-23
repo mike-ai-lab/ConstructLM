@@ -86,9 +86,9 @@ export class TooltipManager {
 
 // Context Menu Management
 export interface ContextMenuItem {
-  label: string;
+  label?: string;
   icon?: string;
-  action: () => void;
+  action?: () => void;
   disabled?: boolean;
   danger?: boolean;
   divider?: boolean;
@@ -108,8 +108,9 @@ export class ContextMenuManager {
 
   private init(): void {
     // Close menu on click outside
-    document.addEventListener('click', (e) => {
-      if (this.currentMenu && !this.currentMenu.contains(e.target as Node)) {
+    document.addEventListener('mousedown', (e) => {
+      const target = e.target as HTMLElement;
+      if (this.currentMenu && !this.currentMenu.contains(target)) {
         this.hideMenu();
       }
     });
@@ -139,12 +140,6 @@ export class ContextMenuManager {
       const menuItem = document.createElement('button');
       menuItem.className = `context-menu-item ${item.danger ? 'danger' : ''}`;
       menuItem.disabled = item.disabled || false;
-      
-      if (item.icon) {
-        const icon = document.createElement('i');
-        icon.className = item.icon;
-        menuItem.appendChild(icon);
-      }
       
       const label = document.createElement('span');
       label.textContent = item.label;
@@ -207,14 +202,12 @@ export const createInputContextMenu = (inputElement: HTMLInputElement | HTMLText
   return [
     {
       label: 'Undo',
-      icon: 'fas fa-undo',
       action: () => document.execCommand('undo'),
       disabled: !document.queryCommandEnabled('undo')
     },
     { divider: true },
     {
       label: 'Cut',
-      icon: 'fas fa-cut',
       action: () => {
         if (hasSelection) {
           document.execCommand('cut');
@@ -224,7 +217,6 @@ export const createInputContextMenu = (inputElement: HTMLInputElement | HTMLText
     },
     {
       label: 'Copy',
-      icon: 'fas fa-copy',
       action: () => {
         if (hasSelection) {
           document.execCommand('copy');
@@ -234,14 +226,12 @@ export const createInputContextMenu = (inputElement: HTMLInputElement | HTMLText
     },
     {
       label: 'Paste',
-      icon: 'fas fa-paste',
       action: async () => {
         if (canPaste) {
           try {
             const text = await navigator.clipboard.readText();
             document.execCommand('insertText', false, text);
           } catch (err) {
-            // Fallback to execCommand
             document.execCommand('paste');
           }
         }
@@ -251,7 +241,6 @@ export const createInputContextMenu = (inputElement: HTMLInputElement | HTMLText
     { divider: true },
     {
       label: 'Select All',
-      icon: 'fas fa-select-all',
       action: () => {
         inputElement.select();
       },
@@ -259,7 +248,6 @@ export const createInputContextMenu = (inputElement: HTMLInputElement | HTMLText
     },
     {
       label: 'Delete',
-      icon: 'fas fa-trash',
       action: () => {
         if (hasSelection) {
           document.execCommand('delete');
@@ -286,7 +274,6 @@ export const createMessageContextMenu = (messageElement: HTMLElement, messageTex
   if (hasSelection) {
     menuItems.push({
       label: 'Copy Selection',
-      icon: 'fas fa-copy',
       action: () => {
         try {
           const selectedText = selection.toString();
@@ -320,7 +307,6 @@ export const createMessageContextMenu = (messageElement: HTMLElement, messageTex
   // Add copy message
   menuItems.push({
     label: 'Copy Message',
-    icon: 'fas fa-copy',
     action: async () => {
       try {
         const textarea = document.createElement('textarea');
@@ -342,7 +328,6 @@ export const createMessageContextMenu = (messageElement: HTMLElement, messageTex
   // Add select all
   menuItems.push({
     label: 'Select All',
-    icon: 'fas fa-select-all',
     action: () => {
       const selection = window.getSelection();
       const range = document.createRange();
@@ -357,7 +342,6 @@ export const createMessageContextMenu = (messageElement: HTMLElement, messageTex
     menuItems.push({ divider: true });
     menuItems.push({
       label: 'Copy Code',
-      icon: 'fas fa-code',
       action: async () => {
         const codeBlocks = messageElement.querySelectorAll('pre code');
         const codeText = Array.from(codeBlocks).map(block => block.textContent).join('\n\n');
@@ -372,7 +356,6 @@ export const createMessageContextMenu = (messageElement: HTMLElement, messageTex
     });
     menuItems.push({
       label: 'Download Code',
-      icon: 'fas fa-download',
       action: () => {
         const codeBlocks = messageElement.querySelectorAll('pre code');
         const codeText = Array.from(codeBlocks).map(block => block.textContent).join('\n\n');

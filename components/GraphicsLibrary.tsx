@@ -37,13 +37,11 @@ const GraphicsLibrary: React.FC<GraphicsLibraryProps> = ({
       }
     };
     
-    // Delay attachment to avoid closing on the same click that opened it
-    const timeoutId = setTimeout(() => {
+    setTimeout(() => {
       document.addEventListener('mousedown', handleClickOutside);
-    }, 100);
+    }, 0);
     
     return () => {
-      clearTimeout(timeoutId);
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isOpen, onClose]);

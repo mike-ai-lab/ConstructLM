@@ -21,7 +21,7 @@ export async function sendMessageToGemini(
   message: string,
   files: any[],
   activeFiles: any[],
-  onStream: (chunk: string) => void,
+  onStream: (chunk: string, thinking?: string) => void,
   systemPrompt?: string,
   history?: any[]
 ): Promise<void> {
@@ -82,6 +82,7 @@ export async function sendMessageToGemini(
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
+  let thinkingContent = "";
 
   while (true) {
     const { done, value } = await reader.read();
@@ -95,8 +96,15 @@ export async function sendMessageToGemini(
       if (line.startsWith("data: ")) {
         try {
           const json = JSON.parse(line.slice(6));
-          const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (text) onStream(text);
+          const parts = json.candidates?.[0]?.content?.parts || [];
+          
+          for (const part of parts) {
+            if (part.thought) {
+              thinkingContent += part.text || "";
+            } else if (part.text) {
+              onStream(part.text, thinkingContent || undefined);
+            }
+          }
         } catch (e) {}
       }
     }

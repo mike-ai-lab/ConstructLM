@@ -79,7 +79,6 @@ export const MODEL_REGISTRY: ModelConfig[] = [
     contextWindow: 131072,
     apiKeyEnv: 'GROQ_API_KEY',
     supportsImages: false,
-    supportsThinking: true,
     maxInputWords: 98304,
     maxOutputWords: 24576,
     description: "Very smart, large context window.",

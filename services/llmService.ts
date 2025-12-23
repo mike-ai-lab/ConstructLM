@@ -75,7 +75,7 @@ export const sendMessageToLLM = async (
   history: Message[],
   newMessage: string,
   activeFiles: ProcessedFile[],
-  onStream: (chunk: string) => void
+  onStream: (chunk: string, thinking?: string) => void
 ): Promise<{ inputTokens?: number; outputTokens?: number; totalTokens?: number }> => {
     const model = getModel(modelId);
 
@@ -311,23 +311,10 @@ const streamOpenAICompatible = async (
         }
     }
 
-    // Fallback to direct API calls with CORS proxy for browser
+    // Direct API calls
     let baseUrl = 'https://api.openai.com/v1/chat/completions';
     if (model.provider === 'groq') {
-        const requestSize = new Blob([JSON.stringify(requestBody)]).size;
-        if (requestSize > 900000) { // 900KB limit (below 1MB)
-            throw new Error(
-                `**Request Too Large:** Your message exceeds the browser limit (${(requestSize / 1024).toFixed(0)}KB).\n\n` +
-                `**Solutions:**\n` +
-                `1. Use the Desktop App (Electron) for unlimited file sizes\n` +
-                `2. Reduce file context or use @mentions for specific files\n` +
-                `3. Switch to Gemini models (no size limit in browser)`
-            );
-        }
-        // Use local proxy server instead of corsproxy.io
-        baseUrl = 'http://localhost:3002/api/proxy/groq';
-    } else if (model.provider === 'openai') {
-        baseUrl = 'http://localhost:3002/api/proxy/openai';
+        baseUrl = 'https://api.groq.com/openai/v1/chat/completions';
     }
 
     try {

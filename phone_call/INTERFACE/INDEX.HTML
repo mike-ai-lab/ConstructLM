@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ConstructLM</title>
+
+  <!-- React 18 -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+  <!-- Babel -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- Lucide -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="m-0">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { createRoot } = ReactDOM;
+
+    /* ---------------- ICON FIX ---------------- */
+    const Icon = ({ name, ...props }) => {
+      const LucideIcon = lucide.icons[name];
+      if (!LucideIcon) return null;
+      return React.createElement(LucideIcon, props);
+    };
+
+    const App = () => {
+      const [leftOpen, setLeftOpen] = useState(true);
+      const [rightOpen, setRightOpen] = useState(true);
+      const [message, setMessage] = useState("");
+      const [leftWidth, setLeftWidth] = useState(288);
+      const [rightWidth, setRightWidth] = useState(400);
+      const [isResizing, setIsResizing] = useState(null);
+      const [citationPreview, setCitationPreview] = useState(null);
+      const [chipRef, setChipRef] = useState(null);
+
+      useEffect(() => {
+        const handleClickOutside = (e) => {
+          if (citationPreview && chipRef && !chipRef.contains(e.target)) {
+            const preview = document.getElementById('citation-preview');
+            if (preview && !preview.contains(e.target)) {
+              setCitationPreview(null);
+              setChipRef(null);
+            }
+          }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+      }, [citationPreview, chipRef]);
+
+      useEffect(() => {
+        const handleResize = () => {
+          if (window.innerWidth < 1024) {
+            setLeftOpen(false);
+            setRightOpen(false);
+          }
+        };
+        handleResize();
+        window.addEventListener("resize", handleResize);
+        return () => window.removeEventListener("resize", handleResize);
+      }, []);
+
+      useEffect(() => {
+        if (!isResizing) return;
+        
+        const handleMouseMove = (e) => {
+          if (isResizing === 'left') {
+            const newWidth = Math.max(200, Math.min(600, e.clientX));
+            setLeftWidth(newWidth);
+          } else if (isResizing === 'right') {
+            const newWidth = Math.max(300, Math.min(800, window.innerWidth - e.clientX));
+            setRightWidth(newWidth);
+          }
+        };
+        
+        const handleMouseUp = () => setIsResizing(null);
+        
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+        
+        return () => {
+          document.removeEventListener('mousemove', handleMouseMove);
+          document.removeEventListener('mouseup', handleMouseUp);
+        };
+      }, [isResizing]);
+
+      const historyItems = [
+        { id: 1, title: "Door Schedule Analysis", date: "2h ago" },
+        { id: 2, title: "Steel Beam Load Calcs", date: "5h ago" },
+        { id: 3, title: "HVAC System Review", date: "Yesterday" },
+        { id: 4, title: "Foundation Plan Q&A", date: "Oct 22" }
+      ];
+
+      const messages = [
+        { role: "user", content: "What are the load requirements for the foundation?" },
+        { role: "assistant", content: "According to the structural plans, the foundation must support a minimum load of 5000 PSF.", citations: [{ id: 1, doc: "S-101.pdf", page: 12, text: "Foundation load capacity: 5000 PSF minimum" }] },
+        { role: "user", content: "Can you show me the structural specifications for the steel beams?" },
+        { role: "assistant", content: "I've pulled up the Structural Specifications (S-101). Section 4.2.1 on page 12 specifies that all structural steel must be Grade 50 minimum and treated with anti-corrosive coating.", citations: [{ id: 2, doc: "S-101.pdf", page: 12, text: "Steel Grade 50, anti-corrosive coating required" }, { id: 3, doc: "S-102.pdf", page: 8, text: "Beam specifications and tolerances" }] },
+        { role: "user", content: "What about the HVAC requirements?" },
+        { role: "assistant", content: "The HVAC system must maintain 68-72°F with humidity between 30-50%. The system should have a minimum SEER rating of 16.", citations: [{ id: 4, doc: "M-201.pdf", page: 5, text: "HVAC temperature and humidity specifications" }] },
+        { role: "user", content: "Tell me about the electrical panel specifications" },
+        { role: "assistant", content: "The main electrical panel must be rated for 400A service with a minimum of 42 circuits. All panels must be UL listed and installed per NEC 2020.", citations: [{ id: 5, doc: "E-301.pdf", page: 15, text: "400A main panel, 42 circuit minimum" }, { id: 6, doc: "E-301.pdf", page: 16, text: "NEC 2020 compliance required" }] },
+        { role: "user", content: "What are the fire safety requirements?" },
+        { role: "assistant", content: "Fire safety systems must include sprinklers throughout, fire-rated walls between units, and smoke detectors in all rooms. Emergency exits must be clearly marked and illuminated.", citations: [{ id: 7, doc: "FS-401.pdf", page: 3, text: "Sprinkler system requirements" }, { id: 8, doc: "FS-401.pdf", page: 7, text: "Fire-rated wall specifications" }] }
+      ];
+
+      return (
+        <div className="flex h-screen w-full bg-slate-100 text-slate-900 overflow-hidden">
+
+          {/* LEFT SIDEBAR */}
+          <aside className={`fixed inset-y-0 left-0 z-50 lg:relative bg-white border-r-2 border-slate-300 ${leftOpen ? "" : "w-0"} overflow-hidden`} style={{ width: leftOpen ? `${leftWidth}px` : '0' }}>
+            <div className="h-full flex flex-col" style={{ width: `${leftWidth}px` }}>
+              <div className="h-[70px] p-4 border-b-2 border-slate-300 font-bold flex items-center gap-2">
+                <Icon name="history" size={18} className="text-blue-600" />
+                Chat History
+              </div>
+
+              <nav className="flex-1 overflow-y-auto p-3 space-y-1">
+                {historyItems.map(item => (
+                  <div key={item.id} className="p-3 rounded-xl hover:bg-slate-100 cursor-pointer border border-slate-200">
+                    <div className="text-sm font-semibold">{item.title}</div>
+                    <div className="text-xs text-slate-400">{item.date}</div>
+                  </div>
+                ))}
+              </nav>
+            </div>
+            {leftOpen && (
+              <div 
+                className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500 transition-colors"
+                onMouseDown={() => setIsResizing('left')}
+              />
+            )}
+          </aside>
+
+          {/* MAIN */}
+          <main className="flex-1 flex flex-col bg-white relative z-10">
+            <header className="h-[70px] border-b-2 border-slate-300 flex items-center justify-between px-4 w-full bg-white">
+              <button 
+                onClick={() => setLeftOpen(!leftOpen)}
+                className="p-2 rounded-lg bg-slate-300 hover:bg-slate-400 transition-colors"
+                title="Toggle History Panel"
+              >
+                <Icon name="panel-left" size={20} className="text-slate-800" />
+              </button>
+              <strong>ConstructLM</strong>
+              <div className="flex items-center gap-2">
+                <button className="p-2 rounded-full bg-slate-200 hover:bg-slate-300 transition-colors" title="New Chat">
+                  <Icon name="plus" size={18} className="text-slate-800" />
+                </button>
+                <button className="p-2 rounded-full bg-slate-200 hover:bg-slate-300 transition-colors" title="Upload Media">
+                  <Icon name="paperclip" size={18} className="text-slate-800" />
+                </button>
+                <button className="p-2 rounded-full bg-slate-200 hover:bg-slate-300 transition-colors" title="Toggle Theme">
+                  <Icon name="moon" size={18} className="text-slate-800" />
+                </button>
+                <button className="p-2 rounded-full bg-slate-200 hover:bg-slate-300 transition-colors" title="Settings">
+                  <Icon name="settings" size={18} className="text-slate-800" />
+                </button>
+                <button 
+                  onClick={() => setRightOpen(!rightOpen)}
+                  className="p-2 rounded-lg bg-slate-300 hover:bg-slate-400 transition-colors"
+                  title="Toggle Document Viewer"
+                >
+                  <Icon name="panel-right" size={20} className="text-slate-800" />
+                </button>
+              </div>
+            </header>
+
+            <div className="flex-1 overflow-y-auto flex justify-center">
+              <div className="w-full max-w-[1000px] p-6 space-y-6">
+                {messages.map((m, i) => (
+                  <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+                    <div className={`${m.role === "user" ? "max-w-xl bg-blue-600 text-white shadow-md rounded-2xl p-4" : "w-full text-slate-900 p-4"}`}>
+                      {m.content}
+                      {m.citations && (
+                        <div className="flex flex-wrap gap-2 mt-3">
+                          {m.citations.map(cite => (
+                            <div key={cite.id} className="relative inline-block">
+                              <button
+                                onClick={(e) => {
+                                  setChipRef(e.currentTarget.parentElement);
+                                  setCitationPreview(citationPreview?.id === cite.id ? null : cite);
+                                }}
+                                className="px-2 py-1 bg-slate-200 border border-slate-400 rounded-full text-xs text-slate-900 hover:bg-slate-300 transition-colors flex items-center gap-1 font-medium"
+                              >
+                                <Icon name="file-text" size={12} />
+                                {cite.doc} p.{cite.page}
+                              </button>
+                              {citationPreview?.id === cite.id && (
+                                <div 
+                                  id="citation-preview"
+                                  className="absolute top-full left-0 mt-2 bg-white rounded-xl shadow-2xl p-4 w-80 border-2 border-slate-400 z-[100]"
+                                >
+                                  <div className="flex items-start justify-between mb-3">
+                                    <div className="flex items-center gap-2">
+                                      <Icon name="file-text" size={18} className="text-blue-600" />
+                                      <div>
+                                        <div className="font-bold text-sm">{citationPreview.doc}</div>
+                                        <div className="text-xs text-slate-600">Page {citationPreview.page}</div>
+                                      </div>
+                                    </div>
+                                    <div className="flex gap-2">
+                                      <button 
+                                        onClick={() => {
+                                          setRightOpen(true);
+                                          setCitationPreview(null);
+                                          setChipRef(null);
+                                        }}
+                                        className="p-1 bg-blue-600 hover:bg-blue-700 text-white rounded"
+                                        title="Open in Document Viewer Panel"
+                                      >
+                                        <Icon name="external-link" size={18} />
+                                      </button>
+                                      <button onClick={() => { setCitationPreview(null); setChipRef(null); }} className="p-1 bg-slate-300 hover:bg-slate-400 text-slate-800 rounded">
+                                        <Icon name="x" size={18} />
+                                      </button>
+                                    </div>
+                                  </div>
+                                  <div className="text-sm text-slate-800 bg-slate-100 p-3 rounded-lg border border-slate-300">
+                                    {citationPreview.text}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex justify-center px-4 pb-2 w-full bg-white">
+              <div className="w-full max-w-[1000px]">
+                <div className="transition-all focus-within:ring-2 focus-within:ring-[rgba(68,133,209,0.1)] mt-4" style={{ borderRadius: '50px', padding: '6px', border: '2px solid #cbd5e1' }}>
+                  <input
+                    value={message}
+                    onChange={e => setMessage(e.target.value)}
+                    placeholder="Message ConstructLM..."
+                    className="w-full px-4 py-2 focus:outline-none bg-transparent"
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-2 text-center">AI can make mistakes. Please verify citations.</p>
+              </div>
+            </div>
+          </main>
+
+          {/* RIGHT PANEL */}
+          <aside className={`fixed inset-y-0 right-0 z-50 lg:relative bg-slate-200 border-l-2 border-slate-300 ${rightOpen ? "" : "w-0"} overflow-hidden`} style={{ width: rightOpen ? `${rightWidth}px` : '0' }}>
+            {rightOpen && (
+              <div 
+                className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500 transition-colors"
+                onMouseDown={() => setIsResizing('right')}
+              />
+            )}
+            <div className="p-4 font-bold border-b-2 border-slate-300 h-[70px] flex items-center bg-white">Document Viewer Panel</div>
+          </aside>
+
+        </div>
+      );
+    };
+
+    /* ---------------- REACT 18 BOOTSTRAP ---------------- */
+    const root = createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

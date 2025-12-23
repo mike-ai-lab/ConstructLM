@@ -125,7 +125,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                         const result = await (window as any).electron.proxyGroq(key, { model: 'llama-3.1-8b-instant', messages: [{ role: 'user', content: 'Hi' }], max_tokens: 1 });
                         if (!result.ok) throw new Error(`Error ${result.status || result.error}`);
                     } else {
-                        const response = await fetch('http://localhost:3002/api/proxy/groq', {
+                        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
                             method: 'POST',
                             headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
                             body: JSON.stringify({ model: 'llama-3.1-8b-instant', messages: [{ role: 'user', content: 'Hi' }], max_tokens: 1 }),
@@ -139,7 +139,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                         const result = await (window as any).electron.proxyOpenai(key, { model: 'gpt-4o-mini', messages: [{ role: 'user', content: 'Hi' }], max_tokens: 1 });
                         if (!result.ok) throw new Error(`Error ${result.status || result.error}`);
                     } else {
-                        const response = await fetch('http://localhost:3002/api/proxy/openai', {
+                        const response = await fetch('https://api.openai.com/v1/chat/completions', {
                             method: 'POST',
                             headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
                             body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'user', content: 'Hi' }], max_tokens: 1 }),
@@ -155,6 +155,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                 clearTimeout(timeoutId);
                 if (fetchError.name === 'AbortError') {
                     throw new Error('Request timeout (10s)');
+                }
+                if (fetchError.message?.includes('Failed to fetch')) {
+                    throw new Error('Network error - check connection');
                 }
                 throw fetchError;
             }
@@ -428,10 +431,6 @@ const LocalModelsStatus: React.FC = () => {
             setIsTesting(false);
         }
     };
-
-    useEffect(() => {
-        testConnection();
-    }, []);
 
     return (
         <div className="space-y-2">

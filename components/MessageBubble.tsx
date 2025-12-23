@@ -109,11 +109,24 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, files, onViewDoc
               {isUser ? (
                   <div>{message.content}</div>
               ) : (
-                  <CitationRenderer 
-                      text={message.content} 
-                      files={files} 
-                      onViewDocument={onViewDocument}
-                  />
+                  <>
+                    {message.thinking && (
+                      <details className="mb-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-3">
+                        <summary className="cursor-pointer text-xs font-bold text-purple-700 dark:text-purple-400 uppercase tracking-wider flex items-center gap-2">
+                          <Sparkles size={12} />
+                          Thinking Process
+                        </summary>
+                        <div className="mt-2 text-sm text-purple-900 dark:text-purple-200 whitespace-pre-wrap">
+                          {message.thinking}
+                        </div>
+                      </details>
+                    )}
+                    <CitationRenderer 
+                        text={message.content} 
+                        files={files} 
+                        onViewDocument={onViewDocument}
+                    />
+                  </>
               )}
             </div>
           </div>

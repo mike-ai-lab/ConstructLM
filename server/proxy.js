@@ -16,12 +16,22 @@ app.post('/api/proxy/groq', async (req, res) => {
       body: JSON.stringify(req.body)
     });
     
-    // Stream the response
-    res.status(response.status);
-    response.headers.forEach((value, key) => {
-      res.setHeader(key, value);
-    });
-    response.body.pipe(res);
+    if (req.body.stream) {
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        res.write(decoder.decode(value, { stream: true }));
+      }
+      res.end();
+    } else {
+      const data = await response.json();
+      res.status(response.status).json(data);
+    }
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -38,12 +48,22 @@ app.post('/api/proxy/openai', async (req, res) => {
       body: JSON.stringify(req.body)
     });
     
-    // Stream the response
-    res.status(response.status);
-    response.headers.forEach((value, key) => {
-      res.setHeader(key, value);
-    });
-    response.body.pipe(res);
+    if (req.body.stream) {
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        res.write(decoder.decode(value, { stream: true }));
+      }
+      res.end();
+    } else {
+      const data = await response.json();
+      res.status(response.status).json(data);
+    }
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
