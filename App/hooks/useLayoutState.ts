@@ -4,10 +4,8 @@ import { ViewState } from '../types';
 export const useLayoutState = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [sidebarWidth, setSidebarWidth] = useState(320);
-  const [viewerWidth, setViewerWidth] = useState(600);
-  const [isResizingSidebar, setIsResizingSidebar] = useState(false);
-  const [isResizingViewer, setIsResizingViewer] = useState(false);
+  const [sidebarWidth] = useState(320);
+  const [viewerWidth] = useState(600);
   const [viewState, setViewState] = useState<ViewState | null>(null);
   const [isSidebarDragOver, setIsSidebarDragOver] = useState(false);
   const [isInputDragOver, setIsInputDragOver] = useState(false);
@@ -22,13 +20,7 @@ export const useLayoutState = () => {
     isSidebarOpen,
     setIsSidebarOpen,
     sidebarWidth,
-    setSidebarWidth,
     viewerWidth,
-    setViewerWidth,
-    isResizingSidebar,
-    setIsResizingSidebar,
-    isResizingViewer,
-    setIsResizingViewer,
     viewState,
     setViewState,
     isSidebarDragOver,

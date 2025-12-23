@@ -47,7 +47,7 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
   setInputHeight
 }) => {
   return (
-    <div className="max-w-3xl mx-auto w-full relative">
+    <div className="w-full relative">
       {/* Context Indicator */}
       {isInputDragOver && (
         <div className="absolute -top-8 left-1/2 -translate-x-1/2 text-xs font-medium bg-[#4485d1] text-white px-3 py-1.5 rounded-full shadow-lg animate-bounce">

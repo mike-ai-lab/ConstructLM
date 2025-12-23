@@ -100,7 +100,6 @@ html.dark {
   position: fixed;
   bottom: 32px;
   max-width: 800px;
-  margin: 0 auto;
   z-index: 20;
 }
 

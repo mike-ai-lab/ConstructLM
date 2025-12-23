@@ -132,19 +132,6 @@ const App: React.FC = () => {
     layoutState.messagesEndRef,
     layoutState.messagesContainerRef,
     layoutState.setUserHasScrolled,
-    layoutState.isResizingSidebar,
-    layoutState.isResizingViewer,
-    layoutState.setSidebarWidth,
-    layoutState.setViewerWidth,
-    layoutState.setIsResizingSidebar,
-    layoutState.setIsResizingViewer,
-    layoutState.isSidebarOpen,
-    layoutState.sidebarWidth,
-    MIN_SIDEBAR_WIDTH,
-    MAX_SIDEBAR_WIDTH,
-    MIN_VIEWER_WIDTH,
-    MAX_VIEWER_WIDTH,
-    MIN_CHAT_WIDTH,
     chatState.currentChatId,
     chatHandlers.saveCurrentChat,
     fileState.files,
@@ -231,9 +218,7 @@ const App: React.FC = () => {
         />
       </div>
 
-      {!layoutState.isMobile && layoutState.isSidebarOpen && !featureState.mindMapData && !featureState.isGeneratingMindMap && (
-        <div className={`resize-handle-vertical ${layoutState.isResizingSidebar ? 'active' : ''}`} onMouseDown={() => layoutState.setIsResizingSidebar(true)} />
-      )}
+
 
       {/* MIDDLE CHAT AREA */}
       <div className="flex-1 flex flex-col h-full relative bg-white dark:bg-[#1a1a1a] transition-all duration-300" style={{ minWidth: MIN_CHAT_WIDTH }}>
@@ -294,8 +279,8 @@ const App: React.FC = () => {
         <div 
           className="fixed bottom-0 bg-white dark:bg-[#1a1a1a] pointer-events-none z-20"
           style={{
-            left: layoutState.isMobile ? '16px' : (layoutState.isSidebarOpen ? `${layoutState.sidebarWidth + 16}px` : '16px'),
-            right: activeFile ? (layoutState.isMobile ? '16px' : `${layoutState.viewerWidth + 16}px`) : '16px',
+            left: layoutState.isMobile ? '0' : (layoutState.isSidebarOpen ? `${layoutState.sidebarWidth}px` : '0'),
+            right: activeFile ? (layoutState.isMobile ? '0' : `${layoutState.viewerWidth}px`) : '0',
             height: '140px',
             transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1), right 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
           }}
@@ -303,8 +288,8 @@ const App: React.FC = () => {
         <div
           className="input-gradient-layer fixed bottom-[140px] pointer-events-none z-20"
           style={{
-            left: layoutState.isMobile ? '16px' : (layoutState.isSidebarOpen ? `${layoutState.sidebarWidth + 16}px` : '16px'),
-            right: activeFile ? (layoutState.isMobile ? '16px' : `${layoutState.viewerWidth + 16}px`) : '16px',
+            left: layoutState.isMobile ? '0' : (layoutState.isSidebarOpen ? `${layoutState.sidebarWidth}px` : '0'),
+            right: activeFile ? (layoutState.isMobile ? '0' : `${layoutState.viewerWidth}px`) : '0',
             height: '30px',
             transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1), right 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
           }}
@@ -313,7 +298,11 @@ const App: React.FC = () => {
           className="floating-input-container z-20"
           style={{
             left: layoutState.isMobile ? '16px' : (layoutState.isSidebarOpen ? `${layoutState.sidebarWidth + 16}px` : '16px'),
-            right: activeFile ? (layoutState.isMobile ? '16px' : `${layoutState.viewerWidth + 16}px`) : '16px'
+            right: activeFile ? (layoutState.isMobile ? '16px' : `${layoutState.viewerWidth + 16}px`) : '16px',
+            transform: 'translateX(0)',
+            maxWidth: '800px',
+            margin: '0 auto',
+            transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1), right 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
           }}
         >
           <FloatingInput
@@ -344,10 +333,11 @@ const App: React.FC = () => {
         {/* Footer Text - Independent Element */}
         {!featureState.mindMapData && !featureState.isSettingsOpen && !featureState.isCallingEffect && !featureState.isHelpOpen && (
         <div 
-          className="fixed bottom-2 text-center pointer-events-none z-20"
+          className="fixed bottom-2 pointer-events-none z-20"
           style={{
             left: layoutState.isMobile ? '16px' : (layoutState.isSidebarOpen ? `${layoutState.sidebarWidth + 16}px` : '16px'),
             right: activeFile ? (layoutState.isMobile ? '16px' : `${layoutState.viewerWidth + 16}px`) : '16px',
+            textAlign: 'center',
             transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1), right 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
           }}
         >
@@ -356,9 +346,7 @@ const App: React.FC = () => {
         )}
       </div>
 
-      {!layoutState.isMobile && activeFile && !featureState.mindMapData && !featureState.isGeneratingMindMap && (
-        <div className={`resize-handle-vertical ${layoutState.isResizingViewer ? 'active' : ''}`} onMouseDown={() => layoutState.setIsResizingViewer(true)} />
-      )}
+
 
       {/* RIGHT DOCUMENT VIEWER */}
       {activeFile && (
