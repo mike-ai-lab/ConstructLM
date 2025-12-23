@@ -5,6 +5,7 @@ import CitationRenderer from './CitationRenderer';
 import { generateSpeech } from '../services/geminiService';
 import { decodeAudioData } from '../services/audioUtils';
 import { contextMenuManager, createMessageContextMenu } from '../utils/uiHelpers';
+import { InteractiveBlob } from './InteractiveBlob';
 
 interface MessageBubbleProps {
   message: Message;
@@ -60,10 +61,16 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, files, onViewDoc
     <div className={`flex w-full mb-8 ${isUser ? 'justify-end' : 'justify-start'}`}>
       <div className={`flex max-w-[90%] md:max-w-[85%] ${isUser ? 'flex-row-reverse' : 'flex-row'} gap-4 group`}>
         {/* Avatar */}
-        <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center shadow-sm border ${
-          isUser ? 'bg-white dark:bg-[#2a2a2a] border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] text-[#666666] dark:text-[#a0a0a0]' : 'bg-gradient-to-br from-[#4485d1] to-[#4485d1] border-transparent text-white'
+        <div className={`flex-shrink-0 ${
+          isUser ? 'w-8 h-8' : 'w-10 h-10'
+        } rounded-full flex items-center justify-center shadow-sm border ${
+          isUser ? 'bg-white dark:bg-[#2a2a2a] border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] text-[#666666] dark:text-[#a0a0a0]' : 'border-transparent overflow-hidden'
         }`}>
-          {isUser ? <User size={14} /> : <Sparkles size={14} fill="currentColor" />}
+          {isUser ? (
+            <User size={14} />
+          ) : (
+            <InteractiveBlob size={40} color="#a6aed9" />
+          )}
         </div>
 
         {/* Content */}

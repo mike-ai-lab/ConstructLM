@@ -42,6 +42,31 @@
       const [isResizing, setIsResizing] = useState(null);
       const [citationPreview, setCitationPreview] = useState(null);
       const [chipRef, setChipRef] = useState(null);
+      const [citationPosition, setCitationPosition] = useState({ top: 0, left: 0 });
+
+      useEffect(() => {
+        if (citationPreview && chipRef) {
+          const rect = chipRef.getBoundingClientRect();
+          const popupWidth = 320;
+          const popupHeight = 200;
+          const gap = 8;
+          
+          let top = rect.bottom + gap;
+          let left = rect.left;
+          
+          if (left + popupWidth > window.innerWidth - 10) {
+            left = window.innerWidth - popupWidth - 10;
+          }
+          if (left < 10) left = 10;
+          
+          if (top + popupHeight > window.innerHeight - 10) {
+            const topAlt = rect.top - popupHeight - gap;
+            top = topAlt >= 10 ? topAlt : window.innerHeight - popupHeight - 10;
+          }
+          
+          setCitationPosition({ top, left });
+        }
+      }, [citationPreview, chipRef]);
 
       useEffect(() => {
         const handleClickOutside = (e) => {
@@ -187,7 +212,8 @@
                             <div key={cite.id} className="relative inline-block">
                               <button
                                 onClick={(e) => {
-                                  setChipRef(e.currentTarget.parentElement);
+                                  const parent = e.currentTarget.parentElement;
+                                  setChipRef(parent);
                                   setCitationPreview(citationPreview?.id === cite.id ? null : cite);
                                 }}
                                 className="px-2 py-1 bg-slate-200 border border-slate-400 rounded-full text-xs text-slate-900 hover:bg-slate-300 transition-colors flex items-center gap-1 font-medium"
@@ -195,10 +221,11 @@
                                 <Icon name="file-text" size={12} />
                                 {cite.doc} p.{cite.page}
                               </button>
-                              {citationPreview?.id === cite.id && (
+                              {citationPreview?.id === cite.id && chipRef && (
                                 <div 
                                   id="citation-preview"
-                                  className="absolute top-full left-0 mt-2 bg-white rounded-xl shadow-2xl p-4 w-80 border-2 border-slate-400 z-[100]"
+                                  className="fixed bg-white rounded-xl shadow-2xl p-4 w-80 border-2 border-slate-400 z-[100]"
+                                  style={{ top: `${citationPosition.top}px`, left: `${citationPosition.left}px` }}
                                 >
                                   <div className="flex items-start justify-between mb-3">
                                     <div className="flex items-center gap-2">

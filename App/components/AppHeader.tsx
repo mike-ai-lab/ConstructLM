@@ -3,6 +3,7 @@ import { Sparkles, PanelLeft, PanelLeftOpen, Cpu, ChevronDown, Phone, Plus, Edit
 import { MODEL_REGISTRY } from '../../services/modelRegistry';
 import { DRAWING_COLORS } from '../../services/drawingService';
 import GraphicsLibrary from '../../components/GraphicsLibrary';
+import { InteractiveBlob } from '../../components/InteractiveBlob';
 
 interface AppHeaderProps {
   isMobile: boolean;
@@ -59,8 +60,8 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
             {props.isSidebarOpen ? <PanelLeft size={18} /> : <PanelLeftOpen size={18} />}
           </button>
         )}
-        <div className="bg-gradient-to-tr from-[#4485d1] to-[#4485d1] p-1.5 rounded-lg shadow-sm flex-shrink-0">
-          <Sparkles size={14} className="text-white" />
+        <div className="flex-shrink-0 flex items-center justify-center">
+          <InteractiveBlob size={28} color="#4485d1" />
         </div>
         <h1 className="font-semibold text-[#1a1a1a] dark:text-white text-base md:text-lg tracking-tight truncate hidden sm:block">ConstructLM</h1>
         

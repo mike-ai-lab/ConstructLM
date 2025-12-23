@@ -51,12 +51,12 @@ const TextContextViewer: React.FC<TextContextViewerProps> = ({ file, quote, loca
       const rows = dataLines.map(line => parseCSVLine(line, delimiter));
       
       return (
-        <div ref={tableRef} className="overflow-auto p-2" style={{ maxHeight: '400px' }} onWheel={(e) => e.stopPropagation()}>
-          <table className="w-full text-xs border-collapse">
+        <div ref={tableRef} className="overflow-auto p-2" style={{ maxHeight: '400px', transform: 'scale(0.85)', transformOrigin: 'top left', width: '117.65%' }} onWheel={(e) => e.stopPropagation()}>
+          <table className="w-full text-[11px] border-collapse">
             <thead className="sticky top-0 bg-gray-100 dark:bg-[#2a2a2a] z-10">
               <tr>
                 {headers.map((h, idx) => (
-                  <th key={idx} className="border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.2)] px-2 py-1.5 text-left font-semibold text-[#1a1a1a] dark:text-white whitespace-nowrap bg-gray-100 dark:bg-[#2a2a2a]">{h}</th>
+                  <th key={idx} className="border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.2)] px-1.5 py-1 text-left font-semibold text-[#1a1a1a] dark:text-white whitespace-nowrap bg-gray-100 dark:bg-[#2a2a2a]">{h}</th>
                 ))}
               </tr>
             </thead>
@@ -64,7 +64,7 @@ const TextContextViewer: React.FC<TextContextViewerProps> = ({ file, quote, loca
               {rows.map((row, rowIdx) => (
                 <tr key={rowIdx} className={`${rowIdx + 2 === targetRowNum ? 'highlighted-row bg-yellow-100 dark:bg-yellow-600/40' : 'hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#222222]'}`}>
                   {row.map((cell, cellIdx) => (
-                    <td key={cellIdx} className="border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.2)] px-2 py-1.5 text-[#1a1a1a] dark:text-white">{cell}</td>
+                    <td key={cellIdx} className="border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.2)] px-1.5 py-1 text-[#1a1a1a] dark:text-white">{cell}</td>
                   ))}
                 </tr>
               ))}

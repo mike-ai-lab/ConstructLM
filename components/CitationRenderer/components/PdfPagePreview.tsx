@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { Loader2 } from 'lucide-react';
 import { renderHighlights } from '../utils/pdfUtils';
 
@@ -21,8 +21,11 @@ const PdfPagePreview: React.FC<PdfPagePreviewProps> = ({ file, pageNumber, quote
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef({ x: 0, y: 0, posX: 0, posY: 0 });
+  const [isHovering, setIsHovering] = useState(false);
 
+  // Render PDF page
   useEffect(() => {
+    let cancelled = false;
     const renderPage = async () => {
       try {
         setLoading(true);
@@ -66,31 +69,53 @@ const PdfPagePreview: React.FC<PdfPagePreviewProps> = ({ file, pageNumber, quote
       } catch (err: any) {
         if (err?.name !== 'RenderingCancelledException') console.error("[CitationPreview] Error:", err);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
     renderPage();
-    return () => { if (renderTaskRef.current) renderTaskRef.current.cancel?.(); };
+    return () => {
+      cancelled = true;
+      if (renderTaskRef.current) renderTaskRef.current.cancel?.();
+    };
   }, [file, pageNumber, quote]);
 
-  const handleWheel = (e: React.WheelEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    const delta = -e.deltaY * 0.003;
-    const newScale = Math.min(Math.max(0.5, scale + delta), 8);
+  // Wheel handler on container - only zoom if hovering over PDF
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
 
-    if (containerRef.current && contentRef.current) {
-      const rect = containerRef.current.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      const dx = (x - rect.width / 2 - position.x) * (newScale / scale - 1);
-      const dy = (y - rect.height / 2 - position.y) * (newScale / scale - 1);
-      setPosition({ x: position.x - dx, y: position.y - dy });
-    }
-    setScale(newScale);
-  };
+    const handleWheel = (e: WheelEvent) => {
+      if (!isHovering) return;
+      
+      e.preventDefault();
+      e.stopPropagation();
 
+      const delta = -e.deltaY * 0.0018;
+      setScale(prevScale => {
+        const newScale = Math.min(Math.max(0.5, prevScale + delta), 8);
+
+        const containerRect = container.getBoundingClientRect();
+        const x = e.clientX - containerRect.left;
+        const y = e.clientY - containerRect.top;
+
+        setPosition(prevPos => {
+          const ratio = prevScale === 0 ? 1 : newScale / prevScale;
+          const dx = (x - containerRect.width / 2 - prevPos.x) * (ratio - 1);
+          const dy = (y - containerRect.height / 2 - prevPos.y) * (ratio - 1);
+          return { x: prevPos.x - dx, y: prevPos.y - dy };
+        });
+
+        return newScale;
+      });
+    };
+
+    container.addEventListener('wheel', handleWheel, { passive: false });
+    return () => container.removeEventListener('wheel', handleWheel);
+  }, [isHovering]);
+
+  // Mouse drag (middle button) for panning
   const handleMouseDown = (e: React.MouseEvent) => {
+    // activate drag only for middle mouse button (button === 1)
     if (e.button === 1) {
       e.preventDefault();
       setIsDragging(true);
@@ -108,24 +133,27 @@ const PdfPagePreview: React.FC<PdfPagePreviewProps> = ({ file, pageNumber, quote
 
   const handleMouseUp = () => setIsDragging(false);
 
-  const handleZoom = (delta: number) => {
+  // Exposed programmatic zoom/reset handlers
+  const handleZoom = useCallback((delta: number) => {
     setScale(prev => {
       const newScale = Math.min(Math.max(0.5, prev + delta), 8);
-      onScaleChange(newScale);
       return newScale;
     });
-  };
+  }, []);
 
-  const handleReset = () => {
+  const handleReset = useCallback(() => {
     setScale(1);
     setPosition({ x: 0, y: 0 });
     onScaleChange(1);
-  };
+  }, [onScaleChange]);
 
+  // Wire handlers to external ref
   useEffect(() => {
     zoomHandlerRef.current = { handleZoom, handleReset };
-  }, [handleZoom, handleReset]);
+    return () => { zoomHandlerRef.current = undefined; };
+  }, [handleZoom, handleReset, zoomHandlerRef]);
 
+  // notify parent on scale changes
   useEffect(() => {
     onScaleChange(scale);
   }, [scale, onScaleChange]);
@@ -134,20 +162,26 @@ const PdfPagePreview: React.FC<PdfPagePreviewProps> = ({ file, pageNumber, quote
     <div
       ref={containerRef}
       className="flex items-center justify-center min-h-full w-full bg-[rgba(0,0,0,0.03)] dark:bg-[#1a1a1a] relative overflow-hidden"
-      onWheel={handleWheel}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
       style={{ cursor: isDragging ? 'grabbing' : 'default' }}
     >
-      {loading && <div className="absolute inset-0 flex items-center justify-center z-20"><Loader2 size={20} className="animate-spin text-[#666666] dark:text-[#a0a0a0]" /></div>}
+      {loading && (
+        <div className="absolute inset-0 flex items-center justify-center z-20">
+          <Loader2 size={20} className="animate-spin text-[#666666] dark:text-[#a0a0a0]" />
+        </div>
+      )}
       <div
         ref={contentRef}
         className={`relative shadow-lg bg-white ${loading ? 'opacity-0' : 'opacity-100'}`}
+        onMouseEnter={() => setIsHovering(true)}
+        onMouseLeave={() => setIsHovering(false)}
         style={{
           transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
-          transition: isDragging ? 'none' : 'transform 0.1s ease-out'
+          transition: isDragging ? 'none' : 'transform 0.1s ease-out',
+          pointerEvents: 'auto'
         }}
       >
         <canvas ref={canvasRef} className="block" />
