@@ -29,7 +29,7 @@ import ReminderOverlay from './components/ReminderOverlay';
 // import Sources from './components/Sources';
 import AppHeader from './App/components/AppHeader';
 import { FloatingInput } from './App/components/FloatingInput';
-import Reminders from './components/Reminders';
+import ContextWarningModal from './components/ContextWarningModal';
 import { Note, Todo, Reminder, Source } from './types';
 
 const App: React.FC = () => {
@@ -51,6 +51,8 @@ const App: React.FC = () => {
   const [triggeredReminder, setTriggeredReminder] = React.useState<Reminder | null>(null);
   const [uploadFeedback, setUploadFeedback] = React.useState<{ uploaded: number; skipped: number; skippedFiles: string[] } | null>(null);
   const [uploadProgress, setUploadProgress] = React.useState<{ current: number; total: number; currentFile: string } | null>(null);
+  const [contextWarning, setContextWarning] = React.useState<{ totalTokens: number; filesUsed: string[]; selectedCount: number; onProceed: () => void } | null>(null);
+  const [embeddingProgress, setEmbeddingProgress] = React.useState<{ fileId: string; fileName: string; current: number; total: number } | null>(null);
 
   React.useEffect(() => {
     const saved = localStorage.getItem('notes');
@@ -393,12 +395,39 @@ const App: React.FC = () => {
     localStorage.setItem('sources', JSON.stringify(updated));
   };
 
+  // Embeddings disabled - using keyword-based search instead
+  // React.useEffect(() => {
+  //   const generateEmbeddings = async () => {
+  //     for (const file of fileState.files) {
+  //       if (file.status === 'ready') {
+  //         try {
+  //           const { embeddingService } = await import('./services/embeddingService');
+  //           await embeddingService.processFile(file, setEmbeddingProgress);
+  //         } catch (error) {
+  //           console.error('Embedding generation failed:', error);
+  //         }
+  //       }
+  //     }
+  //     setEmbeddingProgress(null);
+  //   };
+  //   
+  //   if (fileState.files.length > 0) {
+  //     generateEmbeddings();
+  //   }
+  // }, [fileState.files]);
+
   // Initialize activeModelId
   React.useEffect(() => {
     if (!featureState.activeModelId) {
       featureState.setActiveModelId(DEFAULT_MODEL_ID);
     }
   }, []);
+
+  const handleToggleSource = (fileId: string) => {
+    chatState.setSelectedSourceIds(prev => 
+      prev.includes(fileId) ? prev.filter(id => id !== fileId) : [...prev, fileId]
+    );
+  };
 
   const chatHandlers = createChatHandlers(
     chatState.currentChatId,
@@ -408,7 +437,9 @@ const App: React.FC = () => {
     chatState.messages,
     chatState.setMessages,
     featureState.activeModelId,
-    featureState.setActiveModelId
+    featureState.setActiveModelId,
+    chatState.selectedSourceIds,
+    chatState.setSelectedSourceIds
   );
 
   const fileHandlers = createFileHandlers(
@@ -432,7 +463,9 @@ const App: React.FC = () => {
     featureState.activeModelId,
     inputState.setShowMentionMenu,
     chatHandlers.saveCurrentChat,
-    sources
+    sources,
+    chatState.selectedSourceIds,
+    setContextWarning
   );
 
   const filteredFiles = fileState.files.filter(f => f.name.toLowerCase().includes(inputState.mentionQuery));
@@ -579,6 +612,17 @@ const App: React.FC = () => {
           </button>
         </div>
       )}
+      {embeddingProgress && (
+        <div className="fixed top-20 right-4 z-[80] bg-purple-600 text-white px-4 py-3 rounded-lg shadow-xl">
+          <div className="flex items-center gap-3">
+            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            <div>
+              <p className="text-sm font-semibold">Indexing for search...</p>
+              <p className="text-xs opacity-90">{embeddingProgress.fileName} ({embeddingProgress.current}/{embeddingProgress.total})</p>
+            </div>
+          </div>
+        </div>
+      )}
       {uploadProgress && (
         <div className="fixed top-20 right-4 z-[80] bg-blue-600 text-white px-4 py-3 rounded-lg shadow-xl">
           <div className="flex items-center gap-3">
@@ -612,6 +656,18 @@ const App: React.FC = () => {
             </button>
           </div>
         </div>
+      )}
+      {contextWarning && (
+        <ContextWarningModal
+          totalTokens={contextWarning.totalTokens}
+          filesUsed={contextWarning.filesUsed}
+          selectedCount={contextWarning.selectedCount}
+          onCancel={() => setContextWarning(null)}
+          onProceed={() => {
+            contextWarning.onProceed();
+            setContextWarning(null);
+          }}
+        />
       )}
       {featureState.isLiveMode && <LiveSession onClose={handleCloseLiveSession} />}
       {featureState.isCallingEffect && (
@@ -682,6 +738,8 @@ const App: React.FC = () => {
             onDeleteChat={chatHandlers.handleDeleteChat}
             isDragOver={layoutState.isSidebarDragOver}
             onDragStateChange={layoutState.setIsSidebarDragOver}
+            selectedSourceIds={chatState.selectedSourceIds}
+            onToggleSource={handleToggleSource}
           />
           {layoutState.isSidebarOpen && !layoutState.isMobile && (
             <div 
@@ -805,6 +863,7 @@ const App: React.FC = () => {
               isRecording={featureState.isRecording}
               inputHeight={inputState.inputHeight}
               sources={sources}
+              selectedSourceIds={chatState.selectedSourceIds}
               onInputChange={inputHandlers.handleInputChange}
               onKeyDown={inputHandlers.handleKeyDown}
               onSendMessage={messageHandlers.handleSendMessage}

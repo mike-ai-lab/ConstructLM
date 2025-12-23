@@ -9,7 +9,9 @@ export const createChatHandlers = (
   messages: Message[],
   setMessages: (messages: Message[]) => void,
   activeModelId: string,
-  setActiveModelId: (id: string) => void
+  setActiveModelId: (id: string) => void,
+  selectedSourceIds: string[],
+  setSelectedSourceIds: (ids: string[]) => void
 ) => {
   const loadChat = (chatId: string) => {
     const chat = chatRegistry.getChat(chatId);
@@ -17,6 +19,7 @@ export const createChatHandlers = (
       setCurrentChatId(chatId);
       setMessages(chat.messages);
       setActiveModelId(chat.modelId);
+      setSelectedSourceIds(chat.selectedSourceIds || []);
     }
   };
 
@@ -37,6 +40,7 @@ export const createChatHandlers = (
       modelId: activeModelId,
       messages,
       fileIds: [],
+      selectedSourceIds,
       createdAt: existingChat?.createdAt || Date.now(),
       updatedAt: updateTimestamp ? Date.now() : (existingChat?.updatedAt || Date.now())
     };
@@ -60,16 +64,16 @@ export const createChatHandlers = (
   };
 
   const handleCreateChat = () => {
-    // Don't create new chat if current chat is empty (only has intro message or no messages)
     const hasUserMessages = messages.some(m => m.role === 'user');
     if (!hasUserMessages) {
-      return; // Current chat is empty, don't create a new one
+      return;
     }
     
     saveCurrentChat();
     const newChat = chatRegistry.createNewChat('New Chat', activeModelId);
     setCurrentChatId(newChat.id);
     setMessages(newChat.messages);
+    setSelectedSourceIds([]);
     setChats(prev => [{
       id: newChat.id,
       name: newChat.name,

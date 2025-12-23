@@ -7,6 +7,7 @@ export const useChatState = () => {
   const [chats, setChats] = useState<ChatMetadata[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [selectedSourceIds, setSelectedSourceIds] = useState<string[]>([]);
 
   return {
     currentChatId,
@@ -17,5 +18,7 @@ export const useChatState = () => {
     setMessages,
     isGenerating,
     setIsGenerating,
+    selectedSourceIds,
+    setSelectedSourceIds,
   };
 };

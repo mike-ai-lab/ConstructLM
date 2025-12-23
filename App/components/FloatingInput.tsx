@@ -15,6 +15,7 @@ interface FloatingInputProps {
   isRecording: boolean;
   inputHeight: number;
   sources: any[];
+  selectedSourceIds: string[];
   onInputChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
   onKeyDown: (e: React.KeyboardEvent) => void;
   onSendMessage: () => void;
@@ -40,6 +41,7 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
   isRecording,
   inputHeight,
   sources,
+  selectedSourceIds,
   onInputChange,
   onKeyDown,
   onSendMessage,
@@ -144,6 +146,11 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
         </div>
       )}
       {/* Context Indicator */}
+      {selectedSourceIds.length > 0 && (
+        <div className="absolute -top-6 left-6 text-[12px] font-medium text-[#4485d1] flex items-center gap-1">
+          <Database size={10} /> Using {selectedSourceIds.length} source{selectedSourceIds.length > 1 ? 's' : ''}
+        </div>
+      )}
       {isInputDragOver && (
         <div className="absolute -top-8 left-1/2 -translate-x-1/2 text-xs font-medium bg-[#4485d1] text-white px-3 py-1.5 rounded-full shadow-lg animate-bounce">
           Drop to add & mention

@@ -6,6 +6,7 @@ export interface ChatSession {
   modelId: string;
   messages: Message[];
   fileIds: string[];
+  selectedSourceIds: string[];
   createdAt: number;
   updatedAt: number;
 }
@@ -108,6 +109,7 @@ class ChatRegistryService {
         modelId: chat.modelId || 'gemini-2.0-flash-exp',
         messages: chat.messages || [],
         fileIds: chat.fileIds || [],
+        selectedSourceIds: chat.selectedSourceIds || [],
         createdAt: chat.createdAt || Date.now(),
         updatedAt: chat.updatedAt || Date.now()
       };
@@ -193,6 +195,7 @@ class ChatRegistryService {
         timestamp: Date.now()
       }],
       fileIds: [],
+      selectedSourceIds: [],
       createdAt: Date.now(),
       updatedAt: Date.now()
     };
@@ -256,6 +259,7 @@ class ChatRegistryService {
           modelId: chat.modelId || 'gemini-2.0-flash-exp',
           messages: Array.isArray(chat.messages) ? chat.messages : [],
           fileIds: Array.isArray(chat.fileIds) ? chat.fileIds : [],
+          selectedSourceIds: Array.isArray(chat.selectedSourceIds) ? chat.selectedSourceIds : [],
           createdAt: chat.createdAt || Date.now(),
           updatedAt: chat.updatedAt || Date.now()
         };

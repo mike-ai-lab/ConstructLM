@@ -18,6 +18,8 @@ interface FileSidebarProps {
   onDeleteChat: (chatId: string) => void;
   isDragOver: boolean;
   onDragStateChange: (isDragging: boolean) => void;
+  selectedSourceIds: string[];
+  onToggleSource: (fileId: string) => void;
 }
 
 const removeFolder = (folderPath: string, files: ProcessedFile[], onRemove: (id: string) => void) => {
@@ -40,7 +42,7 @@ interface TreeNode {
 const FileSidebar: React.FC<FileSidebarProps> = ({ 
   files, onUpload, onRemove, isProcessing, onGenerateMindMap,
   chats, activeChatId, onSelectChat, onCreateChat, onDeleteChat,
-  isDragOver, onDragStateChange
+  isDragOver, onDragStateChange, selectedSourceIds, onToggleSource
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
@@ -184,7 +186,13 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
                     `}
                     style={{ marginLeft: `${depth * 16 + 8}px` }}
                 >
-                    <div className="w-3 h-3 flex-shrink-0" />
+                    <input
+                        type="checkbox"
+                        checked={selectedSourceIds.includes(file.id)}
+                        onChange={() => onToggleSource(file.id)}
+                        className="w-3 h-3 rounded border-gray-300 text-blue-600 focus:ring-blue-500 flex-shrink-0 cursor-pointer"
+                        onClick={(e) => e.stopPropagation()}
+                    />
                     <div className="flex-shrink-0">
                         {file.status === 'processing' ? <Loader2 size={12} className="animate-spin text-blue-500"/> : getIcon(file)}
                     </div>
@@ -397,6 +405,13 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
                               ${file.status === 'error' ? 'bg-red-50 dark:bg-red-900/20' : 'hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a]'}
                           `}
                       >
+                          <input
+                              type="checkbox"
+                              checked={selectedSourceIds.includes(file.id)}
+                              onChange={() => onToggleSource(file.id)}
+                              className="w-3.5 h-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 flex-shrink-0 cursor-pointer"
+                              onClick={(e) => e.stopPropagation()}
+                          />
                           <div className="flex-shrink-0">
                               {file.status === 'processing' ? <Loader2 size={12} className="animate-spin text-blue-500"/> : getIcon(file)}
                           </div>

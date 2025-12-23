@@ -19,6 +19,7 @@ export interface Message {
   isStreaming?: boolean;
   modelId?: string;
   thinking?: string;
+  sourcesUsed?: string[];
   usage?: {
     inputTokens: number;
     outputTokens: number;
