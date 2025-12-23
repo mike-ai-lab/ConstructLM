@@ -336,10 +336,38 @@ const streamOpenAICompatible = async (
         }
     }
 
-    // Direct API calls
+    // Try local proxy first, fallback to public CORS proxy
     let baseUrl = 'https://api.openai.com/v1/chat/completions';
+    let useProxy = false;
+    
     if (model.provider === 'groq') {
-        baseUrl = 'https://api.groq.com/openai/v1/chat/completions';
+        // Try local proxy first
+        try {
+            const testResponse = await fetch('http://localhost:3002/api/proxy/groq', { method: 'HEAD' }).catch(() => null);
+            if (testResponse?.ok) {
+                baseUrl = 'http://localhost:3002/api/proxy/groq';
+                useProxy = true;
+            }
+        } catch (e) {}
+        
+        // Fallback to public CORS proxy
+        if (!useProxy) {
+            baseUrl = 'https://corsproxy.io/?' + encodeURIComponent('https://api.groq.com/openai/v1/chat/completions');
+        }
+    } else if (model.provider === 'openai') {
+        // Try local proxy first
+        try {
+            const testResponse = await fetch('http://localhost:3002/api/proxy/openai', { method: 'HEAD' }).catch(() => null);
+            if (testResponse?.ok) {
+                baseUrl = 'http://localhost:3002/api/proxy/openai';
+                useProxy = true;
+            }
+        } catch (e) {}
+        
+        // Fallback to public CORS proxy
+        if (!useProxy) {
+            baseUrl = 'https://corsproxy.io/?' + encodeURIComponent('https://api.openai.com/v1/chat/completions');
+        }
     }
 
     try {

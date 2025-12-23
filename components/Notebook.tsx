@@ -1,4 +1,6 @@
+// Notebook.tsx
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, BookMarked, Trash2, Star, Search, Tag, Download, Copy, Edit2, Check, ExternalLink, FileText, Grid, List, CheckSquare, Square, Save, ArrowUpDown } from 'lucide-react';
 import { Note } from '../types';
 import CitationRenderer from './CitationRenderer';
@@ -141,45 +143,44 @@ const Notebook: React.FC<NotebookProps> = ({ notes, onDeleteNote, onUpdateNote, 
   const openedNote = openNoteId ? notes.find(n => n.id === openNoteId) : null;
 
   if (openedNote) {
-    return (
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
-        <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)]">
-          <div className="flex items-center justify-between p-4 border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)]">
-            <div className="flex items-center gap-3 flex-1">
-              <span className="text-xs px-2 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded font-mono font-semibold">
-                Note #{openedNote.noteNumber}
-              </span>
-              <input
-                type="text"
-                value={editTitle}
-                onChange={(e) => setEditTitle(e.target.value)}
-                placeholder="Add title..."
-                className="flex-1 text-lg font-semibold text-[#1a1a1a] dark:text-white bg-transparent border-none focus:outline-none"
-              />
-            </div>
-            <div className="flex gap-2">
-              <button onClick={saveNote} className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 flex items-center gap-1">
-                <Save size={14} />
-                Save
-              </button>
-              <button onClick={() => setOpenNoteId(null)} className="p-2 hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[#2a2a2a] rounded-lg">
-                <X size={20} className="text-[#666666] dark:text-[#a0a0a0]" />
-              </button>
-            </div>
-          </div>
-          <div className="flex-1 overflow-y-auto p-6">
-            <textarea
-              value={editContent}
-              onChange={(e) => setEditContent(e.target.value)}
-              className="w-full h-full min-h-[400px] bg-transparent text-[#1a1a1a] dark:text-white resize-none focus:outline-none text-sm leading-7"
-              placeholder="Note content..."
+    return createPortal(
+      <div className="fixed inset-0 bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)]" style={{ transform: 'scale(0.8)', top: '23.6727px', margin: '11.8409px auto' }}>
+        <div className="flex items-center justify-between p-4 border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)]">
+          <div className="flex items-center gap-3 flex-1">
+            <span className="text-xs px-2 py-1 bg-[#25b5cd]/20 dark:bg-[#25b5cd]/10 text-[#25b5cd] dark:text-[#5bd8bb] rounded font-mono font-semibold">
+              Note #{openedNote.noteNumber}
+            </span>
+            <input
+              type="text"
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              placeholder="Add title..."
+              className="flex-1 text-lg font-semibold text-[#1a1a1a] dark:text-white bg-transparent border-none focus:outline-none"
             />
           </div>
-          <div className="p-4 border-t border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] text-xs text-[#666666] dark:text-[#a0a0a0]">
-            {openedNote.modelId || 'AI'} • {new Date(openedNote.timestamp).toLocaleString()}
+          <div className="flex gap-2">
+            <button onClick={saveNote} className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 flex items-center gap-1">
+              <Save size={14} />
+              Save
+            </button>
+            <button onClick={() => setOpenNoteId(null)} className="p-2 hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[#2a2a2a] rounded-lg">
+              <X size={20} className="text-[#666666] dark:text-[#a0a0a0]" />
+            </button>
           </div>
         </div>
-      </div>
+
+        <textarea
+          value={editContent}
+          onChange={(e) => setEditContent(e.target.value)}
+          className="flex-1 w-full bg-transparent text-[#1a1a1a] dark:text-white resize-none focus:outline-none text-sm leading-7 p-6"
+          placeholder="Note content..."
+        />
+
+        <div className="p-4 border-t border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] text-xs text-[#666666] dark:text-[#a0a0a0]">
+          {openedNote.modelId || 'AI'} • {new Date(openedNote.timestamp).toLocaleString()}
+        </div>
+      </div>,
+      document.body
     );
   }
 
@@ -275,7 +276,7 @@ const Notebook: React.FC<NotebookProps> = ({ notes, onDeleteNote, onUpdateNote, 
               {filteredNotes.map((note) => (
                 <div
                   key={note.id}
-                  className={`bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] rounded-lg p-3 border-2 transition-all hover:shadow-lg ${
+                  className={`bg-white/70 dark:bg-[#2a2a2a]/70 backdrop-blur-md rounded-lg p-3 border-2 transition-all hover:shadow-lg ${
                     selectedNotes.has(note.id)
                       ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
                       : 'border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)]'
@@ -284,11 +285,11 @@ const Notebook: React.FC<NotebookProps> = ({ notes, onDeleteNote, onUpdateNote, 
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex items-center gap-1 cursor-pointer" onClick={(e) => toggleSelectNote(note.id, e)}>
                       {selectedNotes.has(note.id) ? <CheckSquare size={14} className="text-blue-600" /> : <Square size={14} className="text-[#666666] dark:text-[#a0a0a0]" />}
-                      <span className="text-xs px-1.5 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded font-mono font-semibold">
+                      <span className="text-xs px-1.5 py-0.5 bg-[#25b5cd]/20 dark:bg-[#25b5cd]/10 text-[#25b5cd] dark:text-[#5bd8bb] rounded font-mono font-semibold">
                         #{note.noteNumber}
                       </span>
                     </div>
-                    {note.isFavorite && <Star size={12} fill="currentColor" className="text-yellow-600" />}
+                    {note.isFavorite && <Star size={12} fill="currentColor" className="text-[#25b5cd]" />}
                   </div>
                   <div onClick={() => openNote(note)} className="cursor-pointer">
                     {note.title && <h3 className="font-semibold text-sm text-[#1a1a1a] dark:text-white mb-1 line-clamp-2">{note.title}</h3>}
@@ -324,7 +325,7 @@ const Notebook: React.FC<NotebookProps> = ({ notes, onDeleteNote, onUpdateNote, 
                       <div onClick={(e) => { e.stopPropagation(); toggleSelectNote(note.id, e); }} className="cursor-pointer">
                         {selectedNotes.has(note.id) ? <CheckSquare size={14} className="text-blue-600" /> : <Square size={14} className="text-[#666666] dark:text-[#a0a0a0]" />}
                       </div>
-                      <span className="px-1.5 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded font-mono font-semibold">
+                      <span className="px-1.5 py-0.5 bg-[#25b5cd]/20 dark:bg-[#25b5cd]/10 text-[#25b5cd] dark:text-[#5bd8bb] rounded font-mono font-semibold">
                         #{note.noteNumber}
                       </span>
                     </div>
@@ -391,7 +392,7 @@ const Notebook: React.FC<NotebookProps> = ({ notes, onDeleteNote, onUpdateNote, 
                         <span className="text-xs font-bold text-[#666666] dark:text-[#a0a0a0] uppercase tracking-widest">
                           {note.modelId || 'AI'}
                         </span>
-                        <span className="text-xs px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded-full font-mono font-semibold">
+                        <span className="text-xs px-2 py-0.5 bg-[#25b5cd]/20 dark:bg-[#25b5cd]/10 text-[#25b5cd] dark:text-[#5bd8bb] rounded-full font-mono font-semibold">
                           Note #{note.noteNumber}
                         </span>
                         <span className="text-xs text-[#666666] dark:text-[#a0a0a0]">
@@ -430,7 +431,7 @@ const Notebook: React.FC<NotebookProps> = ({ notes, onDeleteNote, onUpdateNote, 
                         onClick={() => onUpdateNote(note.id, { isFavorite: !note.isFavorite })}
                         className={`p-1.5 rounded transition-colors ${
                           note.isFavorite
-                            ? 'text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20'
+                            ? 'text-[#25b5cd] hover:bg-[#25b5cd]/10 dark:hover:bg-[#25b5cd]/5'
                             : 'text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[#222222]'
                         }`}
                         title="Favorite"

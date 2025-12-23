@@ -56,7 +56,190 @@ const App: React.FC = () => {
     const savedSources = localStorage.getItem('sources');
     if (saved) setNotes(JSON.parse(saved));
     if (savedCounter) setNoteCounter(parseInt(savedCounter));
-    if (savedTodos) setTodos(JSON.parse(savedTodos));
+    
+    const demoTasks: Todo[] = [
+      {
+        id: 'demo1',
+        title: 'Design new landing page',
+        completed: false,
+        timestamp: Date.now(),
+        priority: 'high' as const,
+        category: 'Design',
+        estimatedTime: 180,
+        tags: ['ui', 'urgent', 'client'],
+        notes: 'Focus on mobile-first approach with modern aesthetics',
+        subtasks: [
+          { id: 'sub1', title: 'Create wireframes', completed: true },
+          { id: 'sub2', title: 'Design mockups', completed: true },
+          { id: 'sub3', title: 'Get client approval', completed: false },
+          { id: 'sub4', title: 'Implement responsive design', completed: false }
+        ],
+        progress: 50
+      },
+      {
+        id: 'demo2',
+        title: 'Refactor authentication system',
+        completed: false,
+        timestamp: Date.now() - 3600000,
+        priority: 'high' as const,
+        category: 'Backend',
+        estimatedTime: 240,
+        tags: ['security', 'refactor'],
+        notes: 'Migrate to JWT tokens and add 2FA support',
+        subtasks: [
+          { id: 'sub5', title: 'Research JWT best practices', completed: true },
+          { id: 'sub6', title: 'Implement token refresh', completed: false },
+          { id: 'sub7', title: 'Add 2FA integration', completed: false },
+          { id: 'sub8', title: 'Write unit tests', completed: false },
+          { id: 'sub9', title: 'Update documentation', completed: false }
+        ],
+        progress: 20
+      },
+      {
+        id: 'demo3',
+        title: 'Optimize database queries',
+        completed: false,
+        timestamp: Date.now() - 7200000,
+        priority: 'medium' as const,
+        category: 'Performance',
+        estimatedTime: 120,
+        tags: ['optimization', 'database'],
+        notes: 'Focus on slow queries identified in monitoring',
+        subtasks: [
+          { id: 'sub10', title: 'Analyze query performance', completed: true },
+          { id: 'sub11', title: 'Add database indexes', completed: true },
+          { id: 'sub12', title: 'Implement query caching', completed: false }
+        ],
+        progress: 67
+      },
+      {
+        id: 'demo4',
+        title: 'Write API documentation',
+        completed: true,
+        timestamp: Date.now() - 86400000,
+        priority: 'medium' as const,
+        category: 'Documentation',
+        estimatedTime: 90,
+        tags: ['docs', 'api'],
+        notes: 'Complete OpenAPI spec with examples',
+        subtasks: [
+          { id: 'sub13', title: 'Document all endpoints', completed: true },
+          { id: 'sub14', title: 'Add code examples', completed: true },
+          { id: 'sub15', title: 'Review with team', completed: true }
+        ],
+        progress: 100
+      },
+      {
+        id: 'demo5',
+        title: 'Implement dark mode',
+        completed: false,
+        timestamp: Date.now() - 10800000,
+        priority: 'low' as const,
+        category: 'Feature',
+        estimatedTime: 150,
+        tags: ['ui', 'enhancement'],
+        notes: 'Add theme toggle with system preference detection',
+        subtasks: [
+          { id: 'sub16', title: 'Create color palette', completed: true },
+          { id: 'sub17', title: 'Update all components', completed: false },
+          { id: 'sub18', title: 'Add theme persistence', completed: false },
+          { id: 'sub19', title: 'Test accessibility', completed: false }
+        ],
+        progress: 25
+      },
+      {
+        id: 'demo6',
+        title: 'Fix mobile navigation bugs',
+        completed: true,
+        timestamp: Date.now() - 172800000,
+        priority: 'high' as const,
+        category: 'Bug Fix',
+        estimatedTime: 60,
+        tags: ['mobile', 'bug'],
+        notes: 'Menu not closing on iOS devices',
+        subtasks: [
+          { id: 'sub20', title: 'Reproduce issue', completed: true },
+          { id: 'sub21', title: 'Implement fix', completed: true },
+          { id: 'sub22', title: 'Test on multiple devices', completed: true }
+        ],
+        progress: 100
+      },
+      {
+        id: 'demo7',
+        title: 'Set up CI/CD pipeline',
+        completed: false,
+        timestamp: Date.now() - 14400000,
+        priority: 'medium' as const,
+        category: 'DevOps',
+        estimatedTime: 200,
+        tags: ['automation', 'deployment'],
+        notes: 'Configure GitHub Actions for automated testing and deployment',
+        subtasks: [
+          { id: 'sub23', title: 'Configure test workflow', completed: true },
+          { id: 'sub24', title: 'Set up staging deployment', completed: false },
+          { id: 'sub25', title: 'Configure production deployment', completed: false },
+          { id: 'sub26', title: 'Add deployment notifications', completed: false }
+        ],
+        progress: 25
+      },
+      {
+        id: 'demo8',
+        title: 'Conduct security audit',
+        completed: false,
+        timestamp: Date.now() - 18000000,
+        priority: 'high' as const,
+        category: 'Security',
+        estimatedTime: 300,
+        tags: ['security', 'audit'],
+        notes: 'Comprehensive security review before launch',
+        subtasks: [
+          { id: 'sub27', title: 'Run automated security scan', completed: true },
+          { id: 'sub28', title: 'Review dependencies', completed: true },
+          { id: 'sub29', title: 'Manual code review', completed: false },
+          { id: 'sub30', title: 'Penetration testing', completed: false },
+          { id: 'sub31', title: 'Fix identified issues', completed: false }
+        ],
+        progress: 40
+      },
+      {
+        id: 'demo9',
+        title: 'Create onboarding tutorial',
+        completed: false,
+        timestamp: Date.now() - 21600000,
+        priority: 'low' as const,
+        category: 'UX',
+        estimatedTime: 100,
+        tags: ['tutorial', 'ux'],
+        notes: 'Interactive walkthrough for new users',
+        subtasks: [
+          { id: 'sub32', title: 'Design tutorial flow', completed: true },
+          { id: 'sub33', title: 'Write copy', completed: false },
+          { id: 'sub34', title: 'Implement interactive elements', completed: false }
+        ],
+        progress: 33
+      },
+      {
+        id: 'demo10',
+        title: 'Upgrade to React 19',
+        completed: false,
+        timestamp: Date.now() - 25200000,
+        priority: 'medium' as const,
+        category: 'Maintenance',
+        estimatedTime: 180,
+        tags: ['upgrade', 'react'],
+        notes: 'Update dependencies and refactor deprecated APIs',
+        subtasks: [
+          { id: 'sub35', title: 'Update package.json', completed: true },
+          { id: 'sub36', title: 'Fix breaking changes', completed: false },
+          { id: 'sub37', title: 'Update tests', completed: false },
+          { id: 'sub38', title: 'Performance testing', completed: false }
+        ],
+        progress: 25
+      }
+    ];
+    setTodos(demoTasks);
+    localStorage.setItem('todos', JSON.stringify(demoTasks));
+    
     if (savedReminders) setReminders(JSON.parse(savedReminders));
     if (savedSources) setSources(JSON.parse(savedSources));
   }, []);
@@ -134,6 +317,14 @@ const App: React.FC = () => {
     const updated = todos.filter(t => t.id !== id);
     setTodos(updated);
     localStorage.setItem('todos', JSON.stringify(updated));
+  };
+
+  const handleDeleteSubtask = (todoId: string, subtaskId: string) => {
+    const todo = todos.find(t => t.id === todoId);
+    if (!todo || !todo.subtasks) return;
+    const subtasks = todo.subtasks.filter(s => s.id !== subtaskId);
+    const progress = subtasks.length > 0 ? Math.round((subtasks.filter(s => s.completed).length / subtasks.length) * 100) : 0;
+    handleUpdateTodo(todoId, { subtasks, progress });
   };
 
   const handleUpdateTodo = (id: string, updates: Partial<Todo>) => {
@@ -357,11 +548,11 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen w-full bg-white dark:bg-[#1a1a1a] overflow-hidden text-sm relative">
-      {toastMessage && (
-        <div className="fixed top-4 right-4 z-[80] bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-in slide-in-from-top">
+      {toastMessage && toastMessage.id && (
+        <div className="fixed top-20 right-4 z-[80] bg-[#f07a76] text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-in slide-in-from-top">
           <Bell size={16} />
           <span className="text-sm font-medium">{toastMessage.message}</span>
-          <button onClick={() => setToastMessage(null)} className="ml-2 hover:bg-red-700 rounded p-1">
+          <button onClick={() => setToastMessage(null)} className="ml-2 hover:bg-[#f07a76]/90 rounded p-1">
             <X size={14} />
           </button>
         </div>
@@ -498,8 +689,8 @@ const App: React.FC = () => {
         />
 
         {activeTab === 'chat' ? (
-          <div ref={layoutState.messagesContainerRef} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 scroll-smooth bg-white dark:bg-[#1a1a1a]">
-            <div className="max-w-3xl mx-auto w-full" style={{ paddingBottom: `${inputState.inputHeight - 40}px` }}>
+          <div ref={layoutState.messagesContainerRef} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 scroll-smooth bg-white dark:bg-[#1a1a1a]" style={{ marginTop: featureState.drawingState.isActive && featureState.drawingState.tool !== 'none' ? '48px' : '0' }}>
+            <div className="max-w-3xl mx-auto w-full" style={{ paddingBottom: `${Math.max(0, (inputState.inputHeight || 56) - 40)}px` }}>
               {chatState.messages.map((msg) => (
                 <MessageBubble 
                   key={msg.id} 
@@ -523,6 +714,7 @@ const App: React.FC = () => {
               onToggleTodo={handleToggleTodo}
               onDeleteTodo={handleDeleteTodo}
               onUpdateTodo={handleUpdateTodo}
+              onDeleteSubtask={handleDeleteSubtask}
             />
           </div>
         ) : activeTab === 'reminders' ? (

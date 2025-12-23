@@ -47,7 +47,7 @@ const TextViewer: React.FC<TextViewerProps> = ({ file, highlightQuote, textScale
       <pre className="font-mono text-sm text-[#1a1a1a] dark:text-white whitespace-pre-wrap leading-relaxed">
         {parts.map((part, i) => 
           part.toLowerCase() === highlightQuote.toLowerCase() 
-            ? <mark key={i} id="text-highlight-match" className="bg-yellow-200 dark:bg-yellow-600/40 text-[#1a1a1a] dark:text-white rounded px-0.5 font-bold border-b-2 border-yellow-400 dark:border-yellow-500">{part}</mark>
+            ? <mark key={i} id="text-highlight-match" className="bg-[#9ce8d6]/40 dark:bg-[#5bd8bb]/20 text-[#1a1a1a] dark:text-white rounded px-0.5 font-bold border-b-2 border-[#25b5cd]">{part}</mark>
             : part
         )}
       </pre>

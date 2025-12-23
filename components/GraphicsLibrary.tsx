@@ -51,7 +51,7 @@ const GraphicsLibrary: React.FC<GraphicsLibraryProps> = ({
   const totalCount = mindMaps.length + snapshots.length;
 
   return (
-    <div ref={libraryRef} className="absolute top-full right-0 mt-2 w-72 bg-white dark:bg-[#222222] rounded-xl shadow-xl border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] overflow-hidden z-[100] max-h-[400px] flex flex-col">
+    <div ref={libraryRef} className="w-full h-full bg-white dark:bg-[#222222] rounded-xl overflow-hidden flex flex-col">
       <div className="px-3 py-2 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] text-[12px] font-bold text-[#666666] dark:text-[#a0a0a0] uppercase flex items-center justify-between">
         <span>Graphics Library</span>
         <span className="text-[#666666] dark:text-[#a0a0a0]">{totalCount}</span>

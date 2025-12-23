@@ -10,13 +10,11 @@ export const createAudioHandlers = (
 ) => {
   const transcribeAudio = async (audioBlob: Blob) => {
     try {
-      showToast('Transcribing audio...', 'info');
       const arrayBuffer = await audioBlob.arrayBuffer();
       const base64Audio = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
       
       const apiKey = getApiKey();
       if (!apiKey) {
-        showToast('Please set your API key in .env.local', 'error');
         return;
       }
       
@@ -44,13 +42,9 @@ export const createAudioHandlers = (
       const transcription = result.candidates?.[0]?.content?.parts?.[0]?.text || '';
       if (transcription) {
         setInput(prev => prev + (prev ? ' ' : '') + transcription);
-        showToast('Transcription complete', 'success');
-      } else {
-        showToast('No transcription returned', 'error');
       }
     } catch (error) {
       console.error('Transcription error:', error);
-      showToast('Failed to transcribe audio', 'error');
     }
   };
 
@@ -81,7 +75,6 @@ export const createAudioHandlers = (
         setIsRecording(true);
       } catch (error) {
         console.error('Failed to start recording:', error);
-        showToast('Failed to access microphone', 'error');
       }
     }
   };

@@ -8,7 +8,7 @@ export interface DrawingColor {
 }
 
 export const DRAWING_COLORS: DrawingColor[] = [
-  { id: 'yellow', name: 'Yellow', color: '#FCD34D', highlightColor: 'rgba(252, 211, 77, 0.4)' },
+  { id: 'yellow', name: 'Yellow', color: '#E3FA15', highlightColor: 'rgba(227, 250, 21, 0.4)' },
   { id: 'green', name: 'Green', color: '#34D399', highlightColor: 'rgba(16, 185, 129, 0.4)' },
   { id: 'blue', name: 'Blue', color: '#60A5FA', highlightColor: 'rgba(59, 130, 246, 0.4)' },
   { id: 'pink', name: 'Pink', color: '#F472B6', highlightColor: 'rgba(236, 72, 153, 0.4)' },

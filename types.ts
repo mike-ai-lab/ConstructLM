@@ -49,6 +49,13 @@ export interface Todo {
   priority?: 'low' | 'medium' | 'high';
   chatId?: string;
   messageId?: string;
+  notes?: string;
+  tags?: string[];
+  subtasks?: { id: string; title: string; completed: boolean }[];
+  progress?: number;
+  estimatedTime?: number;
+  category?: string;
+  attachments?: string[];
 }
 
 export interface Reminder {

@@ -5,6 +5,10 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Health check endpoint
+app.head('/api/proxy/groq', (req, res) => res.status(200).end());
+app.head('/api/proxy/openai', (req, res) => res.status(200).end());
+
 app.post('/api/proxy/groq', async (req, res) => {
   try {
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {

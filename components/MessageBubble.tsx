@@ -84,7 +84,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, files, sources, 
                  {isUser ? 'You' : (message.modelId || 'AI')}
              </span>
              {noteNumber && (
-               <span className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 font-semibold">
+               <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#25b5cd]/20 dark:bg-[#25b5cd]/10 text-[#25b5cd] dark:text-[#5bd8bb] font-semibold">
                  Note #{noteNumber}
                </span>
              )}
@@ -108,7 +108,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, files, sources, 
                 ? 'bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] text-[#1a1a1a] dark:text-white rounded-tr-sm' 
                 : 'text-[#1a1a1a] dark:text-white'
              }
-             ${noteNumber ? 'border-l-4 border-yellow-500' : ''}
+             ${noteNumber ? 'border-l-4 border-[#25b5cd]' : ''}
           `}>
             {message.isStreaming && !isUser && (
                  <div className="absolute -left-5 top-4">
@@ -186,7 +186,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, files, sources, 
             </div>
           )}
           {noteNumber && (
-            <div className="text-[10px] text-yellow-700 dark:text-yellow-400 mt-1.5 px-1 font-mono flex items-center gap-2">
+            <div className="text-[10px] text-[#25b5cd] dark:text-[#5bd8bb] mt-1.5 px-1 font-mono flex items-center gap-2">
               Saved as Note #{noteNumber}
             </div>
           )}
@@ -199,7 +199,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, files, sources, 
                   onSaveNote(message.content, message.modelId);
                 }
               }}
-              className="mt-1.5 px-1 flex items-center gap-1 text-[#a0a0a0] hover:text-yellow-600 transition-all text-xs"
+              className="mt-1.5 px-1 flex items-center gap-1 text-[#a0a0a0] hover:text-[#25b5cd] transition-all text-xs"
               title={noteNumber ? "Unsave Note" : "Save as Note"}
             >
               <BookmarkPlus size={12} />

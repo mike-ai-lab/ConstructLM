@@ -13,6 +13,9 @@ const HelpDocumentation: React.FC<HelpDocumentationProps> = ({ onClose }) => {
     { id: 'getting-started', title: 'Getting Started', icon: Sparkles },
     { id: 'sources', title: 'Managing Sources', icon: FileText },
     { id: 'chat', title: 'Chat Features', icon: MessageSquare },
+    { id: 'notebook', title: 'Notebook', icon: FileText },
+    { id: 'todos', title: 'Tasks & Todos', icon: MessageSquare },
+    { id: 'reminders', title: 'Reminders', icon: MessageSquare },
     { id: 'mindmap', title: 'Mind Maps', icon: Network },
     { id: 'live', title: 'Live Mode', icon: Phone },
     { id: 'graphics', title: 'Graphics Library', icon: Image },
@@ -81,6 +84,9 @@ const HelpDocumentation: React.FC<HelpDocumentationProps> = ({ onClose }) => {
             {activeSection === 'getting-started' && <GettingStarted />}
             {activeSection === 'sources' && <ManagingSources />}
             {activeSection === 'chat' && <ChatFeatures />}
+            {activeSection === 'notebook' && <NotebookFeature />}
+            {activeSection === 'todos' && <TodosFeature />}
+            {activeSection === 'reminders' && <RemindersFeature />}
             {activeSection === 'mindmap' && <MindMaps />}
             {activeSection === 'live' && <LiveMode />}
             {activeSection === 'graphics' && <GraphicsLibrary />}
@@ -224,15 +230,27 @@ const ChatFeatures: React.FC = () => (
       Choose from multiple AI models based on your needs:
     </Paragraph>
     <List>
-      <ListItem>Google Gemini: Fast, supports large contexts and images</ListItem>
-      <ListItem>Groq Llama: Extremely fast inference, great for quick tasks</ListItem>
+      <ListItem>Google Gemini: Fast, supports large contexts and images (Free tier available)</ListItem>
+      <ListItem>Groq Llama: Extremely fast inference, great for quick tasks (Free tier available)</ListItem>
       <ListItem>OpenAI GPT: Industry-standard intelligence (requires paid account)</ListItem>
+      <ListItem>AWS Bedrock: Claude 3.5 Sonnet, Haiku, Llama 3, Mistral (requires AWS account)</ListItem>
     </List>
 
     <SubTitle>Citations</SubTitle>
     <Paragraph>
       When the AI references your documents, clickable citations appear in the response. Click any citation to view the exact location in the source document.
     </Paragraph>
+
+    <SubTitle>Save to Notebook</SubTitle>
+    <Paragraph>
+      Save important AI responses to your notebook:
+    </Paragraph>
+    <List>
+      <ListItem>Click the bookmark icon on any AI message to save it</ListItem>
+      <ListItem>Saved notes are numbered automatically (Note #1, #2, etc.)</ListItem>
+      <ListItem>Access all saved notes from the Notebook tab in the header</ListItem>
+      <ListItem>Click the bookmark icon again to unsave</ListItem>
+    </List>
 
     <SubTitle>Drawing Tools</SubTitle>
     <Paragraph>
@@ -244,6 +262,28 @@ const ChatFeatures: React.FC = () => (
       <ListItem>Color picker: Choose from multiple colors</ListItem>
       <ListItem>Stroke width: Adjust pen thickness</ListItem>
       <ListItem>Clear all: Remove all annotations</ListItem>
+    </List>
+
+    <SubTitle>Voice Input</SubTitle>
+    <Paragraph>
+      Use voice-to-text for hands-free input:
+    </Paragraph>
+    <List>
+      <ListItem>Click the microphone icon in the chat input</ListItem>
+      <ListItem>Speak your message clearly</ListItem>
+      <ListItem>Click again to stop recording and transcribe</ListItem>
+      <ListItem>Edit the transcribed text before sending</ListItem>
+    </List>
+
+    <SubTitle>Web Sources</SubTitle>
+    <Paragraph>
+      Add web pages as context for your conversations:
+    </Paragraph>
+    <List>
+      <ListItem>Click the link icon in the chat input</ListItem>
+      <ListItem>Enter a URL to fetch and include in context</ListItem>
+      <ListItem>The AI can reference content from added URLs</ListItem>
+      <ListItem>Remove sources by clicking the X icon</ListItem>
     </List>
   </>
 );
@@ -273,6 +313,14 @@ const MindMaps: React.FC = () => (
       <ListItem>Click the fullscreen button to toggle fullscreen mode</ListItem>
     </List>
 
+    <SubTitle>Mind Map Cache</SubTitle>
+    <List>
+      <ListItem>Generated mind maps are cached locally in IndexedDB</ListItem>
+      <ListItem>Access cached mind maps from the Graphics Library</ListItem>
+      <ListItem>No additional API calls needed for cached maps</ListItem>
+      <ListItem>Cache persists across browser sessions</ListItem>
+    </List>
+
     <SubTitle>Best Use Cases</SubTitle>
     <List>
       <ListItem>Bill of Quantities (BOQ) documents</ListItem>
@@ -284,6 +332,177 @@ const MindMaps: React.FC = () => (
     <InfoBox>
       Mind maps are cached locally. Once generated, you can access them instantly from the Graphics Library without using additional API calls.
     </InfoBox>
+  </>
+);
+
+const NotebookFeature: React.FC = () => (
+  <>
+    <SectionTitle>Notebook</SectionTitle>
+
+    <SubTitle>What is the Notebook?</SubTitle>
+    <Paragraph>
+      The Notebook is your personal knowledge base where you can save, organize, and manage important AI responses and notes.
+    </Paragraph>
+
+    <SubTitle>Saving Notes</SubTitle>
+    <List>
+      <ListItem>Click the bookmark icon on any AI message to save it</ListItem>
+      <ListItem>Notes are automatically numbered (Note #1, #2, etc.)</ListItem>
+      <ListItem>Each note includes the model used and timestamp</ListItem>
+      <ListItem>Notes maintain links to their original chat conversation</ListItem>
+    </List>
+
+    <SubTitle>Organizing Notes</SubTitle>
+    <List>
+      <ListItem>Add titles to notes for easy identification</ListItem>
+      <ListItem>Add tags to categorize notes by topic</ListItem>
+      <ListItem>Assign categories for better organization</ListItem>
+      <ListItem>Mark notes as favorites with the star icon</ListItem>
+    </List>
+
+    <SubTitle>View Modes</SubTitle>
+    <Paragraph>
+      Switch between different view modes:
+    </Paragraph>
+    <List>
+      <ListItem>Grid View: Visual card layout with previews</ListItem>
+      <ListItem>List View: Detailed list with full content</ListItem>
+      <ListItem>Details View: Table format showing metadata</ListItem>
+    </List>
+
+    <SubTitle>Search and Filter</SubTitle>
+    <List>
+      <ListItem>Search notes by content, title, or tags</ListItem>
+      <ListItem>Filter by category</ListItem>
+      <ListItem>Sort by creation date, last modified, or model</ListItem>
+      <ListItem>Toggle sort order (ascending/descending)</ListItem>
+    </List>
+
+    <SubTitle>Editing Notes</SubTitle>
+    <List>
+      <ListItem>Click any note to open the full editor</ListItem>
+      <ListItem>Edit content and title directly</ListItem>
+      <ListItem>Changes are tracked with "Last Modified" timestamp</ListItem>
+      <ListItem>Click Save to apply changes</ListItem>
+    </List>
+
+    <SubTitle>Exporting Notes</SubTitle>
+    <List>
+      <ListItem>Export individual notes as Markdown or Text</ListItem>
+      <ListItem>Select multiple notes and export as ZIP</ListItem>
+      <ListItem>Export all notes at once</ListItem>
+      <ListItem>Copy note content to clipboard</ListItem>
+    </List>
+
+    <SubTitle>Navigation</SubTitle>
+    <List>
+      <ListItem>Click the external link icon to jump to the original conversation</ListItem>
+      <ListItem>The chat will scroll to the exact message</ListItem>
+      <ListItem>Message is highlighted briefly for easy identification</ListItem>
+    </List>
+  </>
+);
+
+const TodosFeature: React.FC = () => (
+  <>
+    <SectionTitle>Tasks & Todos</SectionTitle>
+
+    <SubTitle>What are Tasks?</SubTitle>
+    <Paragraph>
+      The Tasks feature helps you track action items, to-dos, and follow-ups from your conversations and work.
+    </Paragraph>
+
+    <SubTitle>Creating Tasks</SubTitle>
+    <List>
+      <ListItem>Type your task in the input field at the top</ListItem>
+      <ListItem>Press Enter or click Add to create</ListItem>
+      <ListItem>Tasks are automatically timestamped</ListItem>
+    </List>
+
+    <SubTitle>Task Properties</SubTitle>
+    <List>
+      <ListItem>Priority: Set as Low, Medium, or High (shown as colored dots)</ListItem>
+      <ListItem>Due Date: Set deadlines for time-sensitive tasks</ListItem>
+      <ListItem>Completion Status: Check off completed tasks</ListItem>
+    </List>
+
+    <SubTitle>Managing Tasks</SubTitle>
+    <List>
+      <ListItem>Click the checkbox to mark tasks as complete</ListItem>
+      <ListItem>Completed tasks show with strikethrough text</ListItem>
+      <ListItem>Delete tasks by clicking the trash icon</ListItem>
+      <ListItem>Hover over tasks to reveal action buttons</ListItem>
+    </List>
+
+    <SubTitle>Filtering and Sorting</SubTitle>
+    <List>
+      <ListItem>Filter: All, Active, or Completed tasks</ListItem>
+      <ListItem>Sort by: Created date, Due date, or Priority</ListItem>
+      <ListItem>High priority tasks show red dots</ListItem>
+      <ListItem>Overdue tasks are highlighted in red</ListItem>
+    </List>
+
+    <SubTitle>Time Indicators</SubTitle>
+    <List>
+      <ListItem>Tasks show time remaining (e.g., "2d", "5h", "30m")</ListItem>
+      <ListItem>Overdue tasks display "Overdue" badge</ListItem>
+      <ListItem>Color-coded badges for quick status recognition</ListItem>
+    </List>
+  </>
+);
+
+const RemindersFeature: React.FC = () => (
+  <>
+    <SectionTitle>Reminders</SectionTitle>
+
+    <SubTitle>What are Reminders?</SubTitle>
+    <Paragraph>
+      Reminders help you remember important deadlines, meetings, and time-sensitive tasks with automatic notifications.
+    </Paragraph>
+
+    <SubTitle>Creating Reminders</SubTitle>
+    <List>
+      <ListItem>Enter a reminder title in the input field</ListItem>
+      <ListItem>Select date and time using the datetime picker</ListItem>
+      <ListItem>Click Add to create the reminder</ListItem>
+      <ListItem>Reminders must be set for future times</ListItem>
+    </List>
+
+    <SubTitle>Reminder Notifications</SubTitle>
+    <List>
+      <ListItem>System checks for due reminders every 10 seconds</ListItem>
+      <ListItem>Toast notification appears when reminder triggers</ListItem>
+      <ListItem>Audio notification plays (if browser allows)</ListItem>
+      <ListItem>Reminder card pulses and highlights in red</ListItem>
+    </List>
+
+    <SubTitle>Managing Active Reminders</SubTitle>
+    <List>
+      <ListItem>Snooze: Postpone for 5 min, 15 min, or 1 hour</ListItem>
+      <ListItem>Done: Mark as completed and dismiss</ListItem>
+      <ListItem>Delete: Remove reminder permanently</ListItem>
+    </List>
+
+    <SubTitle>Reminder States</SubTitle>
+    <List>
+      <ListItem>Pending: Waiting for trigger time (blue badge)</ListItem>
+      <ListItem>Triggered: Time has arrived (red badge, pulsing)</ListItem>
+      <ListItem>Dismissed: Marked as done (grayed out)</ListItem>
+    </List>
+
+    <SubTitle>Filtering</SubTitle>
+    <List>
+      <ListItem>All: Show all reminders regardless of status</ListItem>
+      <ListItem>Pending: Only upcoming reminders</ListItem>
+      <ListItem>Triggered: Only active notifications</ListItem>
+    </List>
+
+    <SubTitle>Time Display</SubTitle>
+    <List>
+      <ListItem>Shows countdown: "in 2d", "in 5h", "in 30m"</ListItem>
+      <ListItem>Urgent reminders (under 1 hour) show yellow badge</ListItem>
+      <ListItem>Triggered reminders show "Now!" badge</ListItem>
+    </List>
   </>
 );
 
@@ -532,6 +751,17 @@ const Configuration: React.FC = () => (
       <ListItem>Visit platform.openai.com</ListItem>
       <ListItem>Create an account and add payment method</ListItem>
       <ListItem>Generate an API key from API settings</ListItem>
+    </List>
+
+    <Paragraph>
+      AWS Bedrock (Paid, requires AWS account):
+    </Paragraph>
+    <List>
+      <ListItem>Visit console.aws.amazon.com</ListItem>
+      <ListItem>Enable Bedrock service in your region</ListItem>
+      <ListItem>Create IAM user with Bedrock permissions</ListItem>
+      <ListItem>Generate Access Key ID and Secret Access Key</ListItem>
+      <ListItem>Enter both keys in Settings</ListItem>
     </List>
 
     <InfoBox>

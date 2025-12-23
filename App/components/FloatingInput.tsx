@@ -204,25 +204,25 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
         />
         <label
           htmlFor="chat-file-input"
-          className="absolute left-2 p-2 rounded-full text-[#a0a0a0] hover:text-[#4485d1] hover:bg-[rgba(68,133,209,0.1)] transition-colors cursor-pointer"
+          className="absolute left-3 top-1/2 -translate-y-1/2 p-2 rounded-full text-[#a0a0a0] hover:text-[#4485d1] hover:bg-[rgba(68,133,209,0.1)] transition-colors cursor-pointer"
           title="Attach files"
         >
           <FileText size={20} />
         </label>
         <button
           onClick={onToggleRecording}
-          className={`absolute left-12 p-2 rounded-full transition-colors ${
+          className={`absolute left-[52px] top-1/2 -translate-y-1/2 p-2 rounded-full transition-all ${
             isRecording 
-              ? 'text-red-500 bg-red-100 dark:bg-red-900/30 animate-pulse' 
+              ? 'text-red-500 bg-red-100 dark:bg-red-900/30 scale-110' 
               : 'text-[#a0a0a0] hover:text-[#4485d1] hover:bg-[rgba(68,133,209,0.1)]'
           }`}
           title={isRecording ? 'Stop recording' : 'Voice input'}
         >
-          <Mic size={20} />
+          <Mic size={20} className={isRecording ? 'animate-pulse' : ''} />
         </button>
         <button
           onClick={() => setShowSourceMenu(!showSourceMenu)}
-          className="absolute left-[88px] p-2 rounded-full text-[#a0a0a0] hover:text-[#4485d1] hover:bg-[rgba(68,133,209,0.1)] transition-colors"
+          className="absolute left-[101px] top-1/2 -translate-y-1/2 p-2 rounded-full text-[#a0a0a0] hover:text-[#4485d1] hover:bg-[rgba(68,133,209,0.1)] transition-colors"
           title="Add source link"
         >
           <Link size={20} />
@@ -297,7 +297,7 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
           disabled={isGenerating}
           autoComplete="off"
           rows={1}
-          style={{ height: 'auto', paddingLeft: '130px', paddingRight: '56px' }}
+          style={{ height: 'auto', paddingLeft: '150px', paddingRight: '56px' }}
           onInput={(e) => {
             const target = e.target as HTMLTextAreaElement;
             target.style.height = 'auto';

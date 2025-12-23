@@ -21,14 +21,14 @@ const Sources: React.FC<SourcesProps> = ({ sources, onAddSource, onDeleteSource 
 
   return (
     <div className="h-full flex flex-col bg-white dark:bg-[#1a1a1a]">
-      <div className="h-[60px] flex-none border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] flex items-center px-4 gap-2">
+      <div className="h-[60px] flex-none border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] flex items-center px-4 gap-2 bg-white/70 dark:bg-[#1a1a1a]/70 backdrop-blur-md">
         <input
           type="url"
           value={newUrl}
           onChange={(e) => setNewUrl(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
           placeholder="Enter URL to add as source..."
-          className="flex-1 px-3 py-2 text-sm bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="flex-1 px-3 py-2 text-sm bg-white/70 dark:bg-[#2a2a2a]/70 backdrop-blur-md border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <button
           onClick={handleAdd}
