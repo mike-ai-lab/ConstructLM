@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { Menu, X, Phone, Bell } from 'lucide-react';
+import { Menu, X, Phone, Bell, MessageSquare, BookMarked, CheckSquare } from 'lucide-react';
 import { useUIHelpersInit } from './hooks/useUIHelpers';
 import { useChatState } from './App/hooks/useChatState';
 import { useFileState } from './App/hooks/useFileState';
@@ -368,33 +368,35 @@ const App: React.FC = () => {
         </button>
       )}
 
-      <div 
-        className={`fixed md:relative z-40 h-full bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] flex flex-col border-r border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] ${layoutState.isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} ${!layoutState.isSidebarOpen && !layoutState.isMobile ? 'md:w-0 md:opacity-0 md:overflow-hidden' : ''} overflow-hidden`}
-        style={{ 
-          width: layoutState.isMobile ? '85%' : (layoutState.isSidebarOpen ? layoutState.sidebarWidth : 0)
-        }}
-      >
-        <FileSidebar 
-          files={fileState.files} 
-          onUpload={fileHandlers.handleFileUpload} 
-          onRemove={fileHandlers.handleRemoveFile}
-          isProcessing={fileState.isProcessingFiles}
-          onGenerateMindMap={featureHandlers.handleGenerateMindMap}
-          chats={chatState.chats}
-          activeChatId={chatState.currentChatId}
-          onSelectChat={chatHandlers.handleSelectChat}
-          onCreateChat={chatHandlers.handleCreateChat}
-          onDeleteChat={chatHandlers.handleDeleteChat}
-          isDragOver={layoutState.isSidebarDragOver}
-          onDragStateChange={layoutState.setIsSidebarDragOver}
-        />
-        {layoutState.isSidebarOpen && !layoutState.isMobile && (
-          <div 
-            className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500 transition-colors z-50"
-            onMouseDown={() => layoutState.setIsResizing('left')}
+      {activeTab === 'chat' && (
+        <div 
+          className={`fixed md:relative z-40 h-full bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] flex flex-col border-r border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] ${layoutState.isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} ${!layoutState.isSidebarOpen && !layoutState.isMobile ? 'md:w-0 md:opacity-0 md:overflow-hidden' : ''} overflow-hidden`}
+          style={{ 
+            width: layoutState.isMobile ? '85%' : (layoutState.isSidebarOpen ? layoutState.sidebarWidth : 0)
+          }}
+        >
+          <FileSidebar 
+            files={fileState.files} 
+            onUpload={fileHandlers.handleFileUpload} 
+            onRemove={fileHandlers.handleRemoveFile}
+            isProcessing={fileState.isProcessingFiles}
+            onGenerateMindMap={featureHandlers.handleGenerateMindMap}
+            chats={chatState.chats}
+            activeChatId={chatState.currentChatId}
+            onSelectChat={chatHandlers.handleSelectChat}
+            onCreateChat={chatHandlers.handleCreateChat}
+            onDeleteChat={chatHandlers.handleDeleteChat}
+            isDragOver={layoutState.isSidebarDragOver}
+            onDragStateChange={layoutState.setIsSidebarDragOver}
           />
-        )}
-      </div>
+          {layoutState.isSidebarOpen && !layoutState.isMobile && (
+            <div 
+              className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500 transition-colors z-50"
+              onMouseDown={() => layoutState.setIsResizing('left')}
+            />
+          )}
+        </div>
+      )}
 
 
 

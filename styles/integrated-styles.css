@@ -140,11 +140,15 @@ html.dark .floating-input-field {
 
 .floating-input-field::placeholder {
   color: #9ca3af;
+  font-style: italic;
+  font-size: 14px;
   transition: none;
 }
 
 html.dark .floating-input-field::placeholder {
-  color: var(--color-text-secondary);
+  color: #6b7280;
+  font-style: italic;
+  font-size: 14px;
 }
 
 .floating-send-button {

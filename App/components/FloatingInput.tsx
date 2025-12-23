@@ -191,7 +191,7 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
             e.stopPropagation();
             setIsInputDragOver(false);
           }}
-          placeholder={files.length === 0 ? "Ask me anything or drag files here..." : "Type @ to mention files (required for file context)..."}
+          placeholder="Ask anything or mention a source"
           disabled={isGenerating}
           autoComplete="off"
           rows={1}
