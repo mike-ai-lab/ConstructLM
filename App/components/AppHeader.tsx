@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, PanelLeft, PanelLeftOpen, Cpu, ChevronDown, Phone, Plus, Edit3, Highlighter, Trash2, Check, Minus, Camera, Image, Moon, Sun, HelpCircle, Settings, BookMarked } from 'lucide-react';
+import { Sparkles, PanelLeft, PanelLeftOpen, Cpu, ChevronDown, Phone, Plus, Edit3, Highlighter, Trash2, Check, Minus, Camera, Image, Moon, Sun, HelpCircle, Settings, BookMarked, CheckSquare, Bell } from 'lucide-react';
 import { MODEL_REGISTRY } from '../../services/modelRegistry';
 import { DRAWING_COLORS } from '../../services/drawingService';
 import GraphicsLibrary from '../../components/GraphicsLibrary';
@@ -47,6 +47,10 @@ interface AppHeaderProps {
   handleOpenMindMapFromLibrary: (fileId: string, modelId: string, data: any, fileName: string) => void;
   notesCount?: number;
   onOpenNotebook?: () => void;
+  activeTab?: 'chat' | 'notebook' | 'todos' | 'reminders';
+  onTabChange?: (tab: 'chat' | 'notebook' | 'todos' | 'reminders') => void;
+  todosCount?: number;
+  remindersCount?: number;
 }
 
 const AppHeader: React.FC<AppHeaderProps> = (props) => {
@@ -263,15 +267,57 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
         <button onClick={() => props.setIsHelpOpen(true)} className="p-1.5 md:p-2 text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] hover:text-[#1a1a1a] dark:hover:text-white rounded-full transition-colors flex-shrink-0" title="Help & Documentation">
           <HelpCircle size={16} />
         </button>
-        {props.onOpenNotebook && (
-          <button onClick={props.onOpenNotebook} className="p-1.5 md:p-2 text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] hover:text-yellow-600 rounded-full transition-colors flex-shrink-0 relative" title="My Notebook">
-            <BookMarked size={16} />
-            {props.notesCount && props.notesCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-yellow-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                {props.notesCount}
-              </span>
-            )}
-          </button>
+        {props.onOpenNotebook && props.onTabChange && (
+          <>
+            <button 
+              onClick={() => props.onTabChange!('notebook')} 
+              className={`p-1.5 md:p-2 rounded-full transition-colors flex-shrink-0 relative ${
+                props.activeTab === 'notebook' 
+                  ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600'
+                  : 'text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] hover:text-yellow-600'
+              }`}
+              title="Notebook"
+            >
+              <BookMarked size={16} />
+              {props.notesCount && props.notesCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-yellow-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                  {props.notesCount}
+                </span>
+              )}
+            </button>
+            <button 
+              onClick={() => props.onTabChange!('todos')} 
+              className={`p-1.5 md:p-2 rounded-full transition-colors flex-shrink-0 relative ${
+                props.activeTab === 'todos' 
+                  ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600'
+                  : 'text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] hover:text-blue-600'
+              }`}
+              title="Tasks"
+            >
+              <CheckSquare size={16} />
+              {props.todosCount && props.todosCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                  {props.todosCount}
+                </span>
+              )}
+            </button>
+            <button 
+              onClick={() => props.onTabChange!('reminders')} 
+              className={`p-1.5 md:p-2 rounded-full transition-colors flex-shrink-0 relative ${
+                props.activeTab === 'reminders' 
+                  ? 'bg-red-100 dark:bg-red-900/30 text-red-600'
+                  : 'text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] hover:text-red-600'
+              }`}
+              title="Reminders"
+            >
+              <Bell size={16} />
+              {props.remindersCount && props.remindersCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                  {props.remindersCount}
+                </span>
+              )}
+            </button>
+          </>
         )}
         <button onClick={() => props.setIsSettingsOpen(true)} className="p-1.5 md:p-2 text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] hover:text-[#1a1a1a] dark:hover:text-white rounded-full transition-colors flex-shrink-0" title="Settings">
           <Settings size={16} />

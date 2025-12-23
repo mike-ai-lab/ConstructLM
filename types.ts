@@ -37,6 +37,28 @@ export interface Note {
   isFavorite?: boolean;
   chatId?: string;
   messageId?: string;
+  lastModified?: number;
+}
+
+export interface Todo {
+  id: string;
+  title: string;
+  completed: boolean;
+  timestamp: number;
+  dueDate?: number;
+  priority?: 'low' | 'medium' | 'high';
+  chatId?: string;
+  messageId?: string;
+}
+
+export interface Reminder {
+  id: string;
+  title: string;
+  timestamp: number;
+  reminderTime: number;
+  status: 'pending' | 'triggered' | 'dismissed';
+  chatId?: string;
+  messageId?: string;
 }
 
 export interface Citation {

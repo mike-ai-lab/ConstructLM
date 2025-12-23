@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { Menu, X, Phone } from 'lucide-react';
+import { Menu, X, Phone, Bell } from 'lucide-react';
 import { useUIHelpersInit } from './hooks/useUIHelpers';
 import { useChatState } from './App/hooks/useChatState';
 import { useFileState } from './App/hooks/useFileState';
@@ -24,9 +24,11 @@ import SettingsModal from './components/SettingsModal';
 import HelpDocumentation from './components/HelpDocumentation';
 import MindMapViewer from './components/MindMapViewer';
 import Notebook from './components/Notebook';
+import TodoList from './components/TodoList';
+import Reminders from './components/Reminders';
 import AppHeader from './App/components/AppHeader';
 import { FloatingInput } from './App/components/FloatingInput';
-import { Note } from './types';
+import { Note, Todo, Reminder } from './types';
 
 const App: React.FC = () => {
   useUIHelpersInit();
@@ -38,14 +40,21 @@ const App: React.FC = () => {
   const featureState = useFeatureState();
 
   const [notes, setNotes] = React.useState<Note[]>([]);
-  const [showNotebook, setShowNotebook] = React.useState(false);
   const [noteCounter, setNoteCounter] = React.useState(1);
+  const [activeTab, setActiveTab] = React.useState<'chat' | 'notebook' | 'todos' | 'reminders'>('chat');
+  const [todos, setTodos] = React.useState<Todo[]>([]);
+  const [reminders, setReminders] = React.useState<Reminder[]>([]);
+  const [toastMessage, setToastMessage] = React.useState<{ message: string; id: string } | null>(null);
 
   React.useEffect(() => {
     const saved = localStorage.getItem('notes');
     const savedCounter = localStorage.getItem('noteCounter');
+    const savedTodos = localStorage.getItem('todos');
+    const savedReminders = localStorage.getItem('reminders');
     if (saved) setNotes(JSON.parse(saved));
     if (savedCounter) setNoteCounter(parseInt(savedCounter));
+    if (savedTodos) setTodos(JSON.parse(savedTodos));
+    if (savedReminders) setReminders(JSON.parse(savedReminders));
   }, []);
 
   const handleSaveNote = (content: string, modelId?: string, messageId?: string) => {
@@ -81,6 +90,7 @@ const App: React.FC = () => {
     if (chatId !== chatState.currentChatId) {
       chatHandlers.handleSelectChat(chatId);
     }
+    setActiveTab('chat');
     setTimeout(() => {
       const msgElement = document.querySelector(`[data-message-id="${messageId}"]`);
       if (msgElement) {
@@ -89,6 +99,55 @@ const App: React.FC = () => {
         setTimeout(() => msgElement.classList.remove('highlight-flash'), 2000);
       }
     }, 100);
+  };
+
+  const handleAddTodo = (todo: Omit<Todo, 'id' | 'timestamp'>) => {
+    const newTodo: Todo = { ...todo, id: Date.now().toString(), timestamp: Date.now() };
+    const updated = [newTodo, ...todos];
+    setTodos(updated);
+    localStorage.setItem('todos', JSON.stringify(updated));
+  };
+
+  const handleToggleTodo = (id: string) => {
+    const updated = todos.map(t => t.id === id ? { ...t, completed: !t.completed } : t);
+    setTodos(updated);
+    localStorage.setItem('todos', JSON.stringify(updated));
+  };
+
+  const handleDeleteTodo = (id: string) => {
+    const updated = todos.filter(t => t.id !== id);
+    setTodos(updated);
+    localStorage.setItem('todos', JSON.stringify(updated));
+  };
+
+  const handleUpdateTodo = (id: string, updates: Partial<Todo>) => {
+    const updated = todos.map(t => t.id === id ? { ...t, ...updates } : t);
+    setTodos(updated);
+    localStorage.setItem('todos', JSON.stringify(updated));
+  };
+
+  const handleAddReminder = (reminder: Omit<Reminder, 'id' | 'timestamp' | 'status'>) => {
+    const newReminder: Reminder = { ...reminder, id: Date.now().toString(), timestamp: Date.now(), status: 'pending' };
+    const updated = [newReminder, ...reminders];
+    setReminders(updated);
+    localStorage.setItem('reminders', JSON.stringify(updated));
+  };
+
+  const handleDeleteReminder = (id: string) => {
+    const updated = reminders.filter(r => r.id !== id);
+    setReminders(updated);
+    localStorage.setItem('reminders', JSON.stringify(updated));
+  };
+
+  const handleUpdateReminder = (id: string, updates: Partial<Reminder>) => {
+    const updated = reminders.map(r => r.id === id ? { ...r, ...updates } : r);
+    setReminders(updated);
+    localStorage.setItem('reminders', JSON.stringify(updated));
+  };
+
+  const handleShowToast = (message: string, reminderId: string) => {
+    setToastMessage({ message, id: reminderId });
+    setTimeout(() => setToastMessage(null), 10000);
   };
 
   // Initialize activeModelId
@@ -251,6 +310,15 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen w-full bg-white dark:bg-[#1a1a1a] overflow-hidden text-sm relative">
+      {toastMessage && (
+        <div className="fixed top-4 right-4 z-[80] bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-in slide-in-from-top">
+          <Bell size={16} />
+          <span className="text-sm font-medium">{toastMessage.message}</span>
+          <button onClick={() => setToastMessage(null)} className="ml-2 hover:bg-red-700 rounded p-1">
+            <X size={14} />
+          </button>
+        </div>
+      )}
       {featureState.isLiveMode && <LiveSession onClose={handleCloseLiveSession} />}
       {featureState.isCallingEffect && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] flex items-center justify-center">
@@ -270,7 +338,6 @@ const App: React.FC = () => {
       )}
       {featureState.isSettingsOpen && <SettingsModal onClose={() => featureState.setIsSettingsOpen(false)} />}
       {featureState.isHelpOpen && <HelpDocumentation onClose={() => featureState.setIsHelpOpen(false)} />}
-      {showNotebook && <Notebook notes={notes} onClose={() => setShowNotebook(false)} onDeleteNote={handleDeleteNote} onUpdateNote={handleUpdateNote} onNavigateToMessage={handleNavigateToMessage} files={fileState.files} onViewDocument={fileHandlers.handleViewDocument} />}
       {featureState.isGeneratingMindMap && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center">
           <div className="bg-white rounded-2xl shadow-2xl p-8 flex flex-col items-center gap-4">
@@ -374,27 +441,65 @@ const App: React.FC = () => {
           handleDeleteSnapshot={featureHandlers.handleDeleteSnapshot}
           handleOpenMindMapFromLibrary={featureHandlers.handleOpenMindMapFromLibrary}
           notesCount={notes.length}
-          onOpenNotebook={() => setShowNotebook(true)}
+          todosCount={todos.length}
+          remindersCount={reminders.filter(r => r.status === 'pending').length}
+          onOpenNotebook={() => setActiveTab('notebook')}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
         />
 
-        <div ref={layoutState.messagesContainerRef} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 scroll-smooth bg-white dark:bg-[#1a1a1a]">
-          <div className="max-w-3xl mx-auto w-full" style={{ paddingBottom: `${inputState.inputHeight - 40}px` }}>
-            {chatState.messages.map((msg) => (
-              <MessageBubble 
-                key={msg.id} 
-                message={msg} 
-                files={fileState.files} 
-                onViewDocument={fileHandlers.handleViewDocument}
-                onSaveNote={msg.role === 'model' ? (content, modelId) => handleSaveNote(content, modelId, msg.id) : undefined}
-                noteNumber={notes.find(n => n.messageId === msg.id)?.noteNumber}
-              />
-            ))}
-            <div ref={layoutState.messagesEndRef} className="snapshot-ignore" />
+        {activeTab === 'chat' ? (
+          <div ref={layoutState.messagesContainerRef} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 scroll-smooth bg-white dark:bg-[#1a1a1a]">
+            <div className="max-w-3xl mx-auto w-full" style={{ paddingBottom: `${inputState.inputHeight - 40}px` }}>
+              {chatState.messages.map((msg) => (
+                <MessageBubble 
+                  key={msg.id} 
+                  message={msg} 
+                  files={fileState.files} 
+                  onViewDocument={fileHandlers.handleViewDocument}
+                  onSaveNote={msg.role === 'model' ? (content, modelId) => handleSaveNote(content, modelId, msg.id) : undefined}
+                  noteNumber={notes.find(n => n.messageId === msg.id)?.noteNumber}
+                />
+              ))}
+              <div ref={layoutState.messagesEndRef} className="snapshot-ignore" />
+            </div>
           </div>
-        </div>
+        ) : activeTab === 'todos' ? (
+          <div className="flex-1 overflow-hidden">
+            <TodoList
+              todos={todos}
+              onAddTodo={handleAddTodo}
+              onToggleTodo={handleToggleTodo}
+              onDeleteTodo={handleDeleteTodo}
+              onUpdateTodo={handleUpdateTodo}
+            />
+          </div>
+        ) : activeTab === 'reminders' ? (
+          <div className="flex-1 overflow-hidden">
+            <Reminders
+              reminders={reminders}
+              onAddReminder={handleAddReminder}
+              onDeleteReminder={handleDeleteReminder}
+              onUpdateReminder={handleUpdateReminder}
+              onShowToast={handleShowToast}
+            />
+          </div>
+        ) : (
+          <div className="flex-1 overflow-hidden">
+            <Notebook 
+              notes={notes} 
+              onDeleteNote={handleDeleteNote} 
+              onUpdateNote={handleUpdateNote} 
+              onNavigateToMessage={handleNavigateToMessage} 
+              files={fileState.files} 
+              onViewDocument={fileHandlers.handleViewDocument} 
+              chats={chatState.chats}
+            />
+          </div>
+        )}
 
         {/* Floating Input Area */}
-        {!featureState.mindMapData && !featureState.isSettingsOpen && !featureState.isCallingEffect && !featureState.isHelpOpen && (
+        {!featureState.mindMapData && !featureState.isSettingsOpen && !featureState.isCallingEffect && !featureState.isHelpOpen && activeTab === 'chat' && (
         <div className="flex justify-center px-4 pb-2 w-full bg-white dark:bg-[#1a1a1a]">
           <div className="w-full max-w-[800px]">
             <FloatingInput
