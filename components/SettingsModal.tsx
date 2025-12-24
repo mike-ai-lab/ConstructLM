@@ -1,9 +1,9 @@
-
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Save, Key, ShieldCheck, CheckCircle, Loader2, Play, AlertCircle, Cpu, ExternalLink, Download, Upload, Database, Trash2 } from 'lucide-react';
+import { X, Save, Key, ShieldCheck, CheckCircle, Loader2, Play, AlertCircle, Cpu, ExternalLink, Download, Upload, Database, Trash2, User } from 'lucide-react';
 import { saveApiKey, getStoredApiKey } from '../services/modelRegistry';
 import { checkOllamaConnection, getAvailableOllamaModels, getLocalModelSetupInstructions } from '../services/localModelService';
 import { dataExportService } from '../services/dataExportService';
+import { userProfileService, UserProfile } from '../services/userProfileService';
 
 interface SettingsModalProps {
     onClose: () => void;
@@ -13,6 +13,13 @@ type Provider = 'google' | 'openai' | 'groq' | 'aws';
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
     const modalRef = useRef<HTMLDivElement>(null);
+    
+    // User Profile State
+    const [userProfile, setUserProfile] = useState<UserProfile>({
+        name: '',
+        role: '',
+        greetingStyle: 'casual'
+    });
     
     // API Keys State
     const [keys, setKeys] = useState({
@@ -41,6 +48,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
     });
 
     useEffect(() => {
+        // Load user profile
+        const profile = userProfileService.getProfile();
+        if (profile) {
+            setUserProfile(profile);
+        }
+        
+        // Load API keys
         setKeys({
             google: getStoredApiKey('GEMINI_API_KEY'),
             openai: getStoredApiKey('OPENAI_API_KEY'),
@@ -167,6 +181,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
     };
 
     const handleSave = () => {
+        // Save User Profile
+        userProfileService.saveProfile({
+            ...userProfile,
+            hasCompletedOnboarding: true
+        });
+        
         // Save API Keys
         saveApiKey('GEMINI_API_KEY', keys.google);
         saveApiKey('OPENAI_API_KEY', keys.openai);
@@ -298,13 +318,70 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
 
                 {/* Content */}
                 <div className="p-4 overflow-y-auto space-y-4 flex-1">
-                    <div className="bg-[rgba(68,133,209,0.1)] border border-[rgba(68,133,209,0.2)] dark:border-[rgba(68,133,209,0.3)] rounded-lg p-2 flex gap-2">
-                        <ShieldCheck size={14} className="text-[#4485d1] flex-shrink-0 mt-0.5" />
-                        <p className="text-xs text-[#1a1a1a] dark:text-white leading-relaxed">
-                            API Keys are stored locally on your device.
-                        </p>
-                    </div>
+                    {/* User Profile Section */}
                     <div className="space-y-3">
+                        <div className="flex items-center gap-1.5">
+                            <User size={12} className="text-[#666666] dark:text-[#a0a0a0]" />
+                            <h3 className="text-xs font-bold text-[#666666] dark:text-[#a0a0a0] uppercase tracking-wider">User Profile</h3>
+                        </div>
+                        <div className="bg-[rgba(68,133,209,0.1)] border border-[rgba(68,133,209,0.2)] dark:border-[rgba(68,133,209,0.3)] rounded-lg p-2 flex gap-2">
+                            <p className="text-xs text-[#1a1a1a] dark:text-white leading-relaxed">
+                                Personalize your AI assistant experience with smart, context-aware greetings.
+                            </p>
+                        </div>
+                        <div className="space-y-2">
+                            <div>
+                                <label className="text-xs font-medium text-[#666666] dark:text-[#a0a0a0]">Name (Optional)</label>
+                                <input 
+                                    type="text" 
+                                    value={userProfile.name || ''}
+                                    onChange={e => setUserProfile({...userProfile, name: e.target.value})}
+                                    placeholder="Your name"
+                                    className="w-full px-2.5 py-1.5 bg-[rgba(0,0,0,0.03)] dark:bg-[#1a1a1a] border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] rounded-lg text-sm text-[#1a1a1a] dark:text-white focus:outline-none focus:ring-2 focus:ring-[rgba(68,133,209,0.2)] focus:border-[#4485d1] transition-all"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs font-medium text-[#666666] dark:text-[#a0a0a0]">Role (Optional)</label>
+                                <input 
+                                    type="text" 
+                                    value={userProfile.role || ''}
+                                    onChange={e => setUserProfile({...userProfile, role: e.target.value})}
+                                    placeholder="e.g., Developer, Designer, Student"
+                                    className="w-full px-2.5 py-1.5 bg-[rgba(0,0,0,0.03)] dark:bg-[#1a1a1a] border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] rounded-lg text-sm text-[#1a1a1a] dark:text-white focus:outline-none focus:ring-2 focus:ring-[rgba(68,133,209,0.2)] focus:border-[#4485d1] transition-all"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs font-medium text-[#666666] dark:text-[#a0a0a0]">Greeting Style</label>
+                                <select 
+                                    value={userProfile.greetingStyle || 'casual'}
+                                    onChange={e => setUserProfile({...userProfile, greetingStyle: e.target.value as 'professional' | 'casual' | 'minimal'})}
+                                    className="w-full px-2.5 py-1.5 bg-[rgba(0,0,0,0.03)] dark:bg-[#1a1a1a] border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] rounded-lg text-sm text-[#1a1a1a] dark:text-white focus:outline-none focus:ring-2 focus:ring-[rgba(68,133,209,0.2)] focus:border-[#4485d1] transition-all"
+                                >
+                                    <option value="professional">Professional</option>
+                                    <option value="casual">Casual</option>
+                                    <option value="minimal">Minimal</option>
+                                </select>
+                                <p className="text-[11px] text-[#666666] dark:text-[#a0a0a0] mt-1">
+                                    {userProfile.greetingStyle === 'professional' && 'Formal greetings with time-based salutations'}
+                                    {userProfile.greetingStyle === 'casual' && 'Friendly, varied greetings'}
+                                    {userProfile.greetingStyle === 'minimal' && 'Brief, to-the-point greetings'}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="border-t border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] pt-4">
+                        <div className="flex items-center gap-1.5 mb-2">
+                            <Key size={12} className="text-[#666666] dark:text-[#a0a0a0]" />
+                            <h3 className="text-xs font-bold text-[#666666] dark:text-[#a0a0a0] uppercase tracking-wider">API Keys</h3>
+                        </div>
+                        <div className="bg-[rgba(68,133,209,0.1)] border border-[rgba(68,133,209,0.2)] dark:border-[rgba(68,133,209,0.3)] rounded-lg p-2 flex gap-2 mb-3">
+                            <ShieldCheck size={14} className="text-[#4485d1] flex-shrink-0 mt-0.5" />
+                            <p className="text-xs text-[#1a1a1a] dark:text-white leading-relaxed">
+                                API Keys are stored locally on your device.
+                            </p>
+                        </div>
+                        <div className="space-y-3">
                         {renderApiInput('Google Gemini', 'google', 'AIzaSy...', 'Required for Gemini models & TTS.')}
                         {renderApiInput('Groq', 'groq', 'gsk_...', 'Required for Llama 3 models.')}
                         {renderApiInput('OpenAI', 'openai', 'sk-...', 'Required for GPT-4o models.')}
@@ -328,6 +405,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                             />
                             <p className="text-[12px] text-[#666666] dark:text-[#a0a0a0]">For Claude 3.5 Sonnet & other AWS models. Uses your $100 credits.</p>
                         </div>
+                    </div>
                     </div>
 
                     {/* Data Management Section */}

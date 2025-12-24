@@ -8,7 +8,8 @@ import {
 } from "./audioUtils";
 
 export function getApiKey(): string | undefined {
-  return 'AIzaSyBzbrMzzfYAzzJvQ6kmj2Uf1y-HevM5LWE';
+  const key = localStorage.getItem('GEMINI_API_KEY');
+  return key || undefined;
 }
 
 export function initializeGemini(): void {
@@ -88,9 +89,9 @@ export async function sendMessageToGemini(
   console.log('🔵 [GEMINI] Response status:', response.status, response.statusText);
   
   if (!response.ok) {
-    console.error('🔴 [GEMINI] API ERROR:', response.status, response.statusText);
+    console.error('🔴 [GEMINI] API ERROR:', response.status);
     const errorBody = await response.text().catch(() => 'Unable to read error');
-    console.error('🔴 [GEMINI] Error body:', errorBody);
+    console.error('🔴 [GEMINI] Error details:', errorBody.substring(0, 200));
     throw new Error(`API Error: ${response.statusText}`);
   }
   if (!response.body) throw new Error("No response body");

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Send, FileText, Mic, Sparkles, Database, Link, X } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Send, FileText, Mic, Sparkles, Plus, X } from 'lucide-react';
 import { ProcessedFile } from '../../types';
 import { contextMenuManager, createInputContextMenu } from '../../utils/uiHelpers';
 
@@ -13,6 +13,7 @@ interface FloatingInputProps {
   filteredFiles: ProcessedFile[];
   mentionIndex: number;
   isRecording: boolean;
+  isTranscribing: boolean;
   inputHeight: number;
   sources: any[];
   selectedSourceIds: string[];
@@ -29,6 +30,13 @@ interface FloatingInputProps {
   onDeleteSource: (id: string) => void;
 }
 
+interface SourceWithCheck extends Record<string, any> {
+  id: string;
+  url: string;
+  title?: string;
+  checked?: boolean;
+}
+
 export const FloatingInput: React.FC<FloatingInputProps> = ({
   input,
   inputRef,
@@ -39,6 +47,7 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
   filteredFiles,
   mentionIndex,
   isRecording,
+  isTranscribing,
   inputHeight,
   sources,
   selectedSourceIds,
@@ -54,130 +63,136 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
   onAddSource,
   onDeleteSource
 }) => {
-  const [showSourceInput, setShowSourceInput] = useState(false);
+  const [showSourcePopup, setShowSourcePopup] = useState(false);
   const [sourceUrl, setSourceUrl] = useState('');
-  const [showSourceMenu, setShowSourceMenu] = useState(false);
+  const [checkedSources, setCheckedSources] = useState<Record<string, boolean>>({});
+  const sourceInputRef = useRef<HTMLInputElement>(null);
 
-  const defaultSources = [
-    { name: 'Wikipedia', url: 'https://en.wikipedia.org' },
-    { name: 'Stack Overflow', url: 'https://stackoverflow.com' },
-    { name: 'GitHub', url: 'https://github.com' }
-  ];
+  useEffect(() => {
+    const newChecked: Record<string, boolean> = {};
+    sources.forEach(source => {
+      if (checkedSources[source.id] === undefined) {
+        newChecked[source.id] = selectedSourceIds.includes(source.id);
+      } else {
+        newChecked[source.id] = checkedSources[source.id];
+      }
+    });
+    setCheckedSources(newChecked);
+  }, [sources]);
+
+  useEffect(() => {
+    if (showSourcePopup && sourceInputRef.current) {
+      sourceInputRef.current.focus();
+    }
+  }, [showSourcePopup]);
+
+  const toggleSourceCheck = (sourceId: string) => {
+    setCheckedSources(prev => ({
+      ...prev,
+      [sourceId]: !prev[sourceId]
+    }));
+  };
+
+  const handleAddSource = () => {
+    if (sourceUrl.trim()) {
+      onAddSource(sourceUrl.trim());
+      setSourceUrl('');
+    }
+  };
+
+  const checkedCount = Object.values(checkedSources).filter(Boolean).length;
+  const totalCount = sources.length;
   return (
     <div className="w-full relative">
-      {/* Source Links Display */}
-      {sources.length > 0 && (
-        <div className="mb-2 flex flex-wrap gap-2">
-          {sources.map((source) => (
-            <div key={source.id} className="flex items-center gap-1 px-2 py-1 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] rounded text-xs border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)]">
-              <Link size={10} className="text-[#a0a0a0]" />
-              <span className="text-[#1a1a1a] dark:text-white truncate max-w-[200px]">{source.title || source.url}</span>
-              <button onClick={() => onDeleteSource(source.id)} className="text-[#a0a0a0] hover:text-[#1a1a1a] dark:hover:text-white">
-                <X size={10} />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Source Input Popup */}
-      {showSourceInput && (
-        <div className="absolute bottom-full left-0 mb-2 flex gap-2 z-50">
+      {/* Source Popup List */}
+      {showSourcePopup && (
+        <div className="absolute bottom-[calc(100%+8px)] left-0 z-50 w-[350px]">
+          <div className="flex flex-col gap-2 max-h-[280px] overflow-y-auto">
+            {sources.map((source: SourceWithCheck) => (
+              <div key={source.id} className="flex items-center justify-between bg-white dark:bg-[#3C3C3C] border-2 border-[#0078d4] px-4 py-2 rounded-full shadow-lg flex-shrink-0">
+                <div className="flex items-center flex-1 overflow-hidden">
+                  <div
+                    onClick={() => toggleSourceCheck(source.id)}
+                    className={`w-[18px] h-[18px] border-2 border-[#0078d4] rounded-full mr-2 cursor-pointer flex items-center justify-center flex-shrink-0 ${
+                      checkedSources[source.id] ? 'bg-[#0078d4]' : 'bg-transparent'
+                    }`}
+                  >
+                    {checkedSources[source.id] && (
+                      <span className="text-white text-xs font-bold">✓</span>
+                    )}
+                  </div>
+                  <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap mr-2 text-[#1a1a1a] dark:text-white text-sm">
+                    {source.title || source.url}
+                  </span>
+                </div>
+                <button
+                  onClick={() => onDeleteSource(source.id)}
+                  className="text-[#0078d4] hover:text-[#1a1a1a] dark:hover:text-white text-xl w-5 h-5 flex items-center justify-center flex-shrink-0"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
           <input
+            ref={sourceInputRef}
             type="url"
             value={sourceUrl}
             onChange={(e) => setSourceUrl(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && sourceUrl.trim()) {
-                onAddSource(sourceUrl.trim());
-                setSourceUrl('');
-                setShowSourceInput(false);
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleAddSource();
               } else if (e.key === 'Escape') {
-                setShowSourceInput(false);
+                setShowSourcePopup(false);
                 setSourceUrl('');
               }
             }}
-            placeholder="Enter source URL..."
-            className="w-[300px] px-3 py-2 text-sm bg-white dark:bg-[#1a1a1a] border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4485d1]"
-            autoFocus
+            placeholder="Paste source link here..."
+            className="bg-white dark:bg-[#3C3C3C] border-2 border-[#0078d4] rounded-full px-4 py-2 text-[#1a1a1a] dark:text-white text-sm outline-none w-full shadow-lg mt-2"
           />
-          <button
-            onClick={() => {
-              if (sourceUrl.trim()) {
-                onAddSource(sourceUrl.trim());
-                setSourceUrl('');
-                setShowSourceInput(false);
-              }
-            }}
-            className="px-3 py-2 bg-[#4485d1] text-white rounded-lg hover:bg-[#3a75c1] text-sm"
-          >
-            Add
-          </button>
         </div>
       )}
-
-      {/* Source Menu Popup */}
-      {showSourceMenu && (
-        <div className="absolute bottom-full left-0 mb-2 bg-white dark:bg-[#1a1a1a] border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] rounded-lg p-2 shadow-lg z-50">
-          <div className="text-xs font-medium text-[#666666] dark:text-[#a0a0a0] mb-2 px-2">Quick Sources</div>
-          {defaultSources.map((source) => (
-            <button
-              key={source.url}
-              onClick={() => {
-                onAddSource(source.url);
-                setShowSourceMenu(false);
-              }}
-              className="w-full text-left px-3 py-2 text-sm hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] rounded transition-colors text-[#1a1a1a] dark:text-white whitespace-nowrap"
-            >
-              {source.name}
-            </button>
-          ))}
-          <div className="border-t border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] mt-2 pt-2">
-            <button
-              onClick={() => {
-                setShowSourceMenu(false);
-                setShowSourceInput(true);
-              }}
-              className="w-full text-left px-3 py-2 text-sm hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] rounded transition-colors text-[#4485d1]"
-            >
-              + Custom URL
-            </button>
-          </div>
+      
+      {/* Badges Container - Aligned horizontally */}
+      <div className="flex justify-between items-center mb-2">
+        {/* Source Indicator - Left Side */}
+        <div>
+          {checkedCount > 0 && (
+            <span className="inline-flex items-center gap-1 px-4 py-1 bg-[#0078D4] text-white text-xs font-semibold rounded-xl shadow-sm">
+              {checkedCount}/{totalCount} LINKS USED
+            </span>
+          )}
         </div>
-      )}
-      {/* Context Indicator */}
-      {selectedSourceIds.length > 0 && (
-        <div className="mb-2">
-          <span className="inline-flex items-center gap-1 px-2 py-1 bg-white dark:bg-[#1a1a1a] border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] rounded text-[11px] font-medium text-[#4485d1] shadow-sm">
-            <Database size={10} /> Using {selectedSourceIds.length} source{selectedSourceIds.length > 1 ? 's' : ''}
-          </span>
+        
+        {/* File/Token Count - Right Side */}
+        <div>
+          {!isInputDragOver && input.trim() && files.length > 0 && (() => {
+            const mentionedFiles = files.filter(f => input.includes(`@${f.name}`));
+            const totalTokens = mentionedFiles.reduce((sum, f) => sum + (f.tokenCount || 0), 0);
+            const isOverLimit = totalTokens > 30000;
+            
+            if (mentionedFiles.length === 0) return null;
+            
+            return (
+              <span className={`inline-flex items-center gap-1 px-2 py-1 bg-white dark:bg-[#1a1a1a] border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] rounded text-[11px] font-medium shadow-sm ${isOverLimit ? 'text-[#ef4444]' : 'text-[#4485d1]'}`}>
+                <Sparkles size={10} /> {mentionedFiles.length} file(s) • ~{(totalTokens / 1000).toFixed(0)}k tokens
+                {isOverLimit && ' ⚠️'}
+              </span>
+            );
+          })()}
         </div>
-      )}
+      </div>
+      
       {isInputDragOver && (
         <div className="absolute -top-8 left-1/2 -translate-x-1/2 text-xs font-medium bg-[#4485d1] text-white px-3 py-1.5 rounded-full shadow-lg animate-bounce">
           Drop to add & mention
         </div>
       )}
-      {!isInputDragOver && input.trim() && files.length > 0 && (() => {
-        const mentionedFiles = files.filter(f => input.includes(`@${f.name}`));
-        const totalTokens = mentionedFiles.reduce((sum, f) => sum + (f.tokenCount || 0), 0);
-        const isOverLimit = totalTokens > 30000;
-        
-        if (mentionedFiles.length === 0) return null;
-        
-        return (
-          <div className="mb-2">
-            <span className={`inline-flex items-center gap-1 px-2 py-1 bg-white dark:bg-[#1a1a1a] border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] rounded text-[11px] font-medium shadow-sm ${isOverLimit ? 'text-[#ef4444]' : 'text-[#4485d1]'}`}>
-              <Sparkles size={10} /> {mentionedFiles.length} file(s) • ~{(totalTokens / 1000).toFixed(0)}k tokens
-              {isOverLimit && ' ⚠️'}
-            </span>
-          </div>
-        );
-      })()}
 
       {/* Mention Popup Menu */}
       {showMentionMenu && filteredFiles.length > 0 && (
-        <div className="absolute bottom-full left-6 mb-2 w-64 bg-white dark:bg-[#222222] rounded-xl shadow-xl border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] overflow-hidden z-50 animate-in slide-in-from-bottom-2 fade-in duration-200">
+        <div className="absolute bottom-[calc(100%+8px)] left-6 w-64 bg-white dark:bg-[#222222] rounded-xl shadow-xl border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] overflow-hidden z-50 animate-in slide-in-from-bottom-2 fade-in duration-200">
           <div className="px-3 py-2 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] text-[12px] font-bold text-[#666666] dark:text-[#a0a0a0] uppercase tracking-wider">
             Mention a source
           </div>
@@ -207,31 +222,40 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
           onChange={(e) => e.target.files && onFileUpload(e.target.files)}
           className="hidden"
         />
-        <label
-          htmlFor="chat-file-input"
-          className="absolute left-3 top-1/2 -translate-y-1/2 p-2 rounded-full text-[#a0a0a0] hover:text-[#4485d1] hover:bg-[rgba(68,133,209,0.1)] transition-colors cursor-pointer"
-          title="Attach files"
-        >
-          <FileText size={20} />
-        </label>
         <button
-          onClick={onToggleRecording}
-          className={`absolute left-[52px] top-1/2 -translate-y-1/2 p-2 rounded-full transition-all ${
-            isRecording 
-              ? 'text-red-500 bg-red-100 dark:bg-red-900/30 scale-110' 
-              : 'text-[#a0a0a0] hover:text-[#4485d1] hover:bg-[rgba(68,133,209,0.1)]'
-          }`}
-          title={isRecording ? 'Stop recording' : 'Voice input'}
-        >
-          <Mic size={20} className={isRecording ? 'animate-pulse' : ''} />
-        </button>
-        <button
-          onClick={() => setShowSourceMenu(!showSourceMenu)}
-          className="absolute left-[101px] top-1/2 -translate-y-1/2 p-2 rounded-full text-[#a0a0a0] hover:text-[#4485d1] hover:bg-[rgba(68,133,209,0.1)] transition-colors"
+          onClick={() => setShowSourcePopup(!showSourcePopup)}
+          className="absolute left-3 top-1/2 -translate-y-1/2 p-0 bg-transparent border-none text-[#a0a0a0] hover:text-[#4485d1] transition-colors cursor-pointer flex items-center justify-center"
           title="Add source link"
         >
-          <Link size={20} />
+          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/>
+          </svg>
         </button>
+        <button
+          onClick={onToggleRecording}
+          disabled={isTranscribing}
+          className={`absolute left-[50px] top-1/2 -translate-y-1/2 p-0 bg-transparent border-none transition-all ${
+            isTranscribing
+              ? 'text-blue-500'
+              : isRecording 
+              ? 'text-blue-500 scale-110' 
+              : 'text-[#a0a0a0] hover:text-[#4485d1]'
+          }`}
+          title={isTranscribing ? 'Transcribing...' : isRecording ? 'Stop recording' : 'Voice input'}
+        >
+          {isTranscribing ? (
+            <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+          ) : (
+            <Mic size={20} className={isRecording ? 'animate-pulse' : ''} />
+          )}
+        </button>
+        <label
+          htmlFor="chat-file-input"
+          className="absolute left-[80px] top-1/2 -translate-y-1/2 p-0 flex items-center justify-center text-[#a0a0a0] hover:text-[#4485d1] transition-colors cursor-pointer"
+          title="Attach files"
+        >
+          <Plus size={24} />
+        </label>
 
         <textarea
           ref={inputRef}
@@ -298,11 +322,11 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
             e.stopPropagation();
             setIsInputDragOver(false);
           }}
-          placeholder="Ask anything or mention a source"
+          placeholder="Ask anything"
           disabled={isGenerating}
           autoComplete="off"
           rows={1}
-          style={{ height: 'auto', paddingLeft: '150px', paddingRight: '56px' }}
+          style={{ height: 'auto', paddingLeft: '130px', paddingRight: '56px' }}
           onInput={(e) => {
             const target = e.target as HTMLTextAreaElement;
             target.style.height = 'auto';
@@ -316,12 +340,16 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
           <button
             onClick={onSendMessage}
             disabled={!input.trim() || isGenerating}
-            className={`floating-send-button ${
-              !input.trim() || isGenerating ? 'opacity-50' : ''
-            }`}
-            style={{ cursor: (!input.trim() || isGenerating) ? 'default' : 'pointer' }}
+            className="bg-[#0078D4] border-none rounded-full w-[38px] h-[38px] flex justify-center items-center cursor-pointer text-white hover:bg-[#005a9e] transition-colors disabled:opacity-50 disabled:cursor-default"
+            title="Send message"
           >
-            {isGenerating ? <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" /> : <Send size={16} />}
+            {isGenerating ? (
+              <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M6 10H3v4h3v6h2v-6h3v6h2v-6h3v6h2v-6h3V10h-3V4h-2v6h-3V4h-2v6H8V4H6v6z"/>
+              </svg>
+            )}
           </button>
         </div>
       </div>

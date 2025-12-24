@@ -75,7 +75,7 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
   return (
     <header ref={headerRef} className="h-[65px] flex-none border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] flex items-center justify-between px-3 md:px-6 bg-white dark:bg-[#1a1a1a] min-w-0 gap-2 relative z-40">
       <div className="flex items-center gap-2 min-w-0 flex-shrink">
-        {!props.isMobile && (
+        {!props.isMobile && props.activeTab === 'chat' && (
           <button onClick={() => props.setIsSidebarOpen(!props.isSidebarOpen)} className="p-1.5 text-gray-400 hover:bg-gray-100 rounded-md transition-colors flex-shrink-0">
             {props.isSidebarOpen ? <PanelLeft size={18} /> : <PanelLeftOpen size={18} />}
           </button>
@@ -340,7 +340,7 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
                 title="Graphics Library"
               >
                 <Image size={16} />
-                {(props.snapshots.length > 0 || props.mindMapCache.getAll().length > 0) && (
+                {(props.snapshots.length + props.mindMapCache.getAll().length) > 0 && (
                   <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-semibold">
                     {props.snapshots.length + props.mindMapCache.getAll().length}
                   </span>

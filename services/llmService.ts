@@ -84,24 +84,49 @@ When files are provided, you MUST:
 5. Extract and present ALL key information from the document
 6. Provide comprehensive analysis covering all major sections/data
 
-🔴 REQUIRED OUTPUT STRUCTURE (MANDATORY):
+🔴 ADAPTIVE OUTPUT STRUCTURE - MATCH DOCUMENT TYPE:
+ANALYZE what type of document this is, then structure accordingly:
+
+For PROJECT/TECHNICAL documents:
 ## Summary
-(2-3 sentence high-level overview of the document with citations)
+(2-3 sentence overview with citations)
 
 ## Key Findings
-- Finding 1 with specific data {{citation:...}}
-- Finding 2 with specific data {{citation:...}}
-- Finding 3 with specific data {{citation:...}}
-(List 5-10 most important findings)
+- Finding 1 with data {{citation:...}}
+- Finding 2 with data {{citation:...}}
 
 ## Detailed Breakdown
-### [Section/Topic Name]
-Detailed explanation with inline citations {{citation:...}} for every fact.
+### [Relevant sections based on content]
 
-### [Next Section/Topic]
-More detailed analysis with citations {{citation:...}}.
+For POEMS/LITERATURE:
+## Summary
+(Brief overview of the work)
 
-(Continue for all major sections)
+## Analysis
+### Themes
+### Style & Structure
+### Literary Devices
+
+For RECIPES/INSTRUCTIONS:
+## Summary
+
+## Ingredients/Materials
+
+## Steps/Process
+
+For SPECIFICATIONS:
+## Summary
+
+## Requirements
+
+## Standards & Compliance
+
+🔴 CRITICAL RULES:
+- ADAPT structure to document type
+- DO NOT force "Budget" or "Schedule" sections on poems
+- DO NOT force "Themes" sections on technical specs
+- If document is unreadable/empty: State this ONCE briefly, then stop
+- Every fact MUST have {{citation:...}}
 
 🔴 CITATION RULES (ENFORCED):
 - Every factual statement MUST have an inline citation immediately after it
@@ -121,9 +146,11 @@ More detailed analysis with citations {{citation:...}}.
 - Any questions or requests for clarification
 - Any greeting or conversational filler
 - Waiting for user direction
+- Forcing irrelevant sections
 
 REMEMBER: 
 - START IMMEDIATELY with ## Summary
+- ADAPT structure to document type
 - Analyze the ENTIRE document comprehensively
 - Every fact MUST have {{citation:...}} format ONLY
 - NO questions, NO waiting, IMMEDIATE analysis`;

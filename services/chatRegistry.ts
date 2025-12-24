@@ -1,4 +1,5 @@
 import { Message, ProcessedFile } from '../types';
+import { greetingService } from './greetingService';
 
 export interface ChatSession {
   id: string;
@@ -191,7 +192,7 @@ class ChatRegistryService {
       messages: [{
         id: 'intro',
         role: 'model',
-        content: 'Hello! I am ConstructLM, your AI assistant. \n\nI can help you with any questions or tasks. You can also upload documents (PDF, Excel, images, etc.) or drag files here for analysis. \n\n**Tip:** Type "@" in the chat to mention a specific file.',
+        content: greetingService.generateGreeting(),
         timestamp: Date.now()
       }],
       fileIds: [],

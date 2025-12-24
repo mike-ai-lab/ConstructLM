@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Message, ProcessedFile } from '../types';
-import { Sparkles, User, Volume2, Loader2, StopCircle, BookmarkPlus, FileText, ExternalLink } from 'lucide-react';
+import { Sparkles, User, Volume2, Loader2, StopCircle, BookmarkPlus, FileText, ExternalLink, Trash2, RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react';
 import CitationRenderer from './CitationRenderer';
 import { generateSpeech } from '../services/geminiService';
 import { decodeAudioData } from '../services/audioUtils';
@@ -15,9 +15,27 @@ interface MessageBubbleProps {
   onSaveNote?: (content: string, modelId?: string) => void;
   onUnsaveNote?: (messageId: string) => void;
   noteNumber?: number;
+  onDeleteMessage?: (messageId: string) => void;
+  onRetryMessage?: (messageId: string) => void;
+  alternativeOutputs?: string[];
+  currentOutputIndex?: number;
+  onSwitchOutput?: (messageId: string, index: number) => void;
 }
 
-const MessageBubble: React.FC<MessageBubbleProps> = ({ message, files, sources, onViewDocument, onSaveNote, onUnsaveNote, noteNumber }) => {
+const MessageBubble: React.FC<MessageBubbleProps> = ({ 
+  message, 
+  files, 
+  sources, 
+  onViewDocument, 
+  onSaveNote, 
+  onUnsaveNote, 
+  noteNumber,
+  onDeleteMessage,
+  onRetryMessage,
+  alternativeOutputs = [],
+  currentOutputIndex = 0,
+  onSwitchOutput
+}) => {
   const isUser = message.role === 'user';
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoadingAudio, setIsLoadingAudio] = useState(false);
@@ -98,12 +116,30 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, files, sources, 
                    >
                       {isLoadingAudio ? <Loader2 size={12} className="animate-spin" /> : (isPlaying ? <StopCircle size={12} /> : <Volume2 size={12} />)}
                    </button>
+                   {onRetryMessage && (
+                     <button
+                       onClick={() => onRetryMessage(message.id)}
+                       className="opacity-0 group-hover:opacity-100 p-1 hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] rounded text-[#a0a0a0] hover:text-[#4485d1] transition-all"
+                       title="Regenerate"
+                     >
+                       <RotateCcw size={12} />
+                     </button>
+                   )}
                  </>
+             )}
+             {onDeleteMessage && (
+               <button
+                 onClick={() => onDeleteMessage(message.id)}
+                 className="opacity-0 group-hover:opacity-100 p-1 hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] rounded text-[#a0a0a0] hover:text-[#f07a76] transition-all"
+                 title="Delete Message"
+               >
+                 <Trash2 size={12} />
+               </button>
              )}
           </div>
           
           <div className={`
-             relative px-5 py-3.5 text-sm leading-7 rounded-2xl shadow-sm
+             relative px-5 py-3.5 text-sm leading-5 rounded-2xl shadow-sm
              ${isUser 
                 ? 'bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] text-[#1a1a1a] dark:text-white rounded-tr-sm' 
                 : 'text-[#1a1a1a] dark:text-white'
@@ -145,66 +181,91 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, files, sources, 
                         files={files} 
                         onViewDocument={onViewDocument}
                     />
-                    
-                    {/* Sources Bar */}
-                    {(files.length > 0 || sources.length > 0) && (
-                      <div className="mt-4 pt-3 border-t border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)]">
-                        <div className="text-[10px] font-semibold text-[#666666] dark:text-[#a0a0a0] uppercase mb-2">Sources Used</div>
-                        <div className="flex flex-wrap gap-2">
-                          {files.filter(f => message.content.includes(f.name)).map(file => (
-                            <div key={file.id} className="flex items-center gap-1 px-2 py-1 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] rounded text-[10px] border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)]">
-                              <FileText size={10} className="text-[#a0a0a0]" />
-                              <span className="text-[#1a1a1a] dark:text-white">{file.name}</span>
-                            </div>
-                          ))}
-                          {sources.filter(s => s.status === 'fetched').map(source => (
-                            <a
-                              key={source.id}
-                              href={source.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-1 px-2 py-1 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] rounded text-[10px] border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] hover:border-[#4485d1] transition-colors"
-                            >
-                              <ExternalLink size={10} className="text-[#a0a0a0]" />
-                              <span className="text-[#1a1a1a] dark:text-white">{source.title || source.url}</span>
-                            </a>
-                          ))}
-                        </div>
-                      </div>
-                    )}
                   </>
               )}
             </div>
           </div>
           
-          {/* Token Usage Stats */}
-          {!isUser && message.usage && (
-            <div className="text-[12px] text-[#666666] dark:text-[#a0a0a0] mt-1.5 px-1 flex gap-3">
-              <span>In: {message.usage.inputTokens.toLocaleString()} tokens</span>
-              <span>Out: {message.usage.outputTokens.toLocaleString()} tokens</span>
-              <span className="font-semibold">Total: {message.usage.totalTokens.toLocaleString()}</span>
+          {/* Message Footer - Clean and Readable */}
+          {!isUser && (
+            <div className="mt-3 px-1 space-y-2">
+              {/* Sources Row */}
+              {(files.filter(f => message.content.includes(f.name)).length > 0 || sources.filter(s => s.status === 'fetched').length > 0) && (
+                <div className="flex flex-wrap gap-2">
+                  {files.filter(f => message.content.includes(f.name)).map(file => (
+                    <span key={file.id} className="inline-flex items-center gap-1 px-2 py-1 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] rounded text-xs text-[#1a1a1a] dark:text-white">
+                      <FileText size={12} className="text-[#a0a0a0]" />
+                      {file.name}
+                    </span>
+                  ))}
+                  {sources.filter(s => s.status === 'fetched').map(source => (
+                    <a
+                      key={source.id}
+                      href={source.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 px-2 py-1 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] rounded text-xs text-[#1a1a1a] dark:text-white hover:bg-[rgba(68,133,209,0.1)]"
+                    >
+                      <ExternalLink size={12} className="text-[#a0a0a0]" />
+                      {source.title || source.url}
+                    </a>
+                  ))}
+                </div>
+              )}
+              
+              {/* Bottom Row - Stats and Actions */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4 text-xs text-[#666666] dark:text-[#a0a0a0]">
+                  {/* Token Usage */}
+                  {message.usage && (
+                    <span>{message.usage.inputTokens.toLocaleString()} → {message.usage.outputTokens.toLocaleString()} tokens</span>
+                  )}
+                  
+                  {/* Alternative Outputs */}
+                  {alternativeOutputs.length > 1 && onSwitchOutput && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => onSwitchOutput(message.id, currentOutputIndex - 1)}
+                        disabled={currentOutputIndex === 0}
+                        className="p-1 text-[#a0a0a0] hover:text-[#4485d1] disabled:opacity-30 disabled:cursor-not-allowed"
+                      >
+                        <ChevronLeft size={14} />
+                      </button>
+                      <span>{currentOutputIndex + 1} of {alternativeOutputs.length}</span>
+                      <button
+                        onClick={() => onSwitchOutput(message.id, currentOutputIndex + 1)}
+                        disabled={currentOutputIndex === alternativeOutputs.length - 1}
+                        className="p-1 text-[#a0a0a0] hover:text-[#4485d1] disabled:opacity-30 disabled:cursor-not-allowed"
+                      >
+                        <ChevronRight size={14} />
+                      </button>
+                    </div>
+                  )}
+                  
+                  {/* Note Status */}
+                  {noteNumber && (
+                    <span className="text-[#25b5cd] dark:text-[#5bd8bb] font-medium">Note #{noteNumber}</span>
+                  )}
+                </div>
+                
+                {/* Save Button */}
+                {!message.isStreaming && onSaveNote && (
+                  <button
+                    onClick={() => {
+                      if (noteNumber && onUnsaveNote) {
+                        onUnsaveNote(message.id);
+                      } else {
+                        onSaveNote(message.content, message.modelId);
+                      }
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[#a0a0a0] hover:text-[#25b5cd] hover:bg-[rgba(37,181,205,0.1)] rounded transition-colors"
+                  >
+                    <BookmarkPlus size={14} />
+                    <span>{noteNumber ? "Unsave" : "Save"}</span>
+                  </button>
+                )}
+              </div>
             </div>
-          )}
-          {noteNumber && (
-            <div className="text-[10px] text-[#25b5cd] dark:text-[#5bd8bb] mt-1.5 px-1 font-mono flex items-center gap-2">
-              Saved as Note #{noteNumber}
-            </div>
-          )}
-          {!isUser && !message.isStreaming && onSaveNote && (
-            <button
-              onClick={() => {
-                if (noteNumber && onUnsaveNote) {
-                  onUnsaveNote(message.id);
-                } else {
-                  onSaveNote(message.content, message.modelId);
-                }
-              }}
-              className="mt-1.5 px-1 flex items-center gap-1 text-[#a0a0a0] hover:text-[#25b5cd] transition-all text-xs"
-              title={noteNumber ? "Unsave Note" : "Save as Note"}
-            >
-              <BookmarkPlus size={12} />
-              <span>{noteNumber ? "Unsave" : "Save as Note"}</span>
-            </button>
           )}
         </div>
       </div>

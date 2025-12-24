@@ -17,24 +17,15 @@ export const createMessageHandlers = (
   selectedSourceIds: string[] = [],
   onShowContextWarning?: (data: { totalTokens: number; filesUsed: string[]; selectedCount: number; onProceed: () => void }) => void
 ) => {
-  const handleSendMessage = async () => {
-    if (!input.trim() || isGenerating) return;
+  const handleSendMessage = async (messageText?: string, retryMessageId?: string): Promise<string | null> => {
+    const textToSend = messageText || input;
+    if (!textToSend.trim() || isGenerating) return null;
 
-    const selectedFiles = files.filter(f => selectedSourceIds.includes(f.id));
-    
-    if (selectedFiles.length === 0) {
-      const helpMsg: Message = {
-        id: Date.now().toString(),
-        role: 'model',
-        content: `**No sources selected**\n\nPlease select sources using the checkboxes in the sidebar.`,
-        timestamp: Date.now()
-      };
-      setMessages(prev => [...prev, { id: Date.now().toString(), role: 'user', content: input, timestamp: Date.now() }, helpMsg]);
-      setInput('');
-      return;
-    }
+    // Priority: @mentioned files override sources panel selection
+    const mentionedFiles = files.filter(f => textToSend.includes(`@${f.name}`));
+    const selectedFiles = mentionedFiles.length > 0 ? mentionedFiles : files.filter(f => selectedSourceIds.includes(f.id));
 
-    const contextResult = await contextManager.selectContext(input, selectedFiles, activeModelId);
+    const contextResult = await contextManager.selectContext(textToSend, selectedFiles, activeModelId);
     
     if (contextResult.totalTokens > 50000 && onShowContextWarning) {
       const fileNames = contextManager.getFileNames(contextResult.filesUsed, files);
@@ -42,55 +33,47 @@ export const createMessageHandlers = (
         totalTokens: contextResult.totalTokens,
         filesUsed: fileNames,
         selectedCount: selectedFiles.length,
-        onProceed: () => sendMessageWithContext(contextResult, selectedFiles)
+        onProceed: () => sendMessageWithContext(contextResult, selectedFiles, textToSend, retryMessageId)
       });
-      return;
+      return null;
     }
 
-    await sendMessageWithContext(contextResult, selectedFiles);
+    return await sendMessageWithContext(contextResult, selectedFiles, textToSend, retryMessageId);
   };
 
-  const sendMessageWithContext = async (contextResult: any, selectedFiles: ProcessedFile[]) => {
+  const sendMessageWithContext = async (contextResult: any, selectedFiles: ProcessedFile[], textToSend: string, retryMessageId?: string): Promise<string | null> => {
     console.log('[MessageHandler] Context result:', { 
       totalTokens: contextResult.totalTokens, 
       filesUsed: contextResult.filesUsed.length,
-      chunksCount: contextResult.chunks.length 
+      chunksCount: contextResult.chunks.length,
+      selectedFilesCount: selectedFiles.length
     });
     
     const fileNames = contextManager.getFileNames(contextResult.filesUsed, files);
     console.log('[MessageHandler] Sources:', fileNames);
     
-    // Create excerpted files for LLM - if no chunks, use full files
-    const excerptedFiles: ProcessedFile[] = contextResult.chunks.length > 0
-      ? contextResult.chunks.map((chunk: any) => {
-          const originalFile = selectedFiles.find(f => f.id === chunk.fileId);
-          return {
-            id: chunk.fileId,
-            name: originalFile?.name || 'Unknown',
-            content: chunk.content,
-            type: originalFile?.type || 'text/plain',
-            size: chunk.content.length,
-            uploadedAt: originalFile?.uploadedAt || Date.now()
-          };
-        })
-      : selectedFiles; // Use full files if no chunks
+    // Always use selected files - chunks are optional optimization
+    const excerptedFiles: ProcessedFile[] = selectedFiles;
+    console.log('[MessageHandler] Excerpted files:', excerptedFiles.map(f => ({ name: f.name, contentLength: f.content?.length || 0 })));
     
     const userMsg: Message = {
       id: `user-${Date.now()}`,
       role: 'user',
-      content: input,
+      content: textToSend,
       timestamp: Date.now(),
       sourcesUsed: fileNames
     };
 
-    setMessages(prev => [...prev, userMsg]);
-    setInput('');
+    if (!retryMessageId) {
+      setMessages(prev => [...prev, userMsg]);
+      setInput('');
+    }
     setShowMentionMenu(false);
     setIsGenerating(true);
     
     console.log('[MessageHandler] Sending to LLM, model:', activeModelId);
 
-    const modelMsgId = `model-${Date.now()}`;
+    const modelMsgId = retryMessageId || `model-${Date.now()}`;
     const modelMsg: Message = {
       id: modelMsgId,
       role: 'model',
@@ -101,7 +84,11 @@ export const createMessageHandlers = (
       sourcesUsed: fileNames
     };
     
-    setMessages(prev => [...prev, modelMsg]);
+    if (!retryMessageId) {
+      setMessages(prev => [...prev, modelMsg]);
+    } else {
+      setMessages(prev => prev.map(m => m.id === retryMessageId ? { ...modelMsg, id: retryMessageId } : m));
+    }
 
     try {
       let accumText = "";
@@ -144,6 +131,8 @@ export const createMessageHandlers = (
             : msg
         ));
       }
+      saveCurrentChat(true);
+      return accumText;
     } catch (error: any) {
       console.error('[MessageHandler] ERROR:', error);
       const errorMsg = error?.message || "Sorry, I encountered an error. Please check your connection.";
@@ -155,7 +144,7 @@ export const createMessageHandlers = (
       setMessages(prev => prev.map(msg => 
         msg.id === modelMsgId ? { ...msg, isStreaming: false } : msg
       ));
-      saveCurrentChat(true);
+      return null;
     }
   };
 

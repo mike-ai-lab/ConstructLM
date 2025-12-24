@@ -25,6 +25,8 @@ export interface Message {
     outputTokens: number;
     totalTokens: number;
   };
+  alternativeOutputs?: string[];
+  currentOutputIndex?: number;
 }
 
 export interface Note {

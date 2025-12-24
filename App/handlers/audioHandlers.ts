@@ -6,15 +6,18 @@ export const createAudioHandlers = (
   setIsRecording: (recording: boolean) => void,
   mediaRecorder: MediaRecorder | null,
   setMediaRecorder: (recorder: MediaRecorder | null) => void,
-  setInput: (input: string | ((prev: string) => string)) => void
+  setInput: (input: string | ((prev: string) => string)) => void,
+  setIsTranscribing: (transcribing: boolean) => void
 ) => {
   const transcribeAudio = async (audioBlob: Blob) => {
+    setIsTranscribing(true);
     try {
       const arrayBuffer = await audioBlob.arrayBuffer();
       const base64Audio = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
       
       const apiKey = getApiKey();
       if (!apiKey) {
+        setIsTranscribing(false);
         return;
       }
       
@@ -45,6 +48,8 @@ export const createAudioHandlers = (
       }
     } catch (error) {
       console.error('Transcription error:', error);
+    } finally {
+      setIsTranscribing(false);
     }
   };
 

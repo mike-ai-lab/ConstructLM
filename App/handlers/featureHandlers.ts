@@ -18,20 +18,24 @@ export const createFeatureHandlers = (
   activeModelId: string
 ) => {
   const handleTakeSnapshot = async () => {
+    const button = document.querySelector('[title="Take snapshot"]');
+    const originalIcon = button?.innerHTML;
     try {
       const messagesContainer = document.querySelector('.max-w-3xl.mx-auto.w-full');
-      if (!messagesContainer) {
-        showToast('Messages container not found', 'error');
-        return;
-      }
+      if (!messagesContainer) return;
+      
+      if (button) button.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+      
       const context = { fileCount: files.length, messageCount: messages.length };
-      showToast('Taking snapshot...', 'info');
       const snapshot = await snapshotService.takeSnapshot(messagesContainer as HTMLElement, context);
       setSnapshots(snapshotService.getSnapshots());
-      showToast('Snapshot saved!', 'success');
+      
+      setTimeout(() => {
+        if (button && originalIcon) button.innerHTML = originalIcon;
+      }, 800);
     } catch (error: any) {
       console.error('Failed to take snapshot:', error);
-      showToast(error?.message || 'Failed to take snapshot', 'error');
+      if (button && originalIcon) button.innerHTML = originalIcon;
     }
   };
 
@@ -42,10 +46,8 @@ export const createFeatureHandlers = (
   const handleCopySnapshot = async (snapshot: Snapshot) => {
     try {
       await snapshotService.copyToClipboard(snapshot);
-      showToast('Copied to clipboard!', 'success');
     } catch (error: any) {
       console.error('Failed to copy snapshot:', error);
-      showToast('Failed to copy snapshot', 'error');
     }
   };
 

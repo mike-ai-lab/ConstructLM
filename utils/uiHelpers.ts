@@ -277,8 +277,6 @@ export const createMessageContextMenu = (messageElement: HTMLElement, messageTex
       action: () => {
         try {
           const selectedText = selection.toString();
-          
-          // Use execCommand which is more reliable for this use case
           const textarea = document.createElement('textarea');
           textarea.value = selectedText;
           textarea.style.position = 'fixed';
@@ -287,18 +285,11 @@ export const createMessageContextMenu = (messageElement: HTMLElement, messageTex
           document.body.appendChild(textarea);
           textarea.focus();
           textarea.select();
-          
-          const successful = document.execCommand('copy');
+          document.execCommand('copy');
           document.body.removeChild(textarea);
-          
-          if (successful) {
-            showToast('Selection copied', 'success');
-          } else {
-            throw new Error('Copy command failed');
-          }
+          showCheckmark();
         } catch (err) {
           console.error('Failed to copy selection:', err);
-          showToast('Failed to copy selection', 'error');
         }
       }
     });
@@ -317,10 +308,9 @@ export const createMessageContextMenu = (messageElement: HTMLElement, messageTex
         textarea.select();
         document.execCommand('copy');
         document.body.removeChild(textarea);
-        showToast('Message copied', 'success');
+        showCheckmark();
       } catch (err) {
         console.error('Failed to copy message:', err);
-        showToast('Failed to copy', 'error');
       }
     }
   });
@@ -347,10 +337,9 @@ export const createMessageContextMenu = (messageElement: HTMLElement, messageTex
         const codeText = Array.from(codeBlocks).map(block => block.textContent).join('\n\n');
         try {
           await navigator.clipboard.writeText(codeText);
-          showToast('Code copied to clipboard', 'success');
+          showCheckmark();
         } catch (err) {
           console.error('Failed to copy code:', err);
-          showToast('Failed to copy code', 'error');
         }
       }
     });
@@ -365,6 +354,29 @@ export const createMessageContextMenu = (messageElement: HTMLElement, messageTex
   }
   
   return menuItems;
+};
+
+// Checkmark feedback at cursor position
+export const showCheckmark = (): void => {
+  const checkmark = document.createElement('div');
+  checkmark.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+  checkmark.style.cssText = 'position:fixed;z-index:9999;pointer-events:none;color:#16b47e;animation:checkmark-fade 0.6s ease-out forwards;';
+  
+  const style = document.createElement('style');
+  style.textContent = '@keyframes checkmark-fade{0%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.3)}}';
+  if (!document.querySelector('style[data-checkmark]')) {
+    style.setAttribute('data-checkmark', 'true');
+    document.head.appendChild(style);
+  }
+  
+  const x = window.event ? (window.event as MouseEvent).clientX : window.innerWidth / 2;
+  const y = window.event ? (window.event as MouseEvent).clientY : window.innerHeight / 2;
+  
+  checkmark.style.left = `${x - 10}px`;
+  checkmark.style.top = `${y - 10}px`;
+  
+  document.body.appendChild(checkmark);
+  setTimeout(() => checkmark.remove(), 600);
 };
 
 // Toast Notifications

@@ -16,6 +16,7 @@ import { createAudioHandlers } from './App/handlers/audioHandlers';
 import { MIN_SIDEBAR_WIDTH, MAX_SIDEBAR_WIDTH, MIN_VIEWER_WIDTH, MAX_VIEWER_WIDTH, MIN_CHAT_WIDTH } from './App/constants';
 import { MODEL_REGISTRY, DEFAULT_MODEL_ID } from './services/modelRegistry';
 import { mindMapCache } from './services/mindMapCache';
+import { userProfileService } from './services/userProfileService';
 import FileSidebar from './components/FileSidebar';
 import MessageBubble from './components/MessageBubble';
 import DocumentViewer from './components/DocumentViewer';
@@ -55,6 +56,9 @@ const App: React.FC = () => {
   const [embeddingProgress, setEmbeddingProgress] = React.useState<{ fileId: string; fileName: string; current: number; total: number } | null>(null);
 
   React.useEffect(() => {
+    // Record user visit for smart greetings
+    userProfileService.recordVisit();
+    
     const saved = localStorage.getItem('notes');
     const savedCounter = localStorage.getItem('noteCounter');
     const savedTodos = localStorage.getItem('todos');
@@ -372,18 +376,73 @@ const App: React.FC = () => {
     localStorage.setItem('sources', JSON.stringify(updated));
     
     try {
-      const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
-      const data = await response.json();
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(data.contents, 'text/html');
-      const title = doc.querySelector('title')?.textContent || url;
-      const content = doc.body.textContent?.slice(0, 5000) || '';
+      let content = '';
+      let title = url;
+      
+      // Handle GitHub URLs specially
+      if (url.includes('github.com')) {
+        // Convert GitHub URL to raw content URL if it's a file
+        let fetchUrl = url;
+        if (url.includes('/blob/')) {
+          fetchUrl = url.replace('github.com', 'raw.githubusercontent.com').replace('/blob/', '/');
+        }
+        
+        try {
+          const response = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(fetchUrl)}`);
+          if (response.ok) {
+            content = await response.text();
+            // Extract repo name as title
+            const match = url.match(/github\.com\/([^\/]+\/[^\/]+)/);
+            title = match ? match[1] : url;
+          } else {
+            throw new Error('Failed to fetch');
+          }
+        } catch (error) {
+          // Fallback: try to get README or main page
+          const repoMatch = url.match(/github\.com\/([^\/]+\/[^\/]+)/);
+          if (repoMatch) {
+            const readmeUrl = `https://raw.githubusercontent.com/${repoMatch[1]}/main/README.md`;
+            try {
+              const readmeResponse = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(readmeUrl)}`);
+              if (readmeResponse.ok) {
+                content = await readmeResponse.text();
+                title = repoMatch[1];
+              }
+            } catch (e) {
+              // Try master branch
+              const masterUrl = `https://raw.githubusercontent.com/${repoMatch[1]}/master/README.md`;
+              const masterResponse = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(masterUrl)}`);
+              if (masterResponse.ok) {
+                content = await masterResponse.text();
+                title = repoMatch[1];
+              }
+            }
+          }
+        }
+      } else {
+        // Regular URL handling
+        const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+        const data = await response.json();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(data.contents, 'text/html');
+        title = doc.querySelector('title')?.textContent || url;
+        
+        // Extract main content, prioritize article/main tags
+        const mainContent = doc.querySelector('article, main, .content, #content');
+        content = (mainContent?.textContent || doc.body.textContent || '').trim();
+      }
+      
+      // Limit content to reasonable size for API limits
+      if (content.length > 8000) {
+        content = content.slice(0, 8000) + '\n\n[Content truncated...]';
+      }
       
       const updatedSource = { ...newSource, title, content, status: 'fetched' as const };
       setSources(prev => prev.map(s => s.id === newSource.id ? updatedSource : s));
       localStorage.setItem('sources', JSON.stringify(sources.map(s => s.id === newSource.id ? updatedSource : s)));
     } catch (error) {
-      const errorSource = { ...newSource, status: 'error' as const };
+      console.error('Source fetch error:', error);
+      const errorSource = { ...newSource, status: 'error' as const, title: 'Failed to fetch' };
       setSources(prev => prev.map(s => s.id === newSource.id ? errorSource : s));
       localStorage.setItem('sources', JSON.stringify(sources.map(s => s.id === newSource.id ? errorSource : s)));
     }
@@ -497,12 +556,15 @@ const App: React.FC = () => {
     featureState.activeModelId
   );
 
+  const [isTranscribing, setIsTranscribing] = React.useState(false);
+
   const audioHandlers = createAudioHandlers(
     featureState.isRecording,
     featureState.setIsRecording,
     featureState.mediaRecorder,
     featureState.setMediaRecorder,
-    inputState.setInput
+    inputState.setInput,
+    setIsTranscribing
   );
 
   useAppEffects(
@@ -795,7 +857,7 @@ const App: React.FC = () => {
           handleDeleteSnapshot={featureHandlers.handleDeleteSnapshot}
           handleOpenMindMapFromLibrary={featureHandlers.handleOpenMindMapFromLibrary}
           notesCount={notes.length}
-          todosCount={todos.length}
+          todosCount={todos.filter(t => !t.completed).length}
           remindersCount={reminders.filter(r => r.status === 'pending').length}
           onOpenNotebook={() => setActiveTab('notebook')}
           activeTab={activeTab}
@@ -817,6 +879,36 @@ const App: React.FC = () => {
                   onSaveNote={msg.role === 'model' && msg.id !== 'intro' ? (content, modelId) => handleSaveNote(content, modelId, msg.id) : undefined}
                   onUnsaveNote={msg.role === 'model' && msg.id !== 'intro' ? handleUnsaveNote : undefined}
                   noteNumber={notes.find(n => n.messageId === msg.id)?.noteNumber}
+                  onDeleteMessage={(messageId) => {
+                    chatState.setMessages(chatState.messages.filter(m => m.id !== messageId));
+                  }}
+                  onRetryMessage={msg.role === 'model' ? async (messageId) => {
+                    const msgIndex = chatState.messages.findIndex(m => m.id === messageId);
+                    if (msgIndex === -1) return;
+                    const prevUserMsg = chatState.messages.slice(0, msgIndex).reverse().find(m => m.role === 'user');
+                    if (!prevUserMsg) return;
+                    const currentMsg = chatState.messages[msgIndex];
+                    const newOutput = await messageHandlers.handleSendMessage(prevUserMsg.content, messageId);
+                    if (newOutput) {
+                      chatState.setMessages(chatState.messages.map(m => {
+                        if (m.id === messageId) {
+                          const alternatives = m.alternativeOutputs || [m.content];
+                          return { ...m, alternativeOutputs: [...alternatives, newOutput], currentOutputIndex: alternatives.length, content: newOutput };
+                        }
+                        return m;
+                      }));
+                    }
+                  } : undefined}
+                  alternativeOutputs={msg.alternativeOutputs}
+                  currentOutputIndex={msg.currentOutputIndex}
+                  onSwitchOutput={(messageId, index) => {
+                    chatState.setMessages(chatState.messages.map(m => {
+                      if (m.id === messageId && m.alternativeOutputs) {
+                        return { ...m, content: m.alternativeOutputs[index], currentOutputIndex: index };
+                      }
+                      return m;
+                    }));
+                  }}
                 />
               ))}
               <div ref={layoutState.messagesEndRef} className="snapshot-ignore" />
@@ -861,6 +953,7 @@ const App: React.FC = () => {
               filteredFiles={filteredFiles}
               mentionIndex={inputState.mentionIndex}
               isRecording={featureState.isRecording}
+              isTranscribing={isTranscribing}
               inputHeight={inputState.inputHeight}
               sources={sources}
               selectedSourceIds={chatState.selectedSourceIds}

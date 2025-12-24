@@ -17,13 +17,9 @@ interface CitationPopupProps {
   coords?: { top: number; left: number };
 }
 
-/**
- * Layout constants
- * Adjust SIDE_PANEL_WIDTH if your UI changes
- */
 const POPUP_WIDTH = 450;
 const VIEWPORT_PADDING = 8;
-const SIDE_PANEL_WIDTH = 280; // left / right panels when opened
+const SIDE_PANEL_WIDTH = 280;
 const MAX_HEIGHT = 'min(40vh, 400px)';
 
 const CitationPopup: React.FC<CitationPopupProps> = ({
@@ -42,15 +38,14 @@ const CitationPopup: React.FC<CitationPopupProps> = ({
   const [file, setFile] = useState<ProcessedFile | undefined>();
   const [pdfPageNumber, setPdfPageNumber] = useState<number | null>(null);
   const [pdfScale, setPdfScale] = useState(1);
+  const [popupWidth, setPopupWidth] = useState(POPUP_WIDTH);
   const pdfZoomHandlerRef = useRef<{
     handleZoom: (delta: number) => void;
     handleReset: () => void;
-  }>();
+  } | undefined>(undefined);
 
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
   const isPdfMode = file?.type === 'pdf' && pdfPageNumber !== null;
-
-  /* ---------------- File Resolution ---------------- */
 
   useEffect(() => {
     const found = files.find(f => f.name === fileName);
@@ -64,132 +59,101 @@ const CitationPopup: React.FC<CitationPopupProps> = ({
     }
   }, [fileName, files, location]);
 
-  /* ---------------- Smart Positioning ---------------- */
-
   const calculatePosition = () => {
+    const trigger = isInTable ? null : triggerRef.current;
+    const chatArea = trigger?.closest('.max-w-3xl');
+    
+    if (!chatArea && !coords) return;
+
+    const chatRect = chatArea?.getBoundingClientRect();
+    const popupHeight = popoverRef.current?.offsetHeight || 400;
+    const calculatedWidth = Math.min(POPUP_WIDTH, (chatRect?.width || window.innerWidth) - VIEWPORT_PADDING * 2);
+    setPopupWidth(calculatedWidth);
+
     if (isInTable && coords) {
-      const viewportWidth = window.innerWidth;
-      const safeLeftBoundary = SIDE_PANEL_WIDTH + VIEWPORT_PADDING;
-      const safeRightBoundary = viewportWidth - SIDE_PANEL_WIDTH - VIEWPORT_PADDING;
-      const availableWidth = safeRightBoundary - safeLeftBoundary;
-      const effectiveWidth = Math.min(POPUP_WIDTH, availableWidth);
+      const safeLeft = (chatRect?.left || VIEWPORT_PADDING) + VIEWPORT_PADDING;
+      const safeRight = (chatRect?.right || window.innerWidth) - VIEWPORT_PADDING;
+      const safeTop = (chatRect?.top || VIEWPORT_PADDING) + VIEWPORT_PADDING;
+      const safeBottom = (chatRect?.bottom || window.innerHeight) - VIEWPORT_PADDING;
 
       let left = coords.left;
-      if (left + effectiveWidth > safeRightBoundary) {
-        left = safeRightBoundary - effectiveWidth;
-      }
-      if (left < safeLeftBoundary) {
-        left = safeLeftBoundary;
-      }
+      let top = coords.top;
 
-      setPosition({ top: coords.top, left });
-    } else if (!isInTable && popoverRef.current && triggerRef.current) {
-      const popup = popoverRef.current;
-      const rect = popup.getBoundingClientRect();
-      const chatArea = popup.closest('main') || popup.closest('[role="main"]') || document.body;
-      const chatRect = chatArea.getBoundingClientRect();
+      if (left + calculatedWidth > safeRight) left = safeRight - calculatedWidth;
+      if (left < safeLeft) left = safeLeft;
+      if (top + popupHeight > safeBottom) top = safeBottom - popupHeight;
+      if (top < safeTop) top = safeTop;
 
-      if (rect.right > chatRect.right - 10) {
-        popup.style.right = '0';
-        popup.style.left = 'auto';
-      } else {
-        popup.style.left = '-20px';
-        popup.style.right = 'auto';
-      }
+      setPosition({ top, left });
     }
   };
 
-  useLayoutEffect(() => {
-    calculatePosition();
-  }, [coords, isInTable]);
+  useLayoutEffect(() => calculatePosition(), [coords, isInTable, file, pdfPageNumber, calculatePosition]);
 
   useEffect(() => {
     const handleResize = () => calculatePosition();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [isInTable, coords]);
-
-  /* ---------------- Outside Click ---------------- */
+  }, [calculatePosition]);
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    const handleClickOutside = (e: MouseEvent) => {
       if (
         popoverRef.current &&
-        !popoverRef.current.contains(event.target as Node) &&
+        !popoverRef.current.contains(e.target as Node) &&
         triggerRef.current &&
-        !triggerRef.current.contains(event.target as Node)
+        !triggerRef.current.contains(e.target as Node)
       ) {
         onClose();
       }
     };
-
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [onClose, triggerRef]);
-
-  /* ---------------- Render ---------------- */
 
   const popup = (
     <div
       ref={popoverRef}
       role="dialog"
       aria-modal="true"
-      aria-label={`Citation for ${fileName}`}
-      onWheel={e => e.stopPropagation()}
       className={`
         ${isInTable ? 'fixed z-[10000]' : 'absolute z-[150]'}
-        bg-white dark:bg-[#222222]
-        text-[#1a1a1a] dark:text-white
+        bg-white dark:bg-[#222]
         rounded-lg shadow-2xl
         border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)]
         flex flex-col overflow-hidden
-        animate-in fade-in duration-150
       `}
       style={{
-        width: POPUP_WIDTH,
-        maxWidth: `calc(100vw - ${(SIDE_PANEL_WIDTH * 2) + VIEWPORT_PADDING * 2}px)`,
+        width: popupWidth || POPUP_WIDTH,
         maxHeight: MAX_HEIGHT,
         ...(isInTable
           ? { top: position?.top ?? 0, left: position?.left ?? 0 }
-          : { top: '100%', left: '-20px', marginTop: 8 }),
+          : { top: '100%', marginTop: 6 }),
       }}
     >
-      {/* Header */}
-      <div className="px-3 py-1.5 flex items-center justify-between border-b bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a]">
-        <div className="flex items-center gap-1.5 min-w-0">
-          <BookOpen size={12} className="text-blue-600" />
-          <span className="text-xs font-medium truncate">{fileName}</span>
-          <span className="text-xs text-[#666] dark:text-[#a0a0a0]">
-            • {location}
-          </span>
+      {/* Compact Header */}
+      <div className="px-2 py-[3px] flex items-center justify-between border-b text-[12px] bg-[rgba(0,0,0,0.02)] dark:bg-[#262626]">
+        <div className="flex items-center gap-1 min-w-0">
+          <BookOpen size={12} className="text-blue-600 shrink-0" />
+          <span className="truncate font-medium">{fileName}</span>
+          <span className="text-[#777] dark:text-[#aaa] truncate">• {location}</span>
         </div>
-
-        <div className="flex gap-1">
-          <button
-            onClick={onOpenFull}
-            className="p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/30 text-blue-600"
-            title="Open Full"
-          >
+        <div className="flex gap-0.5">
+          <button onClick={onOpenFull} className="p-0.5 hover:text-blue-600">
             <Maximize2 size={12} />
           </button>
-          <button
-            onClick={onClose}
-            className="p-1 rounded hover:bg-[rgba(0,0,0,0.05)]"
-          >
+          <button onClick={onClose} className="p-0.5 hover:text-red-500">
             <X size={12} />
           </button>
         </div>
       </div>
 
       {/* Content */}
-      <div
-        className="flex-1 overflow-y-auto overscroll-contain bg-[rgba(0,0,0,0.03)] dark:bg-[#1a1a1a]"
-        onWheel={e => e.stopPropagation()}
-      >
+      <div className="flex-1 overflow-y-auto overscroll-contain">
         {isPdfMode && file?.fileHandle ? (
           <PdfPagePreview
             file={file.fileHandle}
-            pageNumber={pdfPageNumber as number}
+            pageNumber={pdfPageNumber}
             quote={quote}
             onScaleChange={setPdfScale}
             zoomHandlerRef={pdfZoomHandlerRef}
@@ -199,16 +163,16 @@ const CitationPopup: React.FC<CitationPopupProps> = ({
         )}
       </div>
 
-      {/* Footer */}
-      <div className="px-2 py-1.5 border-t bg-white dark:bg-[#2a2a2a] flex items-center justify-between">
-        <p className="text-xs italic text-[#666] dark:text-[#a0a0a0] line-clamp-2">
-          "{quote}"
-        </p>
+      {/* Compact Footer */}
+      <div className="px-2 py-[3px] border-t flex items-center justify-between text-[11px] bg-[rgba(0,0,0,0.02)] dark:bg-[#262626]">
+        <span className="italic text-[#777] dark:text-[#aaa] truncate">
+          “{quote}”
+        </span>
 
         {isPdfMode && (
           <div className="flex items-center gap-1 ml-2">
             <button onClick={() => pdfZoomHandlerRef.current?.handleZoom(0.2)}>+</button>
-            <span className="text-xs">{Math.round(pdfScale * 100)}%</span>
+            <span>{Math.round(pdfScale * 100)}%</span>
             <button onClick={() => pdfZoomHandlerRef.current?.handleZoom(-0.2)}>−</button>
             <button onClick={() => pdfZoomHandlerRef.current?.handleReset()}>⟲</button>
           </div>

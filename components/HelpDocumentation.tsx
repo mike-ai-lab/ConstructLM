@@ -43,7 +43,7 @@ const HelpDocumentation: React.FC<HelpDocumentationProps> = ({ onClose }) => {
               placeholder="Search..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-2.5 py-1.5 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] rounded-lg text-xs text-[#1a1a1a] dark:text-white focus:outline-none focus:ring-2 focus:ring-[rgba(68,133,209,0.2)]"
+              className="w-full pl-8 pr-2.5 py-1.5 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] rounded-lg text-xs text-[#1a1a1a] dark:text-white focus:outline-none focus:ring-2 focus:ring-[rgba(37,99,235,0.3)]"
             />
           </div>
         </div>
@@ -64,7 +64,7 @@ const HelpDocumentation: React.FC<HelpDocumentationProps> = ({ onClose }) => {
                 }}
                 className={`documentation-nav-button w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium ${
                   activeSection === section.id
-                    ? 'active bg-[rgba(68,133,209,0.1)] text-[#4485d1]'
+                    ? 'active bg-[rgba(37,99,235,0.15)] text-[rgb(37,99,235)]'
                     : 'text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a]'
                 }`}
               >
@@ -117,7 +117,7 @@ const List: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 
 const ListItem: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <li className="flex items-start gap-2 text-sm text-[#666666] dark:text-[#a0a0a0]">
-    <ChevronRight size={14} className="text-[#4485d1] flex-shrink-0 mt-0.5" />
+    <ChevronRight size={14} className="text-[rgb(37,99,235)] flex-shrink-0 mt-0.5" />
     <span>{children}</span>
   </li>
 );
@@ -129,7 +129,7 @@ const CodeBlock: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 );
 
 const InfoBox: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div className="bg-[rgba(68,133,209,0.1)] border border-[rgba(68,133,209,0.2)] dark:border-[rgba(68,133,209,0.3)] rounded-lg p-3 mb-4">
+  <div className="bg-[rgba(37,99,235,0.1)] border border-[rgba(37,99,235,0.25)] dark:border-[rgba(37,99,235,0.3)] rounded-lg p-3 mb-4">
     <p className="text-xs text-[#1a1a1a] dark:text-white leading-relaxed">{children}</p>
   </div>
 );
