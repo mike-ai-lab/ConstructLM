@@ -1,5 +1,7 @@
 import { ProcessedFile } from '../types';
 import { compressText } from './compressionService';
+import { permanentStorage } from './permanentStorage';
+import { extractStructuredPDF } from './advancedPdfParser';
 
 const MAX_PDF_PAGES = 200;
 
@@ -8,6 +10,19 @@ export const generateId = () => Math.random().toString(36).substr(2, 9);
 export const parseFile = async (file: File): Promise<ProcessedFile> => {
   const fileName = file.name.toLowerCase();
   let fileType: ProcessedFile['type'] = 'other';
+  
+  // Generate content hash for deduplication
+  const arrayBuffer = await file.arrayBuffer();
+  const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const contentHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  
+  // Check if file already processed
+  const existing = await permanentStorage.getFileByHash(contentHash);
+  if (existing) {
+    console.log(`✅ File "${file.name}" already processed (hash match) - reusing`);
+    return { ...existing, fileHandle: file, status: 'ready' };
+  }
 
   if (fileName.endsWith('.pdf')) {
     fileType = 'pdf';
@@ -26,7 +41,39 @@ export const parseFile = async (file: File): Promise<ProcessedFile> => {
 
   try {
     if (fileType === 'pdf') {
-      content = await extractPdfText(file);
+      // Use advanced structured extraction for PDFs
+      try {
+        const structured = await extractStructuredPDF(file);
+        content = structured.fullText;
+        
+        // Store sections separately
+        const processedFile: ProcessedFile = {
+          id: generateId(),
+          name: file.name,
+          type: fileType,
+          content: compressText(content),
+          size: file.size,
+          status: 'ready',
+          tokenCount: Math.ceil(content.length / 4),
+          fileHandle: file,
+          path: file.webkitRelativePath || "",
+          uploadedAt: Date.now(),
+          contentHash,
+          sections: structured.sections
+        };
+        
+        // Save to permanent storage
+        await permanentStorage.saveFile(processedFile);
+        if (structured.sections && structured.sections.length > 0) {
+          await permanentStorage.saveSections(structured.sections, processedFile.id);
+        }
+        
+        console.log(`✅ PDF "${file.name}" processed: ${structured.sections.length} sections`);
+        return processedFile;
+      } catch (structuredError) {
+        console.warn('Structured PDF parsing failed, falling back to basic extraction:', structuredError);
+        content = await extractPdfText(file);
+      }
     } else if (fileType === 'excel') {
       content = await extractExcelText(file);
     } else if (fileType === 'image') {
@@ -59,7 +106,7 @@ export const parseFile = async (file: File): Promise<ProcessedFile> => {
   const compressed = compressText(content);
   const tokenCount = Math.ceil(compressed.length / 4);
 
-  return {
+  const processedFile: ProcessedFile = {
     id: generateId(),
     name: file.name,
     type: fileType,
@@ -69,8 +116,14 @@ export const parseFile = async (file: File): Promise<ProcessedFile> => {
     tokenCount,
     fileHandle: file,
     path: file.webkitRelativePath || "",
-    uploadedAt: Date.now()
+    uploadedAt: Date.now(),
+    contentHash
   };
+  
+  // Save to permanent storage
+  await permanentStorage.saveFile(processedFile);
+  
+  return processedFile;
 };
 
 const extractPdfText = async (file: File): Promise<string> => {

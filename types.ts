@@ -9,6 +9,17 @@ export interface ProcessedFile {
   fileHandle?: File; // Store original file for re-reading binary data (rendering PDFs)
   path?: string; // Relative path for folder uploads
   uploadedAt?: number; // Timestamp when file was uploaded
+  contentHash?: string; // SHA-256 hash for deduplication
+  sections?: PDFSection[]; // Structured sections for construction PDFs
+}
+
+export interface PDFSection {
+  id: string;
+  title: string;
+  content: string;
+  pageNumber: number;
+  tokens: number;
+  boundingBox?: { x: number; y: number; width: number; height: number };
 }
 
 export interface Message {

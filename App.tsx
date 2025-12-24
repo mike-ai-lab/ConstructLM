@@ -597,7 +597,8 @@ const App: React.FC = () => {
     chatHandlers.saveCurrentChat,
     fileState.files,
     featureState.activeModelId,
-    featureState.setRateLimitTimers
+    featureState.setRateLimitTimers,
+    fileState.setFiles
   );
 
   // Resize handler for panels

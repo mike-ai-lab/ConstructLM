@@ -5,6 +5,7 @@ import { chatRegistry } from '../../services/chatRegistry';
 import { drawingService } from '../../services/drawingService';
 import { MODEL_REGISTRY, getRateLimitCooldown, DEFAULT_MODEL_ID } from '../../services/modelRegistry';
 import { Message } from '../../types';
+import { permanentStorage } from '../../services/permanentStorage';
 
 export const useAppEffects = (
   setSnapshots: any,
@@ -36,33 +37,53 @@ export const useAppEffects = (
   saveCurrentChat: any,
   files: any[],
   activeModelId: string,
-  setRateLimitTimers: any
+  setRateLimitTimers: any,
+  setFiles?: any
 ) => {
   // Initial setup
   useEffect(() => {
-    initializeGemini();
-    setSnapshots(snapshotService.getSnapshots());
+    const initializeApp = async () => {
+      initializeGemini();
+      setSnapshots(snapshotService.getSnapshots());
+      
+      // Initialize permanent storage
+      try {
+        await permanentStorage.init();
+        console.log('✅ Permanent storage initialized');
+        
+        // Restore files from permanent storage
+        const storedFiles = await permanentStorage.getAllFiles();
+        if (storedFiles.length > 0 && setFiles) {
+          console.log(`✅ Restored ${storedFiles.length} files from permanent storage`);
+          setFiles(storedFiles);
+        }
+      } catch (error) {
+        console.error('Failed to initialize permanent storage:', error);
+      }
+      
+      const chatHistory = chatRegistry.getAllChats();
+      setChats(chatHistory);
+      
+      if (chatHistory.length === 0) {
+        const newChat = chatRegistry.createNewChat('New Chat', DEFAULT_MODEL_ID);
+        setCurrentChatId(newChat.id);
+        setMessages(newChat.messages);
+        setActiveModelId(newChat.modelId);
+        setChats([{
+          id: newChat.id,
+          name: newChat.name,
+          modelId: newChat.modelId,
+          messageCount: newChat.messages.length,
+          createdAt: newChat.createdAt,
+          updatedAt: newChat.updatedAt
+        }]);
+      } else {
+        const mostRecent = chatHistory.sort((a, b) => b.updatedAt - a.updatedAt)[0];
+        loadChat(mostRecent.id);
+      }
+    };
     
-    const chatHistory = chatRegistry.getAllChats();
-    setChats(chatHistory);
-    
-    if (chatHistory.length === 0) {
-      const newChat = chatRegistry.createNewChat('New Chat', DEFAULT_MODEL_ID);
-      setCurrentChatId(newChat.id);
-      setMessages(newChat.messages);
-      setActiveModelId(newChat.modelId);
-      setChats([{
-        id: newChat.id,
-        name: newChat.name,
-        modelId: newChat.modelId,
-        messageCount: newChat.messages.length,
-        createdAt: newChat.createdAt,
-        updatedAt: newChat.updatedAt
-      }]);
-    } else {
-      const mostRecent = chatHistory.sort((a, b) => b.updatedAt - a.updatedAt)[0];
-      loadChat(mostRecent.id);
-    }
+    initializeApp();
     
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     handleResize();

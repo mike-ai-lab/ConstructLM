@@ -3,6 +3,7 @@ import { vectorStore, ChunkRecord } from './vectorStore';
 import { estimateTokens } from './embeddingUtils';
 import { ProcessedFile } from '../types';
 import { MODEL_REGISTRY } from './modelRegistry';
+import { selectRelevantContext, buildContextString as buildSmartContext } from './smartContextManager';
 
 interface ContextResult {
   chunks: ChunkRecord[];
@@ -21,26 +22,51 @@ class ContextManager {
       return { chunks: [], totalTokens: 0, filesUsed: [] };
     }
 
-    const model = MODEL_REGISTRY.find(m => m.id === modelId);
-    const contextWindow = model?.contextWindow || 32000;
-    
-    // Groq models have strict TPM limits - use conservative limits
-    const groqLimits: Record<string, number> = {
-      'llama-3.3-70b-versatile': 8000,
-      'llama-3.1-8b-instant': 4000,
-      'qwen/qwen3-32b': 4000,
-      'openai/gpt-oss-120b': 5000,
-      'meta-llama/llama-4-scout-17b-16e-instruct': 4000,
-      'meta-llama/llama-4-maverick-17b-128e-instruct': 4000,
-      'openai/gpt-oss-safeguard-20b': 5000,
-      'openai/gpt-oss-20b': 5000
-    };
-    
-    const maxTokens = model?.provider === 'groq' && groqLimits[modelId]
-      ? groqLimits[modelId]
-      : contextWindow - 4000;
+    // Try smart section-based selection first
+    try {
+      const fileIds = selectedFiles.map(f => f.id);
+      const smartSelection = await selectRelevantContext(query, fileIds, modelId);
+      
+      // Convert to ContextResult format
+      const chunks: ChunkRecord[] = smartSelection.sections.map((section, idx) => ({
+        id: `${section.fileId}_section_${idx}`,
+        fileId: section.fileId,
+        chunkIndex: idx,
+        content: `[${section.sectionTitle}] (Page ${section.pageNumber})\n${section.content}`,
+        embedding: [],
+        tokens: Math.ceil(section.content.length / 4)
+      }));
+      
+      return {
+        chunks,
+        totalTokens: smartSelection.totalTokens,
+        filesUsed: smartSelection.filesUsed,
+        warning: smartSelection.warning
+      };
+    } catch (error) {
+      console.warn('Smart context selection failed, falling back to keyword-based:', error);
+      
+      // Fallback to keyword-based selection
+      const model = MODEL_REGISTRY.find(m => m.id === modelId);
+      const contextWindow = model?.contextWindow || 32000;
+      
+      const groqLimits: Record<string, number> = {
+        'llama-3.3-70b-versatile': 8000,
+        'llama-3.1-8b-instant': 4000,
+        'qwen/qwen3-32b': 4000,
+        'openai/gpt-oss-120b': 5000,
+        'meta-llama/llama-4-scout-17b-16e-instruct': 4000,
+        'meta-llama/llama-4-maverick-17b-128e-instruct': 4000,
+        'openai/gpt-oss-safeguard-20b': 5000,
+        'openai/gpt-oss-20b': 5000
+      };
+      
+      const maxTokens = model?.provider === 'groq' && groqLimits[modelId]
+        ? groqLimits[modelId]
+        : contextWindow - 4000;
 
-    return this.keywordBasedSelection(query, selectedFiles, maxTokens);
+      return this.keywordBasedSelection(query, selectedFiles, maxTokens);
+    }
   }
 
   private keywordBasedSelection(query: string, files: ProcessedFile[], maxTokens: number): ContextResult {

@@ -19,7 +19,7 @@ export const createMessageHandlers = (
 ) => {
   const handleSendMessage = async (messageText?: string, retryMessageId?: string): Promise<string | null> => {
     const textToSend = messageText || input;
-    if (!textToSend.trim() || isGenerating) return null;
+    if (!textToSend || !textToSend.trim() || isGenerating) return null;
 
     // Priority: @mentioned files override sources panel selection
     const mentionedFiles = files.filter(f => textToSend.includes(`@${f.name}`));
