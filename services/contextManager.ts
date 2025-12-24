@@ -23,10 +23,23 @@ class ContextManager {
 
     const model = MODEL_REGISTRY.find(m => m.id === modelId);
     const contextWindow = model?.contextWindow || 32000;
-    const safetyMargin = 4000;
-    const maxTokens = contextWindow - safetyMargin;
+    
+    // Groq models have strict TPM limits - use conservative limits
+    const groqLimits: Record<string, number> = {
+      'llama-3.3-70b-versatile': 8000,
+      'llama-3.1-8b-instant': 4000,
+      'qwen/qwen3-32b': 4000,
+      'openai/gpt-oss-120b': 5000,
+      'meta-llama/llama-4-scout-17b-16e-instruct': 4000,
+      'meta-llama/llama-4-maverick-17b-128e-instruct': 4000,
+      'openai/gpt-oss-safeguard-20b': 5000,
+      'openai/gpt-oss-20b': 5000
+    };
+    
+    const maxTokens = model?.provider === 'groq' && groqLimits[modelId]
+      ? groqLimits[modelId]
+      : contextWindow - 4000;
 
-    // Use keyword-based search (no embeddings needed)
     return this.keywordBasedSelection(query, selectedFiles, maxTokens);
   }
 
@@ -49,17 +62,19 @@ class ContextManager {
         return sum + matches;
       }, 0);
       return { file, score };
-    }).filter(f => f.score > 0).sort((a, b) => b.score - a.score);
+    }).sort((a, b) => b.score - a.score);
     
     console.log('[ContextManager] Scored files:', scoredFiles.map(f => ({ name: f.file.name, score: f.score })));
 
-    for (const { file } of scoredFiles) {
+    const filesToUse = scoredFiles.length > 0 ? scoredFiles.filter(f => f.score > 0) : scoredFiles;
+
+    for (const { file } of filesToUse) {
       const fileTokens = Math.min(estimateTokens(file.content), maxPerFile);
       if (totalTokens + fileTokens > maxTokens) break;
       
       const excerpts: string[] = [];
       for (const word of queryWords) {
-        const regex = new RegExp(`.{0,500}${word}.{0,500}`, 'gi');
+        const regex = new RegExp(`.{0,500}${word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}.{0,500}`, 'gi');
         const matches = file.content.match(regex);
         if (matches) excerpts.push(...matches.slice(0, 5));
       }

@@ -5,7 +5,7 @@ export const useLayoutState = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [sidebarWidth, setSidebarWidth] = useState(288);
-  const [viewerWidth, setViewerWidth] = useState(400);
+  const [viewerWidth, setViewerWidth] = useState(450);
   const [isResizing, setIsResizing] = useState<'left' | 'right' | null>(null);
   const [viewState, setViewState] = useState<ViewState | null>(null);
   const [isSidebarDragOver, setIsSidebarDragOver] = useState(false);

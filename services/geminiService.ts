@@ -8,7 +8,7 @@ import {
 } from "./audioUtils";
 
 export function getApiKey(): string | undefined {
-  return process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+  return 'AIzaSyBzbrMzzfYAzzJvQ6kmj2Uf1y-HevM5LWE';
 }
 
 export function initializeGemini(): void {
@@ -19,13 +19,18 @@ export async function sendMessageToGemini(
   modelId: string,
   apiKey: string,
   message: string,
-  files: any[],
   activeFiles: any[],
   onStream: (chunk: string, thinking?: string) => void,
   systemPrompt?: string,
   history?: any[]
 ): Promise<void> {
   if (!apiKey) throw new Error("API Key missing");
+
+  console.log('🔵 [GEMINI] === REQUEST START ===');
+  console.log('🔵 [GEMINI] Model:', modelId);
+  console.log('🔵 [GEMINI] Message length:', message.length);
+  console.log('🔵 [GEMINI] Files attached:', activeFiles.length);
+  console.log('🔵 [GEMINI] History messages:', history?.length || 0);
 
   const fileContext = activeFiles.length > 0
     ? '\n\nFILE CONTEXT:\n' + activeFiles.map(f => `=== FILE: "${f.name}" ===\n${f.content}\n=== END FILE ===`).join('\n\n')
@@ -66,6 +71,10 @@ export async function sendMessageToGemini(
   if (systemPrompt) {
     requestBody.systemInstruction = { parts: [{ text: systemPrompt }] };
   }
+
+  console.log('🔵 [GEMINI] Request body size:', JSON.stringify(requestBody).length, 'bytes');
+  console.log('🔵 [GEMINI] Total content messages:', contents.length);
+  console.log('🔵 [GEMINI] Sending request to API...');
   
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:streamGenerateContent?key=${apiKey}&alt=sse`,
@@ -76,13 +85,24 @@ export async function sendMessageToGemini(
     }
   );
 
-  if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
+  console.log('🔵 [GEMINI] Response status:', response.status, response.statusText);
+  
+  if (!response.ok) {
+    console.error('🔴 [GEMINI] API ERROR:', response.status, response.statusText);
+    const errorBody = await response.text().catch(() => 'Unable to read error');
+    console.error('🔴 [GEMINI] Error body:', errorBody);
+    throw new Error(`API Error: ${response.statusText}`);
+  }
   if (!response.body) throw new Error("No response body");
+
+  console.log('🟢 [GEMINI] Streaming response started...');
 
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
   let thinkingContent = "";
+  let chunkCount = 0;
+  let totalChars = 0;
 
   while (true) {
     const { done, value } = await reader.read();
@@ -102,6 +122,8 @@ export async function sendMessageToGemini(
             if (part.thought) {
               thinkingContent += part.text || "";
             } else if (part.text) {
+              chunkCount++;
+              totalChars += part.text.length;
               onStream(part.text, thinkingContent || undefined);
             }
           }
@@ -109,6 +131,11 @@ export async function sendMessageToGemini(
       }
     }
   }
+  
+  console.log('🟢 [GEMINI] Streaming complete');
+  console.log('🟢 [GEMINI] Chunks received:', chunkCount);
+  console.log('🟢 [GEMINI] Total characters:', totalChars);
+  console.log('🔵 [GEMINI] === REQUEST END ===');
 }
 
 export async function generateSpeech(text: string): Promise<Uint8Array | null> {
@@ -202,7 +229,6 @@ export class LiveManager {
           sampleRate: INPUT_SAMPLE_RATE,
         });
 
-      // FIX 1: Ensure Input Context is Resumed
       if (this.inputContext.state === "suspended") {
         console.log("[LiveManager DEBUG] Resuming input context...");
         await this.inputContext.resume();
@@ -364,7 +390,6 @@ export class LiveManager {
       return;
     }
 
-    // CRITICAL FIX: Ensure inputContext is resumed (especially important in Electron)
     if (this.inputContext.state === "suspended") {
       console.log("[LiveManager DEBUG] Resuming suspended inputContext before starting stream");
       await this.inputContext.resume();
@@ -372,7 +397,6 @@ export class LiveManager {
 
     console.log("[LiveManager] Starting Audio Input Stream");
     this.inputSource = this.inputContext.createMediaStreamSource(this.stream);
-    // createScriptProcessor may not be in lib.dom.d.ts in strict modes; cast to any to avoid TS errors
     this.processor = (this.inputContext as any).createScriptProcessor(512, 1, 1);
 
     let audioChunkCount = 0;
@@ -381,12 +405,10 @@ export class LiveManager {
         if (!this.sessionPromise || !this.inputContext) return;
         const inputData = e.inputBuffer.getChannelData(0);
 
-        // Calculate volume to detect speech
         let sum = 0;
         for (let i = 0; i < inputData.length; i++) sum += Math.abs(inputData[i]);
         const avgVolume = sum / inputData.length;
 
-        // Report input volume for visualization
         if (this.config?.onAudioInput) {
           this.config.onAudioInput(avgVolume * 50);
         }
@@ -433,10 +455,8 @@ export class LiveManager {
 
     this.inputSource.connect(this.processor);
 
-    // FIX 2: Connect to destination
-    // Connect to dummy gain node (silenced) then to destination to keep graph alive
     const dummyGain = this.inputContext.createGain();
-    dummyGain.gain.value = 0; // Mute processing output locally
+    dummyGain.gain.value = 0;
     this.processor.connect(dummyGain);
     dummyGain.connect(this.inputContext.destination);
 
@@ -528,8 +548,6 @@ export class LiveManager {
       } catch (e) {}
       this.inputSource = null;
     }
-    // CRITICAL FIX: Don't close contexts if we're still connecting or connected
-    // This prevents the inputContext from being null when startAudioInputStream is called
     if (this.inputContext && this.inputContext.state !== "closed" && !this.isConnected) {
       console.log("[LiveManager DEBUG] Closing input context");
       try {

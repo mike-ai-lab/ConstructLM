@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clear API Keys & Reset</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #1e1e1e; color: #d4d4d4; }
+        button { padding: 15px 30px; margin: 10px; cursor: pointer; font-size: 16px; }
+        .danger { background: #f44336; color: white; border: none; border-radius: 4px; }
+        .success { background: #4caf50; color: white; border: none; border-radius: 4px; }
+        .result { margin: 20px 0; padding: 15px; background: #2d2d2d; border-radius: 4px; }
+        .warning { color: #ff9800; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>🔧 ConstructLM API Key Reset Tool</h1>
+    
+    <div class="warning">
+        ⚠️ WARNING: This will clear ALL stored API keys and app data!
+    </div>
+    
+    <div style="margin: 30px 0;">
+        <button class="danger" onclick="clearEverything()">Clear All API Keys & Data</button>
+        <button class="success" onclick="showStoredKeys()">Show Stored Keys</button>
+    </div>
+    
+    <div id="results"></div>
+    
+    <script>
+        function log(msg) {
+            const div = document.createElement('div');
+            div.className = 'result';
+            div.textContent = msg;
+            document.getElementById('results').appendChild(div);
+        }
+        
+        function clearEverything() {
+            document.getElementById('results').innerHTML = '';
+            
+            // Clear all localStorage items related to API keys
+            const keysCleared = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && (key.includes('API_KEY') || key.includes('constructlm'))) {
+                    keysCleared.push(key);
+                }
+            }
+            
+            keysCleared.forEach(key => {
+                localStorage.removeItem(key);
+                log(`✓ Cleared: ${key}`);
+            });
+            
+            // Also clear common API key storage locations
+            const commonKeys = [
+                'GEMINI_API_KEY',
+                'NEXT_PUBLIC_GEMINI_API_KEY',
+                'GROQ_API_KEY',
+                'OPENAI_API_KEY',
+                'AWS_ACCESS_KEY_ID',
+                'AWS_SECRET_ACCESS_KEY',
+                'constructlm_config_GEMINI_API_KEY',
+                'constructlm_config_GROQ_API_KEY',
+                'constructlm_config_OPENAI_API_KEY',
+                'constructlm_config_AWS_ACCESS_KEY_ID',
+                'constructlm_config_AWS_SECRET_ACCESS_KEY'
+            ];
+            
+            commonKeys.forEach(key => {
+                if (localStorage.getItem(key)) {
+                    localStorage.removeItem(key);
+                    log(`✓ Cleared: ${key}`);
+                }
+            });
+            
+            log('');
+            log('✅ ALL API KEYS CLEARED!');
+            log('');
+            log('Next steps:');
+            log('1. Close this page');
+            log('2. Restart your app');
+            log('3. Go to Settings and add your NEW API key');
+            log('4. Test with a single request');
+        }
+        
+        function showStoredKeys() {
+            document.getElementById('results').innerHTML = '';
+            log('=== STORED API KEYS ===');
+            log('');
+            
+            let found = false;
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && (key.includes('API_KEY') || key.includes('constructlm_config'))) {
+                    const value = localStorage.getItem(key);
+                    const masked = value ? value.substring(0, 10) + '...' + value.substring(value.length - 4) : 'null';
+                    log(`${key}: ${masked}`);
+                    found = true;
+                }
+            }
+            
+            if (!found) {
+                log('No API keys found in localStorage');
+            }
+        }
+    </script>
+</body>
+</html>

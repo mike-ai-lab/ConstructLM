@@ -7,7 +7,7 @@ export const renderHighlights = (
 ) => {
   highlightLayerRef.innerHTML = '';
 
-  const normalize = (str: string) => str.replace(/\s+/g, '').toLowerCase();
+  const normalize = (str: string) => str.replace(/[\s\n\r]+/g, ' ').trim().toLowerCase();
   const normQuote = normalize(quote);
   if (!normQuote || normQuote.length < 3) return;
 
@@ -15,9 +15,11 @@ export const renderHighlights = (
   const itemMap: { start: number, end: number, item: any }[] = [];
   textContent.items.forEach((item: any) => {
     const str = normalize(item.str);
-    const start = fullText.length;
-    fullText += str;
-    itemMap.push({ start, end: fullText.length, item });
+    if (str) {
+      const start = fullText.length;
+      fullText += str + ' ';
+      itemMap.push({ start, end: fullText.length - 1, item });
+    }
   });
 
   const matchIndex = fullText.indexOf(normQuote);
@@ -40,16 +42,16 @@ export const renderHighlights = (
           top: `${(tx[5] - Math.hypot(tx[2], tx[3])) / scaleFactor}px`,
           width: `${fontWidth}px`,
           height: `${fontHeight}px`,
-          backgroundColor: 'rgba(255, 235, 59, 0.4)',
+          backgroundColor: 'rgba(255, 235, 59, 0.5)',
+          border: '1px solid rgba(255, 193, 7, 0.8)',
           mixBlendMode: 'multiply',
           pointerEvents: 'none',
           transform: `rotate(${angle}rad)`,
-          transformOrigin: '0% 100%'
+          transformOrigin: '0% 100%',
+          zIndex: 10
         });
         highlightLayerRef.appendChild(rect);
       }
     });
-  } else {
-    console.warn("[CitationPreview] Quote not found in text content");
   }
 };

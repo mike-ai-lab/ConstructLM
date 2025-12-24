@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Fix API Key - Complete</title>
+    <style>
+        body { font-family: system-ui; padding: 20px; max-width: 600px; margin: 0 auto; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        .success { background: #4CAF50; color: white; border: none; }
+        .danger { background: #f44336; color: white; border: none; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Fix Gemini API Key</h1>
+    
+    <h2>Step 1: Clear Old Keys</h2>
+    <button class="danger" onclick="clearAll()">Clear All Stored Keys</button>
+    
+    <h2>Step 2: Set Working Key</h2>
+    <button class="success" onclick="setWorkingKey()">Set Working Key</button>
+    
+    <h2>Step 3: Restart Dev Server</h2>
+    <p>Stop your dev server (Ctrl+C) and run <code>npm run dev</code> again</p>
+    
+    <h2>Current Status:</h2>
+    <pre id="status"></pre>
+
+    <script>
+        const WORKING_KEY = 'AIzaSyBzbrMzzfYAzzJvQ6kmj2Uf1y-HevM5LWE';
+        
+        function clearAll() {
+            // Clear all possible key locations
+            localStorage.removeItem('constructlm_config_GEMINI_API_KEY');
+            localStorage.removeItem('constructlm_config_API_KEY');
+            localStorage.removeItem('GEMINI_API_KEY');
+            localStorage.removeItem('API_KEY');
+            updateStatus();
+            alert('✅ All keys cleared! Now click "Set Working Key"');
+        }
+        
+        function setWorkingKey() {
+            localStorage.setItem('constructlm_config_GEMINI_API_KEY', WORKING_KEY);
+            updateStatus();
+            alert('✅ Working key set! Now restart your dev server.');
+        }
+        
+        function updateStatus() {
+            const keys = {
+                'constructlm_config_GEMINI_API_KEY': localStorage.getItem('constructlm_config_GEMINI_API_KEY'),
+                'constructlm_config_API_KEY': localStorage.getItem('constructlm_config_API_KEY'),
+                'GEMINI_API_KEY': localStorage.getItem('GEMINI_API_KEY'),
+                'API_KEY': localStorage.getItem('API_KEY')
+            };
+            
+            let status = 'Stored Keys:\n\n';
+            for (const [key, value] of Object.entries(keys)) {
+                if (value) {
+                    const masked = value.substring(0, 10) + '...' + value.substring(value.length - 4);
+                    status += `${key}: ${masked}\n`;
+                } else {
+                    status += `${key}: (not set)\n`;
+                }
+            }
+            
+            document.getElementById('status').textContent = status;
+        }
+        
+        // Show status on load
+        updateStatus();
+    </script>
+</body>
+</html>

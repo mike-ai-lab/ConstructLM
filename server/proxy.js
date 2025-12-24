@@ -20,6 +20,12 @@ app.post('/api/proxy/groq', async (req, res) => {
       body: JSON.stringify(req.body)
     });
     
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('[Groq Proxy] API Error:', response.status, errorData);
+      return res.status(response.status).json(errorData);
+    }
+    
     if (req.body.stream) {
       res.setHeader('Content-Type', 'text/event-stream');
       res.setHeader('Cache-Control', 'no-cache');
@@ -37,6 +43,7 @@ app.post('/api/proxy/groq', async (req, res) => {
       res.status(response.status).json(data);
     }
   } catch (error) {
+    console.error('[Groq Proxy] Error:', error);
     res.status(500).json({ error: error.message });
   }
 });

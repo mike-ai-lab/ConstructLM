@@ -42,7 +42,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
 
     useEffect(() => {
         setKeys({
-            google: getStoredApiKey('API_KEY'),
+            google: getStoredApiKey('GEMINI_API_KEY'),
             openai: getStoredApiKey('OPENAI_API_KEY'),
             groq: getStoredApiKey('GROQ_API_KEY'),
             aws: getStoredApiKey('AWS_ACCESS_KEY_ID'),
@@ -168,7 +168,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
 
     const handleSave = () => {
         // Save API Keys
-        saveApiKey('API_KEY', keys.google);
+        saveApiKey('GEMINI_API_KEY', keys.google);
         saveApiKey('OPENAI_API_KEY', keys.openai);
         saveApiKey('GROQ_API_KEY', keys.groq);
         saveApiKey('AWS_ACCESS_KEY_ID', keys.aws);

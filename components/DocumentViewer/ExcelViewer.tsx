@@ -14,18 +14,14 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({ file, location, textScale }) 
       const rowEl = document.getElementById('excel-highlight-row');
       if (rowEl) {
         rowEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        rowEl.classList.add('bg-amber-200');
-        setTimeout(() => rowEl.classList.remove('bg-amber-200'), 1000);
         return true;
       }
       return false;
     };
-    if (!tryScroll()) {
-      setTimeout(tryScroll, 100);
-      setTimeout(tryScroll, 300);
-      setTimeout(tryScroll, 600);
-    }
-  }, [location]);
+    setTimeout(tryScroll, 100);
+    setTimeout(tryScroll, 300);
+    setTimeout(tryScroll, 600);
+  }, [location, file]);
 
   const parseExcelContent = (content: string, highlightLoc?: string) => {
     console.log('🔍 EXCEL CONTENT:', content.substring(0, 500));
@@ -88,6 +84,22 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({ file, location, textScale }) 
       console.log(`📊 Sample cells:`, rows[1]?.slice(0, 3));
 
       const isTargetSheet = targetSheet && sheetName.toLowerCase().includes(targetSheet);
+      
+      // If no row number, try to find by quote in location
+      if (targetRow === -1 && location) {
+        const quoteMatch = location.match(/["']([^"']+)["']/);
+        if (quoteMatch) {
+          const searchText = quoteMatch[1].toLowerCase();
+          for (let i = 0; i < rows.length; i++) {
+            const rowText = rows[i].join(' ').toLowerCase();
+            if (rowText.includes(searchText)) {
+              targetRow = i + 1;
+              console.log('📊 Found quote match at row:', targetRow);
+              break;
+            }
+          }
+        }
+      }
 
       elements.push(
         <div key={i} className="mb-8">
@@ -106,9 +118,9 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({ file, location, textScale }) 
                     <tr 
                       key={rIdx} 
                       id={isHighlightRow ? "excel-highlight-row" : undefined}
-                      className={`transition-colors duration-500 ${isHeaderRow ? "bg-gray-100 dark:bg-[#1a1a1a] font-semibold text-[#1a1a1a] dark:text-white sticky top-0 z-20" : "text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#222222]"} ${isHighlightRow ? "bg-amber-100 dark:bg-amber-900/30 ring-2 ring-inset ring-amber-400 dark:ring-amber-600 z-10 relative" : ""}`}
+                      className={`transition-colors duration-500 ${isHeaderRow ? "bg-gray-100 dark:bg-[#1a1a1a] font-semibold text-[#1a1a1a] dark:text-white sticky top-0 z-20" : "text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#222222]"} ${isHighlightRow ? "bg-yellow-200 dark:bg-yellow-600/50 ring-2 ring-inset ring-yellow-400 dark:ring-yellow-600 z-10 relative" : ""}`}
                     >
-                      <td className={`px-1 py-1 w-8 select-none text-[12px] text-right border-r border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] ${isHeaderRow ? "bg-gray-100 dark:bg-[#1a1a1a]" : "bg-[rgba(0,0,0,0.03)] dark:bg-[#1a1a1a]"} ${isHighlightRow ? "text-amber-700 dark:text-amber-400 font-bold" : "text-[#999999] dark:text-[#666666]"}`}>
+                      <td className={`px-1 py-1 w-8 select-none text-[12px] text-right border-r border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] ${isHeaderRow ? "bg-gray-100 dark:bg-[#1a1a1a]" : "bg-[rgba(0,0,0,0.03)] dark:bg-[#1a1a1a]"} ${isHighlightRow ? "text-yellow-700 dark:text-yellow-400 font-bold" : "text-[#999999] dark:text-[#666666]"}`}>
                         {visualRowNumber}
                       </td>
                       {row.map((cell, cIdx) => (

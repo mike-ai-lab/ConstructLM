@@ -806,7 +806,7 @@ const App: React.FC = () => {
 
         {activeTab === 'chat' ? (
           <div ref={layoutState.messagesContainerRef} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 scroll-smooth bg-white dark:bg-[#1a1a1a]" style={{ marginTop: featureState.drawingState.isActive && featureState.drawingState.tool !== 'none' ? '48px' : '0' }}>
-            <div className="max-w-3xl mx-auto w-full" style={{ paddingBottom: `${Math.max(0, (inputState.inputHeight || 56) - 40)}px` }}>
+            <div className="max-w-3xl mx-auto w-full relative overflow-hidden" style={{ paddingBottom: `${Math.max(0, (inputState.inputHeight || 56) - 40)}px` }}>
               {chatState.messages.map((msg) => (
                 <MessageBubble 
                   key={msg.id} 

@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ConstructLM - Scrolling Citations Test</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="m-0">
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { createRoot } = ReactDOM;
+
+    const Icon = ({ name, ...props }) => {
+      const LucideIcon = lucide.icons[name];
+      if (!LucideIcon) return null;
+      return React.createElement(LucideIcon, props);
+    };
+
+    const CitationPopup = ({ cite, onClose, isUser }) => {
+      const popupRef = React.useRef(null);
+      const [style, setStyle] = useState({});
+
+      useEffect(() => {
+        if (popupRef.current) {
+          const popup = popupRef.current;
+          const rect = popup.getBoundingClientRect();
+          const chatArea = popup.closest('main');
+          const chatRect = chatArea.getBoundingClientRect();
+          
+          const popupWidth = 320;
+          let newStyle = {};
+          
+          if (rect.right > chatRect.right - 10) {
+            newStyle = { right: '0', left: 'auto' };
+          } else {
+            newStyle = { left: '0', right: 'auto' };
+          }
+          
+          setStyle(newStyle);
+        }
+      }, []);
+
+      return (
+        <span 
+          ref={popupRef}
+          className="absolute mt-2 w-80 bg-white border-2 border-blue-500 rounded-xl shadow-xl p-4 z-[100] block"
+          style={{ ...style, top: '100%' }}
+        >
+          <span className="flex items-start justify-between mb-2">
+            <span className="flex items-center gap-2">
+              <Icon name="file-text" size={16} className="text-blue-600" />
+              <span className="font-semibold text-sm text-slate-900">{cite.doc}</span>
+            </span>
+            <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
+              <Icon name="x" size={16} />
+            </button>
+          </span>
+          <span className="text-xs text-slate-500 mb-2 block">Page {cite.page}</span>
+          <p className="text-sm text-slate-700 leading-relaxed">{cite.text}</p>
+        </span>
+      );
+    };
+
+    const App = () => {
+      const [leftOpen, setLeftOpen] = useState(true);
+      const [rightOpen, setRightOpen] = useState(true);
+      const [message, setMessage] = useState("");
+      const [leftWidth, setLeftWidth] = useState(288);
+      const [rightWidth, setRightWidth] = useState(400);
+      const [isResizing, setIsResizing] = useState(null);
+      const [activeCitation, setActiveCitation] = useState(null);
+
+      useEffect(() => {
+        if (!isResizing) return;
+        const handleMouseMove = (e) => {
+          if (isResizing === 'left') {
+            setLeftWidth(Math.max(200, Math.min(600, e.clientX)));
+          } else if (isResizing === 'right') {
+            setRightWidth(Math.max(300, Math.min(800, window.innerWidth - e.clientX)));
+          }
+        };
+        const handleMouseUp = () => setIsResizing(null);
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+        return () => {
+          document.removeEventListener('mousemove', handleMouseMove);
+          document.removeEventListener('mouseup', handleMouseUp);
+        };
+      }, [isResizing]);
+
+      const historyItems = [
+        { id: 1, title: "Door Schedule Analysis", date: "2h ago" },
+        { id: 2, title: "Steel Beam Load Calcs", date: "5h ago" },
+        { id: 3, title: "HVAC System Review", date: "Yesterday" },
+        { id: 4, title: "Foundation Plan Q&A", date: "Oct 22" }
+      ];
+
+      const messages = [
+        { role: "user", parts: ["What are the ", { cite: { id: 1, doc: "REQ-001.pdf", page: 3, text: "Load requirements specification" } }, "load requirements", " for the foundation?"] },
+        { role: "assistant", parts: ["According to the ", { cite: { id: 2, doc: "S-101.pdf", page: 12, text: "Foundation load capacity: 5000 PSF minimum" } }, "structural plans", ", the foundation must support a minimum load of ", { cite: { id: 3, doc: "S-101.pdf", page: 12, text: "5000 PSF load specification" } }, "5000 PSF", "."] },
+        { role: "user", parts: ["Can you show me the ", { cite: { id: 4, doc: "REQ-002.pdf", page: 5, text: "Steel beam specification requirements" } }, "structural specifications", " for the steel beams?"] },
+        { role: "assistant", parts: ["I've pulled up the Structural Specifications (S-101). Section 4.2.1 on page 12 specifies that all ", { cite: { id: 5, doc: "S-101.pdf", page: 12, text: "Steel Grade 50, anti-corrosive coating required" } }, "structural steel must be Grade 50", " minimum and treated with ", { cite: { id: 6, doc: "S-102.pdf", page: 8, text: "Anti-corrosive coating specifications" } }, "anti-corrosive coating", "."] },
+        { role: "user", parts: ["What about the ", { cite: { id: 7, doc: "M-200.pdf", page: 2, text: "HVAC system requirements overview" } }, "HVAC requirements", "?"] },
+        { role: "assistant", parts: ["The ", { cite: { id: 8, doc: "M-201.pdf", page: 5, text: "HVAC temperature and humidity specifications" } }, "HVAC system must maintain 68-72°F", " with humidity between 30-50%. The system should have a minimum ", { cite: { id: 9, doc: "M-201.pdf", page: 6, text: "SEER rating requirements" } }, "SEER rating of 16", "."] },
+        { role: "user", parts: ["Tell me about the ", { cite: { id: 10, doc: "E-300.pdf", page: 10, text: "Electrical panel requirements" } }, "electrical panel specifications"] },
+        { role: "assistant", parts: ["The main electrical panel must be rated for ", { cite: { id: 11, doc: "E-301.pdf", page: 15, text: "400A main panel, 42 circuit minimum" } }, "400A service with a minimum of 42 circuits", ". All panels must be ", { cite: { id: 12, doc: "E-301.pdf", page: 16, text: "NEC 2020 compliance required" } }, "UL listed and installed per NEC 2020", "."] },
+        { role: "user", parts: ["What are the ", { cite: { id: 13, doc: "FS-400.pdf", page: 1, text: "Fire safety requirements overview" } }, "fire safety requirements", "?"] },
+        { role: "assistant", parts: ["Fire safety systems must include ", { cite: { id: 14, doc: "FS-401.pdf", page: 3, text: "Sprinkler system requirements" } }, "sprinklers throughout", ", ", { cite: { id: 15, doc: "FS-401.pdf", page: 7, text: "Fire-rated wall specifications" } }, "fire-rated walls between units", ", and smoke detectors in all rooms. Emergency exits must be clearly marked and illuminated."] }
+      ];
+
+      return (
+        <div className="flex h-screen w-full bg-slate-100 text-slate-900 overflow-hidden">
+          <aside className={`fixed inset-y-0 left-0 z-50 lg:relative bg-white border-r-2 border-slate-300 ${leftOpen ? "" : "w-0"} overflow-hidden`} style={{ width: leftOpen ? `${leftWidth}px` : '0' }}>
+            <div className="h-full flex flex-col" style={{ width: `${leftWidth}px` }}>
+              <div className="h-[70px] p-4 border-b-2 border-slate-300 font-bold flex items-center gap-2">
+                <Icon name="history" size={18} className="text-blue-600" />
+                Chat History
+              </div>
+              <nav className="flex-1 overflow-y-auto p-3 space-y-1">
+                {historyItems.map(item => (
+                  <div key={item.id} className="p-3 rounded-xl hover:bg-slate-100 cursor-pointer border border-slate-200">
+                    <div className="text-sm font-semibold">{item.title}</div>
+                    <div className="text-xs text-slate-400">{item.date}</div>
+                  </div>
+                ))}
+              </nav>
+            </div>
+            {leftOpen && <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500 transition-colors" onMouseDown={() => setIsResizing('left')} />}
+          </aside>
+
+          <main className="flex-1 flex flex-col bg-white relative z-10 overflow-hidden">
+            <header className="h-[70px] border-b-2 border-slate-300 flex items-center justify-between px-4 w-full bg-white">
+              <button onClick={() => setLeftOpen(!leftOpen)} className="p-2 rounded-lg bg-slate-300 hover:bg-slate-400 transition-colors">
+                <Icon name="panel-left" size={20} className="text-slate-800" />
+              </button>
+              <strong>ConstructLM - Scrolling Citations</strong>
+              <button onClick={() => setRightOpen(!rightOpen)} className="p-2 rounded-lg bg-slate-300 hover:bg-slate-400 transition-colors">
+                <Icon name="panel-right" size={20} className="text-slate-800" />
+              </button>
+            </header>
+
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              {messages.map((msg, idx) => (
+                <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[70%] p-4 rounded-2xl ${msg.role === 'user' ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-900'}`}>
+                    <p className="text-sm leading-relaxed">
+                      {msg.parts.map((part, pIdx) => 
+                        typeof part === 'string' ? (
+                          <span key={pIdx}>{part}</span>
+                        ) : (
+                          <span key={pIdx} className="relative inline-block">
+                            <button
+                              onClick={() => setActiveCitation(activeCitation === part.cite.id ? null : part.cite.id)}
+                              className={`mx-0.5 px-1.5 py-0.5 rounded text-xs font-semibold hover:opacity-80 transition-opacity ${
+                                msg.role === 'user' 
+                                  ? 'bg-blue-400 text-white border border-blue-300' 
+                                  : 'bg-blue-100 text-blue-700 border border-blue-300'
+                              }`}
+                            >
+                              [{part.cite.id}]
+                            </button>
+                            {activeCitation === part.cite.id && (
+                              <CitationPopup 
+                                cite={part.cite} 
+                                onClose={() => setActiveCitation(null)} 
+                                isUser={msg.role === 'user'}
+                              />
+                            )}
+                          </span>
+                        )
+                      )}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <footer className="border-t-2 border-slate-300 p-4 bg-white">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="Ask about construction documents..."
+                  className="flex-1 px-4 py-3 border-2 border-slate-300 rounded-xl focus:outline-none focus:border-blue-500"
+                />
+                <button className="px-6 py-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors font-medium">
+                  <Icon name="send" size={20} />
+                </button>
+              </div>
+            </footer>
+          </main>
+
+          {rightOpen && (
+            <aside className="w-0 lg:w-auto bg-white border-l-2 border-slate-300 relative" style={{ width: `${rightWidth}px` }}>
+              <div className="h-full flex flex-col" style={{ width: `${rightWidth}px` }}>
+                <div className="h-[70px] p-4 border-b-2 border-slate-300 font-bold flex items-center gap-2">
+                  <Icon name="file-text" size={18} className="text-blue-600" />
+                  Documents
+                </div>
+                <div className="flex-1 overflow-y-auto p-4">
+                  <p className="text-sm text-slate-500">Document viewer panel</p>
+                </div>
+              </div>
+              <div className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500 transition-colors" onMouseDown={() => setIsResizing('right')} />
+            </aside>
+          )}
+        </div>
+      );
+    };
+
+    createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>

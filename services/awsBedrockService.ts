@@ -5,7 +5,7 @@ export async function streamAWSBedrock(
   messages: any[],
   userMessage: string,
   files: ProcessedFile[],
-  onChunk: (chunk: string) => void
-): Promise<{ inputTokens: number; outputTokens: number; totalTokens: number }> {
+  onChunk: (chunk: string, thinking?: string) => void
+): Promise<{ inputTokens?: number; outputTokens?: number; totalTokens?: number }> {
   throw new Error('AWS Bedrock integration not configured. Please set up AWS credentials.');
 }

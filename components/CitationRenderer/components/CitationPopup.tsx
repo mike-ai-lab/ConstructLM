@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, useLayoutEffect, useCallback } from 'react';
+import React, { useRef, useState, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { BookOpen, X, Maximize2 } from 'lucide-react';
 import { ProcessedFile } from '../../../types';
@@ -15,14 +15,15 @@ interface CitationPopupProps {
   onOpenFull: () => void;
   isInTable: boolean;
   coords?: { top: number; left: number };
-  fileNotFound?: boolean;
 }
 
 /**
  * Layout constants
+ * Adjust SIDE_PANEL_WIDTH if your UI changes
  */
 const POPUP_WIDTH = 450;
 const VIEWPORT_PADDING = 8;
+const SIDE_PANEL_WIDTH = 280; // left / right panels when opened
 const MAX_HEIGHT = 'min(40vh, 400px)';
 
 const CitationPopup: React.FC<CitationPopupProps> = ({
@@ -35,7 +36,6 @@ const CitationPopup: React.FC<CitationPopupProps> = ({
   onOpenFull,
   isInTable,
   coords,
-  fileNotFound,
 }) => {
   const popoverRef = useRef<HTMLDivElement>(null);
 
@@ -45,9 +45,9 @@ const CitationPopup: React.FC<CitationPopupProps> = ({
   const pdfZoomHandlerRef = useRef<{
     handleZoom: (delta: number) => void;
     handleReset: () => void;
-  }>(undefined);
+  }>();
 
-  const [position, setPosition] = useState<{ top: number; left: number; width?: number } | null>(null);
+  const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
   const isPdfMode = file?.type === 'pdf' && pdfPageNumber !== null;
 
   /* ---------------- File Resolution ---------------- */
@@ -66,43 +66,48 @@ const CitationPopup: React.FC<CitationPopupProps> = ({
 
   /* ---------------- Smart Positioning ---------------- */
 
-  const calculatePosition = useCallback(() => {
-    if (!coords) return;
+  const calculatePosition = () => {
+    if (isInTable && coords) {
+      const viewportWidth = window.innerWidth;
+      const safeLeftBoundary = SIDE_PANEL_WIDTH + VIEWPORT_PADDING;
+      const safeRightBoundary = viewportWidth - SIDE_PANEL_WIDTH - VIEWPORT_PADDING;
+      const availableWidth = safeRightBoundary - safeLeftBoundary;
+      const effectiveWidth = Math.min(POPUP_WIDTH, availableWidth);
 
-    const chatContainer = document.querySelector('.flex-1.flex.flex-col.h-full.relative.bg-white');
-    if (!chatContainer) return;
+      let left = coords.left;
+      if (left + effectiveWidth > safeRightBoundary) {
+        left = safeRightBoundary - effectiveWidth;
+      }
+      if (left < safeLeftBoundary) {
+        left = safeLeftBoundary;
+      }
 
-    const chatRect = chatContainer.getBoundingClientRect();
-    const availableWidth = chatRect.width - VIEWPORT_PADDING * 2;
-    const effectiveWidth = Math.min(POPUP_WIDTH, availableWidth);
+      setPosition({ top: coords.top, left });
+    } else if (!isInTable && popoverRef.current && triggerRef.current) {
+      const popup = popoverRef.current;
+      const rect = popup.getBoundingClientRect();
+      const chatArea = popup.closest('main') || popup.closest('[role="main"]') || document.body;
+      const chatRect = chatArea.getBoundingClientRect();
 
-    let left = coords.left;
-    const rightEdge = left + effectiveWidth;
-
-    if (rightEdge > chatRect.right - VIEWPORT_PADDING) {
-      left = chatRect.right - effectiveWidth - VIEWPORT_PADDING;
+      if (rect.right > chatRect.right - 10) {
+        popup.style.right = '0';
+        popup.style.left = 'auto';
+      } else {
+        popup.style.left = '-20px';
+        popup.style.right = 'auto';
+      }
     }
-
-    if (left < chatRect.left + VIEWPORT_PADDING) {
-      left = chatRect.left + VIEWPORT_PADDING;
-    }
-
-    setPosition({ top: coords.top, left, width: effectiveWidth });
-  }, [coords]);
+  };
 
   useLayoutEffect(() => {
-    if (isInTable && coords) {
-      calculatePosition();
-    }
-  }, [coords, isInTable, calculatePosition]);
+    calculatePosition();
+  }, [coords, isInTable]);
 
   useEffect(() => {
-    if (!isInTable) return;
-
     const handleResize = () => calculatePosition();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [isInTable, coords, calculatePosition]);
+  }, [isInTable, coords]);
 
   /* ---------------- Outside Click ---------------- */
 
@@ -141,7 +146,8 @@ const CitationPopup: React.FC<CitationPopupProps> = ({
         animate-in fade-in duration-150
       `}
       style={{
-        width: position?.width || POPUP_WIDTH,
+        width: POPUP_WIDTH,
+        maxWidth: `calc(100vw - ${(SIDE_PANEL_WIDTH * 2) + VIEWPORT_PADDING * 2}px)`,
         maxHeight: MAX_HEIGHT,
         ...(isInTable
           ? { top: position?.top ?? 0, left: position?.left ?? 0 }
@@ -195,15 +201,9 @@ const CitationPopup: React.FC<CitationPopupProps> = ({
 
       {/* Footer */}
       <div className="px-2 py-1.5 border-t bg-white dark:bg-[#2a2a2a] flex items-center justify-between">
-        {fileNotFound ? (
-          <p className="text-xs text-gray-400 dark:text-gray-500">
-            Source file not found. Upload to view references.
-          </p>
-        ) : (
-          <p className="text-xs italic text-[#666] dark:text-[#a0a0a0] line-clamp-2">
-            "{quote}"
-          </p>
-        )}
+        <p className="text-xs italic text-[#666] dark:text-[#a0a0a0] line-clamp-2">
+          "{quote}"
+        </p>
 
         {isPdfMode && (
           <div className="flex items-center gap-1 ml-2">

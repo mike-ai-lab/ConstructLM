@@ -140,12 +140,30 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
         .map((node) => {
           if (node.type === 'folder') {
               const isExpanded = expandedFolders.has(node.path);
+              const folderFiles = files.filter(f => (f.path || f.name).startsWith(node.path + '/'));
+              const allFolderFilesSelected = folderFiles.length > 0 && folderFiles.every(f => selectedSourceIds.includes(f.id));
+              const someFolderFilesSelected = folderFiles.some(f => selectedSourceIds.includes(f.id)) && !allFolderFilesSelected;
+              
               return (
                   <div key={node.path} className="select-none">
                       <div 
                         className="flex items-center gap-1.5 px-2 py-1.5 hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] rounded cursor-pointer text-[#1a1a1a] dark:text-white group"
                         style={{ paddingLeft: `${depth * 16 + 8}px` }}
                       >
+                          <input
+                              type="checkbox"
+                              checked={allFolderFilesSelected}
+                              ref={el => { if (el) el.indeterminate = someFolderFilesSelected; }}
+                              onChange={() => {
+                                if (allFolderFilesSelected) {
+                                  folderFiles.forEach(f => { if (selectedSourceIds.includes(f.id)) onToggleSource(f.id); });
+                                } else {
+                                  folderFiles.forEach(f => { if (!selectedSourceIds.includes(f.id)) onToggleSource(f.id); });
+                                }
+                              }}
+                              className="w-3 h-3 rounded border-gray-300 text-blue-600 focus:ring-blue-500 flex-shrink-0 cursor-pointer"
+                              onClick={(e) => e.stopPropagation()}
+                          />
                           <div className="w-3 h-3 flex items-center justify-center flex-shrink-0" onClick={() => toggleFolder(node.path)}>
                             {isExpanded ? <ChevronDown size={12} className="text-[#666666] dark:text-[#a0a0a0]"/> : <ChevronRight size={12} className="text-[#666666] dark:text-[#a0a0a0]"/>}
                           </div>
@@ -313,6 +331,22 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
                    )}
                 </div>
                 <div className="flex gap-1">
+                  {files.length > 0 && (
+                    <button
+                      onClick={() => {
+                        const allSelected = files.every(f => selectedSourceIds.includes(f.id));
+                        if (allSelected) {
+                          files.forEach(f => onToggleSource(f.id));
+                        } else {
+                          files.filter(f => !selectedSourceIds.includes(f.id)).forEach(f => onToggleSource(f.id));
+                        }
+                      }}
+                      className="p-1.5 text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] rounded-lg transition-colors text-[10px] font-semibold"
+                      title={files.every(f => selectedSourceIds.includes(f.id)) ? "Deselect All" : "Select All"}
+                    >
+                      {files.every(f => selectedSourceIds.includes(f.id)) ? "Deselect All" : "Select All"}
+                    </button>
+                  )}
                   <button
                     onClick={() => fileInputRef.current?.click()}
                     disabled={isProcessing}

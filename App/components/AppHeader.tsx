@@ -85,12 +85,13 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
         </div>
         <h1 className="font-semibold text-[#1a1a1a] dark:text-white text-base md:text-lg tracking-tight truncate hidden sm:block">ConstructLM</h1>
         {props.activeTab === 'chat' && (
-          <div className="relative flex-shrink-0" ref={props.modelMenuRef}>
-            <button onClick={(e) => { e.stopPropagation(); props.setShowModelMenu(!props.showModelMenu); }} className="flex items-center gap-1 px-2 md:px-3 py-1.5 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] hover:bg-[rgba(0,0,0,0.06)] dark:hover:bg-[#222222] rounded-full text-xs font-medium text-[#1a1a1a] dark:text-white">
-              <Cpu size={12} />
-              <span>{props.activeModel.name}</span>
-              <ChevronDown size={10} />
-            </button>
+          <>
+            <div className="relative flex-shrink-0" ref={props.modelMenuRef}>
+              <button onClick={(e) => { e.stopPropagation(); props.setShowModelMenu(!props.showModelMenu); }} className="flex items-center gap-1 px-2 md:px-3 py-1.5 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] hover:bg-[rgba(0,0,0,0.06)] dark:hover:bg-[#222222] rounded-full text-xs font-medium text-[#1a1a1a] dark:text-white">
+                <Cpu size={12} />
+                <span>{props.activeModel.name}</span>
+                <ChevronDown size={10} />
+              </button>
             <div style={{display: props.showModelMenu ? 'block' : 'none'}} className="absolute top-full left-0 mt-2 w-72 bg-white dark:bg-[#222222] rounded-xl shadow-xl border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] overflow-hidden z-[100]">
               <div className="px-3 py-2 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] text-[12px] font-bold text-[#666666] dark:text-[#a0a0a0] uppercase">Select Model</div>
               <div className="max-h-[400px] overflow-y-auto p-1">
@@ -123,7 +124,15 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
                 })}
               </div>
             </div>
-          </div>
+            </div>
+            <button
+              onClick={props.handleCreateChat}
+              className="p-1.5 text-[#4485d1] hover:bg-[rgba(68,133,209,0.1)] rounded-lg transition-colors flex-shrink-0"
+              title="New Chat"
+            >
+              <Plus size={16} />
+            </button>
+          </>
         )}
       </div>
 

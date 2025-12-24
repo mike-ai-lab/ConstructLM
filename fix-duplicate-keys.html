@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head><title>Fix Duplicate Keys</title></head>
+<body>
+<script>
+// Fix duplicate message IDs in stored chats
+const chatsKey = 'constructlm_chats';
+const chats = JSON.parse(localStorage.getItem(chatsKey) || '[]');
+
+let fixed = 0;
+chats.forEach(chat => {
+  if (chat.messages) {
+    chat.messages = chat.messages.map((msg, idx) => {
+      const newId = `${msg.role}-${chat.id}-${idx}-${Date.now()}`;
+      if (msg.id !== newId) fixed++;
+      return { ...msg, id: newId };
+    });
+  }
+});
+
+localStorage.setItem(chatsKey, JSON.stringify(chats));
+alert(`✓ Fixed ${fixed} duplicate message IDs! Refresh your app.`);
+</script>
+</body>
+</html>

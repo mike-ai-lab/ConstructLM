@@ -147,8 +147,10 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
       )}
       {/* Context Indicator */}
       {selectedSourceIds.length > 0 && (
-        <div className="absolute -top-6 left-6 text-[12px] font-medium text-[#4485d1] flex items-center gap-1">
-          <Database size={10} /> Using {selectedSourceIds.length} source{selectedSourceIds.length > 1 ? 's' : ''}
+        <div className="mb-2">
+          <span className="inline-flex items-center gap-1 px-2 py-1 bg-white dark:bg-[#1a1a1a] border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] rounded text-[11px] font-medium text-[#4485d1] shadow-sm">
+            <Database size={10} /> Using {selectedSourceIds.length} source{selectedSourceIds.length > 1 ? 's' : ''}
+          </span>
         </div>
       )}
       {isInputDragOver && (
@@ -161,18 +163,14 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
         const totalTokens = mentionedFiles.reduce((sum, f) => sum + (f.tokenCount || 0), 0);
         const isOverLimit = totalTokens > 30000;
         
+        if (mentionedFiles.length === 0) return null;
+        
         return (
-          <div className="absolute -top-6 left-6 text-[12px] font-medium transition-all duration-300">
-            {mentionedFiles.length > 0 ? (
-              <span className={`flex items-center gap-1 ${isOverLimit ? 'text-[#ef4444]' : 'text-[#4485d1]'}`}>
-                <Sparkles size={10} /> {mentionedFiles.length} file(s) • ~{(totalTokens / 1000).toFixed(0)}k tokens
-                {isOverLimit && ' ⚠️'}
-              </span>
-            ) : (
-              <span className="text-[#666666] dark:text-[#a0a0a0] flex items-center gap-1">
-                <Database size={10} /> No files selected - Use @ to mention
-              </span>
-            )}
+          <div className="mb-2">
+            <span className={`inline-flex items-center gap-1 px-2 py-1 bg-white dark:bg-[#1a1a1a] border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] rounded text-[11px] font-medium shadow-sm ${isOverLimit ? 'text-[#ef4444]' : 'text-[#4485d1]'}`}>
+              <Sparkles size={10} /> {mentionedFiles.length} file(s) • ~{(totalTokens / 1000).toFixed(0)}k tokens
+              {isOverLimit && ' ⚠️'}
+            </span>
           </div>
         );
       })()}

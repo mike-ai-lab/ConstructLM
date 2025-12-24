@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Fix API Key</title>
+</head>
+<body>
+    <h1>Fix Gemini API Key</h1>
+    <button onclick="fixKey()">Replace with Working Key</button>
+    <button onclick="clearKey()">Clear Stored Key</button>
+    <pre id="output"></pre>
+
+    <script>
+        function fixKey() {
+            const workingKey = 'AIzaSyBzbrMzzfYAzzJvQ6kmj2Uf1y-HevM5LWE';
+            localStorage.setItem('constructlm_config_GEMINI_API_KEY', workingKey);
+            document.getElementById('output').textContent = 'Fixed! Key updated to: ' + workingKey;
+        }
+
+        function clearKey() {
+            localStorage.removeItem('constructlm_config_GEMINI_API_KEY');
+            document.getElementById('output').textContent = 'Cleared! Stored key removed.';
+        }
+
+        // Show current key
+        const current = localStorage.getItem('constructlm_config_GEMINI_API_KEY');
+        document.getElementById('output').textContent = 'Current stored key: ' + (current || 'None');
+    </script>
+</body>
+</html>

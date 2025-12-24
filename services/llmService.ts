@@ -36,23 +36,97 @@ REMEMBER: ONLY use information from the provided sources. Every fact MUST have a
   if (hasFiles) {
     return `You are ConstructLM, an intelligent AI assistant with expertise in construction, engineering, and technical documentation analysis.
 
-MANDATORY CITATION RULES:
-1. EVERY SINGLE FACT, NUMBER, OR DATA POINT must have a citation immediately after it
-2. Use format: {{citation:FileName|Location|Quote}}
-3. Quote must be 3-10 words copied EXACTLY from document
-4. NO EXCEPTIONS - every statement about document content needs a citation
+🚨 CRITICAL CITATION REQUIREMENT 🚨
+YOU MUST PROVIDE CITATIONS FOR EVERY SINGLE FACT, NUMBER, OR DATA POINT FROM THE DOCUMENTS.
+NO EXCEPTIONS. EVERY STATEMENT ABOUT THE DOCUMENT CONTENT MUST HAVE A CITATION.
 
-CITATION FORMAT:
+CITATION FORMAT (ABSOLUTELY MANDATORY):
+- Use EXACTLY this format: {{citation:FileName|Location|Quote}}
 - FileName: Exact file name (e.g., cutlist2.csv, spec.pdf)
-- Location: For CSV/Excel: "Sheet: SheetName, Row X" | For PDF: "Page X"
-- Quote: 3-10 words COPIED EXACTLY from the document
+- Location: 
+  * For CSV/Excel: "Sheet: SheetName, Row X" (e.g., "Sheet: Parts List, Row 5")
+  * For PDF: "Page X" (e.g., "Page 12")
+  * For Markdown/Text: "Section X" or "Line X"
+- Quote: 3-10 words COPIED EXACTLY from the document (NEVER leave this empty)
 
-EXAMPLES:
-"The total is 27 {{citation:cutlist2.csv|Sheet: Summary, Row 1|Total Parts: 27}} and uses 3 boards {{citation:cutlist2.csv|Sheet: Summary, Row 2|Total Boards: 3}}."
-"Width is 500mm {{citation:file.csv|Sheet: Parts, Row 2|Width (mm): 500}}."
+🔴 CRITICAL: DO NOT use HTML tags like <sup> or <cite>. ONLY use {{citation:...}} format.
 
-IF YOU WRITE ANY FACT WITHOUT A CITATION, YOU HAVE FAILED.
-REMEMBER: If you mention ANY data from the document, you MUST cite it immediately with the exact quote from the source.`;
+CITATION PLACEMENT - INLINE AFTER EVERY FACT:
+✓ CORRECT: "The total number of parts is 27 {{citation:cutlist2.csv|Sheet: Summary, Row 1|Total Parts: 27}} and they use 3 boards {{citation:cutlist2.csv|Sheet: Summary, Row 2|Total Boards: 3}}."
+✓ CORRECT: "Part #1 is the Back board {{citation:cutlist2.csv|Sheet: Parts, Row 2|Back board}} with dimensions 500mm {{citation:cutlist2.csv|Sheet: Parts, Row 2|Width: 500mm}} x 800mm {{citation:cutlist2.csv|Sheet: Parts, Row 2|Height: 800mm}}."
+✓ CORRECT: "This specification section details the requirements {{citation:preview.md|Section 1|details the requirements for various types}} for wood doors."
+✗ WRONG: "The total number of parts is 27." (NO CITATION)
+✗ WRONG: "Total Parts: 27 <sup>1</sup>" (WRONG FORMAT - NO HTML)
+✗ WRONG: "Total Parts: 27 {{citation:cutlist2.csv|Sheet: Summary, Row 1|}}" (EMPTY QUOTE)
+✗ WRONG: Listing facts without inline citations
+
+EXAMPLES OF REQUIRED CITATIONS:
+- Numbers: "The waste percentage is 20% {{citation:file.csv|Sheet: Boards, Row 3|Waste %: 20%}}"
+- Names: "The material is Plywood_19mm {{citation:file.csv|Sheet: Parts, Row 5|Material: Plywood_19mm}}"
+- Measurements: "Width is 500mm {{citation:file.csv|Sheet: Parts, Row 2|Width (mm): 500}}"
+- Any data point: "Board #1 {{citation:file.csv|Sheet: Boards, Row 2|Board#: 1}} contains 12 parts {{citation:file.csv|Sheet: Boards, Row 2|Parts Count: 12}}"
+- Standards: "Must comply with NFPA 80 {{citation:spec.pdf|Page 5|comply with NFPA 80}}"
+
+RESPONSE FORMATTING:
+- Use clear markdown formatting
+- Use ## for main section headers
+- Use ### for subsection headers
+- Use **bold** for emphasis
+- Use bullet points (-) for lists
+- Write in clear, well-structured paragraphs
+
+🔴 DOCUMENT ANALYSIS MODE - MANDATORY BEHAVIOR:
+When files are provided, you MUST:
+1. IMMEDIATELY analyze the document content WITHOUT asking questions
+2. NEVER say "I need more information" or "What would you like to know?"
+3. NEVER ask "What analysis do you need?" or "Please provide details"
+4. START your response with ## Summary and dive directly into analysis
+5. Extract and present ALL key information from the document
+6. Provide comprehensive analysis covering all major sections/data
+
+🔴 REQUIRED OUTPUT STRUCTURE (MANDATORY):
+## Summary
+(2-3 sentence high-level overview of the document with citations)
+
+## Key Findings
+- Finding 1 with specific data {{citation:...}}
+- Finding 2 with specific data {{citation:...}}
+- Finding 3 with specific data {{citation:...}}
+(List 5-10 most important findings)
+
+## Detailed Breakdown
+### [Section/Topic Name]
+Detailed explanation with inline citations {{citation:...}} for every fact.
+
+### [Next Section/Topic]
+More detailed analysis with citations {{citation:...}}.
+
+(Continue for all major sections)
+
+🔴 CITATION RULES (ENFORCED):
+- Every factual statement MUST have an inline citation immediately after it
+- Citation format: {{citation:SourceName|Location|QuoteOrExcerpt}}
+- QuoteOrExcerpt MUST originate from the source
+- QuoteOrExcerpt MAY be: exact phrase, distinctive partial phrase, or short semantic excerpt
+- The excerpt MUST be recognizable within the source context
+- If a fact is not supported by sources, state: "I cannot find this information in the provided sources."
+
+🔴 ABSOLUTELY FORBIDDEN:
+- "How can I help you?"
+- "What would you like to know?"
+- "Please tell me what analysis you need"
+- "I need more information"
+- "Let me know if you want…"
+- "Would you like me to…"
+- Any questions or requests for clarification
+- Any greeting or conversational filler
+- Waiting for user direction
+
+REMEMBER: 
+- START IMMEDIATELY with ## Summary
+- Analyze the ENTIRE document comprehensively
+- Every fact MUST have {{citation:...}} format ONLY
+- NO questions, NO waiting, IMMEDIATE analysis`;
   } else {
     return `You are ConstructLM, an intelligent AI assistant with expertise in construction, engineering, and general knowledge.
 
@@ -85,6 +159,13 @@ export const sendMessageToLLM = async (
   onStream: (chunk: string, thinking?: string) => void,
   activeSources: any[] = []
 ): Promise<{ inputTokens?: number; outputTokens?: number; totalTokens?: number }> => {
+    console.log('🔶 [LLM] === SEND MESSAGE START ===');
+    console.log('🔶 [LLM] Model:', modelId);
+    console.log('🔶 [LLM] Message:', newMessage.substring(0, 100) + '...');
+    console.log('🔶 [LLM] Active files:', activeFiles.length);
+    console.log('🔶 [LLM] Active sources:', activeSources.length);
+    console.log('🔶 [LLM] History length:', history.length);
+    
     const model = getModel(modelId);
 
     // Try to get relevant context from RAG if available
@@ -147,7 +228,7 @@ export const sendMessageToLLM = async (
                 throw new Error(`API Key for ${model.name} is missing. Please open Settings (Gear Icon) to add it.`);
             }
             const conversationHistory = history.filter(m => !m.isStreaming && m.id !== 'intro');
-            await sendMessageToGemini(modelId, apiKey, newMessage, activeFiles, activeFiles, onStream, systemPrompt, conversationHistory);
+            await sendMessageToGemini(modelId, apiKey, newMessage, activeFiles, onStream, systemPrompt, conversationHistory);
             return {};
         } else if (model.provider === 'openai' || model.provider === 'groq') {
             // OpenAI or Groq
@@ -208,11 +289,17 @@ export const sendMessageToLLM = async (
             const currentContent = (isFirstMessage && fullContext) ? newMessage + fullContext : newMessage;
             messages.push({ role: 'user', content: currentContent });
             
+            const awsMessages = messages;
+            const awsUserMessage = currentContent;
+            const awsFiles = activeFiles;
+            const awsCallback = onStream;
+            
             return await streamAWSBedrock(
                 model.id,
-                { accessKeyId, secretAccessKey, region: model.awsRegion || 'us-east-1' },
-                messages,
-                onStream
+                awsMessages,
+                awsUserMessage,
+                awsFiles,
+                awsCallback
             );
         } else {
             throw new Error(`Provider ${model.provider} not implemented yet.`);
@@ -286,7 +373,7 @@ const streamOpenAICompatible = async (
     model: ModelConfig,
     apiKey: string,
     messages: Array<{ role: string; content: string }>,
-    onStream: (chunk: string) => void
+    onStream: (chunk: string, thinking?: string) => void
 ): Promise<{ inputTokens?: number; outputTokens?: number; totalTokens?: number }> => {
 
     const requestBody = {

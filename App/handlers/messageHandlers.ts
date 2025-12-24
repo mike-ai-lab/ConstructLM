@@ -57,13 +57,26 @@ export const createMessageHandlers = (
       chunksCount: contextResult.chunks.length 
     });
     
-    const contextString = contextManager.buildContextString(contextResult.chunks, selectedFiles);
     const fileNames = contextManager.getFileNames(contextResult.filesUsed, files);
+    console.log('[MessageHandler] Sources:', fileNames);
     
-    console.log('[MessageHandler] Context string length:', contextString.length, 'Sources:', fileNames);
+    // Create excerpted files for LLM - if no chunks, use full files
+    const excerptedFiles: ProcessedFile[] = contextResult.chunks.length > 0
+      ? contextResult.chunks.map((chunk: any) => {
+          const originalFile = selectedFiles.find(f => f.id === chunk.fileId);
+          return {
+            id: chunk.fileId,
+            name: originalFile?.name || 'Unknown',
+            content: chunk.content,
+            type: originalFile?.type || 'text/plain',
+            size: chunk.content.length,
+            uploadedAt: originalFile?.uploadedAt || Date.now()
+          };
+        })
+      : selectedFiles; // Use full files if no chunks
     
     const userMsg: Message = {
-      id: Date.now().toString(),
+      id: `user-${Date.now()}`,
       role: 'user',
       content: input,
       timestamp: Date.now(),
@@ -77,12 +90,12 @@ export const createMessageHandlers = (
     
     console.log('[MessageHandler] Sending to LLM, model:', activeModelId);
 
-    const modelMsgId = (Date.now() + 1).toString();
+    const modelMsgId = `model-${Date.now()}`;
     const modelMsg: Message = {
       id: modelMsgId,
       role: 'model',
       content: '',
-      timestamp: Date.now(),
+      timestamp: Date.now() + 1,
       isStreaming: true,
       modelId: activeModelId,
       sourcesUsed: fileNames
@@ -101,8 +114,8 @@ export const createMessageHandlers = (
       const usage = await sendMessageToLLM(
         activeModelId,
         messages,
-        contextString + '\n\nUser Query: ' + userMsg.content,
-        [],
+        userMsg.content,
+        excerptedFiles,
         (chunk, thinking) => {
           accumText += chunk;
           if (thinking) thinkingText = thinking;
