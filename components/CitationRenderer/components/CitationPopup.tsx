@@ -59,7 +59,7 @@ const CitationPopup: React.FC<CitationPopupProps> = ({
     }
   }, [fileName, files, location]);
 
-  const calculatePosition = () => {
+  const calculatePosition = React.useCallback(() => {
     const trigger = isInTable ? null : triggerRef.current;
     const chatArea = trigger?.closest('.max-w-3xl');
     
@@ -86,9 +86,9 @@ const CitationPopup: React.FC<CitationPopupProps> = ({
 
       setPosition({ top, left });
     }
-  };
+  }, [coords, isInTable, triggerRef]);
 
-  useLayoutEffect(() => calculatePosition(), [coords, isInTable, file, pdfPageNumber, calculatePosition]);
+  useLayoutEffect(() => calculatePosition(), [coords, isInTable, file, pdfPageNumber]);
 
   useEffect(() => {
     const handleResize = () => calculatePosition();
@@ -158,8 +158,12 @@ const CitationPopup: React.FC<CitationPopupProps> = ({
             onScaleChange={setPdfScale}
             zoomHandlerRef={pdfZoomHandlerRef}
           />
-        ) : (
+        ) : file ? (
           <TextContextViewer file={file} quote={quote} location={location} />
+        ) : (
+          <div className="p-4 text-center text-[#999]">
+            File not found
+          </div>
         )}
       </div>
 

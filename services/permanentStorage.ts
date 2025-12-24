@@ -46,19 +46,20 @@ class PermanentStorageService {
 
   async saveFile(file: ProcessedFile): Promise<void> {
     if (!this.db) await this.init();
-    return new Promise(async (resolve, reject) => {
+    
+    // Get ArrayBuffer BEFORE starting transaction
+    let rawContent: ArrayBuffer | undefined;
+    if (file.type === 'pdf' && file.fileHandle) {
+      try {
+        rawContent = await file.fileHandle.arrayBuffer();
+      } catch (e) {
+        console.warn('Failed to store PDF raw content:', e);
+      }
+    }
+    
+    return new Promise((resolve, reject) => {
       const tx = this.db!.transaction(FILES_STORE, 'readwrite');
       const store = tx.objectStore(FILES_STORE);
-      
-      // Store rawContent (ArrayBuffer) for PDFs to enable rendering
-      let rawContent: ArrayBuffer | undefined;
-      if (file.type === 'pdf' && file.fileHandle) {
-        try {
-          rawContent = await file.fileHandle.arrayBuffer();
-        } catch (e) {
-          console.warn('Failed to store PDF raw content:', e);
-        }
-      }
       
       // Don't store fileHandle in IndexedDB (can't be serialized)
       const { fileHandle, ...fileData } = file;
