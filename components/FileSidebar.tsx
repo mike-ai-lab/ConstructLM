@@ -1,9 +1,10 @@
 import React, { useRef, useState, useMemo, useEffect } from 'react'; 
 import { ProcessedFile } from '../types';
 import { ChatMetadata } from '../services/chatRegistry';
-import { FileText, FileSpreadsheet, File as FileIcon, X, Loader2, FolderOpen, Plus, ChevronRight, ChevronDown, Folder, Image, MessageCircle, Files, BookOpen, Minus, Network, List, GitBranch } from 'lucide-react';
+import { FileText, FileSpreadsheet, File as FileIcon, X, Loader2, FolderOpen, Plus, ChevronRight, ChevronDown, Folder, Image, MessageCircle, Files, BookOpen, Minus, Network, List, GitBranch, History } from 'lucide-react';
 import ChatHistory from './ChatHistory';
 import DocumentViewer from './DocumentViewer';
+import LogsModal from './LogsModal';
 
 interface FileSidebarProps {
   files: ProcessedFile[];
@@ -49,6 +50,7 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState<'files' | 'chats'>('files');
   const [fileViewTab, setFileViewTab] = useState<'all' | 'folders'>('all');
+  const [isLogsModalOpen, setIsLogsModalOpen] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -503,6 +505,7 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
             onSelectChat={onSelectChat}
             onCreateChat={onCreateChat}
             onDeleteChat={onDeleteChat}
+            onOpenLogs={() => setIsLogsModalOpen(true)}
           />
         )}
       </div>
@@ -510,6 +513,7 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
     {previewFile && (
       <FilePreviewModal file={previewFile} onClose={() => setPreviewFileId(null)} />
     )}
+    <LogsModal isOpen={isLogsModalOpen} onClose={() => setIsLogsModalOpen(false)} />
     </>
   );
 };

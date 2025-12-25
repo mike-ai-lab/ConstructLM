@@ -33,14 +33,15 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ file, initialPage, highlightQuote
   useEffect(() => {
     let isMounted = true;
     const loadPdf = async () => {
-      if (!file.fileHandle || !(file.fileHandle instanceof File) || !window.pdfjsLib) {
+      if (!file.fileHandle || !window.pdfjsLib) {
+        console.warn('[PdfViewer] Missing fileHandle or pdfjsLib');
         setLoading(false);
         return;
       }
       try {
         setLoading(true);
         if (window.pdfWorkerReady) await window.pdfWorkerReady;
-        const arrayBuffer = await (file.fileHandle as File).arrayBuffer();
+        const arrayBuffer = await file.fileHandle.arrayBuffer();
         const pdf = await window.pdfjsLib.getDocument({ 
           data: new Uint8Array(arrayBuffer),
           cMapUrl: 'https://unpkg.com/pdfjs-dist@3.11.174/cmaps/',

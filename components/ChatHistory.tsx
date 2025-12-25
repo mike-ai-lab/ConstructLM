@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ChatMetadata } from '../services/chatRegistry';
 import { MODEL_REGISTRY } from '../services/modelRegistry';
-import { MessageCircle, Plus, Trash2, Calendar, Hash } from 'lucide-react';
+import { MessageCircle, Plus, Trash2, Calendar, Hash, History } from 'lucide-react';
 
 interface ChatHistoryProps {
   chats: ChatMetadata[];
@@ -9,6 +9,7 @@ interface ChatHistoryProps {
   onSelectChat: (chatId: string) => void;
   onCreateChat: () => void;
   onDeleteChat: (chatId: string) => void;
+  onOpenLogs?: () => void;
 }
 
 const ChatHistory: React.FC<ChatHistoryProps> = ({
@@ -16,7 +17,8 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
   activeChatId,
   onSelectChat,
   onCreateChat,
-  onDeleteChat
+  onDeleteChat,
+  onOpenLogs
 }) => {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
@@ -51,13 +53,24 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
     <div className="flex flex-col h-full">
       <div className="px-4 h-[50px] flex items-center justify-between flex-shrink-0">
         <span className="text-[12px] font-medium text-[#666666] dark:text-[#a0a0a0]">{chats.length} chats</span>
-        <button
-          onClick={onCreateChat}
-          className="p-1.5 text-[#4485d1] hover:bg-[rgba(68,133,209,0.1)] rounded-lg transition-colors"
-          title="New Chat"
-        >
-          <Plus size={14} />
-        </button>
+        <div className="flex gap-1">
+          {onOpenLogs && (
+            <button
+              onClick={onOpenLogs}
+              className="p-1.5 text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] rounded-lg transition-colors"
+              title="Open Logs"
+            >
+              <History size={14} />
+            </button>
+          )}
+          <button
+            onClick={onCreateChat}
+            className="p-1.5 text-[#4485d1] hover:bg-[rgba(68,133,209,0.1)] rounded-lg transition-colors"
+            title="New Chat"
+          >
+            <Plus size={14} />
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto px-2 py-2 custom-scrollbar">

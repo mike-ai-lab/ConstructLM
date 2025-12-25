@@ -1,8 +1,22 @@
-import { app, BrowserWindow, ipcMain, protocol, Menu } from 'electron';
+import { app, BrowserWindow, ipcMain, protocol, Menu, shell } from 'electron';
 import path from 'path';
 import { net } from 'electron';
+import * as fs from 'fs';
 
 let mainWindow: BrowserWindow | null = null;
+let logsDir: string;
+
+// Initialize logs directory
+function initializeLogsDirectory() {
+  logsDir = path.join(app.getPath('userData'), 'logs');
+  try {
+    if (!fs.existsSync(logsDir)) {
+      fs.mkdirSync(logsDir, { recursive: true });
+    }
+  } catch (error) {
+    console.error('Failed to create logs directory:', error);
+  }
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -186,6 +200,93 @@ ipcMain.handle('proxy-openai', async (event, { key, body }) => {
     const data = await response.json();
     return { ok: true, status: response.status, data };
   } catch (error: any) {
+    return { ok: false, error: error.message };
+  }
+});
+
+// Logging IPC handlers
+ipcMain.handle('write-logs', async (event, logContent: string) => {
+  try {
+    if (!logsDir) {
+      initializeLogsDirectory();
+    }
+    
+    const today = new Date();
+    const dateStr = today.toISOString().split('T')[0]; // YYYY-MM-DD
+    const logFile = path.join(logsDir, `activity-${dateStr}.log`);
+    
+    fs.appendFileSync(logFile, logContent + '\n');
+    return { ok: true };
+  } catch (error: any) {
+    console.error('Failed to write logs:', error);
+    return { ok: false, error: error.message };
+  }
+});
+
+ipcMain.handle('get-log-files', async (event) => {
+  try {
+    if (!logsDir) {
+      initializeLogsDirectory();
+    }
+    
+    if (!fs.existsSync(logsDir)) {
+      return [];
+    }
+    
+    const files = fs.readdirSync(logsDir)
+      .filter(file => file.startsWith('activity-') && file.endsWith('.log'))
+      .sort()
+      .reverse();
+    
+    return files;
+  } catch (error: any) {
+    console.error('Failed to get log files:', error);
+    return [];
+  }
+});
+
+ipcMain.handle('read-log-file', async (event, fileName: string) => {
+  try {
+    if (!logsDir) {
+      initializeLogsDirectory();
+    }
+    
+    const filePath = path.join(logsDir, fileName);
+    
+    // Security: ensure the file is within the logs directory
+    if (!filePath.startsWith(logsDir)) {
+      throw new Error('Invalid log file path');
+    }
+    
+    if (!fs.existsSync(filePath)) {
+      return '';
+    }
+    
+    return fs.readFileSync(filePath, 'utf-8');
+  } catch (error: any) {
+    console.error('Failed to read log file:', error);
+    return '';
+  }
+});
+
+ipcMain.handle('get-logs-directory', async (event) => {
+  try {
+    if (!logsDir) {
+      initializeLogsDirectory();
+    }
+    return logsDir;
+  } catch (error: any) {
+    console.error('Failed to get logs directory:', error);
+    return '';
+  }
+});
+
+ipcMain.handle('open-path', async (event, dirPath: string) => {
+  try {
+    shell.openPath(dirPath);
+    return { ok: true };
+  } catch (error: any) {
+    console.error('Failed to open path:', error);
     return { ok: false, error: error.message };
   }
 });

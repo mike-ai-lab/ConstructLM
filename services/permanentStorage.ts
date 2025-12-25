@@ -137,11 +137,15 @@ class PermanentStorageService {
         const files = request.result || [];
         // Restore File objects from rawContent for PDFs
         const restoredFiles = files.map((f: any) => {
-          if (f.type === 'pdf' && f.rawContent) {
-            const blob = new Blob([f.rawContent], { type: 'application/pdf' });
-            const file = new File([blob], f.name, { type: 'application/pdf' });
-            const { rawContent, ...fileData } = f;
-            return { ...fileData, fileHandle: file };
+          if (f.type === 'pdf') {
+            if (f.rawContent) {
+              const blob = new Blob([f.rawContent], { type: 'application/pdf' });
+              const file = new File([blob], f.name, { type: 'application/pdf' });
+              const { rawContent, ...fileData } = f;
+              return { ...fileData, fileHandle: file };
+            } else {
+              console.warn(`PDF "${f.name}" has no rawContent - re-upload to enable preview`);
+            }
           }
           return f;
         });

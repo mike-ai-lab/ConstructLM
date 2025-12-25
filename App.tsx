@@ -7,6 +7,7 @@ import { useLayoutState } from './App/hooks/useLayoutState';
 import { useInputState } from './App/hooks/useInputState';
 import { useFeatureState } from './App/hooks/useFeatureState';
 import { useAppEffects } from './App/hooks/useAppEffects';
+import { activityLogger } from './services/activityLogger';
 import { createChatHandlers } from './App/handlers/chatHandlers';
 import { createFileHandlers } from './App/handlers/fileHandlers';
 import { createMessageHandlers } from './App/handlers/messageHandlers';
@@ -56,8 +57,17 @@ const App: React.FC = () => {
   const [embeddingProgress, setEmbeddingProgress] = React.useState<{ fileId: string; fileName: string; current: number; total: number } | null>(null);
 
   React.useEffect(() => {
+    // Initialize activity logger
+    activityLogger.logSessionStart();
+    
     // Record user visit for smart greetings
     userProfileService.recordVisit();
+    
+    // Flush logs on page unload
+    const handleBeforeUnload = () => {
+      activityLogger.shutdown();
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
     
     const saved = localStorage.getItem('notes');
     const savedCounter = localStorage.getItem('noteCounter');
