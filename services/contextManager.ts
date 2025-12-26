@@ -5,6 +5,7 @@ import { ProcessedFile } from '../types';
 import { MODEL_REGISTRY } from './modelRegistry';
 import { selectRelevantContext, buildContextString as buildSmartContext } from './smartContextManager';
 import { activityLogger } from './activityLogger';
+import { diagnosticLogger } from './diagnosticLogger';
 
 interface ContextResult {
   chunks: ChunkRecord[];
@@ -161,6 +162,10 @@ class ContextManager {
       chunksByFile.get(chunk.fileId)!.push(chunk);
     });
 
+    // DIAGNOSTIC: 5. LLM CONTEXT ASSEMBLY LOG
+    const contextUnits: any[] = [];
+    let orderIndex = 0;
+
     // Build context string
     chunksByFile.forEach((fileChunks, fileId) => {
       const file = fileMap.get(fileId);
@@ -171,10 +176,27 @@ class ContextManager {
         .sort((a, b) => a.chunkIndex - b.chunkIndex)
         .forEach(chunk => {
           context += chunk.content + '\n\n';
+          
+          contextUnits.push({
+            unit_id: chunk.id,
+            order_in_prompt: orderIndex++,
+            character_count: chunk.content.length,
+            token_count: chunk.tokens,
+            source_file: file.name,
+            chunk_index: chunk.chunkIndex
+          });
         });
     });
 
     context += '=== END CONTEXT ===\n\n';
+    
+    diagnosticLogger.log('5. LLM_CONTEXT_ASSEMBLY', {
+      number_of_units_included: chunks.length,
+      total_characters: context.length,
+      total_tokens: chunks.reduce((sum, c) => sum + c.tokens, 0),
+      context_units: contextUnits
+    });
+    
     return context;
   }
 

@@ -2,6 +2,7 @@ import { Message, ProcessedFile } from '../../types';
 import { sendMessageToLLM } from '../../services/llmService';
 import { contextManager } from '../../services/contextManager';
 import { activityLogger } from '../../services/activityLogger';
+import { diagnosticLogger } from '../../services/diagnosticLogger';
 
 export const createMessageHandlers = (
   input: string,
@@ -141,6 +142,17 @@ export const createMessageHandlers = (
       
       activityLogger.logResponseReceived(activeModelId, accumText.length, usage?.inputTokens, usage?.outputTokens, usage?.totalTokens);
       activityLogger.logMessageReceived('current', accumText.length, activeModelId, usage);
+      
+      // DIAGNOSTIC: 7. FINAL ANSWER LOG
+      diagnosticLogger.log('7. FINAL_ANSWER', {
+        model_name: activeModelId,
+        final_answer_text: accumText,
+        answer_length: accumText.length,
+        thinking_text: thinkingText || null,
+        usage_stats: usage,
+        sources_used: fileNames,
+        timestamp: Date.now()
+      });
       
       if (usage && (usage.inputTokens || usage.outputTokens)) {
         setMessages(prev => prev.map(msg => 

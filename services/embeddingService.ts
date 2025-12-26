@@ -1,6 +1,7 @@
 import { vectorStore, ChunkRecord } from './vectorStore';
 import { generateFileHash, estimateTokens, chunkText } from './embeddingUtils';
 import { ProcessedFile } from '../types';
+import { diagnosticLogger } from './diagnosticLogger';
 
 const EMBEDDING_VERSION = 'MiniLM-L6-v2';
 const CHUNK_SIZE = 500; // ~500 tokens per chunk
@@ -84,6 +85,18 @@ class EmbeddingService {
     if (!this.pipeline) await this.loadModel();
 
     const chunks = chunkText(file.content, CHUNK_SIZE, OVERLAP_PERCENT);
+    
+    // DIAGNOSTIC: 2. UNIT/CHUNK CREATION LOG
+    diagnosticLogger.log('2. CHUNK CREATION START', {
+      source_file: file.name,
+      file_id: file.id,
+      total_content_length: file.content.length,
+      chunk_size: CHUNK_SIZE,
+      overlap_percent: OVERLAP_PERCENT,
+      total_chunks_created: chunks.length,
+      chunking_strategy: 'fixed-size-with-overlap'
+    });
+    
     const chunkRecords: ChunkRecord[] = [];
 
     for (let i = 0; i < chunks.length; i++) {
@@ -97,13 +110,31 @@ class EmbeddingService {
       }
 
       const embedding = await this.generateEmbedding(chunks[i]);
-      chunkRecords.push({
+      const chunkRecord = {
         id: `${file.id}_chunk_${i}`,
         fileId: file.id,
         chunkIndex: i,
         content: chunks[i],
         embedding,
         tokens: estimateTokens(chunks[i])
+      };
+      chunkRecords.push(chunkRecord);
+      
+      // DIAGNOSTIC: Log each unit created
+      diagnosticLogger.log(`2. UNIT_CREATED [${i + 1}/${chunks.length}]`, {
+        unit_id: chunkRecord.id,
+        source_file: file.name,
+        chunk_index: i,
+        unit_type: 'chunk',
+        character_count: chunks[i].length,
+        token_count: chunkRecord.tokens,
+        chunking_strategy: 'fixed-size-with-overlap',
+        text_preview: chunks[i].substring(0, 200),
+        metadata: {
+          fileId: file.id,
+          chunkIndex: i,
+          embeddingDimension: embedding.length
+        }
       });
     }
 
@@ -118,10 +149,30 @@ class EmbeddingService {
     });
 
     await vectorStore.saveChunks(chunkRecords);
+    
+    // DIAGNOSTIC: 3. EMBEDDING & INDEXING LOG
+    diagnosticLogger.log('3. EMBEDDING & INDEXING COMPLETE', {
+      embedding_model_name: 'Xenova/all-MiniLM-L6-v2',
+      embedding_version: EMBEDDING_VERSION,
+      embedding_dimension: avgEmbedding.length,
+      total_units_embedded: chunkRecords.length,
+      storage_backend: 'IndexedDB (vectorStore)',
+      file_id: file.id,
+      file_name: file.name
+    });
   }
 
   async searchSimilar(query: string, fileIds: string[], topK: number = 5): Promise<ChunkRecord[]> {
     if (!this.pipeline) await this.loadModel();
+
+    // DIAGNOSTIC: 4. QUERY & RETRIEVAL LOG
+    diagnosticLogger.log('4. QUERY START', {
+      raw_user_query: query,
+      embedding_model_used: 'Xenova/all-MiniLM-L6-v2',
+      top_k_requested: topK,
+      file_ids_searched: fileIds,
+      query_length: query.length
+    });
 
     const queryEmbedding = await this.generateEmbedding(query);
     const allChunks: ChunkRecord[] = [];
@@ -130,6 +181,11 @@ class EmbeddingService {
       const chunks = await vectorStore.getChunks(fileId);
       allChunks.push(...chunks);
     }
+    
+    diagnosticLogger.log('4. CHUNKS LOADED', {
+      total_chunks_loaded: allChunks.length,
+      file_ids: fileIds
+    });
 
     // Calculate cosine similarity
     const scored = allChunks.map(chunk => ({
@@ -138,7 +194,23 @@ class EmbeddingService {
     }));
 
     scored.sort((a, b) => b.score - a.score);
-    return scored.slice(0, topK).map(s => s.chunk);
+    const results = scored.slice(0, topK).map(s => s.chunk);
+    
+    // DIAGNOSTIC: Log all retrieval results
+    diagnosticLogger.log('4. RETRIEVAL_RESULTS', {
+      total_results: results.length,
+      results: results.map((chunk, idx) => ({
+        rank: idx + 1,
+        unit_id: chunk.id,
+        similarity_score: scored[idx].score,
+        source_file: chunk.fileId,
+        chunk_index: chunk.chunkIndex,
+        token_count: chunk.tokens,
+        text_preview: chunk.content.substring(0, 300)
+      }))
+    });
+    
+    return results;
   }
 
   private cosineSimilarity(a: number[], b: number[]): number {

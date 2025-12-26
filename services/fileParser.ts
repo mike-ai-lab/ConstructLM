@@ -3,6 +3,7 @@ import { compressText } from './compressionService';
 import { permanentStorage } from './permanentStorage';
 import { extractStructuredPDF } from './advancedPdfParser';
 import { activityLogger } from './activityLogger';
+import { diagnosticLogger } from './diagnosticLogger';
 
 const MAX_PDF_PAGES = 200;
 
@@ -38,6 +39,17 @@ export const parseFile = async (file: File): Promise<ProcessedFile> => {
   console.log(`Processing file: ${file.name}, type: ${fileType}, size: ${file.size}`);
   activityLogger.logFileParsingStart(file.name, fileType, file.size);
 
+  // DIAGNOSTIC: 1. INGESTION & EXTRACTION LOG
+  diagnosticLogger.log('1. INGESTION & EXTRACTION', {
+    file_name: file.name,
+    file_type: fileType,
+    file_size: file.size,
+    page_count: null, // Will be updated for PDF
+    sheet_count: null, // Will be updated for Excel
+    extraction_method: null, // Will be updated based on type
+    output_unit_type: null // Will be updated after extraction
+  });
+
   let content = '';
   let status: ProcessedFile['status'] = 'ready';
 
@@ -47,6 +59,17 @@ export const parseFile = async (file: File): Promise<ProcessedFile> => {
       try {
         const structured = await extractStructuredPDF(file);
         content = structured.fullText;
+        
+        // DIAGNOSTIC: Update extraction details for PDF
+        diagnosticLogger.log('1. INGESTION & EXTRACTION (PDF)', {
+          file_name: file.name,
+          file_type: 'pdf',
+          file_size: file.size,
+          page_count: structured.sections.length,
+          extraction_method: 'structured_pdf_parser',
+          output_unit_type: 'sections',
+          sections_extracted: structured.sections.length
+        });
         
         // Store sections separately
         const processedFile: ProcessedFile = {

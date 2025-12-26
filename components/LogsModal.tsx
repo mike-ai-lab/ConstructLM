@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { X, Download, Trash2, ChevronDown, ChevronUp, Loader2, FolderOpen, Copy } from 'lucide-react';
+import { X, Download, Trash2, ChevronDown, ChevronUp, Loader2, FolderOpen, Copy, Bug } from 'lucide-react';
 import { activityLogger } from '../services/activityLogger';
+import { diagnosticLogger } from '../services/diagnosticLogger';
 
 interface LogsModalProps {
   isOpen: boolean;
@@ -97,6 +98,20 @@ const LogsModal: React.FC<LogsModalProps> = ({ isOpen, onClose }) => {
     }
   };
 
+  const handleDownloadDiagnosticLogs = () => {
+    const logs = diagnosticLogger.getAllLogs();
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const fileName = `diagnostic-logs-${timestamp}.txt`;
+    
+    const element = document.createElement('a');
+    element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(logs));
+    element.setAttribute('download', fileName);
+    element.style.display = 'none';
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+  };
+
   const toggleLogExpanded = (fileName: string) => {
     const next = new Set(expandedLogs);
     if (next.has(fileName)) {
@@ -170,6 +185,14 @@ const LogsModal: React.FC<LogsModalProps> = ({ isOpen, onClose }) => {
             <span className="text-sm text-[#666666] dark:text-[#a0a0a0]">({logFiles.length} files)</span>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={handleDownloadDiagnosticLogs}
+              className="px-3 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors flex items-center gap-2"
+              title="Download RAG diagnostic logs"
+            >
+              <Bug size={16} />
+              Diagnostic Logs
+            </button>
             <button
               onClick={handleOpenLogsFolder}
               className="p-2 text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[#222222] rounded-lg transition-colors"

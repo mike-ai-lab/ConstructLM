@@ -1,4 +1,5 @@
 import { activityLogger } from './activityLogger';
+import { diagnosticLogger } from './diagnosticLogger';
 
 interface RAGChunk {
   fileName: string;

@@ -5,6 +5,7 @@ import { sendMessageToGemini } from "./geminiService";
 import { streamLocalModel } from "./localModelService";
 import { ragService } from "./ragService";
 import { streamAWSBedrock } from "./awsBedrockService";
+import { diagnosticLogger } from "./diagnosticLogger";
 
 // --- System Prompt Construction ---
 export const constructBaseSystemPrompt = (hasFiles: boolean = false, hasSources: boolean = false, sources: any[] = []) => {
@@ -284,6 +285,23 @@ export const sendMessageToLLM = async (
             const isFirstMessage = recentHistory.length === 0;
             const currentContent = (isFirstMessage && fullContext) ? newMessage + fullContext : newMessage;
             messages.push({ role: 'user', content: currentContent });
+            
+            // DIAGNOSTIC: 5. LLM CONTEXT ASSEMBLY (Full Prompt)
+            diagnosticLogger.log('5. LLM_CONTEXT_FULL_PROMPT', {
+                model_id: modelId,
+                model_name: model.name,
+                system_prompt: systemPrompt,
+                user_prompt: currentContent,
+                total_messages: messages.length,
+                total_characters: messages.reduce((sum, m) => sum + m.content.length, 0),
+                estimated_tokens: Math.ceil(messages.reduce((sum, m) => sum + m.content.length, 0) / 4),
+                messages_structure: messages.map((m, idx) => ({
+                    index: idx,
+                    role: m.role,
+                    content_length: m.content.length,
+                    content_preview: m.content.substring(0, 200)
+                }))
+            });
             
             return await streamOpenAICompatible(model, apiKey, messages, onStream);
         } else if (model.provider === 'aws') {
