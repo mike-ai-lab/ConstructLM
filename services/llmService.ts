@@ -23,12 +23,16 @@ ${sourcesList}
 
 MANDATORY CITATION RULES:
 1. EVERY SINGLE FACT must have a citation immediately after it
-2. Use format: {{citation:SourceTitle|URL|Quote}}
-3. Quote must be 3-10 words copied EXACTLY from source
-4. NO EXCEPTIONS - every statement needs a citation
+2. For web sources, use format: {{citation:https://full-url.com|Section/Heading|Quote}}
+3. For files, use format: {{citation:FileName.ext|Location|Quote}}
+4. Quote must be 3-10 words copied EXACTLY from source
+5. NO EXCEPTIONS - every statement needs a citation
 
-EXAMPLE:
-"The feature was released in 2024 {{citation:Product Blog|https://example.com|released in 2024}}."
+EXAMPLES:
+- Web: "The feature was released in 2024 {{citation:https://example.com/blog|Product Updates|released in 2024}}."
+- File: "The total is 27 {{citation:data.csv|Sheet: Summary, Row 1|Total: 27}}."
+
+CRITICAL: For web sources, the FIRST field MUST be the full URL starting with https://
 
 IF YOU WRITE ANY FACT WITHOUT A CITATION, YOU HAVE FAILED.
 REMEMBER: ONLY use information from the provided sources. Every fact MUST have a citation.`;
@@ -256,7 +260,17 @@ export const sendMessageToLLM = async (
                 throw new Error(`API Key for ${model.name} is missing. Please open Settings (Gear Icon) to add it.`);
             }
             const conversationHistory = history.filter(m => !m.isStreaming && m.id !== 'intro');
-            await sendMessageToGemini(modelId, apiKey, newMessage, activeFiles, onStream, systemPrompt, conversationHistory);
+            
+            // Add source context to the message for Gemini
+            let geminiMessage = newMessage;
+            if (activeSources.length > 0) {
+                geminiMessage += '\n\nSOURCE CONTENT:\n' + 
+                    activeSources.filter(s => s.content).map((s, i) => 
+                        `=== SOURCE [${i + 1}]: "${s.title || s.url}" (${s.url}) ===\n${s.content}\n=== END SOURCE ===`
+                    ).join('\n\n');
+            }
+            
+            await sendMessageToGemini(modelId, apiKey, geminiMessage, activeFiles, onStream, systemPrompt, conversationHistory);
             return {};
         } else if (model.provider === 'openai' || model.provider === 'groq') {
             // OpenAI or Groq

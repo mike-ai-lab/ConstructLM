@@ -14,6 +14,10 @@ export const incrementCitationCounter = () => {
 
 export const getCitationCounter = () => citationCounter;
 
+export const isUrlCitation = (source: string): boolean => {
+  return source.startsWith('http://') || source.startsWith('https://');
+};
+
 export const extractSourceFiles = (text: string): Set<string> => {
   const citationMatches = text.match(/(?:\{\{|【)citation:[^}】]+(?:\}\}|】)/g) || [];
   const sourceFiles = new Set<string>();

@@ -21,6 +21,7 @@ import { userProfileService } from './services/userProfileService';
 import FileSidebar from './components/FileSidebar';
 import MessageBubble from './components/MessageBubble';
 import DocumentViewer from './components/DocumentViewer';
+import WebViewer from './components/WebViewer';
 import LiveSession from './components/LiveSession';
 import SettingsModal from './components/SettingsModal';
 import HelpDocumentation from './components/HelpDocumentation';
@@ -57,6 +58,7 @@ const App: React.FC = () => {
   const [contextWarning, setContextWarning] = React.useState<{ totalTokens: number; filesUsed: string[]; selectedCount: number; onProceed: () => void } | null>(null);
   const [embeddingProgress, setEmbeddingProgress] = React.useState<{ fileId: string; fileName: string; current: number; total: number } | null>(null);
   const [isLogsOpen, setIsLogsOpen] = React.useState(false);
+  const [webViewerUrl, setWebViewerUrl] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     // Initialize activity logger
@@ -893,8 +895,11 @@ const App: React.FC = () => {
           onOpenNotebook={() => setActiveTab('notebook')}
           activeTab={activeTab}
           onTabChange={setActiveTab}
-          isViewerOpen={!!activeFile}
-          onCloseViewer={() => layoutState.setViewState(null)}
+          isViewerOpen={!!activeFile || !!webViewerUrl}
+          onCloseViewer={() => {
+            layoutState.setViewState(null);
+            setWebViewerUrl(null);
+          }}
           onOpenLogs={() => setIsLogsOpen(true)}
         />
 
@@ -941,6 +946,7 @@ const App: React.FC = () => {
                       return m;
                     }));
                   }}
+                  onOpenWebViewer={setWebViewerUrl}
                 />
               ))}
               <div ref={layoutState.messagesEndRef} className="snapshot-ignore" />
@@ -1009,8 +1015,8 @@ const App: React.FC = () => {
 
 
 
-      {/* RIGHT DOCUMENT VIEWER */}
-      {activeFile && (
+      {/* RIGHT DOCUMENT VIEWER OR WEB VIEWER */}
+      {(activeFile || webViewerUrl) && (
         <div 
           className="fixed md:relative z-30 h-full bg-[#f9f9f9] dark:bg-[#2a2a2a] flex flex-col shadow-2xl md:shadow-none border-l border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] overflow-hidden"
           style={{ 
@@ -1023,13 +1029,17 @@ const App: React.FC = () => {
               onMouseDown={() => layoutState.setIsResizing('right')}
             />
           )}
-          <DocumentViewer 
-            file={activeFile} 
-            initialPage={layoutState.viewState?.page} 
-            highlightQuote={layoutState.viewState?.quote}
-            location={layoutState.viewState?.location}
-            onClose={() => layoutState.setViewState(null)}
-          />
+          {webViewerUrl ? (
+            <WebViewer url={webViewerUrl} onClose={() => setWebViewerUrl(null)} />
+          ) : activeFile ? (
+            <DocumentViewer 
+              file={activeFile} 
+              initialPage={layoutState.viewState?.page} 
+              highlightQuote={layoutState.viewState?.quote}
+              location={layoutState.viewState?.location}
+              onClose={() => layoutState.setViewState(null)}
+            />
+          ) : null}
         </div>
       )}
     </div>

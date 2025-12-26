@@ -1,6 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect, useContext, createContext } from 'react';
 import { ProcessedFile } from '../../../types';
 import CitationPopup from './CitationPopup';
+import { isUrlCitation } from '../utils/citationUtils';
 
 interface CitationChipProps {
   index: number;
@@ -9,17 +10,19 @@ interface CitationChipProps {
   quote: string;
   files: ProcessedFile[];
   onViewDocument: (fileName: string, page?: number, quote?: string, location?: string) => void;
+  onOpenWebViewer?: (url: string) => void;
 }
 
 const CitationDepthContext = createContext(0);
 
-const CitationChip: React.FC<CitationChipProps> = ({ index, fileName, location, quote, files, onViewDocument }) => {
+const CitationChip: React.FC<CitationChipProps> = ({ index, fileName, location, quote, files, onViewDocument, onOpenWebViewer }) => {
   const depth = useContext(CitationDepthContext);
   const [isOpen, setIsOpen] = useState(false);
   const triggerRef = useRef<HTMLSpanElement>(null);
   const [coords, setCoords] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const [isInTable, setIsInTable] = useState(false);
-  const fileExists = files.find(f => f.name === fileName);
+  const isUrl = isUrlCitation(fileName);
+  const fileExists = isUrl ? true : files.find(f => f.name === fileName);
 
   // Prevent nested citation popups beyond depth 1
   if (depth > 0) {
@@ -68,6 +71,15 @@ const CitationChip: React.FC<CitationChipProps> = ({ index, fileName, location, 
   }, [isOpen, isInTable, updateCoords]);
 
   const handleOpenFull = () => {
+    if (isUrl) {
+      if (onOpenWebViewer) {
+        onOpenWebViewer(fileName);
+      } else {
+        window.open(fileName, '_blank', 'noopener,noreferrer');
+      }
+      setIsOpen(false);
+      return;
+    }
     if (!fileExists) return;
     let page = 1;
     if (location) {
@@ -83,9 +95,9 @@ const CitationChip: React.FC<CitationChipProps> = ({ index, fileName, location, 
       <sup
         ref={triggerRef}
         onClick={handleToggle}
-        className="citation-marker"
+        className={`citation-marker ${isUrl ? 'citation-url' : ''}`}
         data-citation-index={index}
-        title={`${fileName} - ${location}`}
+        title={isUrl ? `${fileName} - ${location}` : `${fileName} - ${location}`}
         aria-expanded={isOpen}
         role="button"
       >
@@ -104,6 +116,8 @@ const CitationChip: React.FC<CitationChipProps> = ({ index, fileName, location, 
             isInTable={isInTable}
             coords={coords}
             fileNotFound={!fileExists}
+            isUrl={isUrl}
+            onOpenWebViewer={onOpenWebViewer}
           />
         </CitationDepthContext.Provider>
       )}

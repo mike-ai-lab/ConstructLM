@@ -10,7 +10,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "electron:start": "vite build --config electron.vite.config.ts && set NODE_ENV=development&& electron .",
-    "electron:dev": "concurrently \"vite\" \"vite build --config electron.vite.config.ts --watch\" \"wait-on dist-electron/main.js && electron .\"",
+    "electron:dev": "concurrently \"vite\" \"vite build --config electron.vite.config.ts --watch\" \"wait-on dist-electron/main.cjs && electron .\"",
     "electron:build": "vite build && vite build --config electron.vite.config.ts && electron-builder",
     "electron:pack": "vite build && vite build --config electron.vite.config.ts && electron-builder --dir"
   },

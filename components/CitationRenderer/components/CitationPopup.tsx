@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { BookOpen, X, Maximize2 } from 'lucide-react';
+import { BookOpen, X, Maximize2, Globe, ExternalLink } from 'lucide-react';
 import { ProcessedFile } from '../../../types';
 import PdfPagePreview from './PdfPagePreview';
 import TextContextViewer from './TextContextViewer';
@@ -15,6 +15,9 @@ interface CitationPopupProps {
   onOpenFull: () => void;
   isInTable: boolean;
   coords?: { top: number; left: number };
+  fileNotFound?: boolean;
+  isUrl?: boolean;
+  onOpenWebViewer?: (url: string) => void;
 }
 
 const POPUP_WIDTH = 450;
@@ -32,6 +35,9 @@ const CitationPopup: React.FC<CitationPopupProps> = ({
   onOpenFull,
   isInTable,
   coords,
+  fileNotFound,
+  isUrl,
+  onOpenWebViewer,
 }) => {
   const popoverRef = useRef<HTMLDivElement>(null);
 
@@ -134,13 +140,17 @@ const CitationPopup: React.FC<CitationPopupProps> = ({
       {/* Compact Header */}
       <div className="px-2 py-[3px] flex items-center justify-between border-b text-[12px] bg-[rgba(0,0,0,0.02)] dark:bg-[#262626]">
         <div className="flex items-center gap-1 min-w-0">
-          <BookOpen size={12} className="text-blue-600 shrink-0" />
-          <span className="truncate font-medium">{fileName}</span>
+          {isUrl ? (
+            <Globe size={12} className="text-blue-600 shrink-0" />
+          ) : (
+            <BookOpen size={12} className="text-blue-600 shrink-0" />
+          )}
+          <span className="truncate font-medium">{isUrl ? new URL(fileName).hostname : fileName}</span>
           <span className="text-[#777] dark:text-[#aaa] truncate">• {location}</span>
         </div>
         <div className="flex gap-0.5">
-          <button onClick={onOpenFull} className="p-0.5 hover:text-blue-600">
-            <Maximize2 size={12} />
+          <button onClick={onOpenFull} className="p-0.5 hover:text-blue-600" title={isUrl ? 'Open in browser' : 'Open full view'}>
+            {isUrl ? <ExternalLink size={12} /> : <Maximize2 size={12} />}
           </button>
           <button onClick={onClose} className="p-0.5 hover:text-red-500">
             <X size={12} />
@@ -150,7 +160,25 @@ const CitationPopup: React.FC<CitationPopupProps> = ({
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto overscroll-contain">
-        {isPdfMode && file?.fileHandle ? (
+        {isUrl ? (
+          <div className="p-4 space-y-3">
+            <div className="text-sm">
+              <div className="font-semibold text-[#1a1a1a] dark:text-white mb-1">Source</div>
+              <a href={fileName} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline text-xs break-all flex items-center gap-1">
+                {fileName}
+                <ExternalLink size={10} />
+              </a>
+            </div>
+            <div className="text-sm">
+              <div className="font-semibold text-[#1a1a1a] dark:text-white mb-1">Location</div>
+              <div className="text-xs text-[#666] dark:text-[#aaa]">{location}</div>
+            </div>
+            <div className="text-sm">
+              <div className="font-semibold text-[#1a1a1a] dark:text-white mb-1">Quote</div>
+              <div className="text-xs italic text-[#666] dark:text-[#aaa] bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] p-2 rounded">"{quote}"</div>
+            </div>
+          </div>
+        ) : isPdfMode && file?.fileHandle ? (
           <PdfPagePreview
             file={file.fileHandle}
             pageNumber={pdfPageNumber}

@@ -42,7 +42,19 @@ const Sources: React.FC<SourcesProps> = ({ sources, onAddSource, onDeleteSource 
       {sources.length > 0 && (
         <div className="px-4 py-2 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)]">
           <p className="text-xs text-[#666666] dark:text-[#a0a0a0] font-medium">
-            AI restricted to {sources.filter(s => s.status === 'fetched').length} fetched source(s)
+            {sources.filter(s => s.status === 'fetched').length > 0 ? (
+              <span className="text-green-600 dark:text-green-400">
+                ✓ AI will use {sources.filter(s => s.status === 'fetched').length} fetched source(s)
+              </span>
+            ) : sources.filter(s => s.status === 'pending').length > 0 ? (
+              <span className="text-yellow-600 dark:text-yellow-400">
+                ⏳ Fetching {sources.filter(s => s.status === 'pending').length} source(s)... (wait before sending)
+              </span>
+            ) : (
+              <span className="text-red-600 dark:text-red-400">
+                ✗ {sources.filter(s => s.status === 'error').length} source(s) failed to fetch
+              </span>
+            )}
           </p>
         </div>
       )}
