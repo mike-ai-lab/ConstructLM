@@ -94,7 +94,7 @@ const CitationPopup: React.FC<CitationPopupProps> = ({
     setPosition({ top, left });
   }, [coords, isInTable, triggerRef]);
 
-  useLayoutEffect(() => calculatePosition(), [coords, isInTable, file, pdfPageNumber]);
+  useLayoutEffect(() => calculatePosition(), [coords, isInTable, file, pdfPageNumber, calculatePosition]);
 
   useEffect(() => {
     const handleResize = () => calculatePosition();

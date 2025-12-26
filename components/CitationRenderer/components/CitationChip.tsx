@@ -83,7 +83,7 @@ const CitationChip: React.FC<CitationChipProps> = ({ index, fileName, location, 
   };
 
   useEffect(() => {
-    if (!isOpen || !isInTable) return;
+    if (!isOpen) return;
     
     let rafId: number;
     const handleScroll = () => {
@@ -96,7 +96,7 @@ const CitationChip: React.FC<CitationChipProps> = ({ index, fileName, location, 
       window.removeEventListener('scroll', handleScroll, true);
       if (rafId) cancelAnimationFrame(rafId);
     };
-  }, [isOpen, isInTable, updateCoords]);
+  }, [isOpen, updateCoords]);
 
   const handleOpenFull = () => {
     if (isUrl) {
