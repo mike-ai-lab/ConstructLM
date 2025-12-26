@@ -106,7 +106,7 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
     <div className="w-full relative">
       {/* Source Popup List */}
       {showSourcePopup && (
-        <div className="absolute bottom-[calc(100%+8px)] left-0 z-50 w-[350px]">
+        <div className="absolute bottom-[calc(100%+8px)] left-0 z-[200] w-[350px]">
           <div className="flex flex-col gap-2 max-h-[280px] overflow-y-auto">
             {sources.map((source: SourceWithCheck) => (
               <div key={source.id} className="flex items-center justify-between bg-white dark:bg-[#3C3C3C] border-2 border-[#0078d4] px-4 py-2 rounded-full shadow-lg flex-shrink-0">
@@ -192,7 +192,7 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
 
       {/* Mention Popup Menu */}
       {showMentionMenu && filteredFiles.length > 0 && (
-        <div className="absolute bottom-[calc(100%+8px)] left-6 w-64 bg-white dark:bg-[#222222] rounded-xl shadow-xl border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] overflow-hidden z-50 animate-in slide-in-from-bottom-2 fade-in duration-200">
+        <div className="absolute bottom-[calc(100%+8px)] left-6 w-64 bg-white dark:bg-[#222222] rounded-xl shadow-xl border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] overflow-hidden z-[200] animate-in slide-in-from-bottom-2 fade-in duration-200">
           <div className="px-3 py-2 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] text-[12px] font-bold text-[#666666] dark:text-[#a0a0a0] uppercase tracking-wider">
             Mention a source
           </div>

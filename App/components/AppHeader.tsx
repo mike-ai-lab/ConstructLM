@@ -74,7 +74,7 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
   }, []);
   
   return (
-    <header ref={headerRef} className="h-[65px] flex-none border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] flex items-center justify-between px-3 md:px-6 bg-white dark:bg-[#1a1a1a] min-w-0 gap-2 relative z-40">
+    <header ref={headerRef} className="h-[65px] flex-none border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] flex items-center justify-between px-3 md:px-6 bg-white dark:bg-[#1a1a1a] min-w-0 gap-2 relative z-[200]">
       <div className="flex items-center gap-2 min-w-0 flex-shrink">
         {!props.isMobile && props.activeTab === 'chat' && (
           <button onClick={() => props.setIsSidebarOpen(!props.isSidebarOpen)} className="p-1.5 text-gray-400 hover:bg-gray-100 rounded-md transition-colors flex-shrink-0">
@@ -234,7 +234,7 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
 
             {/* Drawing Controls - Positioned below header */}
             {props.drawingState.isActive && props.drawingState.tool !== 'none' && (
-              <div className="fixed top-[65px] left-0 right-0 h-12 bg-white dark:bg-[#1a1a1a] border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] flex items-center justify-center gap-4 z-40 px-4">
+              <div className="fixed top-[65px] left-0 right-0 h-12 bg-white dark:bg-[#1a1a1a] border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] flex items-center justify-center gap-4 z-[200] px-4">
                 {/* Color Picker */}
                 <div className="relative" ref={props.colorPickerRef}>
                   <button
