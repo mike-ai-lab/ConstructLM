@@ -4,6 +4,7 @@ import { drawingService, DrawingTool, DRAWING_COLORS, DrawingState } from '../..
 import { generateMindMapData } from '../../services/mindMapService';
 import { mindMapCache } from '../../services/mindMapCache';
 import { showToast } from '../../utils/uiHelpers';
+import { activityLogger } from '../../services/activityLogger';
 
 export const createFeatureHandlers = (
   files: ProcessedFile[],
@@ -29,6 +30,7 @@ export const createFeatureHandlers = (
       const context = { fileCount: files.length, messageCount: messages.length };
       const snapshot = await snapshotService.takeSnapshot(messagesContainer as HTMLElement, context);
       setSnapshots(snapshotService.getSnapshots());
+      activityLogger.logAction('SNAPSHOT', 'Snapshot taken', { messageCount: messages.length, fileCount: files.length });
       
       setTimeout(() => {
         if (button && originalIcon) button.innerHTML = originalIcon;
@@ -58,6 +60,7 @@ export const createFeatureHandlers = (
 
   const handleDrawingToolChange = (tool: DrawingTool) => {
     drawingService.setTool(tool);
+    activityLogger.logDrawingAction(`Tool changed to ${tool}`);
     if (tool === 'none') {
       setShowColorPicker(false);
     }
@@ -84,17 +87,20 @@ export const createFeatureHandlers = (
 
     const cached = mindMapCache.get(fileId, activeModelId);
     if (cached) {
+      activityLogger.logAction('MINDMAP', 'Mind map loaded from cache', { fileName: file.name });
       setMindMapData(cached.data);
       setMindMapFileName(cached.fileName);
       return;
     }
 
     setIsGeneratingMindMap(true);
+    activityLogger.logAction('MINDMAP', 'Mind map generation started', { fileName: file.name, modelId: activeModelId });
     try {
       const data = await generateMindMapData(file, activeModelId);
       mindMapCache.save(fileId, file.name, activeModelId, data);
       setMindMapData(data);
       setMindMapFileName(file.name);
+      activityLogger.logMindMapGenerated(file.name);
     } catch (error: any) {
       console.error('Mind map generation error:', error);
       showToast((error as Error).message || 'Failed to generate mind map', 'error');

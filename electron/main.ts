@@ -5,6 +5,7 @@ import * as fs from 'fs';
 
 let mainWindow: BrowserWindow | null = null;
 let logsDir: string;
+let currentLogFile: string | null = null;
 
 // Initialize logs directory
 function initializeLogsDirectory() {
@@ -13,6 +14,11 @@ function initializeLogsDirectory() {
     if (!fs.existsSync(logsDir)) {
       fs.mkdirSync(logsDir, { recursive: true });
     }
+    // Create log file for this session
+    const now = new Date();
+    const dateStr = now.toISOString().split('T')[0];
+    const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-');
+    currentLogFile = path.join(logsDir, `session-${dateStr}-${timeStr}.log`);
   } catch (error) {
     console.error('Failed to create logs directory:', error);
   }
@@ -71,6 +77,9 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  // Initialize logs directory first
+  initializeLogsDirectory();
+  
   // CRITICAL: Enable audio features
   app.commandLine.appendSwitch('enable-features', 'WebRTCPipeWireCapturer');
   app.commandLine.appendSwitch('enable-usermedia-screen-capturing');
@@ -143,19 +152,16 @@ app.on('activate', () => {
 
 ipcMain.handle('get-app-version', () => app.getVersion());
 
-// Proxy handlers for API requests
+// Proxy handlers for API requests with streaming
 ipcMain.handle('proxy-groq', async (event, { key, body }) => {
   try {
-    // Force non-streaming for Electron to avoid complexity
-    const requestBody = { ...body, stream: false };
-    
     const response = await net.fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${key}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(requestBody)
+      body: JSON.stringify(body)
     });
     
     if (!response.ok) {
@@ -167,6 +173,33 @@ ipcMain.handle('proxy-groq', async (event, { key, body }) => {
       };
     }
     
+    if (body.stream && response.body) {
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+        
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (trimmed.startsWith('data: ')) {
+            const dataStr = trimmed.slice(6);
+            if (dataStr !== '[DONE]') {
+              event.sender.send('stream-chunk', dataStr);
+            }
+          }
+        }
+      }
+      
+      return { ok: true, status: response.status, streaming: true };
+    }
+    
     const data = await response.json();
     return { ok: true, status: response.status, data };
   } catch (error: any) {
@@ -176,16 +209,13 @@ ipcMain.handle('proxy-groq', async (event, { key, body }) => {
 
 ipcMain.handle('proxy-openai', async (event, { key, body }) => {
   try {
-    // Force non-streaming for Electron to avoid complexity
-    const requestBody = { ...body, stream: false };
-    
     const response = await net.fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${key}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(requestBody)
+      body: JSON.stringify(body)
     });
     
     if (!response.ok) {
@@ -195,6 +225,33 @@ ipcMain.handle('proxy-openai', async (event, { key, body }) => {
         status: response.status, 
         error: errorData.error?.message || response.statusText 
       };
+    }
+    
+    if (body.stream && response.body) {
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+        
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (trimmed.startsWith('data: ')) {
+            const dataStr = trimmed.slice(6);
+            if (dataStr !== '[DONE]') {
+              event.sender.send('stream-chunk', dataStr);
+            }
+          }
+        }
+      }
+      
+      return { ok: true, status: response.status, streaming: true };
     }
     
     const data = await response.json();
@@ -207,15 +264,13 @@ ipcMain.handle('proxy-openai', async (event, { key, body }) => {
 // Logging IPC handlers
 ipcMain.handle('write-logs', async (event, logContent: string) => {
   try {
-    if (!logsDir) {
+    if (!currentLogFile) {
       initializeLogsDirectory();
     }
     
-    const today = new Date();
-    const dateStr = today.toISOString().split('T')[0]; // YYYY-MM-DD
-    const logFile = path.join(logsDir, `activity-${dateStr}.log`);
-    
-    fs.appendFileSync(logFile, logContent + '\n');
+    if (currentLogFile) {
+      fs.appendFileSync(currentLogFile, logContent + '\n');
+    }
     return { ok: true };
   } catch (error: any) {
     console.error('Failed to write logs:', error);
@@ -234,7 +289,7 @@ ipcMain.handle('get-log-files', async (event) => {
     }
     
     const files = fs.readdirSync(logsDir)
-      .filter(file => file.startsWith('activity-') && file.endsWith('.log'))
+      .filter(file => file.startsWith('session-') && file.endsWith('.log'))
       .sort()
       .reverse();
     

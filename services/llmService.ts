@@ -334,10 +334,22 @@ export const sendMessageToLLM = async (
     } catch (error: any) {
         const errMsg = error.message || "";
         
-        if (errMsg.includes("413") || errMsg.includes("too large") || errMsg.includes("TPM")) {
+        // Check for actual 413 status code or explicit size errors
+        if (errMsg.includes("413") || errMsg.includes("Payload Too Large") || errMsg.includes("Request Entity Too Large")) {
             throw new Error(
                 `**Message Too Large:** ${model.name} cannot process this request.\n\n` +
                 `**Solution:** Use @mentions to select specific files only, or switch to Gemini 2.5 Flash.`
+            );
+        }
+        
+        // CORS proxy file size limit (403 from corsproxy)
+        if (errMsg.includes("403") && errMsg.includes("corsproxy")) {
+            throw new Error(
+                `**File Size Limit:** Request exceeds 1MB browser limit.\n\n` +
+                `**Solutions:**\n` +
+                `1. Use Desktop App (no size limits)\n` +
+                `2. Reduce file attachments\n` +
+                `3. Switch to Gemini models`
             );
         }
         
@@ -413,6 +425,30 @@ const streamOpenAICompatible = async (
     // Use Electron proxy if available
     if ((window as any).electron) {
         try {
+            // Setup stream listener if available
+            let streamBuffer = '';
+            
+            if ((window as any).electron.onStreamChunk) {
+                const handleStreamChunk = (dataStr: string) => {
+                    try {
+                        const json = JSON.parse(dataStr);
+                        const content = json.choices?.[0]?.delta?.content;
+                        const thinking = json.choices?.[0]?.delta?.reasoning_content;
+                        
+                        if (thinking) {
+                            streamBuffer += thinking;
+                            onStream('', streamBuffer);
+                        } else if (content) {
+                            onStream(content, streamBuffer || undefined);
+                        }
+                    } catch (e) {
+                        // ignore parse errors
+                    }
+                };
+                
+                (window as any).electron.onStreamChunk(handleStreamChunk);
+            }
+            
             let result;
             if (model.provider === 'groq') {
                 result = await (window as any).electron.proxyGroq(apiKey, requestBody);
@@ -420,22 +456,24 @@ const streamOpenAICompatible = async (
                 result = await (window as any).electron.proxyOpenai(apiKey, requestBody);
             }
             
+            // Cleanup listener if available
+            if ((window as any).electron.removeStreamListener) {
+                (window as any).electron.removeStreamListener();
+            }
+            
             if (result && !result.ok) {
                 throw new Error(`API Error ${result.status}: ${result.error || 'Unknown error'}`);
             }
             
-            // Handle streaming response from Electron proxy
+            if (result && result.streaming) {
+                return {};
+            }
+            
+            // Handle non-streaming response
             if (result && result.data) {
-                // For non-streaming response, simulate streaming
                 const content = result.data.choices?.[0]?.message?.content || '';
                 if (content) {
-                    // Simulate streaming by chunking the response
-                    const words = content.split(' ');
-                    for (let i = 0; i < words.length; i++) {
-                        const chunk = (i === 0 ? '' : ' ') + words[i];
-                        onStream(chunk);
-                        await new Promise(resolve => setTimeout(resolve, 20)); // Small delay for streaming effect
-                    }
+                    onStream(content);
                 }
                 
                 return {
@@ -524,6 +562,7 @@ const streamOpenAICompatible = async (
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
+        let thinkingBuffer = '';
         let usage = { inputTokens: 0, outputTokens: 0, totalTokens: 0 };
 
         while (true) {
@@ -542,9 +581,15 @@ const streamOpenAICompatible = async (
                     try {
                         const json = JSON.parse(dataStr);
                         const content = json.choices?.[0]?.delta?.content;
-                        if (content) {
-                            onStream(content);
+                        const thinking = json.choices?.[0]?.delta?.reasoning_content;
+                        
+                        if (thinking) {
+                            thinkingBuffer += thinking;
+                            onStream('', thinkingBuffer);
+                        } else if (content) {
+                            onStream(content, thinkingBuffer || undefined);
                         }
+                        
                         // Capture usage stats if available
                         if (json.usage) {
                             usage.inputTokens = json.usage.prompt_tokens || 0;
@@ -572,17 +617,6 @@ const streamOpenAICompatible = async (
             throw new Error(
                 `**Connection Error:** Cannot reach ${model.name} API.\n\n` +
                 `Check your internet connection or try switching to Gemini models.`
-            );
-        }
-        
-        // Handle CORS proxy errors
-        if (error.message?.includes('403') && error.message?.includes('corsproxy')) {
-            throw new Error(
-                `**File Size Limit:** Request exceeds 1MB browser limit.\n\n` +
-                `**Solutions:**\n` +
-                `1. Use Desktop App (no size limits)\n` +
-                `2. Reduce file attachments\n` +
-                `3. Switch to Gemini models`
             );
         }
         

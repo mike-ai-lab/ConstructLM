@@ -2,6 +2,7 @@ import { ProcessedFile } from '../types';
 import { compressText } from './compressionService';
 import { permanentStorage } from './permanentStorage';
 import { extractStructuredPDF } from './advancedPdfParser';
+import { activityLogger } from './activityLogger';
 
 const MAX_PDF_PAGES = 200;
 
@@ -35,6 +36,7 @@ export const parseFile = async (file: File): Promise<ProcessedFile> => {
   }
 
   console.log(`Processing file: ${file.name}, type: ${fileType}, size: ${file.size}`);
+  activityLogger.logFileParsingStart(file.name, fileType, file.size);
 
   let content = '';
   let status: ProcessedFile['status'] = 'ready';
@@ -69,6 +71,7 @@ export const parseFile = async (file: File): Promise<ProcessedFile> => {
         }
         
         console.log(`✅ PDF "${file.name}" processed: ${structured.sections.length} sections`);
+        activityLogger.logFileParsingComplete(file.name, content.length, processedFile.tokenCount, structured.sections.length);
         return processedFile;
       } catch (structuredError) {
         console.warn('Structured PDF parsing failed, falling back to basic extraction:', structuredError);
@@ -105,6 +108,8 @@ export const parseFile = async (file: File): Promise<ProcessedFile> => {
   // Compress content to reduce token usage
   const compressed = compressText(content);
   const tokenCount = Math.ceil(compressed.length / 4);
+  
+  activityLogger.logFileParsingComplete(file.name, content.length, tokenCount);
 
   const processedFile: ProcessedFile = {
     id: generateId(),

@@ -28,6 +28,7 @@ import MindMapViewer from './components/MindMapViewer';
 import Notebook from './components/Notebook';
 import TodoList from './components/TodoList';
 import ReminderOverlay from './components/ReminderOverlay';
+import LogsModal from './components/LogsModal';
 // import Sources from './components/Sources';
 import AppHeader from './App/components/AppHeader';
 import { FloatingInput } from './App/components/FloatingInput';
@@ -55,6 +56,7 @@ const App: React.FC = () => {
   const [uploadProgress, setUploadProgress] = React.useState<{ current: number; total: number; currentFile: string } | null>(null);
   const [contextWarning, setContextWarning] = React.useState<{ totalTokens: number; filesUsed: string[]; selectedCount: number; onProceed: () => void } | null>(null);
   const [embeddingProgress, setEmbeddingProgress] = React.useState<{ fileId: string; fileName: string; current: number; total: number } | null>(null);
+  const [isLogsOpen, setIsLogsOpen] = React.useState(false);
 
   React.useEffect(() => {
     // Initialize activity logger
@@ -385,6 +387,8 @@ const App: React.FC = () => {
     setSources(updated);
     localStorage.setItem('sources', JSON.stringify(updated));
     
+    activityLogger.logSourceAdded(url, url);
+    
     try {
       let content = '';
       let title = url;
@@ -450,8 +454,10 @@ const App: React.FC = () => {
       const updatedSource = { ...newSource, title, content, status: 'fetched' as const };
       setSources(prev => prev.map(s => s.id === newSource.id ? updatedSource : s));
       localStorage.setItem('sources', JSON.stringify(sources.map(s => s.id === newSource.id ? updatedSource : s)));
+      activityLogger.logSourceFetched(url, content.length);
     } catch (error) {
       console.error('Source fetch error:', error);
+      activityLogger.logErrorMsg('SOURCE', 'Failed to fetch source', { url, error: String(error) });
       const errorSource = { ...newSource, status: 'error' as const, title: 'Failed to fetch' };
       setSources(prev => prev.map(s => s.id === newSource.id ? errorSource : s));
       localStorage.setItem('sources', JSON.stringify(sources.map(s => s.id === newSource.id ? errorSource : s)));
@@ -459,6 +465,10 @@ const App: React.FC = () => {
   };
 
   const handleDeleteSource = (id: string) => {
+    const source = sources.find(s => s.id === id);
+    if (source) {
+      activityLogger.logSourceDeleted(source.url);
+    }
     const updated = sources.filter(s => s.id !== id);
     setSources(updated);
     localStorage.setItem('sources', JSON.stringify(updated));
@@ -491,6 +501,15 @@ const App: React.FC = () => {
       featureState.setActiveModelId(DEFAULT_MODEL_ID);
     }
   }, []);
+
+  // Track model changes
+  const prevModelIdRef = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (prevModelIdRef.current && prevModelIdRef.current !== featureState.activeModelId) {
+      activityLogger.logModelSwitched(prevModelIdRef.current, featureState.activeModelId);
+    }
+    prevModelIdRef.current = featureState.activeModelId;
+  }, [featureState.activeModelId]);
 
   const handleToggleSource = (fileId: string) => {
     chatState.setSelectedSourceIds(prev => 
@@ -761,6 +780,7 @@ const App: React.FC = () => {
       )}
       {featureState.isSettingsOpen && <SettingsModal onClose={() => featureState.setIsSettingsOpen(false)} />}
       {featureState.isHelpOpen && <HelpDocumentation onClose={() => featureState.setIsHelpOpen(false)} />}
+      {isLogsOpen && <LogsModal isOpen={isLogsOpen} onClose={() => setIsLogsOpen(false)} />}
       {featureState.isGeneratingMindMap && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center">
           <div className="bg-white rounded-2xl shadow-2xl p-8 flex flex-col items-center gap-4">
@@ -793,7 +813,7 @@ const App: React.FC = () => {
 
       {activeTab === 'chat' && (
         <div 
-          className={`fixed md:relative z-40 h-full bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] flex flex-col border-r border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] ${layoutState.isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} ${!layoutState.isSidebarOpen && !layoutState.isMobile ? 'md:w-0 md:opacity-0 md:overflow-hidden' : ''} overflow-hidden`}
+          className={`fixed md:relative z-40 h-full bg-[#f9f9f9] dark:bg-[#2a2a2a] flex flex-col border-r border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] ${layoutState.isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} ${!layoutState.isSidebarOpen && !layoutState.isMobile ? 'md:w-0 md:opacity-0 md:overflow-hidden' : ''} overflow-hidden`}
           style={{ 
             width: layoutState.isMobile ? '85%' : (layoutState.isSidebarOpen ? layoutState.sidebarWidth : 0)
           }}
@@ -875,6 +895,7 @@ const App: React.FC = () => {
           onTabChange={setActiveTab}
           isViewerOpen={!!activeFile}
           onCloseViewer={() => layoutState.setViewState(null)}
+          onOpenLogs={() => setIsLogsOpen(true)}
         />
 
         {activeTab === 'chat' ? (
@@ -991,7 +1012,7 @@ const App: React.FC = () => {
       {/* RIGHT DOCUMENT VIEWER */}
       {activeFile && (
         <div 
-          className="fixed md:relative z-30 h-full bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] flex flex-col shadow-2xl md:shadow-none border-l border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] overflow-hidden"
+          className="fixed md:relative z-30 h-full bg-[#f9f9f9] dark:bg-[#2a2a2a] flex flex-col shadow-2xl md:shadow-none border-l border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] overflow-hidden"
           style={{ 
             width: layoutState.isMobile ? '100%' : layoutState.viewerWidth
           }}

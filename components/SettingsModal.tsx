@@ -301,7 +301,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
     );
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 backdrop-blur-sm animate-in fade-in duration-200">
             <div ref={modalRef} className="bg-white dark:bg-[#222222] w-full max-w-md rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[75vh]">
                 {/* Header */}
                 <div className="px-4 py-2.5 border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] flex items-center justify-between bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a]">

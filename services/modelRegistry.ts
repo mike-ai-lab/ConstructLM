@@ -348,7 +348,15 @@ export const saveApiKey = (envKey: string, value: string) => {
     if (!value || value.trim() === '') {
         localStorage.removeItem(`${STORAGE_PREFIX}${envKey}`);
     } else {
-        localStorage.setItem(`${STORAGE_PREFIX}${envKey}`, value.trim());
+        const trimmedValue = value.trim();
+        localStorage.setItem(`${STORAGE_PREFIX}${envKey}`, trimmedValue);
+        
+        // Clear rate limits when API key changes
+        MODEL_REGISTRY.forEach(model => {
+            if (model.apiKeyEnv === envKey) {
+                clearRateLimitCooldown(model.id);
+            }
+        });
     }
 };
 

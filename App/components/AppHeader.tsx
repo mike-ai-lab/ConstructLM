@@ -1,5 +1,5 @@
 import React from 'react';
-import { PanelLeft, PanelLeftOpen, Cpu, ChevronDown, Phone, Plus, Edit3, Highlighter, Trash2, Check, Minus, Camera, Image, Moon, Sun, HelpCircle, Settings, BookMarked, CheckSquare, Bell, MessageSquare } from 'lucide-react';
+import { PanelLeft, PanelLeftOpen, Cpu, ChevronDown, Phone, Plus, Edit3, Highlighter, Trash2, Check, Minus, Camera, Image, Moon, Sun, HelpCircle, Settings, BookMarked, CheckSquare, Bell, MessageSquare, FileText } from 'lucide-react';
 import { MODEL_REGISTRY } from '../../services/modelRegistry';
 import { DRAWING_COLORS } from '../../services/drawingService';
 import GraphicsLibrary from '../../components/GraphicsLibrary';
@@ -53,6 +53,7 @@ interface AppHeaderProps {
   remindersCount?: number;
   isViewerOpen?: boolean;
   onCloseViewer?: () => void;
+  onOpenLogs?: () => void;
 }
 
 const AppHeader: React.FC<AppHeaderProps> = (props) => {
@@ -367,6 +368,9 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
         <button onClick={() => document.documentElement.classList.toggle('dark')} className="p-1.5 md:p-2 hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] rounded-full relative flex-shrink-0" style={{ width: '30px', height: '30px' }}>
           <Moon size={16} className="dark:!hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" style={{ color: '#666666' }} />
           <Sun size={16} className="!hidden dark:!block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" style={{ color: '#ffffff' }} />
+        </button>
+        <button onClick={props.onOpenLogs} className="p-1.5 md:p-2 text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] hover:text-[#1a1a1a] dark:hover:text-white rounded-full transition-colors flex-shrink-0" title="Activity Logs">
+          <FileText size={16} />
         </button>
         <button onClick={() => props.setIsHelpOpen(true)} className="p-1.5 md:p-2 text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] hover:text-[#1a1a1a] dark:hover:text-white rounded-full transition-colors flex-shrink-0">
           <HelpCircle size={16} />

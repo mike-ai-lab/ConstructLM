@@ -1,5 +1,6 @@
 import { Message } from '../../types';
 import { chatRegistry, ChatSession, ChatMetadata } from '../../services/chatRegistry';
+import { activityLogger } from '../../services/activityLogger';
 
 export const createChatHandlers = (
   currentChatId: string | null,
@@ -16,6 +17,7 @@ export const createChatHandlers = (
   const loadChat = (chatId: string) => {
     const chat = chatRegistry.getChat(chatId);
     if (chat) {
+      activityLogger.logAction('CHAT', 'Chat loaded', { chatId, messageCount: chat.messages.length, modelId: chat.modelId });
       setCurrentChatId(chatId);
       setMessages(chat.messages);
       setActiveModelId(chat.modelId);
@@ -45,6 +47,7 @@ export const createChatHandlers = (
       updatedAt: updateTimestamp ? Date.now() : (existingChat?.updatedAt || Date.now())
     };
     chatRegistry.saveChat(chat);
+    activityLogger.logAction('CHAT', 'Chat saved', { chatId: currentChatId, messageCount: messages.length });
     setChats(prev => {
       const existing = prev.find(c => c.id === currentChatId);
       const updated = {
@@ -71,6 +74,7 @@ export const createChatHandlers = (
     
     saveCurrentChat();
     const newChat = chatRegistry.createNewChat('New Chat', activeModelId);
+    activityLogger.logChatCreated(newChat.id, activeModelId);
     setCurrentChatId(newChat.id);
     setMessages(newChat.messages);
     setSelectedSourceIds([]);
@@ -92,6 +96,7 @@ export const createChatHandlers = (
 
   const handleDeleteChat = (chatId: string) => {
     chatRegistry.deleteChat(chatId);
+    activityLogger.logChatDeleted(chatId);
     setChats(prev => prev.filter(c => c.id !== chatId));
     if (chatId === currentChatId) {
       const remaining = chats.filter(c => c.id !== chatId);

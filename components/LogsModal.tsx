@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Download, Trash2, ChevronDown, ChevronUp, Loader2, FolderOpen } from 'lucide-react';
+import { X, Download, Trash2, ChevronDown, ChevronUp, Loader2, FolderOpen, Copy } from 'lucide-react';
 import { activityLogger } from '../services/activityLogger';
 
 interface LogsModalProps {
@@ -23,10 +23,11 @@ const LogsModal: React.FC<LogsModalProps> = ({ isOpen, onClose }) => {
   const loadLogFiles = async () => {
     try {
       const files = await activityLogger.getLogFiles();
-      setLogFiles(files);
-      if (files.length > 0 && !selectedLog) {
-        setSelectedLog(files[0]);
-        loadLogContent(files[0]);
+      const sortedFiles = files.sort((a, b) => b.localeCompare(a)); // Most recent first
+      setLogFiles(sortedFiles);
+      if (sortedFiles.length > 0 && !selectedLog) {
+        setSelectedLog(sortedFiles[0]);
+        loadLogContent(sortedFiles[0]);
       }
     } catch (error) {
       console.error('Failed to load log files:', error);
@@ -49,6 +50,22 @@ const LogsModal: React.FC<LogsModalProps> = ({ isOpen, onClose }) => {
   const handleSelectLog = (fileName: string) => {
     setSelectedLog(fileName);
     loadLogContent(fileName);
+  };
+
+  const handleCopyLog = async (fileName: string) => {
+    try {
+      const content = await activityLogger.readLogFile(fileName);
+      const markdown = `# Activity Log: ${fileName}\n\n\`\`\`\n${content}\n\`\`\`\n`;
+      
+      // Use Electron clipboard if available
+      if ((window as any).electron?.clipboard) {
+        (window as any).electron.clipboard.writeText(markdown);
+      } else {
+        await navigator.clipboard.writeText(markdown);
+      }
+    } catch (error) {
+      console.error('Failed to copy log:', error);
+    }
   };
 
   const handleDownloadLog = async (fileName: string) => {
@@ -180,15 +197,14 @@ const LogsModal: React.FC<LogsModalProps> = ({ isOpen, onClose }) => {
               ) : (
                 logFiles.map(fileName => (
                   <div key={fileName}>
-                    <button
-                      onClick={() => handleSelectLog(fileName)}
-                      className={`w-full text-left px-3 py-2 rounded-lg transition-colors flex items-center justify-between ${
+                    <div
+                      className={`w-full text-left px-3 py-2 rounded-lg transition-colors flex items-center justify-between cursor-pointer ${
                         selectedLog === fileName
                           ? 'bg-blue-600 text-white'
                           : 'text-[#1a1a1a] dark:text-white hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[#222222]'
                       }`}
                     >
-                      <span className="text-sm font-medium truncate flex-1">{fileName}</span>
+                      <span onClick={() => handleSelectLog(fileName)} className="text-sm font-medium truncate flex-1">{fileName}</span>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -202,7 +218,7 @@ const LogsModal: React.FC<LogsModalProps> = ({ isOpen, onClose }) => {
                           <ChevronDown size={14} />
                         )}
                       </button>
-                    </button>
+                    </div>
 
                     {expandedLogs.has(fileName) && (
                       <div className="px-3 py-2 space-y-1 bg-[rgba(0,0,0,0.03)] dark:bg-[#1a1a1a]">
@@ -230,13 +246,22 @@ const LogsModal: React.FC<LogsModalProps> = ({ isOpen, onClose }) => {
                     <h3 className="font-semibold text-[#1a1a1a] dark:text-white">{selectedLog}</h3>
                     <p className="text-xs text-[#666666] dark:text-[#a0a0a0] mt-1">{logLines.length} entries</p>
                   </div>
-                  <button
-                    onClick={() => handleDownloadLog(selectedLog)}
-                    className="p-2 text-[#4485d1] hover:bg-[rgba(68,133,209,0.1)] rounded-lg transition-colors"
-                    title="Download log"
-                  >
-                    <Download size={18} />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleCopyLog(selectedLog)}
+                      className="p-2 text-[#4485d1] hover:bg-[rgba(68,133,209,0.1)] rounded-lg transition-colors"
+                      title="Copy as Markdown"
+                    >
+                      <Copy size={18} />
+                    </button>
+                    <button
+                      onClick={() => handleDownloadLog(selectedLog)}
+                      className="p-2 text-[#4485d1] hover:bg-[rgba(68,133,209,0.1)] rounded-lg transition-colors"
+                      title="Download log"
+                    >
+                      <Download size={18} />
+                    </button>
+                  </div>
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4 space-y-2">
@@ -249,7 +274,7 @@ const LogsModal: React.FC<LogsModalProps> = ({ isOpen, onClose }) => {
                       <p className="text-sm">No log entries</p>
                     </div>
                   ) : (
-                    logLines.map((entry, idx) => (
+                    logLines.reverse().map((entry, idx) => (
                       <div
                         key={idx}
                         className={`p-3 rounded-lg transition-colors ${getLevelColor(entry.level)}`}

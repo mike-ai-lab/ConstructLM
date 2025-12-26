@@ -130,12 +130,12 @@ class ActivityLogger {
     this.logAction('CHAT', 'Chat deleted', { chatId });
   }
 
-  public logMessageSent(chatId: string, messageLength: number, modelId: string): void {
-    this.logAction('MESSAGE', 'Message sent', { chatId, messageLength, modelId });
+  public logMessageSent(chatId: string, messageLength: number, modelId: string, filesUsed?: string[]): void {
+    this.logAction('MESSAGE', 'Message sent', { chatId, messageLength, modelId, filesUsed: filesUsed?.join(', ') || 'none' });
   }
 
-  public logMessageReceived(chatId: string, responseLength: number, modelId: string): void {
-    this.logAction('MESSAGE', 'Response received', { chatId, responseLength, modelId });
+  public logMessageReceived(chatId: string, responseLength: number, modelId: string, usage?: { inputTokens?: number; outputTokens?: number; totalTokens?: number }): void {
+    this.logAction('MESSAGE', 'Response received', { chatId, responseLength, modelId, ...usage });
   }
 
   public logFileUploaded(fileName: string, fileType: string, fileSize: number): void {
@@ -144,6 +144,81 @@ class ActivityLogger {
 
   public logFileRemoved(fileName: string): void {
     this.logAction('FILE', 'File removed', { fileName });
+  }
+
+  public logFileProcessingStart(fileName: string, fileCount: number, totalCount: number): void {
+    this.logAction('FILE', 'Processing file', { fileName, progress: `${fileCount}/${totalCount}` });
+  }
+
+  public logFileProcessingComplete(uploadedCount: number, skippedCount: number, skippedFiles: string[]): void {
+    this.logAction('FILE', 'Batch upload complete', { uploaded: uploadedCount, skipped: skippedCount, skippedFiles: skippedFiles.join(', ') || 'none' });
+  }
+
+  public logFileParsingStart(fileName: string, fileType: string, fileSize: number): void {
+    this.logAction('PARSE', 'File parsing started', { fileName, fileType, fileSizeBytes: fileSize });
+  }
+
+  public logFileParsingComplete(fileName: string, contentLength: number, tokenCount: number, sections?: number): void {
+    this.logAction('PARSE', 'File parsing complete', { fileName, contentLength, tokenCount, sections: sections || 0 });
+  }
+
+  public logChunkingStart(fileName: string, contentLength: number): void {
+    this.logAction('CHUNK', 'Chunking started', { fileName, contentLength });
+  }
+
+  public logChunkingComplete(fileName: string, chunksCount: number, avgChunkSize: number): void {
+    this.logAction('CHUNK', 'Chunking complete', { fileName, chunksCount, avgChunkSize });
+  }
+
+  public logEmbeddingStart(fileName: string, chunksCount: number): void {
+    this.logAction('EMBED', 'Embedding generation started', { fileName, chunksCount });
+  }
+
+  public logEmbeddingComplete(fileName: string, chunksCount: number, timeTaken: number): void {
+    this.logAction('EMBED', 'Embedding generation complete', { fileName, chunksCount, timeTakenMs: timeTaken });
+  }
+
+  public logRequestSent(modelId: string, messageLength: number, filesCount: number, sourcesCount: number): void {
+    this.logAction('REQUEST', 'LLM request sent', { modelId, messageLength, filesCount, sourcesCount });
+  }
+
+  public logResponseReceived(modelId: string, responseLength: number, inputTokens?: number, outputTokens?: number, totalTokens?: number): void {
+    this.logAction('RESPONSE', 'LLM response received', { modelId, responseLength, inputTokens, outputTokens, totalTokens });
+  }
+
+  public logContextProcessing(totalTokens: number, filesUsed: number, chunksCount: number): void {
+    this.logAction('CONTEXT', 'Context processing', { totalTokens, filesUsed, chunksCount });
+  }
+
+  public logSemanticSearch(query: string, resultsCount: number, filesSearched?: number, matchedFiles?: string[]): void {
+    this.logAction('SEARCH', 'Semantic search executed', { 
+      queryLength: query.length, 
+      queryPreview: query.substring(0, 50),
+      resultsCount,
+      filesSearched: filesSearched || 0,
+      matchedFiles: matchedFiles?.join(', ') || 'none'
+    });
+  }
+
+  public logRAGSearch(query: string, resultsCount: number, chunksRetrieved?: number): void {
+    this.logAction('RAG', 'RAG search executed', { 
+      queryLength: query.length,
+      queryPreview: query.substring(0, 50),
+      resultsCount,
+      chunksRetrieved: chunksRetrieved || 0
+    });
+  }
+
+  public logSourceAdded(url: string, title: string): void {
+    this.logAction('SOURCE', 'Source added', { url, title });
+  }
+
+  public logSourceFetched(url: string, contentLength: number): void {
+    this.logAction('SOURCE', 'Source content fetched', { url, contentLength });
+  }
+
+  public logSourceDeleted(url: string): void {
+    this.logAction('SOURCE', 'Source deleted', { url });
   }
 
   public logNoteCreated(noteId: string, noteLength: number): void {

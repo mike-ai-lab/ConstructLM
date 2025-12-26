@@ -149,7 +149,7 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
               return (
                   <div key={node.path} className="select-none">
                       <div 
-                        className="flex items-center gap-1.5 px-2 py-1.5 hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] rounded cursor-pointer text-[#1a1a1a] dark:text-white group"
+                        className="flex items-center gap-1.5 px-2 py-1.5 hover:bg-[#eaeaea] dark:hover:bg-[#2a2a2a] rounded cursor-pointer text-[#1a1a1a] dark:text-white group"
                         style={{ paddingLeft: `${depth * 16 + 8}px` }}
                       >
                           <input
@@ -202,7 +202,7 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
                     }}
                     className={`
                         group relative flex items-center gap-1.5 px-2 py-1.5 rounded-md transition-all cursor-grab active:cursor-grabbing
-                        ${file.status === 'error' ? 'bg-red-50 dark:bg-red-900/20' : 'hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a]'}
+                        ${file.status === 'error' ? 'bg-red-50 dark:bg-red-900/20' : 'hover:bg-[#eaeaea] dark:hover:bg-[#2a2a2a]'}
                     `}
                     style={{ marginLeft: `${depth * 16 + 8}px` }}
                 >
@@ -343,7 +343,7 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
                           files.filter(f => !selectedSourceIds.includes(f.id)).forEach(f => onToggleSource(f.id));
                         }
                       }}
-                      className="p-1.5 text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] rounded-lg transition-colors text-[10px] font-semibold"
+                      className="p-1.5 text-[#666666] dark:text-[#a0a0a0] hover:bg-[#eaeaea] dark:hover:bg-[#2a2a2a] rounded-lg transition-colors text-[10px] font-semibold"
                       title={files.every(f => selectedSourceIds.includes(f.id)) ? "Deselect All" : "Select All"}
                     >
                       {files.every(f => selectedSourceIds.includes(f.id)) ? "Deselect All" : "Select All"}
@@ -360,7 +360,7 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
                   <button
                     onClick={() => folderInputRef.current?.click()}
                     disabled={isProcessing}
-                    className="p-1.5 text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] rounded-lg transition-colors disabled:opacity-50"
+                    className="p-1.5 text-[#666666] dark:text-[#a0a0a0] hover:bg-[#eaeaea] dark:hover:bg-[#2a2a2a] rounded-lg transition-colors disabled:opacity-50"
                     title="Add Folder"
                   >
                     <FolderOpen size={14} />
@@ -438,7 +438,7 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
                           }}
                           className={`
                               group relative flex items-center gap-2 px-2 py-2 rounded-md transition-all cursor-grab active:cursor-grabbing mx-2
-                              ${file.status === 'error' ? 'bg-red-50 dark:bg-red-900/20' : 'hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a]'}
+                              ${file.status === 'error' ? 'bg-red-50 dark:bg-red-900/20' : 'hover:bg-[#eaeaea] dark:hover:bg-[#2a2a2a]'}
                           `}
                       >
                           <input

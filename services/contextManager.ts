@@ -4,6 +4,7 @@ import { estimateTokens } from './embeddingUtils';
 import { ProcessedFile } from '../types';
 import { MODEL_REGISTRY } from './modelRegistry';
 import { selectRelevantContext, buildContextString as buildSmartContext } from './smartContextManager';
+import { activityLogger } from './activityLogger';
 
 interface ContextResult {
   chunks: ChunkRecord[];
@@ -124,6 +125,9 @@ class ContextManager {
     }
     
     console.log('[ContextManager] Result - Total tokens:', totalTokens, 'Files used:', filesUsed.size);
+
+    const fileNames = Array.from(filesUsed).map(id => files.find(f => f.id === id)?.name).filter(Boolean);
+    activityLogger.logSemanticSearch(query, filesUsed.size, files.length, fileNames as string[]);
 
     const warning = totalTokens > 50000
       ? `Large context: ~${Math.round(totalTokens / 1000)}k tokens. Response may be slower.`

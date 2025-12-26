@@ -37,10 +37,10 @@ const SimpleMarkdown: React.FC<SimpleMarkdownProps> = ({ text, block = true, fil
       const tableEl = (
         <div key={`table-${i}`} className="overflow-x-auto my-3">
           <table className="min-w-full border-collapse border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.2)] text-xs">
-            <thead className="bg-gray-100 dark:bg-[#2a2a2a] sticky top-0 z-10">
+            <thead className="bg-[#eaeaea] dark:bg-[#2a2a2a] sticky top-0 z-10">
               <tr>
                 {headers.map((cell, idx) => (
-                  <th key={idx} className="border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.2)] px-2 py-1 text-left font-semibold text-[#1a1a1a] dark:text-white bg-gray-100 dark:bg-[#2a2a2a]">
+                  <th key={idx} className="border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.2)] px-2 py-1 text-left font-semibold text-[#1a1a1a] dark:text-white bg-[#eaeaea] dark:bg-[#2a2a2a]">
                     {files && onViewDocument ? <TableCellWithCitations text={cell} files={files} onViewDocument={onViewDocument} /> : cell}
                   </th>
                 ))}
@@ -50,7 +50,7 @@ const SimpleMarkdown: React.FC<SimpleMarkdownProps> = ({ text, block = true, fil
               {tableLines.slice(2).map((row, rowIdx) => {
                 const cells = safeSplitTableLine(row);
                 return (
-                  <tr key={rowIdx} className="hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#222222]">
+                  <tr key={rowIdx} className="hover:bg-[#eaeaea] dark:hover:bg-[#222222]">
                     {cells.map((cell, cellIdx) => (
                       <td key={cellIdx} className="border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.2)] px-2 py-1">
                         {files && onViewDocument ? <TableCellWithCitations text={cell} files={files} onViewDocument={onViewDocument} /> : cell}
@@ -180,7 +180,7 @@ const SimpleMarkdown: React.FC<SimpleMarkdownProps> = ({ text, block = true, fil
       
       const codeContent = codeLines.join('\n').trim();
       elements.push(
-        <pre key={`code-${i}`} className="bg-[rgba(0,0,0,0.06)] dark:bg-[#2a2a2a] rounded-lg p-3 my-2 overflow-x-auto">
+        <pre key={`code-${i}`} className="bg-[#eaeaea] dark:bg-[#2a2a2a] rounded-lg p-3 my-2 overflow-x-auto">
           <code className="text-[13px] font-mono text-[#1a1a1a] dark:text-white">{codeContent}</code>
         </pre>
       );

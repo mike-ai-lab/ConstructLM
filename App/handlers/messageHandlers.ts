@@ -1,6 +1,7 @@
 import { Message, ProcessedFile } from '../../types';
 import { sendMessageToLLM } from '../../services/llmService';
 import { contextManager } from '../../services/contextManager';
+import { activityLogger } from '../../services/activityLogger';
 
 export const createMessageHandlers = (
   input: string,
@@ -25,10 +26,20 @@ export const createMessageHandlers = (
     const mentionedFiles = files.filter(f => textToSend.includes(`@${f.name}`));
     const selectedFiles = mentionedFiles.length > 0 ? mentionedFiles : files.filter(f => selectedSourceIds.includes(f.id));
 
+    activityLogger.logInfo('MESSAGE', 'Processing user message', { 
+      messageLength: textToSend.length, 
+      filesSelected: selectedFiles.length,
+      sourcesSelected: selectedSourceIds.length,
+      modelId: activeModelId
+    });
+
     const contextResult = await contextManager.selectContext(textToSend, selectedFiles, activeModelId);
+    
+    activityLogger.logContextProcessing(contextResult.totalTokens, contextResult.filesUsed.length, contextResult.chunks.length);
     
     if (contextResult.totalTokens > 50000 && onShowContextWarning) {
       const fileNames = contextManager.getFileNames(contextResult.filesUsed, files);
+      activityLogger.logWarning('CONTEXT', 'Large context warning shown', { totalTokens: contextResult.totalTokens, filesUsed: fileNames.length });
       onShowContextWarning({
         totalTokens: contextResult.totalTokens,
         filesUsed: fileNames,
@@ -67,6 +78,8 @@ export const createMessageHandlers = (
     if (!retryMessageId) {
       setMessages(prev => [...prev, userMsg]);
       setInput('');
+      const actualFileNames = selectedFiles.map(f => f.name);
+      activityLogger.logMessageSent('current', textToSend.length, activeModelId, actualFileNames);
     }
     setShowMentionMenu(false);
     setIsGenerating(true);
@@ -98,6 +111,8 @@ export const createMessageHandlers = (
       const fetchedSources = sources.filter(s => s.status === 'fetched');
       console.log('[MessageHandler] Fetched sources:', fetchedSources.length);
       
+      activityLogger.logRequestSent(activeModelId, textToSend.length, excerptedFiles.length, fetchedSources.length);
+      
       const usage = await sendMessageToLLM(
         activeModelId,
         messages,
@@ -124,6 +139,9 @@ export const createMessageHandlers = (
       console.log('[MessageHandler] LLM response complete. Usage:', usage);
       console.log('[MessageHandler] Final content length:', accumText.length);
       
+      activityLogger.logResponseReceived(activeModelId, accumText.length, usage?.inputTokens, usage?.outputTokens, usage?.totalTokens);
+      activityLogger.logMessageReceived('current', accumText.length, activeModelId, usage);
+      
       if (usage && (usage.inputTokens || usage.outputTokens)) {
         setMessages(prev => prev.map(msg => 
           msg.id === modelMsgId 
@@ -136,6 +154,7 @@ export const createMessageHandlers = (
     } catch (error: any) {
       console.error('[MessageHandler] ERROR:', error);
       const errorMsg = error?.message || "Sorry, I encountered an error. Please check your connection.";
+      activityLogger.logErrorMsg('MESSAGE', 'LLM request failed', { error: errorMsg, modelId: activeModelId });
       setMessages(prev => prev.map(msg => 
         msg.id === modelMsgId ? { ...msg, content: `**Error:** ${errorMsg}` } : msg
       ));

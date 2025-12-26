@@ -1,6 +1,7 @@
 import { ProcessedFile } from '../../types';
 import { parseFile } from '../../services/fileParser';
 import { ViewState } from '../types';
+import { activityLogger } from '../../services/activityLogger';
 
 const SUPPORTED_EXTENSIONS = [
   '.pdf', '.xlsx', '.xls', '.csv', '.txt', '.md', '.json',
@@ -41,11 +42,15 @@ export const createFileHandlers = (
     const totalFiles = fileArray.length;
     let processedCount = 0;
     
+    activityLogger.logInfo('FILE', `Starting batch upload of ${totalFiles} files`);
+    
     for (let i = 0; i < fileArray.length; i += BATCH_SIZE) {
       const batch = fileArray.slice(i, i + BATCH_SIZE);
       
       for (const file of batch) {
         processedCount++;
+        
+        activityLogger.logFileProcessingStart(file.name, processedCount, totalFiles);
         
         if (setUploadProgress) {
           setUploadProgress({
@@ -57,18 +62,21 @@ export const createFileHandlers = (
         
         if (file.name.startsWith('.') || file.name.startsWith('~')) {
           skippedFiles.push(file.name);
+          activityLogger.logWarning('FILE', `Skipped hidden/temp file: ${file.name}`);
           continue;
         }
         
         const ext = '.' + file.name.split('.').pop()?.toLowerCase();
         if (!SUPPORTED_EXTENSIONS.includes(ext)) {
           skippedFiles.push(file.name);
+          activityLogger.logWarning('FILE', `Skipped unsupported file type: ${file.name}`, { extension: ext });
           continue;
         }
         
         const filePath = (file as any).webkitRelativePath || file.name;
         if (files.some(f => (f.path || f.name) === filePath)) {
           skippedFiles.push(file.name);
+          activityLogger.logWarning('FILE', `Skipped duplicate file: ${file.name}`);
           continue;
         }
         
@@ -76,15 +84,19 @@ export const createFileHandlers = (
           const processed = await parseFile(file);
           newFiles.push(processed);
           setFiles(prev => [...prev, processed]);
+          activityLogger.logFileUploaded(file.name, file.type, file.size);
         } catch (err) {
           console.error(`Failed to process ${file.name}:`, err);
           skippedFiles.push(file.name);
+          activityLogger.logErrorMsg('FILE', `Failed to process file: ${file.name}`, { error: String(err) });
         }
       }
     }
     
     if (setUploadProgress) setUploadProgress(null);
     setIsProcessingFiles(false);
+    
+    activityLogger.logFileProcessingComplete(newFiles.length, skippedFiles.length, skippedFiles);
     
     if (setUploadFeedback) {
       setUploadFeedback({
@@ -97,6 +109,10 @@ export const createFileHandlers = (
   };
 
   const handleRemoveFile = (id: string) => {
+    const file = files.find(f => f.id === id);
+    if (file) {
+      activityLogger.logFileRemoved(file.name);
+    }
     setFiles(prev => prev.filter(f => f.id !== id));
     if (viewState?.fileId === id) setViewState(null);
   };
@@ -104,6 +120,7 @@ export const createFileHandlers = (
   const handleViewDocument = (fileName: string, page?: number, quote?: string, location?: string) => {
     const file = files.find(f => f.name === fileName);
     if (file) {
+      activityLogger.logAction('DOCUMENT', 'Document viewer opened', { fileName, page, hasQuote: !!quote });
       setViewState({
         fileId: file.id,
         page: page || 1,
