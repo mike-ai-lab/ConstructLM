@@ -21,7 +21,8 @@ import { userProfileService } from './services/userProfileService';
 import FileSidebar from './components/FileSidebar';
 import MessageBubble from './components/MessageBubble';
 import DocumentViewer from './components/DocumentViewer';
-import WebViewer from './components/WebViewer';
+import TabbedWebViewer from './components/TabbedWebViewer';
+import TabbedWebViewerElectron from './components/TabbedWebViewerElectron';
 import LiveSession from './components/LiveSession';
 import SettingsModal from './components/SettingsModal';
 import HelpDocumentation from './components/HelpDocumentation';
@@ -436,9 +437,34 @@ const App: React.FC = () => {
           }
         }
       } else {
-        // Regular URL handling
-        const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
-        const data = await response.json();
+        // Regular URL handling - try multiple CORS proxies
+        let response;
+        let data;
+        
+        try {
+          // Try allorigins first
+          response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+          if (response.ok) {
+            data = await response.json();
+          } else {
+            throw new Error('allorigins failed');
+          }
+        } catch (e) {
+          // Fallback to corsproxy
+          try {
+            response = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`);
+            if (!response.ok) throw new Error('corsproxy failed');
+            const html = await response.text();
+            data = { contents: html };
+          } catch (e2) {
+            // Last resort: try direct fetch (may fail due to CORS)
+            response = await fetch(url);
+            if (!response.ok) throw new Error('direct fetch failed');
+            const html = await response.text();
+            data = { contents: html };
+          }
+        }
+        
         const parser = new DOMParser();
         const doc = parser.parseFromString(data.contents, 'text/html');
         title = doc.querySelector('title')?.textContent || url;
@@ -680,6 +706,9 @@ const App: React.FC = () => {
   const activeModel = MODEL_REGISTRY.find(m => m.id === featureState.activeModelId) || MODEL_REGISTRY[0];
   const isElectron = typeof window !== 'undefined' && !!(window as any).electron;
   const handleCloseLiveSession = useCallback(() => featureState.setIsLiveMode(false), []);
+  
+  // Use Electron webview for better cookie handling
+  const WebViewerComponent = isElectron ? TabbedWebViewerElectron : TabbedWebViewer;
 
   return (
     <div className="flex h-screen w-full bg-white dark:bg-[#1a1a1a] overflow-hidden text-sm relative">
@@ -947,6 +976,15 @@ const App: React.FC = () => {
                     }));
                   }}
                   onOpenWebViewer={setWebViewerUrl}
+                  onOpenWebViewerNewTab={(url) => {
+                    // Use global function if web viewer is open
+                    if ((window as any).__openWebViewerNewTab) {
+                      (window as any).__openWebViewerNewTab(url);
+                    } else {
+                      // Fallback: open web viewer
+                      setWebViewerUrl(url);
+                    }
+                  }}
                 />
               ))}
               <div ref={layoutState.messagesEndRef} className="snapshot-ignore" />
@@ -1030,7 +1068,7 @@ const App: React.FC = () => {
             />
           )}
           {webViewerUrl ? (
-            <WebViewer url={webViewerUrl} onClose={() => setWebViewerUrl(null)} />
+            <WebViewerComponent initialUrl={webViewerUrl} onClose={() => setWebViewerUrl(null)} onNewTabRequest={(url) => setWebViewerUrl(url)} />
           ) : activeFile ? (
             <DocumentViewer 
               file={activeFile} 

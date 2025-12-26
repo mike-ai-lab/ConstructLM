@@ -7,6 +7,8 @@ interface WebViewerProps {
 }
 
 const WebViewer: React.FC<WebViewerProps> = ({ url, onClose }) => {
+  const iframeRef = React.useRef<HTMLIFrameElement>(null);
+  
   return (
     <div className="h-full flex flex-col bg-[#f9f9f9] dark:bg-[#2a2a2a]">
       <div className="flex items-center justify-between px-4 py-3 border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] bg-white dark:bg-[#222222]">
@@ -31,11 +33,12 @@ const WebViewer: React.FC<WebViewerProps> = ({ url, onClose }) => {
         </button>
       </div>
       <iframe
+        ref={iframeRef}
         src={url}
         className="flex-1 w-full border-0"
         title="Web content"
-        sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-top-navigation-by-user-activation"
-        allow="geolocation; microphone; camera; payment"
+        sandbox="allow-same-origin allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms allow-top-navigation-by-user-activation allow-presentation allow-storage-access-by-user-activation"
+        allow="geolocation; microphone; camera; payment; display-capture; autoplay; encrypted-media; picture-in-picture"
       />
     </div>
   );

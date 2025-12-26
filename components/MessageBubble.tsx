@@ -21,6 +21,7 @@ interface MessageBubbleProps {
   currentOutputIndex?: number;
   onSwitchOutput?: (messageId: string, index: number) => void;
   onOpenWebViewer?: (url: string) => void;
+  onOpenWebViewerNewTab?: (url: string) => void;
 }
 
 const MessageBubble: React.FC<MessageBubbleProps> = ({ 
@@ -36,7 +37,8 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   alternativeOutputs = [],
   currentOutputIndex = 0,
   onSwitchOutput,
-  onOpenWebViewer
+  onOpenWebViewer,
+  onOpenWebViewerNewTab
 }) => {
   const isUser = message.role === 'user';
   const [isPlaying, setIsPlaying] = useState(false);
@@ -183,6 +185,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
                         files={files} 
                         onViewDocument={onViewDocument}
                         onOpenWebViewer={onOpenWebViewer}
+                        onOpenWebViewerNewTab={onOpenWebViewerNewTab}
                     />
                   </>
               )}

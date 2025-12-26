@@ -18,6 +18,7 @@ interface CitationPopupProps {
   fileNotFound?: boolean;
   isUrl?: boolean;
   onOpenWebViewer?: (url: string) => void;
+  onOpenWebViewerNewTab?: (url: string) => void;
 }
 
 const POPUP_WIDTH = 450;
@@ -38,6 +39,7 @@ const CitationPopup: React.FC<CitationPopupProps> = ({
   fileNotFound,
   isUrl,
   onOpenWebViewer,
+  onOpenWebViewerNewTab,
 }) => {
   const popoverRef = useRef<HTMLDivElement>(null);
 
@@ -66,32 +68,30 @@ const CitationPopup: React.FC<CitationPopupProps> = ({
   }, [fileName, files, location]);
 
   const calculatePosition = React.useCallback(() => {
-    const trigger = isInTable ? null : triggerRef.current;
-    const chatArea = trigger?.closest('.max-w-3xl');
-    
-    if (!chatArea && !coords) return;
+    const trigger = triggerRef.current;
+    if (!trigger) return;
 
+    const chatArea = trigger.closest('.max-w-3xl');
     const chatRect = chatArea?.getBoundingClientRect();
+    const triggerRect = trigger.getBoundingClientRect();
     const popupHeight = popoverRef.current?.offsetHeight || 400;
     const calculatedWidth = Math.min(POPUP_WIDTH, (chatRect?.width || window.innerWidth) - VIEWPORT_PADDING * 2);
     setPopupWidth(calculatedWidth);
 
-    if (isInTable && coords) {
-      const safeLeft = (chatRect?.left || VIEWPORT_PADDING) + VIEWPORT_PADDING;
-      const safeRight = (chatRect?.right || window.innerWidth) - VIEWPORT_PADDING;
-      const safeTop = (chatRect?.top || VIEWPORT_PADDING) + VIEWPORT_PADDING;
-      const safeBottom = (chatRect?.bottom || window.innerHeight) - VIEWPORT_PADDING;
+    const safeLeft = (chatRect?.left || VIEWPORT_PADDING) + VIEWPORT_PADDING;
+    const safeRight = (chatRect?.right || window.innerWidth) - VIEWPORT_PADDING;
+    const safeTop = (chatRect?.top || VIEWPORT_PADDING) + VIEWPORT_PADDING;
+    const safeBottom = (chatRect?.bottom || window.innerHeight) - VIEWPORT_PADDING;
 
-      let left = coords.left;
-      let top = coords.top;
+    let left = isInTable && coords ? coords.left : triggerRect.left - 20;
+    let top = isInTable && coords ? coords.top : triggerRect.bottom + 8;
 
-      if (left + calculatedWidth > safeRight) left = safeRight - calculatedWidth;
-      if (left < safeLeft) left = safeLeft;
-      if (top + popupHeight > safeBottom) top = safeBottom - popupHeight;
-      if (top < safeTop) top = safeTop;
+    if (left + calculatedWidth > safeRight) left = safeRight - calculatedWidth;
+    if (left < safeLeft) left = safeLeft;
+    if (top + popupHeight > safeBottom) top = Math.max(safeTop, triggerRect.top - popupHeight - 8);
+    if (top < safeTop) top = safeTop;
 
-      setPosition({ top, left });
-    }
+    setPosition({ top, left });
   }, [coords, isInTable, triggerRef]);
 
   useLayoutEffect(() => calculatePosition(), [coords, isInTable, file, pdfPageNumber]);
@@ -122,19 +122,18 @@ const CitationPopup: React.FC<CitationPopupProps> = ({
       ref={popoverRef}
       role="dialog"
       aria-modal="true"
-      className={`
-        ${isInTable ? 'fixed z-[10000]' : 'absolute z-[150]'}
+      className="
+        fixed z-[10000]
         bg-white dark:bg-[#222]
         rounded-lg shadow-2xl
         border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)]
         flex flex-col overflow-hidden
-      `}
+      "
       style={{
         width: popupWidth || POPUP_WIDTH,
         maxHeight: MAX_HEIGHT,
-        ...(isInTable
-          ? { top: position?.top ?? 0, left: position?.left ?? 0 }
-          : { top: '100%', marginTop: 6 }),
+        top: position?.top ?? 0,
+        left: position?.left ?? 0,
       }}
     >
       {/* Compact Header */}
@@ -213,7 +212,7 @@ const CitationPopup: React.FC<CitationPopupProps> = ({
     </div>
   );
 
-  return isInTable ? createPortal(popup, document.body) : popup;
+  return createPortal(popup, document.body);
 };
 
 export default CitationPopup;

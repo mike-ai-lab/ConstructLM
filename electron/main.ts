@@ -35,7 +35,8 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false
+      sandbox: false,
+      webviewTag: true  // Enable webview tag for proper cookie handling
     },
     backgroundColor: '#1a1a1a',
     show: false
