@@ -1,7 +1,7 @@
 export interface ProcessedFile {
   id: string;
   name: string;
-  type: 'pdf' | 'excel' | 'image' | 'document' | 'other';
+  type: 'pdf' | 'excel' | 'image' | 'document' | 'markdown' | 'csv' | 'other';
   content: string;
   size: number;
   status: 'processing' | 'ready' | 'error';
@@ -91,6 +91,7 @@ export interface Source {
   status: 'pending' | 'fetched' | 'error';
   timestamp: number;
   chatId?: string;
+  selected?: boolean;
 }
 
 export interface Citation {

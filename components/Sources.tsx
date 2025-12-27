@@ -6,9 +6,10 @@ interface SourcesProps {
   sources: Source[];
   onAddSource: (url: string) => void;
   onDeleteSource: (id: string) => void;
+  onToggleSource: (id: string) => void;
 }
 
-const Sources: React.FC<SourcesProps> = ({ sources, onAddSource, onDeleteSource }) => {
+const Sources: React.FC<SourcesProps> = ({ sources, onAddSource, onDeleteSource, onToggleSource }) => {
   const [newUrl, setNewUrl] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -73,6 +74,12 @@ const Sources: React.FC<SourcesProps> = ({ sources, onAddSource, onDeleteSource 
               className="bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] rounded-lg border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] overflow-hidden"
             >
               <div className="p-3 flex items-start gap-2">
+                <input
+                  type="checkbox"
+                  checked={source.selected !== false}
+                  onChange={() => onToggleSource(source.id)}
+                  className="mt-0.5 flex-shrink-0 w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     {source.status === 'fetched' && <CheckCircle size={14} className="text-[#666666] dark:text-[#a0a0a0] flex-shrink-0" />}

@@ -31,6 +31,7 @@ import Notebook from './components/Notebook';
 import TodoList from './components/TodoList';
 import ReminderOverlay from './components/ReminderOverlay';
 import LogsModal from './components/LogsModal';
+import ClearMarkdownStorage from './components/ClearMarkdownStorage';
 // import Sources from './components/Sources';
 import AppHeader from './App/components/AppHeader';
 import { FloatingInput } from './App/components/FloatingInput';
@@ -388,7 +389,7 @@ const App: React.FC = () => {
   };
 
   const handleAddSource = async (url: string) => {
-    const newSource: Source = { id: Date.now().toString(), url, status: 'pending', timestamp: Date.now(), chatId: chatState.currentChatId };
+    const newSource: Source = { id: Date.now().toString(), url, status: 'pending', timestamp: Date.now(), chatId: chatState.currentChatId, selected: true };
     const updated = [newSource, ...sources];
     setSources(updated);
     localStorage.setItem('sources', JSON.stringify(updated));
@@ -505,6 +506,12 @@ const App: React.FC = () => {
     localStorage.setItem('sources', JSON.stringify(updated));
   };
 
+  const handleToggleSourceLink = (id: string) => {
+    const updated = sources.map(s => s.id === id ? { ...s, selected: s.selected === false ? true : false } : s);
+    setSources(updated);
+    localStorage.setItem('sources', JSON.stringify(updated));
+  };
+
   // Embeddings disabled - using keyword-based search instead
   // React.useEffect(() => {
   //   const generateEmbeddings = async () => {
@@ -542,7 +549,7 @@ const App: React.FC = () => {
     prevModelIdRef.current = featureState.activeModelId;
   }, [featureState.activeModelId]);
 
-  const handleToggleSource = (fileId: string) => {
+  const handleToggleFileSource = (fileId: string) => {
     chatState.setSelectedSourceIds(prev => 
       prev.includes(fileId) ? prev.filter(id => id !== fileId) : [...prev, fileId]
     );
@@ -589,7 +596,8 @@ const App: React.FC = () => {
     chatHandlers.saveCurrentChat,
     sources,
     chatState.selectedSourceIds,
-    setContextWarning
+    setContextWarning,
+    chatHandlers.updateChatName
   );
 
   const filteredFiles = fileState.files.filter(f => f.name.toLowerCase().includes(inputState.mentionQuery));
@@ -893,7 +901,7 @@ const App: React.FC = () => {
             isDragOver={layoutState.isSidebarDragOver}
             onDragStateChange={layoutState.setIsSidebarDragOver}
             selectedSourceIds={chatState.selectedSourceIds}
-            onToggleSource={handleToggleSource}
+            onToggleSource={handleToggleFileSource}
           />
           {layoutState.isSidebarOpen && !layoutState.isMobile && (
             <div 
@@ -1078,6 +1086,7 @@ const App: React.FC = () => {
               setInputHeight={inputState.setInputHeight}
               onAddSource={handleAddSource}
               onDeleteSource={handleDeleteSource}
+              onToggleSource={handleToggleSourceLink}
             />
             <p className="text-[#666666] dark:text-[#a0a0a0] text-xs text-center mt-2 relative z-[200]">AI can make mistakes. Please verify citations.</p>
           </div>

@@ -28,6 +28,7 @@ interface FloatingInputProps {
   setInputHeight: (value: number) => void;
   onAddSource: (url: string) => void;
   onDeleteSource: (id: string) => void;
+  onToggleSource: (id: string) => void;
 }
 
 interface SourceWithCheck extends Record<string, any> {
@@ -61,37 +62,18 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
   setInput,
   setInputHeight,
   onAddSource,
-  onDeleteSource
+  onDeleteSource,
+  onToggleSource
 }) => {
   const [showSourcePopup, setShowSourcePopup] = useState(false);
   const [sourceUrl, setSourceUrl] = useState('');
-  const [checkedSources, setCheckedSources] = useState<Record<string, boolean>>({});
   const sourceInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    const newChecked: Record<string, boolean> = {};
-    sources.forEach(source => {
-      if (checkedSources[source.id] === undefined) {
-        newChecked[source.id] = selectedSourceIds.includes(source.id);
-      } else {
-        newChecked[source.id] = checkedSources[source.id];
-      }
-    });
-    setCheckedSources(newChecked);
-  }, [sources]);
 
   useEffect(() => {
     if (showSourcePopup && sourceInputRef.current) {
       sourceInputRef.current.focus();
     }
   }, [showSourcePopup]);
-
-  const toggleSourceCheck = (sourceId: string) => {
-    setCheckedSources(prev => ({
-      ...prev,
-      [sourceId]: !prev[sourceId]
-    }));
-  };
 
   const handleAddSource = () => {
     if (sourceUrl.trim()) {
@@ -100,7 +82,7 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
     }
   };
 
-  const checkedCount = Object.values(checkedSources).filter(Boolean).length;
+  const checkedCount = sources.filter(s => s.selected !== false).length;
   const totalCount = sources.length;
   return (
     <div className="w-full relative">
@@ -112,12 +94,12 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
               <div key={source.id} className="flex items-center justify-between bg-white dark:bg-[#3C3C3C] border-2 border-[#0078d4] px-4 py-2 rounded-full shadow-lg flex-shrink-0">
                 <div className="flex items-center flex-1 overflow-hidden">
                   <div
-                    onClick={() => toggleSourceCheck(source.id)}
+                    onClick={() => onToggleSource(source.id)}
                     className={`w-[18px] h-[18px] border-2 border-[#0078d4] rounded-full mr-2 cursor-pointer flex items-center justify-center flex-shrink-0 ${
-                      checkedSources[source.id] ? 'bg-[#0078d4]' : 'bg-transparent'
+                      source.selected !== false ? 'bg-[#0078d4]' : 'bg-transparent'
                     }`}
                   >
-                    {checkedSources[source.id] && (
+                    {source.selected !== false && (
                       <span className="text-white text-xs font-bold">✓</span>
                     )}
                   </div>

@@ -14,7 +14,7 @@ const TextContextViewer: React.FC<TextContextViewerProps> = ({ file, quote, loca
   useEffect(() => {
     const scrollToRow = () => {
       if (tableRef.current) {
-        const highlightedRow = tableRef.current.querySelector('.highlighted-row');
+        const highlightedRow = tableRef.current.querySelector('.highlighted-row, .highlight-target');
         if (highlightedRow) {
           highlightedRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
           return true;
@@ -25,7 +25,6 @@ const TextContextViewer: React.FC<TextContextViewerProps> = ({ file, quote, loca
     
     setTimeout(() => scrollToRow(), 100);
     setTimeout(() => scrollToRow(), 300);
-    setTimeout(() => scrollToRow(), 600);
   }, [file, location, quote]);
   
   if (file?.type === 'excel' && location) {
@@ -121,6 +120,196 @@ const TextContextViewer: React.FC<TextContextViewerProps> = ({ file, quote, loca
           </table>
         </div>
       );
+    }
+  }
+  
+  if ((file?.type === 'markdown' || file?.name.endsWith('.md')) && file.content) {
+    console.log('[TextContextViewer] Markdown file detected:', file.name);
+    console.log('[TextContextViewer] Looking for quote:', quote);
+    console.log('[TextContextViewer] Location:', location);
+    const parseMarkdown = (md: string): string => {
+      const lines = md.split('\n');
+      const result: string[] = [];
+      let inCodeBlock = false;
+      let codeBlockContent: string[] = [];
+
+      const processInline = (text: string, shouldHighlight: boolean = false): string => {
+        let processed = text
+          .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%;height:auto" />')
+          .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" class="text-blue-600 dark:text-blue-400 hover:underline">$1</a>')
+          .replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>')
+          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+          .replace(/__(.*?)__/g, '<strong>$1</strong>')
+          .replace(/\*(.*?)\*/g, '<em>$1</em>')
+          .replace(/_(.*?)_/g, '<em>$1</em>')
+          .replace(/~~(.*?)~~/g, '<del>$1</del>')
+          .replace(/`([^`]+)`/g, '<code class="bg-gray-100 dark:bg-gray-800 px-1 rounded text-xs">$1</code>');
+        
+        if (shouldHighlight) {
+          processed = `<span class="bg-yellow-100 dark:bg-yellow-600/40 text-[#1a1a1a] dark:text-white p-1 rounded">${processed}</span>`;
+        }
+        return processed;
+      };
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const trimmed = line.trim();
+
+        if (trimmed.startsWith('```')) {
+          if (inCodeBlock) {
+            result.push(`<pre class="bg-gray-100 dark:bg-gray-800 p-2 rounded overflow-x-auto my-2"><code class="text-xs">${codeBlockContent.join('\n')}</code></pre>`);
+            codeBlockContent = [];
+            inCodeBlock = false;
+          } else {
+            inCodeBlock = true;
+          }
+          continue;
+        }
+
+        if (inCodeBlock) {
+          codeBlockContent.push(line.replace(/</g, '&lt;').replace(/>/g, '&gt;'));
+          continue;
+        }
+
+        if (trimmed.startsWith('####')) {
+          result.push(`<h4 class="text-sm font-semibold mt-2 mb-1">${processInline(trimmed.slice(4).trim())}</h4>`);
+        } else if (trimmed.startsWith('###')) {
+          result.push(`<h3 class="text-base font-semibold mt-3 mb-1">${processInline(trimmed.slice(3).trim())}</h3>`);
+        } else if (trimmed.startsWith('##')) {
+          result.push(`<h2 class="text-lg font-bold mt-3 mb-2">${processInline(trimmed.slice(2).trim())}</h2>`);
+        } else if (trimmed.startsWith('#')) {
+          result.push(`<h1 class="text-xl font-bold mt-4 mb-2">${processInline(trimmed.slice(1).trim())}</h1>`);
+        } else if (trimmed.startsWith('---') || trimmed.startsWith('***')) {
+          result.push('<hr class="my-2 border-gray-300 dark:border-gray-600" />');
+        } else if (trimmed.match(/^[-*+]\s/)) {
+          const content = trimmed.replace(/^[-*+]\s/, '');
+          result.push(`<li class="ml-4 my-0.5">${processInline(content)}</li>`);
+        } else if (trimmed.match(/^\d+\.\s/)) {
+          const content = trimmed.replace(/^\d+\.\s/, '');
+          result.push(`<li class="ml-4 my-0.5">${processInline(content)}</li>`);
+        } else if (trimmed.startsWith('>')) {
+          result.push(`<blockquote class="border-l-2 border-gray-400 dark:border-gray-600 pl-2 italic my-2 text-gray-600 dark:text-gray-400">${processInline(trimmed.slice(1).trim())}</blockquote>`);
+        } else if (trimmed === '') {
+          result.push('<br />');
+        } else {
+          result.push(`<p class="my-1 leading-relaxed">${processInline(trimmed)}</p>`);
+        }
+      }
+
+      return result.join('\n');
+    };
+    
+    const lines = file.content.split('\n');
+    const quoteNorm = quote.toLowerCase().trim();
+    
+    // Normalize content for search - remove HTML tags and decode entities
+    const normalizeForSearch = (text: string) => {
+      return text
+        .replace(/<[^>]+>/g, '') // Remove ALL HTML tags
+        .replace(/&#39;/g, "'")
+        .replace(/&quot;/g, '"')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/\s+/g, ' ') // Normalize whitespace
+        .toLowerCase()
+        .trim();
+    };
+    
+    let contextStart = -1;
+    let contextEnd = -1;
+    let highlightLineIndex = -1;
+    
+    for (let i = 0; i < lines.length; i++) {
+      if (normalizeForSearch(lines[i]).includes(quoteNorm)) {
+        contextStart = Math.max(0, i - 2);
+        contextEnd = Math.min(lines.length, i + 3);
+        highlightLineIndex = i - contextStart;
+        console.log('[TextContextViewer] Found quote at line', i);
+        break;
+      }
+    }
+    
+    if (contextStart === -1) {
+      console.log('[TextContextViewer] Quote not found in lines, trying fallback search');
+    }
+    
+    if (contextStart !== -1) {
+      const contextLines = lines.slice(contextStart, contextEnd);
+      const contextMd = contextLines.map((line, idx) => {
+        if (idx === highlightLineIndex) {
+          // Strip HTML tags for highlighting
+          const cleanLine = line.replace(/<sup[^>]*>.*?<\/sup>/gi, '').replace(/&#39;/g, "'").replace(/&quot;/g, '"');
+          const cleanLower = cleanLine.toLowerCase();
+          const startIdx = cleanLower.indexOf(quoteNorm);
+          if (startIdx !== -1) {
+            const before = cleanLine.substring(0, startIdx);
+            const match = cleanLine.substring(startIdx, startIdx + quote.length);
+            const after = cleanLine.substring(startIdx + quote.length);
+            return `${before}<mark class="bg-yellow-300 dark:bg-yellow-700 highlight-target">${match}</mark>${after}`;
+          }
+        }
+        return line.replace(/<sup[^>]*>.*?<\/sup>/gi, '').replace(/&#39;/g, "'").replace(/&quot;/g, '"');
+      }).join('\n');
+      const contextHtml = parseMarkdown(contextMd);
+      
+      return (
+        <div ref={tableRef} className="p-2 overflow-auto" style={{ maxHeight: '400px' }}>
+          <div className="text-xs leading-relaxed max-w-none">
+            <div 
+              dangerouslySetInnerHTML={{ __html: contextHtml }}
+            />
+          </div>
+        </div>
+      );
+    }
+    
+    // Fallback: if quote not found in lines, search entire content
+    const contentLower = normalizeForSearch(file.content);
+    if (contentLower.includes(quoteNorm)) {
+      console.log('[TextContextViewer] Fallback found quote in content');
+      const startIdx = contentLower.indexOf(quoteNorm);
+      const contextStart = Math.max(0, startIdx - 200);
+      const contextEnd = Math.min(file.content.length, startIdx + quote.length + 200);
+      const contextText = file.content.substring(contextStart, contextEnd);
+      const before = contextText.substring(0, startIdx - contextStart);
+      const match = contextText.substring(startIdx - contextStart, startIdx - contextStart + quote.length);
+      const after = contextText.substring(startIdx - contextStart + quote.length);
+      const highlighted = `${before}<mark class="bg-yellow-300 dark:bg-yellow-700 highlight-target">${match}</mark>${after}`;
+      const contextHtml = parseMarkdown(highlighted);
+      
+      return (
+        <div ref={tableRef} className="p-2 overflow-auto" style={{ maxHeight: '400px' }}>
+          <div className="text-xs leading-relaxed max-w-none">
+            <div 
+              dangerouslySetInnerHTML={{ __html: contextHtml }}
+            />
+          </div>
+        </div>
+      );
+    } else {
+      console.log('[TextContextViewer] Quote not found anywhere in content, rendering location context');
+      // Quote not found, but render the section mentioned in location
+      const locationMatch = location.match(/Section\s+([\d.]+\s+[A-Z\s&]+)/i);
+      if (locationMatch) {
+        const sectionName = locationMatch[1].trim();
+        const sectionLines = lines.filter(line => line.toLowerCase().includes(sectionName.toLowerCase()));
+        if (sectionLines.length > 0) {
+          const sectionIdx = lines.findIndex(line => line.toLowerCase().includes(sectionName.toLowerCase()));
+          const contextStart = Math.max(0, sectionIdx - 1);
+          const contextEnd = Math.min(lines.length, sectionIdx + 10);
+          const contextMd = lines.slice(contextStart, contextEnd).join('\n');
+          const contextHtml = parseMarkdown(contextMd);
+          
+          return (
+            <div ref={tableRef} className="p-2 overflow-auto" style={{ maxHeight: '400px' }}>
+              <div className="text-xs leading-relaxed max-w-none">
+                <div dangerouslySetInnerHTML={{ __html: contextHtml }} />
+              </div>
+            </div>
+          );
+        }
+      }
     }
   }
   

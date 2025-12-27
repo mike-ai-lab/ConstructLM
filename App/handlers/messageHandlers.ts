@@ -14,11 +14,47 @@ export const createMessageHandlers = (
   setIsGenerating: (generating: boolean) => void,
   activeModelId: string,
   setShowMentionMenu: (show: boolean) => void,
-  saveCurrentChat: (updateTimestamp: boolean) => void,
+  saveCurrentChat: (updateTimestamp: boolean, sourceType?: 'files' | 'links') => void,
   sources: any[] = [],
   selectedSourceIds: string[] = [],
-  onShowContextWarning?: (data: { totalTokens: number; filesUsed: string[]; selectedCount: number; onProceed: () => void }) => void
+  onShowContextWarning?: (data: { totalTokens: number; filesUsed: string[]; selectedCount: number; onProceed: () => void }) => void,
+  updateChatName?: (name: string) => void
 ) => {
+  
+  const generateChatTitle = async (userMessage: string) => {
+    try {
+      const titlePrompt = `You must create a descriptive 3-word title that summarizes the TOPIC of this user request. DO NOT just copy the first 3 words.
+
+User request: "${userMessage.slice(0, 200)}"
+
+Bad examples (DO NOT DO THIS):
+- "tell me about" ❌
+- "how do I" ❌
+- "can you explain" ❌
+
+Good examples:
+- Request: "tell me about react hooks" → Title: "React Hooks Overview"
+- Request: "how do I sort arrays in python" → Title: "Python Array Sorting"
+- Request: "can you explain machine learning" → Title: "Machine Learning Explained"
+
+Extract the KEY TOPIC and create a proper title. Output ONLY 3 words, no punctuation.`;
+
+      await sendMessageToLLM(
+        activeModelId,
+        [],
+        titlePrompt,
+        [],
+        (chunk) => {
+          if (chunk && updateChatName) {
+            updateChatName(chunk.trim());
+          }
+        },
+        []
+      );
+    } catch (error) {
+      console.error('Failed to generate chat title:', error);
+    }
+  };
   const handleSendMessage = async (messageText?: string, retryMessageId?: string): Promise<string | null> => {
     const textToSend = typeof messageText === 'string' ? messageText : input;
     if (!textToSend || typeof textToSend !== 'string' || !textToSend.trim() || isGenerating) return null;
@@ -109,8 +145,12 @@ export const createMessageHandlers = (
       let thinkingText = "";
       let updateTimer: NodeJS.Timeout | null = null;
       
-      const fetchedSources = sources.filter(s => s.status === 'fetched');
+      const fetchedSources = sources.filter(s => s.status === 'fetched' && s.selected !== false);
       console.log('[MessageHandler] Fetched sources:', fetchedSources.length);
+      
+      // Determine source type for first message
+      const isFirstUserMessage = messages.filter(m => m.role === 'user').length === 0;
+      const sourceType = isFirstUserMessage ? (fetchedSources.length > 0 ? 'links' : 'files') : undefined;
       
       activityLogger.logRequestSent(activeModelId, textToSend.length, excerptedFiles.length, fetchedSources.length);
       
@@ -161,7 +201,13 @@ export const createMessageHandlers = (
             : msg
         ));
       }
-      saveCurrentChat(true);
+      saveCurrentChat(true, sourceType);
+      
+      // Auto-generate chat title on first user message
+      if (isFirstUserMessage && !retryMessageId) {
+        generateChatTitle(textToSend);
+      }
+      
       return accumText;
     } catch (error: any) {
       console.error('[MessageHandler] ERROR:', error);

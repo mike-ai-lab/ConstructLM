@@ -21,6 +21,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
   onOpenLogs
 }) => {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [chatViewTab, setChatViewTab] = useState<'files' | 'links'>('files');
 
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp);
@@ -51,24 +52,40 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="px-4 h-[50px] flex items-center justify-between flex-shrink-0">
-        <span className="text-[12px] font-medium text-[#666666] dark:text-[#a0a0a0]">{chats.length} chats</span>
-        <div className="flex gap-1">
-          {onOpenLogs && (
+      <div className="px-4 py-2 flex-shrink-0">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-[12px] font-medium text-[#666666] dark:text-[#a0a0a0]">{chats.length} chats</span>
+          <div className="flex gap-1">
+            {onOpenLogs && (
+              <button
+                onClick={onOpenLogs}
+                className="p-1.5 text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] rounded-lg transition-colors"
+                title="Open Logs"
+              >
+                <History size={14} />
+              </button>
+            )}
             <button
-              onClick={onOpenLogs}
-              className="p-1.5 text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] rounded-lg transition-colors"
-              title="Open Logs"
+              onClick={onCreateChat}
+              className="p-1.5 text-[#4485d1] hover:bg-[rgba(68,133,209,0.1)] rounded-lg transition-colors"
+              title="New Chat"
             >
-              <History size={14} />
+              <Plus size={14} />
             </button>
-          )}
+          </div>
+        </div>
+        <div className="flex gap-1 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] rounded p-0.5">
           <button
-            onClick={onCreateChat}
-            className="p-1.5 text-[#4485d1] hover:bg-[rgba(68,133,209,0.1)] rounded-lg transition-colors"
-            title="New Chat"
+            onClick={() => setChatViewTab('files')}
+            className={`flex-1 px-2 py-1 rounded text-[10px] font-semibold uppercase transition-colors ${chatViewTab === 'files' ? 'bg-white dark:bg-[#1a1a1a] text-[#4485d1]' : 'text-[#666666] dark:text-[#a0a0a0]'}`}
           >
-            <Plus size={14} />
+            Files
+          </button>
+          <button
+            onClick={() => setChatViewTab('links')}
+            className={`flex-1 px-2 py-1 rounded text-[10px] font-semibold uppercase transition-colors ${chatViewTab === 'links' ? 'bg-white dark:bg-[#1a1a1a] text-[#4485d1]' : 'text-[#666666] dark:text-[#a0a0a0]'}`}
+          >
+            Links
           </button>
         </div>
       </div>
@@ -87,6 +104,13 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
         ) : (
           <div className="space-y-1 pb-8">
             {chats
+              .filter(chat => {
+                if (chatViewTab === 'files') {
+                  return !chat.sourceType || chat.sourceType === 'files';
+                } else {
+                  return chat.sourceType === 'links';
+                }
+              })
               .sort((a, b) => b.updatedAt - a.updatedAt)
               .map((chat) => (
                 <div

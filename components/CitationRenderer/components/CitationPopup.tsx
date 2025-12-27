@@ -148,9 +148,16 @@ const CitationPopup: React.FC<CitationPopupProps> = ({
           <span className="text-[#777] dark:text-[#aaa] truncate">• {location}</span>
         </div>
         <div className="flex gap-0.5">
-          <button onClick={onOpenFull} className="p-0.5 hover:text-blue-600" title={isUrl ? 'Open in browser' : 'Open full view'}>
-            {isUrl ? <ExternalLink size={12} /> : <Maximize2 size={12} />}
-          </button>
+          {isUrl ? (
+            <>
+              <button onClick={() => { onOpenWebViewerNewTab?.(fileName); onClose(); }} className="p-0.5 hover:text-blue-600" title="Open link">
+                <Maximize2 size={12} />
+              </button>
+            </>
+          ) : (
+            <button onClick={onOpenFull} className="p-0.5 hover:text-blue-600" title="Open full view">              <Maximize2 size={12} />
+            </button>
+          )}
           <button onClick={onClose} className="p-0.5 hover:text-red-500">
             <X size={12} />
           </button>

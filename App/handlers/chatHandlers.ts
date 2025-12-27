@@ -35,7 +35,7 @@ export const createChatHandlers = (
     return words.length > 30 ? words.substring(0, 30) + '...' : words;
   };
 
-  const saveCurrentChat = (updateTimestamp: boolean = false) => {
+  const saveCurrentChat = (updateTimestamp: boolean = false, sourceType?: 'files' | 'links') => {
     if (!currentChatId) return;
     const existingChat = chats.find(c => c.id === currentChatId);
     const chat: ChatSession = {
@@ -45,6 +45,7 @@ export const createChatHandlers = (
       messages,
       fileIds: [],
       selectedSourceIds,
+      sourceType: sourceType || existingChat?.sourceType,
       createdAt: existingChat?.createdAt || Date.now(),
       updatedAt: updateTimestamp ? Date.now() : (existingChat?.updatedAt || Date.now())
     };
@@ -57,6 +58,7 @@ export const createChatHandlers = (
         name: chat.name,
         modelId: chat.modelId,
         messageCount: chat.messages.length,
+        sourceType: chat.sourceType,
         createdAt: chat.createdAt,
         updatedAt: chat.updatedAt
       };
@@ -112,11 +114,18 @@ export const createChatHandlers = (
     }
   };
 
+  const updateChatName = (name: string) => {
+    if (!currentChatId) return;
+    setChats(prev => prev.map(c => c.id === currentChatId ? { ...c, name } : c));
+    saveCurrentChat(true);
+  };
+
   return {
     loadChat,
     saveCurrentChat,
     handleCreateChat,
     handleSelectChat,
     handleDeleteChat,
+    updateChatName,
   };
 };

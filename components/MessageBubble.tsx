@@ -587,7 +587,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
           {!isUser && (
             <div className="mt-3 space-y-2" style={{ paddingLeft: '20px', paddingRight: '20px' }}>
               {/* Sources Row */}
-              {(files.filter(f => message.content.includes(f.name)).length > 0 || sources.filter(s => s.status === 'fetched').length > 0) && (
+              {(files.filter(f => message.content.includes(f.name)).length > 0 || sources.filter(s => s.status === 'fetched' && s.selected !== false).length > 0) && (
                 <div className="flex flex-wrap gap-2">
                   {files.filter(f => message.content.includes(f.name)).map(file => (
                     <span key={file.id} className="inline-flex items-center gap-1 px-2 py-1 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] rounded text-xs text-[#1a1a1a] dark:text-white">
@@ -595,7 +595,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
                       {file.name}
                     </span>
                   ))}
-                  {sources.filter(s => s.status === 'fetched').map(source => (
+                  {sources.filter(s => s.status === 'fetched' && s.selected !== false).map(source => (
                     <a
                       key={source.id}
                       href={source.url}

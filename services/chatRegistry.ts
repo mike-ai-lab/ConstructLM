@@ -9,6 +9,7 @@ export interface ChatSession {
   messages: Message[];
   fileIds: string[];
   selectedSourceIds: string[];
+  sourceType?: 'files' | 'links';
   createdAt: number;
   updatedAt: number;
 }
@@ -18,6 +19,7 @@ export interface ChatMetadata {
   name: string;
   modelId: string;
   messageCount: number;
+  sourceType?: 'files' | 'links';
   createdAt: number;
   updatedAt: number;
 }
@@ -42,6 +44,7 @@ class ChatRegistryService {
         name: chat.name || 'Untitled Chat',
         modelId: chat.modelId || 'gemini-2.0-flash-exp',
         messageCount: (chat.messages || []).length,
+        sourceType: chat.sourceType,
         createdAt: chat.createdAt || Date.now(),
         updatedAt: chat.updatedAt || Date.now()
       }));

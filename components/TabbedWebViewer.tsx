@@ -190,6 +190,13 @@ const TabbedWebViewer: React.FC<TabbedWebViewerProps> = ({ initialUrl, onClose, 
             ref={tabsContainerRef}
             className="flex gap-1 overflow-x-auto flex-1 scrollbar-hide pr-1"
             style={{ scrollBehavior: 'smooth' }}
+            onWheel={(e) => {
+              e.preventDefault();
+              if (tabsContainerRef.current) {
+                tabsContainerRef.current.scrollLeft += e.deltaY;
+                setTabsScrollPosition(tabsContainerRef.current.scrollLeft);
+              }
+            }}
           >
             {tabs.map(tab => (
               <div
@@ -231,9 +238,16 @@ const TabbedWebViewer: React.FC<TabbedWebViewerProps> = ({ initialUrl, onClose, 
           <button
             onClick={() => handleNewTab(activeTab?.url || 'about:blank')}
             className="size-6 flex items-center justify-center rounded-md hover:bg-black/5 dark:hover:bg-white/10"
-            title="New tab"
+            title={`New tab (${tabs.length} open)`}
           >
-            <Plus size={14} className="opacity-70" />
+            <div className="relative">
+              <Plus size={14} className="opacity-70" />
+              {tabs.length > 1 && (
+                <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-[8px] font-bold rounded-full w-3 h-3 flex items-center justify-center">
+                  {tabs.length}
+                </span>
+              )}
+            </div>
           </button>
         </div>
 

@@ -28,11 +28,15 @@ export const parseFile = async (file: File): Promise<ProcessedFile> => {
 
   if (fileName.endsWith('.pdf')) {
     fileType = 'pdf';
-  } else if (fileName.match(/\.(xlsx|xls|csv)$/)) {
+  } else if (fileName.endsWith('.csv')) {
+    fileType = 'csv';
+  } else if (fileName.match(/\.(xlsx|xls)$/)) {
     fileType = 'excel';
+  } else if (fileName.endsWith('.md')) {
+    fileType = 'markdown';
   } else if (fileName.match(/\.(png|jpg|jpeg|gif|bmp|webp)$/)) {
     fileType = 'image';
-  } else if (fileName.match(/\.(doc|docx|ppt|pptx|txt|md|json|xml|html)$/)) {
+  } else if (fileName.match(/\.(doc|docx|ppt|pptx|txt|json|xml|html)$/)) {
     fileType = 'document';
   }
 
@@ -100,8 +104,13 @@ export const parseFile = async (file: File): Promise<ProcessedFile> => {
         console.warn('Structured PDF parsing failed, falling back to basic extraction:', structuredError);
         content = await extractPdfText(file);
       }
+    } else if (fileType === 'csv') {
+      content = await extractExcelText(file);
     } else if (fileType === 'excel') {
       content = await extractExcelText(file);
+    } else if (fileType === 'markdown') {
+      const text = await file.text();
+      content = text; // Keep raw markdown without metadata
     } else if (fileType === 'image') {
       content = await extractImageInfo(file);
     } else if (fileType === 'document') {
