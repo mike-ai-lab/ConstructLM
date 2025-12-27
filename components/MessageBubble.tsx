@@ -1,14 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Message, ProcessedFile } from '../types';
-import { Sparkles, User, Volume2, Loader2, StopCircle, BookmarkPlus, FileText, ExternalLink, Trash2, RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Message, ProcessedFile, Highlight } from '../types';
+import { Sparkles, User, Volume2, Loader2, StopCircle, BookmarkPlus, FileText, ExternalLink, Trash2, RotateCcw, ChevronLeft, ChevronRight, Highlighter } from 'lucide-react';
 import CitationRenderer from './CitationRenderer';
 import { generateSpeech } from '../services/geminiService';
 import { decodeAudioData } from '../services/audioUtils';
 import { contextMenuManager, createMessageContextMenu } from '../utils/uiHelpers';
 import { InteractiveBlob } from './InteractiveBlob';
+import { highlightService } from '../services/highlightService';
 
 interface MessageBubbleProps {
   message: Message;
+  chatId: string;
   files: ProcessedFile[];
   sources: any[];
   onViewDocument: (fileName: string, page?: number, quote?: string, location?: string) => void;
@@ -24,8 +26,17 @@ interface MessageBubbleProps {
   onOpenWebViewerNewTab?: (url: string) => void;
 }
 
+const HIGHLIGHT_COLORS = [
+  { id: 'yellow', color: '#FFEB3B', name: 'Yellow' },
+  { id: 'green', color: '#4CAF50', name: 'Green' },
+  { id: 'blue', color: '#2196F3', name: 'Blue' },
+  { id: 'pink', color: '#E91E63', name: 'Pink' },
+  { id: 'purple', color: '#9C27B0', name: 'Purple' }
+];
+
 const MessageBubble: React.FC<MessageBubbleProps> = ({ 
-  message, 
+  message,
+  chatId,
   files, 
   sources, 
   onViewDocument, 
@@ -44,14 +55,143 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoadingAudio, setIsLoadingAudio] = useState(false);
   const [noteStyle, setNoteStyle] = useState(localStorage.getItem('noteStyle') || 'border');
+  const [highlights, setHighlights] = useState<Highlight[]>([]);
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const [colorPickerPos, setColorPickerPos] = useState({ x: 0, y: 0 });
+  const [selectedText, setSelectedText] = useState('');
   const audioContextRef = useRef<AudioContext | null>(null);
   const sourceRef = useRef<AudioBufferSourceNode | null>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleStyleChange = () => setNoteStyle(localStorage.getItem('noteStyle') || 'border');
     window.addEventListener('noteStyleChange', handleStyleChange);
     return () => window.removeEventListener('noteStyleChange', handleStyleChange);
   }, []);
+
+  useEffect(() => {
+    if (!isUser) {
+      const loaded = highlightService.getHighlightsByMessage(chatId, message.id);
+      setHighlights(loaded);
+    }
+  }, [chatId, message.id, isUser]);
+
+  useEffect(() => {
+    if (!isUser && contentRef.current && highlights.length > 0) {
+      const applyHighlightsToDOM = () => {
+        if (!contentRef.current) return;
+        
+        // Remove existing highlights
+        contentRef.current.querySelectorAll('.ai-highlight').forEach(el => {
+          const parent = el.parentNode;
+          if (parent) {
+            parent.replaceChild(document.createTextNode(el.textContent || ''), el);
+            parent.normalize();
+          }
+        });
+        
+        // Apply highlights
+        highlights.forEach(h => {
+          const searchText = h.text;
+          
+          // Get all text content and find position
+          const allText = contentRef.current!.textContent || '';
+          const startPos = allText.indexOf(searchText);
+          if (startPos === -1) return;
+          
+          // Find the text nodes that contain this range
+          let currentPos = 0;
+          let startNode: Node | null = null;
+          let startOffset = 0;
+          let endNode: Node | null = null;
+          let endOffset = 0;
+          
+          const walker = document.createTreeWalker(
+            contentRef.current!,
+            NodeFilter.SHOW_TEXT,
+            null
+          );
+          
+          let node;
+          while (node = walker.nextNode()) {
+            const nodeLength = (node.textContent || '').length;
+            const nodeEnd = currentPos + nodeLength;
+            
+            if (!startNode && startPos >= currentPos && startPos < nodeEnd) {
+              startNode = node;
+              startOffset = startPos - currentPos;
+            }
+            
+            if (startPos + searchText.length > currentPos && startPos + searchText.length <= nodeEnd) {
+              endNode = node;
+              endOffset = startPos + searchText.length - currentPos;
+              break;
+            }
+            
+            currentPos = nodeEnd;
+          }
+          
+          if (startNode && endNode) {
+            try {
+              const range = document.createRange();
+              range.setStart(startNode, startOffset);
+              range.setEnd(endNode, endOffset);
+              
+              const mark = document.createElement('mark');
+              mark.className = 'ai-highlight';
+              mark.style.backgroundColor = h.color;
+              mark.style.padding = '2px 0';
+              mark.style.borderRadius = '2px';
+              
+              range.surroundContents(mark);
+            } catch (e) {
+              // Skip if spans multiple elements
+            }
+          }
+        });
+      };
+      
+      setTimeout(applyHighlightsToDOM, 50);
+      setTimeout(applyHighlightsToDOM, 200);
+      setTimeout(applyHighlightsToDOM, 400);
+    }
+  }, [highlights, message.content, isUser]);
+
+  const handleTextSelection = () => {
+    if (isUser) return;
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed) {
+      setShowColorPicker(false);
+      return;
+    }
+    const text = selection.toString().trim();
+    if (!text) return;
+    
+    const range = selection.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+    
+    setSelectedText(text);
+    setColorPickerPos({ x: rect.left + rect.width / 2, y: rect.top - 10 });
+    setShowColorPicker(true);
+  };
+
+  const applyHighlight = (color: string) => {
+    if (!selectedText) return;
+    const highlight: Highlight = {
+      id: `${Date.now()}_${Math.random()}`,
+      messageId: message.id,
+      chatId,
+      text: selectedText,
+      startOffset: 0,
+      endOffset: 0,
+      color,
+      timestamp: Date.now()
+    };
+    highlightService.saveHighlight(highlight);
+    setHighlights(prev => [...prev, highlight]);
+    setShowColorPicker(false);
+    window.getSelection()?.removeAllRanges();
+  };
 
 
   const handlePlayAudio = async () => {
@@ -171,8 +311,10 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
              )}
              
             <div 
+              ref={contentRef}
               className="whitespace-pre-wrap font-normal message-content" 
               data-highlightable="true"
+              onMouseUp={handleTextSelection}
               onContextMenu={(e) => {
                 e.preventDefault();
                 const menuItems = createMessageContextMenu(e.currentTarget, message.content);
@@ -195,15 +337,31 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
                       </details>
                     )}
                     <CitationRenderer 
-                        text={message.content} 
-                        files={files} 
-                        onViewDocument={onViewDocument}
-                        onOpenWebViewer={onOpenWebViewer}
-                        onOpenWebViewerNewTab={onOpenWebViewerNewTab}
+                      text={message.content} 
+                      files={files} 
+                      onViewDocument={onViewDocument}
+                      onOpenWebViewer={onOpenWebViewer}
+                      onOpenWebViewerNewTab={onOpenWebViewerNewTab}
                     />
                   </>
               )}
             </div>
+            {showColorPicker && (
+              <div 
+                className="fixed z-[100] bg-white dark:bg-[#2a2a2a] rounded-lg shadow-xl border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] p-2 flex gap-2"
+                style={{ left: colorPickerPos.x - 100, top: colorPickerPos.y - 50 }}
+              >
+                {HIGHLIGHT_COLORS.map(c => (
+                  <button
+                    key={c.id}
+                    onClick={() => applyHighlight(c.color)}
+                    className="w-8 h-8 rounded hover:scale-110 transition-transform border-2 border-transparent hover:border-gray-400"
+                    style={{ backgroundColor: c.color }}
+                    title={c.name}
+                  />
+                ))}
+              </div>
+            )}
           </div>
           
           {/* Message Footer - Clean and Readable */}

@@ -98,6 +98,17 @@ export interface Citation {
   snippet: string;
 }
 
+export interface Highlight {
+  id: string;
+  messageId: string;
+  chatId: string;
+  text: string;
+  startOffset: number;
+  endOffset: number;
+  color: string;
+  timestamp: number;
+}
+
 export interface ModelConfig {
   id: string;
   name: string;

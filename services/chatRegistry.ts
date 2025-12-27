@@ -1,5 +1,6 @@
 import { Message, ProcessedFile } from '../types';
 import { greetingService } from './greetingService';
+import { highlightService } from './highlightService';
 
 export interface ChatSession {
   id: string;
@@ -179,6 +180,7 @@ class ChatRegistryService {
       const chats: ChatSession[] = JSON.parse(stored);
       const filtered = chats.filter(chat => chat.id !== chatId);
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(filtered));
+      highlightService.deleteHighlightsByChat(chatId);
     } catch (error) {
       console.error('Error deleting chat:', error);
     }

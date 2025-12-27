@@ -943,7 +943,8 @@ const App: React.FC = () => {
               {chatState.messages.map((msg) => (
                 <MessageBubble 
                   key={msg.id} 
-                  message={msg} 
+                  message={msg}
+                  chatId={chatState.currentChatId}
                   files={fileState.files}
                   sources={sources}
                   onViewDocument={fileHandlers.handleViewDocument}
