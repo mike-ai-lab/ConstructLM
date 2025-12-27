@@ -6,7 +6,9 @@ class HighlightService {
   private getAll(): Highlight[] {
     try {
       const stored = localStorage.getItem(this.STORAGE_KEY);
-      return stored ? JSON.parse(stored) : [];
+      if (!stored) return [];
+      const parsed = JSON.parse(stored);
+      return parsed.filter((h: any) => h.text && typeof h.text === 'string');
     } catch {
       return [];
     }

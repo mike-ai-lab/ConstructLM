@@ -1041,7 +1041,7 @@ const App: React.FC = () => {
               selectedSourceIds={chatState.selectedSourceIds}
               onInputChange={inputHandlers.handleInputChange}
               onKeyDown={inputHandlers.handleKeyDown}
-              onSendMessage={messageHandlers.handleSendMessage}
+              onSendMessage={() => messageHandlers.handleSendMessage()}
               onFileUpload={fileHandlers.handleFileUpload}
               onToggleRecording={audioHandlers.handleToggleRecording}
               onInsertMention={inputHandlers.insertMention}

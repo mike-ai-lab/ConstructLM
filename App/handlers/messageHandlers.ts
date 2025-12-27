@@ -20,8 +20,8 @@ export const createMessageHandlers = (
   onShowContextWarning?: (data: { totalTokens: number; filesUsed: string[]; selectedCount: number; onProceed: () => void }) => void
 ) => {
   const handleSendMessage = async (messageText?: string, retryMessageId?: string): Promise<string | null> => {
-    const textToSend = messageText || input;
-    if (!textToSend || !textToSend.trim() || isGenerating) return null;
+    const textToSend = typeof messageText === 'string' ? messageText : input;
+    if (!textToSend || typeof textToSend !== 'string' || !textToSend.trim() || isGenerating) return null;
 
     // Priority: @mentioned files override sources panel selection
     const mentionedFiles = files.filter(f => textToSend.includes(`@${f.name}`));

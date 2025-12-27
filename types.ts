@@ -107,6 +107,8 @@ export interface Highlight {
   endOffset: number;
   color: string;
   timestamp: number;
+  textBefore?: string;
+  textAfter?: string;
 }
 
 export interface ModelConfig {

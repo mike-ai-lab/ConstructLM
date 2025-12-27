@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
 import { Message, ProcessedFile, Highlight } from '../types';
 import { Sparkles, User, Volume2, Loader2, StopCircle, BookmarkPlus, FileText, ExternalLink, Trash2, RotateCcw, ChevronLeft, ChevronRight, Highlighter, Undo2, Redo2 } from 'lucide-react';
@@ -8,72 +9,149 @@ import { contextMenuManager, createMessageContextMenu } from '../utils/uiHelpers
 import { InteractiveBlob } from './InteractiveBlob';
 import { highlightService } from '../services/highlightService';
 
-// --- ROBUST TEXT MAPPING UTILITIES ---
-
-interface TextNodeInfo {
-  node: Node;
-  start: number;
-  end: number;
-  length: number;
-}
+// --- UTILITY: ROBUST DOM TEXT WALKER ---
 
 /**
- * Flattens the DOM into a linear list of text nodes with their global offsets.
- * This allows us to treat the complex DOM as a simple string.
+ * Helper to check if a node is a visible text node and not part of UI artifacts (like citation badges)
+ * Add 'no-highlight' class to any UI elements you want the offset calculator to ignore.
  */
-const getTextNodes = (root: Node): TextNodeInfo[] => {
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
-  const nodes: TextNodeInfo[] = [];
-  let offset = 0;
+const isValidTextNode = (node: Node): boolean => {
+  if (node.nodeType !== Node.TEXT_NODE) return false;
+  const parent = node.parentElement;
+  if (!parent) return false;
+  // Ignore scripts, styles, and specific UI elements that shouldn't count towards offset
+  if (['SCRIPT', 'STYLE', 'NOSCRIPT'].includes(parent.tagName)) return false;
+  if (parent.closest('.no-highlight')) return false; 
+  return true;
+};
+
+/**
+ * Calculates the global character offset relative to root.
+ * Ignores UI artifacts to ensure offsets remain stable even if CitationRenderer adds badges.
+ */
+const getGlobalOffset = (root: Node, targetNode: Node, targetOffset: number): number => {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode: (node) => isValidTextNode(node) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT
+  });
+  
+  let currentOffset = 0;
+  let node = walker.nextNode();
+
+  while (node) {
+    if (node === targetNode) {
+      return currentOffset + targetOffset;
+    }
+    currentOffset += node.textContent?.length || 0;
+    node = walker.nextNode();
+  }
+  return -1;
+};
+
+/**
+ * Converts global offsets back to a Range.
+ */
+const createRangeFromOffsets = (root: Node, start: number, end: number): Range | null => {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode: (node) => isValidTextNode(node) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT
+  });
+
+  let currentOffset = 0;
+  let startNode: Node | null = null;
+  let startOffsetLocal = 0;
+  let endNode: Node | null = null;
+  let endOffsetLocal = 0;
   let node = walker.nextNode();
 
   while (node) {
     const len = node.textContent?.length || 0;
-    // We only care about nodes that actually have text
-    if (len > 0) {
-      nodes.push({
-        node,
-        start: offset,
-        end: offset + len,
-        length: len
-      });
+    const nodeEnd = currentOffset + len;
+
+    if (!startNode && start >= currentOffset && start < nodeEnd) {
+      startNode = node;
+      startOffsetLocal = start - currentOffset;
     }
-    offset += len;
+    
+    // Note: end can be equal to nodeEnd (end of selection)
+    if (!endNode && end > currentOffset && end <= nodeEnd) {
+      endNode = node;
+      endOffsetLocal = end - currentOffset;
+    }
+
+    if (startNode && endNode) break;
+
+    currentOffset += len;
     node = walker.nextNode();
   }
-  return nodes;
+
+  if (startNode && endNode) {
+    const range = document.createRange();
+    range.setStart(startNode, startOffsetLocal);
+    range.setEnd(endNode, endOffsetLocal);
+    return range;
+  }
+  return null;
 };
 
-const getGlobalOffset = (root: Node, targetNode: Node, targetOffset: number): number => {
-  const nodes = getTextNodes(root);
-  
-  // If selection is on a text node
-  const targetInfo = nodes.find(n => n.node === targetNode);
-  if (targetInfo) {
-    return targetInfo.start + targetOffset;
+/**
+ * NEW: Safely highlights a range by wrapping ONLY text nodes.
+ * This prevents breaking block structure (h3, ul, p) when selecting across them.
+ */
+const safeHighlightRange = (range: Range, color: string, id: string) => {
+  const root = range.commonAncestorContainer;
+  const startContainer = range.startContainer;
+  const endContainer = range.endContainer;
+  const startOffset = range.startOffset;
+  const endOffset = range.endOffset;
+
+  // Create a TreeWalker to find all text nodes within the range
+  const walker = document.createTreeWalker(
+    root.nodeType === Node.TEXT_NODE ? root.parentNode! : root, 
+    NodeFilter.SHOW_TEXT,
+    {
+      acceptNode: (node) => {
+        if (!isValidTextNode(node)) return NodeFilter.FILTER_REJECT;
+        return range.intersectsNode(node) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+      }
+    }
+  );
+
+  const nodesToWrap: { node: Node; start: number; end: number }[] = [];
+  let currentNode = walker.nextNode();
+
+  while (currentNode) {
+    const nodeStart = currentNode === startContainer ? startOffset : 0;
+    const nodeEnd = currentNode === endContainer ? endOffset : (currentNode.textContent?.length || 0);
+
+    // Only wrap if there is actual content selected in this node
+    if (nodeEnd > nodeStart) {
+      nodesToWrap.push({ node: currentNode, start: nodeStart, end: nodeEnd });
+    }
+    currentNode = walker.nextNode();
   }
 
-  // If selection is on an element node (e.g., selecting a whole heading)
-  // Find the closest text node at that position
-  if (targetNode.nodeType === Node.ELEMENT_NODE) {
-    const element = targetNode as Element;
-    // If offset is 0, find first text node in this element
-    if (targetOffset === 0) {
-      const firstNode = nodes.find(n => element.contains(n.node));
-      return firstNode ? firstNode.start : 0;
-    }
-    // Otherwise, find the text node after the offset-th child
-    const childAtOffset = element.childNodes[targetOffset];
-    if (childAtOffset) {
-      const nodeAfter = nodes.find(n => childAtOffset.contains(n.node) || n.node === childAtOffset);
-      return nodeAfter ? nodeAfter.start : nodes[nodes.length - 1]?.end || 0;
-    }
-  }
+  // Apply wraps in reverse order to avoid messing up offsets of subsequent nodes during DOM manipulation
+  nodesToWrap.reverse().forEach(({ node, start, end }) => {
+    const range = document.createRange();
+    range.setStart(node, start);
+    range.setEnd(node, end);
 
-  return -1;
+    const span = document.createElement('span');
+    span.className = 'msg-highlight';
+    span.style.backgroundColor = color;
+    span.style.borderRadius = '2px';
+    span.style.cursor = 'pointer';
+    span.dataset.highlightId = id;
+    
+    // Since we are wrapping a single text node (or part of it), surroundContents is 100% safe
+    try {
+      range.surroundContents(span);
+    } catch (e) {
+      console.warn('Failed to wrap node', e);
+    }
+  });
 };
 
-// --- COMPONENT ---
+// --- END UTILITY ---
 
 interface MessageBubbleProps {
   message: Message;
@@ -142,7 +220,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
     return () => window.removeEventListener('noteStyleChange', handleStyleChange);
   }, []);
 
-  // 1. Load Highlights on Mount
+  // 1. Load Highlights
   useEffect(() => {
     if (!isUser) {
       const loaded = highlightService.getHighlightsByMessage(chatId, message.id);
@@ -150,75 +228,63 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
     }
   }, [chatId, message.id, isUser]);
 
+  // 2. The Robust Rendering Effect
   const paintHighlights = useCallback(() => {
     if (!contentRef.current || isUser) return;
+    
     const root = contentRef.current;
-
+    
+    // Step A: Clean up existing highlights
+    // We must be careful not to merge text nodes across block boundaries during normalization
     const existing = root.querySelectorAll('.msg-highlight');
     existing.forEach(el => {
       const parent = el.parentNode;
       if (parent) {
-        while (el.firstChild) {
-          parent.insertBefore(el.firstChild, el);
-        }
+        while (el.firstChild) parent.insertBefore(el.firstChild, el);
         parent.removeChild(el);
       }
     });
+    
+    // Normalize is usually safe, but if CitationRenderer is fragile, 
+    // we rely on React to heal the DOM on next render if needed.
     root.normalize();
 
     if (highlights.length === 0) return;
 
-    const sortedHighlights = [...highlights].sort((a, b) => b.startOffset - a.startOffset);
+    // Step B: Sort highlights
+    const sortedHighlights = [...highlights].sort((a, b) => a.startOffset - b.startOffset);
 
+    // Step C: Apply Highlights using the Safe Wrapper
     sortedHighlights.forEach(h => {
-      const textNodes = getTextNodes(root);
-      const involvedNodes = textNodes.filter(n => 
-        n.end > h.startOffset && n.start < h.endOffset
-      );
-
-      involvedNodes.forEach(nodeInfo => {
-        try {
-          const relativeStart = Math.max(0, h.startOffset - nodeInfo.start);
-          const relativeEnd = Math.min(nodeInfo.length, h.endOffset - nodeInfo.start);
-          const currentLength = nodeInfo.node.textContent?.length || 0;
+      try {
+        const range = createRangeFromOffsets(root, h.startOffset, h.endOffset);
+        if (range) {
+          // Use the new safe highlighter that handles block boundaries
+          safeHighlightRange(range, h.color, h.id);
           
-          if (relativeStart >= currentLength || relativeEnd > currentLength || relativeStart >= relativeEnd) {
-            return;
-          }
-
-          const range = document.createRange();
-          range.setStart(nodeInfo.node, relativeStart);
-          range.setEnd(nodeInfo.node, relativeEnd);
-
-          const span = document.createElement('span');
-          span.className = 'msg-highlight';
-          span.style.backgroundColor = h.color;
-          span.style.borderRadius = '2px';
-          span.style.padding = '2px 0';
-          span.style.cursor = 'pointer';
-          span.dataset.highlightId = h.id;
-          
-          span.onclick = (e) => {
-            e.stopPropagation();
-            handleRemoveHighlight(h.id);
-          };
-
-          range.surroundContents(span);
-        } catch (e) {
-          console.warn("Skipped node segment:", e);
+          // Re-attach event listeners to the newly created spans
+          // (Since we created multiple spans per highlight, we query them by ID)
+          const spans = root.querySelectorAll(`.msg-highlight[data-highlight-id="${h.id}"]`);
+          spans.forEach((span) => {
+             (span as HTMLElement).onclick = (e) => {
+                e.stopPropagation();
+                handleRemoveHighlight(h.id);
+             };
+          });
         }
-      });
+      } catch (e) {
+        console.warn("Failed to apply highlight:", h.id, e);
+      }
     });
   }, [highlights, isUser]);
 
-  // 3. Trigger Painting
-  // We use useLayoutEffect to paint *immediately* after React renders, preventing flash of unhighlighted text
+  // Trigger painting on data change or citations loading
   useLayoutEffect(() => {
     paintHighlights();
-
-    // Observe changes (e.g., if CitationRenderer loads data asynchronously)
+    
     if (contentRef.current && !observerRef.current) {
       observerRef.current = new MutationObserver(() => {
+        // Debounce could be added here if CitationRenderer updates frequently
         paintHighlights();
       });
       observerRef.current.observe(contentRef.current, { 
@@ -234,7 +300,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
     };
   }, [paintHighlights, message.content]);
 
-  // 4. Handle Selection Creation
+  // 3. Handle Selection (Creation)
   const handleTextSelection = () => {
     if (isUser || !highlightMode || !contentRef.current) return;
     
@@ -245,21 +311,14 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
     const text = range.toString();
     if (!text.trim()) return;
 
-    // Calculate Global Offsets using our Robust Walker
-    // This is reliable even if you select from an H2 into a LI
     const startOffset = getGlobalOffset(contentRef.current, range.startContainer, range.startOffset);
     const endOffset = getGlobalOffset(contentRef.current, range.endContainer, range.endOffset);
 
-    // Validate offsets
-    if (startOffset === -1 || endOffset === -1) {
-        console.warn("Could not calculate global offset");
-        return;
-    }
+    if (startOffset === -1 || endOffset === -1) return;
 
     const finalStart = Math.min(startOffset, endOffset);
     const finalEnd = Math.max(startOffset, endOffset);
 
-    // Context for fuzzy matching/verification later
     const fullText = contentRef.current.textContent || "";
     const prefix = fullText.substring(Math.max(0, finalStart - 30), finalStart);
     const suffix = fullText.substring(finalEnd, Math.min(fullText.length, finalEnd + 30));
@@ -478,7 +537,6 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
               className="whitespace-pre-wrap font-normal message-content" 
               data-highlightable="true"
               onMouseUp={handleTextSelection}
-              // suppressHydrationWarning is crucial here because we manually edit the DOM
               suppressHydrationWarning
               onContextMenu={(e) => {
                 e.preventDefault();
@@ -540,7 +598,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
                 </div>
               )}
               
-              {/* Bottom Row */}
+              {/* Bottom Row - Stats and Actions */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4 text-xs text-[#666666] dark:text-[#a0a0a0]">
                   {/* Token Usage */}
