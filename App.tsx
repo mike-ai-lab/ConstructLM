@@ -37,6 +37,7 @@ import AppHeader from './App/components/AppHeader';
 import { FloatingInput } from './App/components/FloatingInput';
 import ContextWarningModal from './components/ContextWarningModal';
 import DrawingToolbar from './components/DrawingToolbar';
+import GitHubBrowser from './components/GitHubBrowser';
 import { Note, Todo, Reminder, Source } from './types';
 
 const App: React.FC = () => {
@@ -50,7 +51,7 @@ const App: React.FC = () => {
 
   const [notes, setNotes] = React.useState<Note[]>([]);
   const [noteCounter, setNoteCounter] = React.useState(1);
-  const [activeTab, setActiveTab] = React.useState<'chat' | 'notebook' | 'todos'>('chat');
+  const [activeTab, setActiveTab] = React.useState<'chat' | 'notebook' | 'todos' | 'github'>('chat');
   const [todos, setTodos] = React.useState<Todo[]>([]);
   const [reminders, setReminders] = React.useState<Reminder[]>([]);
   const [sources, setSources] = React.useState<Source[]>([]);
@@ -64,6 +65,7 @@ const App: React.FC = () => {
   const [webViewerUrl, setWebViewerUrl] = React.useState<string | null>(null);
   const [showDrawingToolbar, setShowDrawingToolbar] = React.useState(false);
   const [drawingToolbarPos, setDrawingToolbarPos] = React.useState({ x: 0, y: 0 });
+  const [githubRepoUrl, setGithubRepoUrl] = React.useState('');
 
   React.useEffect(() => {
     // Initialize activity logger
@@ -388,7 +390,39 @@ const App: React.FC = () => {
     }
   };
 
+  const handleOpenGitHubTab = (url?: string) => {
+    if (url) setGithubRepoUrl(url);
+    setActiveTab('github');
+    if (layoutState.isViewerOpen) {
+      layoutState.setViewState(null);
+      setWebViewerUrl(null);
+    }
+  };
+
+  const handleImportGitHubFiles = async (files: { name: string; content: string; path: string }[]) => {
+    for (const file of files) {
+      const blob = new Blob([file.content], { type: 'text/plain' });
+      const fileObj = new File([blob], file.name, { type: 'text/plain' });
+      await fileHandlers.handleFileUpload([fileObj]);
+    }
+  };
+
   const handleAddSource = async (url: string) => {
+    // Check if it's a GitHub URL and offer to browse
+    if (url.includes('github.com')) {
+      const shouldBrowse = confirm(
+        'GitHub URL detected!\n\n' +
+        'Would you like to:\n' +
+        '• Click OK to browse the repository and select files\n' +
+        '• Click Cancel to add as a web source (basic fetch)'
+      );
+      
+      if (shouldBrowse) {
+        handleOpenGitHubTab(url);
+        return;
+      }
+    }
+    
     const newSource: Source = { id: Date.now().toString(), url, status: 'pending', timestamp: Date.now(), chatId: chatState.currentChatId, selected: true };
     const updated = [newSource, ...sources];
     setSources(updated);
@@ -969,6 +1003,7 @@ const App: React.FC = () => {
             setWebViewerUrl(null);
           }}
           onOpenLogs={() => setIsLogsOpen(true)}
+          onOpenGitHub={() => handleOpenGitHubTab()}
         />
         )}
 
@@ -1041,6 +1076,14 @@ const App: React.FC = () => {
               onDeleteTodo={handleDeleteTodo}
               onUpdateTodo={handleUpdateTodo}
               onDeleteSubtask={handleDeleteSubtask}
+            />
+          </div>
+        ) : activeTab === 'github' ? (
+          <div className="flex-1 overflow-hidden">
+            <GitHubBrowser
+              initialUrl={githubRepoUrl}
+              onClose={() => setActiveTab('chat')}
+              onImportFiles={handleImportGitHubFiles}
             />
           </div>
         ) : (

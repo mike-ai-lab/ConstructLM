@@ -190,6 +190,63 @@ class ActivityLogger {
     this.logAction('CONTEXT', 'Context processing', { totalTokens, filesUsed, chunksCount });
   }
 
+  public logContextSelectionStart(query: string, filesCount: number, modelId: string): void {
+    this.logAction('🔍 CONTEXT_START', `Query: "${query.substring(0, 50)}${query.length > 50 ? '...' : ''}"`, { 
+      filesCount, 
+      modelId,
+      timestamp: new Date().toLocaleTimeString()
+    });
+  }
+
+  public logRetrievalMethodUsed(method: 'hybrid_semantic' | 'keyword_fallback' | 'failed', reason?: string, embeddingStatus?: string): void {
+    const methodEmoji = method === 'hybrid_semantic' ? '🧠' : method === 'keyword_fallback' ? '🔤' : '❌';
+    this.logAction(`${methodEmoji} RETRIEVAL_METHOD`, `Using: ${method.toUpperCase()}`, { 
+      reason: reason || 'primary_choice',
+      embeddingStatus: embeddingStatus || 'unknown'
+    });
+  }
+
+  public logSectionsSelected(totalSections: number, selectedSections: number, originalTokens: number, finalTokens: number, filesInvolved: string[]): void {
+    const reductionPercent = originalTokens > 0 ? Math.round(((originalTokens - finalTokens) / originalTokens) * 100) : 0;
+    const efficiencyEmoji = reductionPercent > 80 ? '🎯' : reductionPercent > 50 ? '⚡' : '⚠️';
+    this.logAction(`${efficiencyEmoji} SECTIONS_RESULT`, `Selected ${selectedSections}/${totalSections} sections`, {
+      originalTokens,
+      finalTokens,
+      reduction: `${reductionPercent}%`,
+      files: filesInvolved.join(', ')
+    });
+  }
+
+  public logTokenEfficiency(originalTokens: number, actualTokens: number, costSavingsEstimate?: string): void {
+    const reductionPercent = originalTokens > 0 ? Math.round(((originalTokens - actualTokens) / originalTokens) * 100) : 0;
+    const costEmoji = reductionPercent > 80 ? '💰' : reductionPercent > 50 ? '💸' : '🔥';
+    this.logAction(`${costEmoji} TOKEN_SAVINGS`, `${reductionPercent}% reduction (${originalTokens} → ${actualTokens})`, {
+      costSavingsEstimate: costSavingsEstimate || 'calculated_automatically'
+    });
+  }
+
+  public logSectionDetails(sections: Array<{title: string, sourceFile: string, pageNumber: number, tokens: number, score: number, method: string}>): void {
+    const topSections = sections.slice(0, 3).map((s, idx) => `${idx + 1}. "${s.title.substring(0, 30)}..." (${s.tokens} tokens, score: ${Math.round(s.score * 100)/100})`);
+    this.logAction('📋 TOP_SECTIONS', `Best matches: ${topSections.join(' | ')}`, {
+      totalSections: sections.length
+    });
+  }
+
+  // Add session control methods
+  public startNewSession(sessionName?: string): void {
+    const sessionId = sessionName || `session_${Date.now()}`;
+    this.logAction('🆕 NEW_SESSION', `=== STARTING NEW LOG SESSION: ${sessionId} ===`, {
+      sessionId,
+      startTime: new Date().toISOString()
+    });
+  }
+
+  public logSessionMarker(marker: string): void {
+    this.logAction('📍 MARKER', `=== ${marker.toUpperCase()} ===`, {
+      timestamp: new Date().toLocaleTimeString()
+    });
+  }
+
   public logSemanticSearch(query: string, resultsCount: number, filesSearched?: number, matchedFiles?: string[]): void {
     this.logAction('SEARCH', 'Semantic search executed', { 
       queryLength: query.length, 

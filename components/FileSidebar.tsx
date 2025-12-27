@@ -1,7 +1,7 @@
 import React, { useRef, useState, useMemo, useEffect } from 'react'; 
 import { ProcessedFile } from '../types';
 import { ChatMetadata } from '../services/chatRegistry';
-import { FileText, FileSpreadsheet, File as FileIcon, X, Loader2, FolderOpen, Plus, ChevronRight, ChevronDown, Folder, Image, MessageCircle, Files, BookOpen, Minus, Network, List, GitBranch, History } from 'lucide-react';
+import { FileText, FileSpreadsheet, File as FileIcon, X, Loader2, FolderOpen, Plus, ChevronRight, ChevronDown, Folder, Image, MessageCircle, Files, BookOpen, Minus, Network, List, GitBranch, History, Download } from 'lucide-react';
 import ChatHistory from './ChatHistory';
 import DocumentViewer from './DocumentViewer';
 import LogsModal from './LogsModal';
@@ -133,6 +133,19 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
     }
   };
 
+  const handleDownload = (file: ProcessedFile) => {
+    if (!file.fileHandle) return;
+    
+    const url = URL.createObjectURL(file.fileHandle as File);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = file.name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const renderTree = (nodes: Record<string, TreeNode>, depth = 0) => {
       return Object.values(nodes)
         .sort((a, b) => {
@@ -233,6 +246,15 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
                     >
                         <BookOpen size={11} />
                     </button>
+                    {file.fileHandle && (
+                      <button
+                          onClick={(e) => { e.stopPropagation(); handleDownload(file); }}
+                          className="opacity-0 group-hover:opacity-100 p-0.5 text-[#a0a0a0] hover:text-green-500 rounded transition-all flex-shrink-0"
+                          title="Download file"
+                      >
+                          <Download size={11} />
+                      </button>
+                    )}
                     {onGenerateMindMap && (
                       <button
                           onClick={(e) => { e.stopPropagation(); onGenerateMindMap(file.id); }}
@@ -475,6 +497,15 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
                           >
                               <BookOpen size={12} />
                           </button>
+                          {file.fileHandle && (
+                            <button
+                                onClick={(e) => { e.stopPropagation(); handleDownload(file); }}
+                                className="opacity-0 group-hover:opacity-100 p-0.5 text-[#a0a0a0] hover:text-green-500 rounded transition-all flex-shrink-0"
+                                title="Download file"
+                            >
+                                <Download size={12} />
+                            </button>
+                          )}
                           {onGenerateMindMap && (
                             <button
                                 onClick={(e) => { e.stopPropagation(); onGenerateMindMap(file.id); }}

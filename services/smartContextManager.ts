@@ -19,8 +19,9 @@ const MODEL_LIMITS: Record<string, number> = {
   'gemini-2.0-flash-exp': 1000000,
   'gemini-1.5-pro': 2000000,
   'gemini-1.5-flash': 1000000,
-  'llama-3.3-70b-versatile': 8000,
-  'llama-3.1-8b-instant': 4000,
+  'gemini-flash-latest': 1000000,
+  'llama-3.3-70b-versatile': 1000,
+  'llama-3.1-8b-instant': 1500,
 };
 
 export async function selectRelevantContext(
@@ -29,7 +30,7 @@ export async function selectRelevantContext(
   modelId: string
 ): Promise<ContextSelection> {
   const modelLimit = MODEL_LIMITS[modelId] || 32000;
-  const maxTokenBudget = Math.floor(modelLimit * 0.4); // Use 40% for context
+  const maxTokenBudget = Math.floor(modelLimit * 0.1); // Use only 10% for very strict selection
   
   const allSections: any[] = [];
   

@@ -26,11 +26,21 @@ class EmbeddingService {
     this.isLoading = true;
     this.loadPromise = (async () => {
       try {
-        const { pipeline } = await import('@xenova/transformers');
-        this.pipeline = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
-        console.log('Embedding model loaded successfully');
+        // Set custom cache directory and model source
+        const { pipeline, env } = await import('@xenova/transformers');
+        
+        // Use HuggingFace Hub directly with fallback
+        env.allowRemoteModels = true;
+        env.allowLocalModels = true;
+        
+        console.log('[EMBEDDING] Attempting to load model from HuggingFace...');
+        this.pipeline = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2', {
+          revision: 'main',
+          cache_dir: './.cache/transformers'
+        });
+        console.log('[EMBEDDING] Model loaded successfully');
       } catch (error) {
-        console.error('Failed to load embedding model:', error);
+        console.error('[EMBEDDING] Failed to load model:', error);
         throw error;
       } finally {
         this.isLoading = false;

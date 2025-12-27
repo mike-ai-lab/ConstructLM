@@ -43,7 +43,12 @@ A powerful AI-powered document analysis and chat application with multi-model su
 
 ### 🌐 Web Integration
 - **Tabbed Web Viewer**: Browse websites within the app with cookie persistence
-- **GitHub Integration**: Fetch and analyze code repositories directly
+- **GitHub Integration**: Browse and import code from any public GitHub repository
+  - Repository browser with folder navigation
+  - Multi-file selection and batch import
+  - Branch switching and code search
+  - Smart import of README and config files
+  - AI-powered code analysis and documentation
 - **CORS Proxy**: Automatic proxy rotation for accessing web content
 - **Live Sessions**: Real-time collaborative features (Electron only)
 

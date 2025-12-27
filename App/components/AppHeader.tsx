@@ -1,5 +1,5 @@
 import React from 'react';
-import { PanelLeft, PanelLeftOpen, Cpu, ChevronDown, Phone, Plus, Edit3, Trash2, Check, Minus, Camera, Image, Moon, Sun, HelpCircle, Settings, BookMarked, CheckSquare, Bell, MessageSquare, FileText } from 'lucide-react';
+import { PanelLeft, PanelLeftOpen, Cpu, ChevronDown, Phone, Plus, Edit3, Trash2, Check, Minus, Camera, Image, Moon, Sun, HelpCircle, Settings, BookMarked, CheckSquare, Bell, MessageSquare, FileText, Github } from 'lucide-react';
 import { MODEL_REGISTRY } from '../../services/modelRegistry';
 import { DRAWING_COLORS } from '../../services/drawingService';
 import GraphicsLibrary from '../../components/GraphicsLibrary';
@@ -47,13 +47,14 @@ interface AppHeaderProps {
   handleOpenMindMapFromLibrary: (fileId: string, modelId: string, data: any, fileName: string) => void;
   notesCount?: number;
   onOpenNotebook?: () => void;
-  activeTab?: 'chat' | 'notebook' | 'todos';
-  onTabChange?: (tab: 'chat' | 'notebook' | 'todos') => void;
+  activeTab?: 'chat' | 'notebook' | 'todos' | 'github';
+  onTabChange?: (tab: 'chat' | 'notebook' | 'todos' | 'github') => void;
   todosCount?: number;
   remindersCount?: number;
   isViewerOpen?: boolean;
   onCloseViewer?: () => void;
   onOpenLogs?: () => void;
+  onOpenGitHub?: () => void;
 }
 
 const AppHeader: React.FC<AppHeaderProps> = (props) => {
@@ -153,9 +154,8 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
             <span className="absolute -top-1 -right-1 bg-green-600 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">{props.todosCount > 99 ? '99+' : props.todosCount}</span>
           )}
         </button>
-        <button disabled className={`w-8 h-8 rounded-full flex items-center justify-center transition-all relative opacity-50 text-[#666666] dark:text-[#a0a0a0] group`} title="Coming Soon!" style={{ cursor: 'default' }}>
-          <Bell size={14} />
-          <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[8px] bg-gradient-to-r from-orange-500 to-pink-500 text-white px-2 py-0.5 rounded-full whitespace-nowrap font-bold shadow-lg opacity-0 group-hover:opacity-100 transition-opacity">Coming Soon!</span>
+        <button onClick={() => { props.onTabChange?.('github'); if (props.isViewerOpen) props.onCloseViewer?.(); }} className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${props.activeTab === 'github' ? 'bg-purple-600 text-white' : 'text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[#222222]'}`} title="GitHub Browser">
+          <Github size={14} />
         </button>
       </div>
 

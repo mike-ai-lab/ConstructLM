@@ -36,7 +36,9 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false,
-      webviewTag: true  // Enable webview tag for proper cookie handling
+      webviewTag: true,  // Enable webview tag for proper cookie handling
+      webSecurity: false, // Required for @xenova/transformers
+      allowRunningInsecureContent: true // Required for local model loading
     },
     backgroundColor: '#1a1a1a',
     show: false
@@ -81,10 +83,12 @@ app.whenReady().then(() => {
   // Initialize logs directory first
   initializeLogsDirectory();
   
-  // CRITICAL: Enable audio features
+  // CRITICAL: Enable audio features + transformers support
   app.commandLine.appendSwitch('enable-features', 'WebRTCPipeWireCapturer');
   app.commandLine.appendSwitch('enable-usermedia-screen-capturing');
   app.commandLine.appendSwitch('auto-select-desktop-capture-source', 'Entire screen');
+  app.commandLine.appendSwitch('disable-web-security'); // Required for transformers
+  app.commandLine.appendSwitch('allow-running-insecure-content'); // Required for local models
   
   // Disable sandbox for audio to work properly in dev mode
   app.commandLine.appendSwitch('no-sandbox');

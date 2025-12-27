@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, Trash2, ExternalLink, CheckCircle, XCircle, Loader, ChevronDown, ChevronUp, FileText } from 'lucide-react';
+import { Link, Trash2, ExternalLink, CheckCircle, XCircle, Loader, ChevronDown, ChevronUp, FileText, Download } from 'lucide-react';
 import { Source } from '../types';
 
 interface SourcesProps {
@@ -18,6 +18,20 @@ const Sources: React.FC<SourcesProps> = ({ sources, onAddSource, onDeleteSource,
       onAddSource(newUrl.trim());
       setNewUrl('');
     }
+  };
+
+  const handleDownload = (source: Source) => {
+    if (!source.content) return;
+    
+    const blob = new Blob([source.content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${source.title || 'source'}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -109,13 +123,22 @@ const Sources: React.FC<SourcesProps> = ({ sources, onAddSource, onDeleteSource,
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
                   {source.status === 'fetched' && source.content && (
-                    <button
-                      onClick={() => setExpandedId(expandedId === source.id ? null : source.id)}
-                      className="p-1.5 text-[#a0a0a0] hover:text-[#1a1a1a] dark:hover:text-white hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] rounded transition-colors"
-                      title="View extracted content"
-                    >
-                      {expandedId === source.id ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                    </button>
+                    <>
+                      <button
+                        onClick={() => handleDownload(source)}
+                        className="p-1.5 text-[#a0a0a0] hover:text-[#1a1a1a] dark:hover:text-white hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] rounded transition-colors"
+                        title="Download source content"
+                      >
+                        <Download size={14} />
+                      </button>
+                      <button
+                        onClick={() => setExpandedId(expandedId === source.id ? null : source.id)}
+                        className="p-1.5 text-[#a0a0a0] hover:text-[#1a1a1a] dark:hover:text-white hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] rounded transition-colors"
+                        title="View extracted content"
+                      >
+                        {expandedId === source.id ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                      </button>
+                    </>
                   )}
                   <button
                     onClick={() => onDeleteSource(source.id)}

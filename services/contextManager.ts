@@ -4,6 +4,7 @@ import { estimateTokens } from './embeddingUtils';
 import { ProcessedFile } from '../types';
 import { MODEL_REGISTRY } from './modelRegistry';
 import { selectRelevantContext, buildContextString as buildSmartContext } from './smartContextManager';
+import { selectHybridContext, buildHybridContextString } from './hybridContextManager';
 import { activityLogger } from './activityLogger';
 import { diagnosticLogger } from './diagnosticLogger';
 
@@ -24,12 +25,62 @@ class ContextManager {
       return { chunks: [], totalTokens: 0, filesUsed: [] };
     }
 
-    // Try smart section-based selection first
+    // Try hybrid semantic + section-based selection first
     try {
       const fileIds = selectedFiles.map(f => f.id);
-      const smartSelection = await selectRelevantContext(query, fileIds, modelId);
+      const hybridSelection = await selectHybridContext(query, fileIds, modelId);
       
       // Convert to ContextResult format
+      const chunks: ChunkRecord[] = hybridSelection.sections.map((section, idx) => ({
+        id: `${section.fileId}_section_${idx}`,
+        fileId: section.fileId,
+        chunkIndex: idx,
+        content: `[${section.sectionTitle}] (Page ${section.pageNumber})\n${section.content}`,
+        embedding: [],
+        tokens: Math.ceil(section.content.length / 4)
+      }));
+      
+      return {
+        chunks,
+        totalTokens: hybridSelection.totalTokens,
+        filesUsed: hybridSelection.filesUsed,
+        warning: hybridSelection.warning
+      };
+    } catch (error) {
+      console.warn('Hybrid context selection failed, falling back to keyword-based:', error);
+      
+      // LOG: Retrieval method - fallback
+      activityLogger.logRetrievalMethodUsed('keyword_fallback', 'hybrid_method_failed', 'fallback_triggered');
+      
+      // Fallback to keyword-based selection
+      const model = MODEL_REGISTRY.find(m => m.id === modelId);
+      const contextWindow = model?.contextWindow || 32000;
+      
+      const groqLimits: Record<string, number> = {
+        'llama-3.3-70b-versatile': 1000,
+        'llama-3.1-8b-instant': 1500,
+        'qwen/qwen3-32b': 2000,
+        'openai/gpt-oss-120b': 3000,
+        'meta-llama/llama-4-scout-17b-16e-instruct': 2000,
+        'meta-llama/llama-4-maverick-17b-128e-instruct': 2000,
+        'openai/gpt-oss-safeguard-20b': 3000,
+        'openai/gpt-oss-20b': 3000
+      };
+      
+      const maxTokens = model?.provider === 'groq' && groqLimits[modelId]
+        ? groqLimits[modelId]
+        : contextWindow - 4000;
+
+      return await this.keywordBasedSelection(query, selectedFiles, maxTokens);
+    }
+  }
+
+  private async keywordBasedSelection(query: string, files: ProcessedFile[], maxTokens: number): Promise<ContextResult> {
+    // Use section-based fallback, or chunk-based if no sections
+    try {
+      const fileIds = files.map(f => f.id);
+      const smartSelection = await selectRelevantContext(query, fileIds, 'fallback');
+      
       const chunks: ChunkRecord[] = smartSelection.sections.map((section, idx) => ({
         id: `${section.fileId}_section_${idx}`,
         fileId: section.fileId,
@@ -46,105 +97,53 @@ class ContextManager {
         warning: smartSelection.warning
       };
     } catch (error) {
-      console.warn('Smart context selection failed, falling back to keyword-based:', error);
+      console.error('Section-based fallback failed, using emergency chunking:', error);
       
-      // Fallback to keyword-based selection
-      const model = MODEL_REGISTRY.find(m => m.id === modelId);
-      const contextWindow = model?.contextWindow || 32000;
+      // Emergency: chunk files that have no sections
+      const chunks: ChunkRecord[] = [];
+      let totalTokens = 0;
+      const filesUsed = new Set<string>();
       
-      const groqLimits: Record<string, number> = {
-        'llama-3.3-70b-versatile': 8000,
-        'llama-3.1-8b-instant': 4000,
-        'qwen/qwen3-32b': 4000,
-        'openai/gpt-oss-120b': 5000,
-        'meta-llama/llama-4-scout-17b-16e-instruct': 4000,
-        'meta-llama/llama-4-maverick-17b-128e-instruct': 4000,
-        'openai/gpt-oss-safeguard-20b': 5000,
-        'openai/gpt-oss-20b': 5000
-      };
-      
-      const maxTokens = model?.provider === 'groq' && groqLimits[modelId]
-        ? groqLimits[modelId]
-        : contextWindow - 4000;
-
-      return this.keywordBasedSelection(query, selectedFiles, maxTokens);
-    }
-  }
-
-  private keywordBasedSelection(query: string, files: ProcessedFile[], maxTokens: number): ContextResult {
-    console.log('[ContextManager] Query:', query);
-    console.log('[ContextManager] Files:', files.length, 'Max tokens:', maxTokens);
-    
-    const queryWords = query.toLowerCase().split(/\s+/).filter(w => w.length > 2);
-    console.log('[ContextManager] Query words:', queryWords);
-    
-    const chunks: ChunkRecord[] = [];
-    let totalTokens = 0;
-    const filesUsed = new Set<string>();
-    const maxPerFile = 5000;
-
-    const scoredFiles = files.map(file => {
-      const content = file.content.toLowerCase();
-      const score = queryWords.reduce((sum, word) => {
-        const matches = (content.match(new RegExp(word, 'g')) || []).length;
-        return sum + matches;
-      }, 0);
-      return { file, score };
-    }).sort((a, b) => b.score - a.score);
-    
-    console.log('[ContextManager] Scored files:', scoredFiles.map(f => ({ name: f.file.name, score: f.score })));
-
-    const filesToUse = scoredFiles.length > 0 ? scoredFiles.filter(f => f.score > 0) : scoredFiles;
-
-    for (const { file } of filesToUse) {
-      const fileTokens = Math.min(estimateTokens(file.content), maxPerFile);
-      if (totalTokens + fileTokens > maxTokens) break;
-      
-      const excerpts: string[] = [];
-      for (const word of queryWords) {
-        const regex = new RegExp(`.{0,500}${word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}.{0,500}`, 'gi');
-        const matches = file.content.match(regex);
-        if (matches) excerpts.push(...matches.slice(0, 5));
+      for (const file of files) {
+        if (totalTokens >= maxTokens) break;
+        
+        // Find relevant excerpts only
+        const queryWords = query.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+        const excerpts: string[] = [];
+        
+        for (const word of queryWords) {
+          const regex = new RegExp(`.{0,300}${word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}.{0,300}`, 'gi');
+          const matches = file.content.match(regex);
+          if (matches) excerpts.push(...matches.slice(0, 3));
+        }
+        
+        const content = excerpts.length > 0 
+          ? excerpts.join('\n...\n')
+          : file.content.slice(0, Math.min(2000, maxTokens * 4)); // Max 2000 chars
+        
+        const tokens = Math.ceil(content.length / 4);
+        if (totalTokens + tokens > maxTokens) break;
+        
+        chunks.push({
+          id: `${file.id}_emergency_chunk`,
+          fileId: file.id,
+          chunkIndex: 0,
+          content,
+          embedding: [],
+          tokens
+        });
+        
+        totalTokens += tokens;
+        filesUsed.add(file.id);
       }
       
-      const content = excerpts.length > 0 ? excerpts.join('\n...\n') : file.content.slice(0, 20000);
-      const tokens = estimateTokens(content);
-      
-      console.log('[ContextManager] File:', file.name, 'Excerpts:', excerpts.length, 'Tokens:', tokens);
-      
-      chunks.push({
-        id: `${file.id}_excerpts`,
-        fileId: file.id,
-        chunkIndex: 0,
-        content,
-        embedding: [],
-        tokens
-      });
-      
-      totalTokens += tokens;
-      filesUsed.add(file.id);
+      return {
+        chunks,
+        totalTokens,
+        filesUsed: Array.from(filesUsed),
+        warning: 'Using emergency text extraction due to system limitations'
+      };
     }
-    
-    console.log('[ContextManager] Result - Total tokens:', totalTokens, 'Files used:', filesUsed.size);
-
-    const fileNames = Array.from(filesUsed).map(id => files.find(f => f.id === id)?.name).filter(Boolean);
-    activityLogger.logSemanticSearch(query, filesUsed.size, files.length, fileNames as string[]);
-
-    const warning = totalTokens > 50000
-      ? `Large context: ~${Math.round(totalTokens / 1000)}k tokens. Response may be slower.`
-      : undefined;
-
-    return {
-      chunks,
-      totalTokens,
-      filesUsed: Array.from(filesUsed),
-      warning
-    };
-  }
-
-  private fallbackSelection(files: ProcessedFile[], maxTokens: number): ContextResult {
-    // Deprecated - using keyword-based selection instead
-    return this.keywordBasedSelection('', files, maxTokens);
   }
 
   buildContextString(chunks: ChunkRecord[], files: ProcessedFile[]): string {
