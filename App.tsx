@@ -35,6 +35,7 @@ import LogsModal from './components/LogsModal';
 import AppHeader from './App/components/AppHeader';
 import { FloatingInput } from './App/components/FloatingInput';
 import ContextWarningModal from './components/ContextWarningModal';
+import DrawingToolbar from './components/DrawingToolbar';
 import { Note, Todo, Reminder, Source } from './types';
 
 const App: React.FC = () => {
@@ -60,6 +61,8 @@ const App: React.FC = () => {
   const [embeddingProgress, setEmbeddingProgress] = React.useState<{ fileId: string; fileName: string; current: number; total: number } | null>(null);
   const [isLogsOpen, setIsLogsOpen] = React.useState(false);
   const [webViewerUrl, setWebViewerUrl] = React.useState<string | null>(null);
+  const [showDrawingToolbar, setShowDrawingToolbar] = React.useState(false);
+  const [drawingToolbarPos, setDrawingToolbarPos] = React.useState({ x: 0, y: 0 });
 
   React.useEffect(() => {
     // Initialize activity logger
@@ -712,6 +715,12 @@ const App: React.FC = () => {
   const isElectron = typeof window !== 'undefined' && !!(window as any).electron;
   const handleCloseLiveSession = useCallback(() => featureState.setIsLiveMode(false), []);
   
+  const enableDrawingMode = (x: number, y: number) => {
+    setShowDrawingToolbar(true);
+    setDrawingToolbarPos({ x, y });
+    featureHandlers.handleDrawingToolChange('pen');
+  };
+  
   // Use Electron webview for better cookie handling
   const WebViewerComponent = isElectron ? TabbedWebViewerElectron : TabbedWebViewer;
 
@@ -838,6 +847,22 @@ const App: React.FC = () => {
         </div>
       )}
       
+      <DrawingToolbar
+        isOpen={showDrawingToolbar}
+        position={drawingToolbarPos}
+        currentTool={featureState.drawingState.tool}
+        currentColor={featureHandlers.currentColor}
+        strokeWidth={featureState.drawingState.strokeWidth}
+        onToolChange={featureHandlers.handleDrawingToolChange}
+        onColorChange={featureHandlers.handleColorChange}
+        onStrokeWidthChange={featureHandlers.handleStrokeWidthChange}
+        onClearAll={featureHandlers.handleClearAll}
+        onClose={() => {
+          setShowDrawingToolbar(false);
+          featureHandlers.handleDrawingToolChange('none');
+        }}
+      />
+      
       {layoutState.isMobile && !layoutState.isSidebarOpen && (
         <button 
           onClick={() => layoutState.setIsSidebarOpen(true)}
@@ -883,7 +908,8 @@ const App: React.FC = () => {
 
       {/* MIDDLE CHAT AREA */}
       <div className="flex-1 flex flex-col h-full relative bg-white dark:bg-[#1a1a1a] transition-all duration-300" style={{ minWidth: MIN_CHAT_WIDTH }}>
-        <AppHeader
+        {!featureState.isHelpOpen && (
+          <AppHeader
           isMobile={layoutState.isMobile}
           isSidebarOpen={layoutState.isSidebarOpen}
           setIsSidebarOpen={layoutState.setIsSidebarOpen}
@@ -936,6 +962,7 @@ const App: React.FC = () => {
           }}
           onOpenLogs={() => setIsLogsOpen(true)}
         />
+        )}
 
         {activeTab === 'chat' ? (
           <div ref={layoutState.messagesContainerRef} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 scroll-smooth bg-white dark:bg-[#1a1a1a]" style={{ marginTop: featureState.drawingState.isActive && featureState.drawingState.tool !== 'none' ? '48px' : '0' }}>
@@ -991,6 +1018,7 @@ const App: React.FC = () => {
                       setWebViewerUrl(url);
                     }
                   }}
+                  onEnableDrawing={enableDrawingMode}
                 />
               ))}
               <div ref={layoutState.messagesEndRef} className="snapshot-ignore" />

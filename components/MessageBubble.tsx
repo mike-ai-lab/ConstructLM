@@ -91,6 +91,7 @@ interface MessageBubbleProps {
   onSwitchOutput?: (messageId: string, index: number) => void;
   onOpenWebViewer?: (url: string) => void;
   onOpenWebViewerNewTab?: (url: string) => void;
+  onEnableDrawing?: (x: number, y: number) => void;
 }
 
 const HIGHLIGHT_COLORS = [
@@ -116,7 +117,8 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   currentOutputIndex = 0,
   onSwitchOutput,
   onOpenWebViewer,
-  onOpenWebViewerNewTab
+  onOpenWebViewerNewTab,
+  onEnableDrawing
 }) => {
   const isUser = message.role === 'user';
   const [isPlaying, setIsPlaying] = useState(false);
@@ -128,19 +130,28 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   const [highlightMode, setHighlightMode] = useState(false);
   const [selectedColor, setSelectedColor] = useState(HIGHLIGHT_COLORS[0]);
   const [undoStack, setUndoStack] = useState<string[]>([]);
-  const [redoStack, setRedoStack] = useState<string[]>([]);
+  const [redoStack, setRedoStack] = useState<Highlight[]>([]);
+  const [toolbarPosition, setToolbarPosition] = useState({ x: 0, y: 0 });
+  const [isDraggingToolbar, setIsDraggingToolbar] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
   // Refs
   const audioContextRef = useRef<AudioContext | null>(null);
   const sourceRef = useRef<AudioBufferSourceNode | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const observerRef = useRef<MutationObserver | null>(null);
+  const highlightModeRef = useRef(highlightMode);
 
   useEffect(() => {
     const handleStyleChange = () => setNoteStyle(localStorage.getItem('noteStyle') || 'border');
     window.addEventListener('noteStyleChange', handleStyleChange);
     return () => window.removeEventListener('noteStyleChange', handleStyleChange);
   }, []);
+
+  // Keep ref in sync
+  useEffect(() => {
+    highlightModeRef.current = highlightMode;
+  }, [highlightMode]);
 
   // 1. Load Highlights on Mount
   useEffect(() => {
@@ -195,12 +206,13 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
           span.style.backgroundColor = h.color;
           span.style.borderRadius = '2px';
           span.style.padding = '2px 0';
-          span.style.cursor = 'pointer';
           span.dataset.highlightId = h.id;
           
           span.onclick = (e) => {
-            e.stopPropagation();
-            handleRemoveHighlight(h.id);
+            if (highlightModeRef.current) {
+              e.stopPropagation();
+              handleRemoveHighlight(h.id);
+            }
           };
 
           range.surroundContents(span);
@@ -232,7 +244,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
       if (observerRef.current) observerRef.current.disconnect();
       observerRef.current = null;
     };
-  }, [paintHighlights, message.content]);
+  }, [paintHighlights, message.content, highlightMode]);
 
   // 4. Handle Selection Creation
   const handleTextSelection = () => {
@@ -245,12 +257,9 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
     const text = range.toString();
     if (!text.trim()) return;
 
-    // Calculate Global Offsets using our Robust Walker
-    // This is reliable even if you select from an H2 into a LI
     const startOffset = getGlobalOffset(contentRef.current, range.startContainer, range.startOffset);
     const endOffset = getGlobalOffset(contentRef.current, range.endContainer, range.endOffset);
 
-    // Validate offsets
     if (startOffset === -1 || endOffset === -1) {
         console.warn("Could not calculate global offset");
         return;
@@ -259,7 +268,6 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
     const finalStart = Math.min(startOffset, endOffset);
     const finalEnd = Math.max(startOffset, endOffset);
 
-    // Context for fuzzy matching/verification later
     const fullText = contentRef.current.textContent || "";
     const prefix = fullText.substring(Math.max(0, finalStart - 30), finalStart);
     const suffix = fullText.substring(finalEnd, Math.min(fullText.length, finalEnd + 30));
@@ -292,29 +300,67 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   const handleUndo = () => {
     if (undoStack.length === 0) return;
     const lastId = undoStack[undoStack.length - 1];
-    highlightService.deleteHighlight(lastId);
-    setHighlights(prev => prev.filter(h => h.id !== lastId));
-    setUndoStack(prev => prev.slice(0, -1));
-    setRedoStack(prev => [...prev, lastId]);
+    const highlight = highlights.find(h => h.id === lastId);
+    if (highlight) {
+      highlightService.deleteHighlight(lastId);
+      setHighlights(prev => prev.filter(h => h.id !== lastId));
+      setUndoStack(prev => prev.slice(0, -1));
+      setRedoStack(prev => [...prev, highlight]);
+    }
   };
 
   const handleRedo = () => {
     if (redoStack.length === 0) return;
-    const lastId = redoStack[redoStack.length - 1];
-    const allHighlights = highlightService.getHighlightsByMessage(chatId, message.id);
-    const highlight = allHighlights.find(h => h.id === lastId);
-    if (highlight) {
-      setHighlights(prev => [...prev, highlight]);
-      setUndoStack(prev => [...prev, lastId]);
-      setRedoStack(prev => prev.slice(0, -1));
-    }
+    const highlight = redoStack[redoStack.length - 1];
+    highlightService.saveHighlight(highlight);
+    setHighlights(prev => [...prev, highlight]);
+    setUndoStack(prev => [...prev, highlight.id]);
+    setRedoStack(prev => prev.slice(0, -1));
   };
 
   const handleRemoveHighlight = (id: string) => {
     highlightService.deleteHighlight(id);
     setHighlights(prev => prev.filter(h => h.id !== id));
-    setUndoStack(prev => [...prev, id]);
   };
+
+  const handleClearAllHighlights = () => {
+    highlights.forEach(h => highlightService.deleteHighlight(h.id));
+    setHighlights([]);
+    setUndoStack([]);
+    setRedoStack([]);
+  };
+
+  const enableHighlightMode = (x: number, y: number) => {
+    setHighlightMode(true);
+    setToolbarPosition({ x, y });
+  };
+
+  const handleToolbarMouseDown = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).tagName === 'BUTTON') return;
+    setIsDraggingToolbar(true);
+    setDragOffset({ x: e.clientX - toolbarPosition.x, y: e.clientY - toolbarPosition.y });
+    e.preventDefault();
+  };
+
+  useEffect(() => {
+    if (!isDraggingToolbar) return;
+    
+    const handleMouseMove = (e: MouseEvent) => {
+      setToolbarPosition({ x: e.clientX - dragOffset.x, y: e.clientY - dragOffset.y });
+    };
+    
+    const handleMouseUp = () => {
+      setIsDraggingToolbar(false);
+    };
+    
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDraggingToolbar, dragOffset]);
 
   const handlePlayAudio = async () => {
       if (isPlaying) {
@@ -354,6 +400,54 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
 
   return (
     <div className={`flex w-full mb-8 ${isUser ? 'justify-end' : 'justify-start'}`} data-message-id={message.id}>
+      {/* Floating Highlight Toolbar */}
+      {highlightMode && !isUser && (
+        <div 
+          className="fixed z-50 backdrop-blur-md bg-white/70 dark:bg-[#2a2a2a]/70 border border-[#4485d1]/30 rounded-full shadow-lg px-2 py-1.5 flex items-center gap-1.5 cursor-move select-none"
+          style={{ left: `${toolbarPosition.x}px`, top: `${toolbarPosition.y}px`, userSelect: 'none' }}
+          onMouseDown={handleToolbarMouseDown}
+        >
+          {HIGHLIGHT_COLORS.map(c => (
+            <button
+              key={c.id}
+              onClick={() => setSelectedColor(c)}
+              className={`w-5 h-5 rounded-full border transition-all ${
+                selectedColor.id === c.id ? 'border-gray-800 dark:border-white scale-110' : 'border-transparent'
+              }`}
+              style={{ backgroundColor: c.color }}
+            />
+          ))}
+          <div className="w-px h-4 bg-gray-300 dark:bg-gray-600" />
+          <button
+            onClick={handleUndo}
+            disabled={undoStack.length === 0}
+            className="p-1 hover:bg-gray-100/50 dark:hover:bg-[#3a3a3a]/50 rounded disabled:opacity-30"
+          >
+            <Undo2 size={14} />
+          </button>
+          <button
+            onClick={handleRedo}
+            disabled={redoStack.length === 0}
+            className="p-1 hover:bg-gray-100/50 dark:hover:bg-[#3a3a3a]/50 rounded disabled:opacity-30"
+          >
+            <Redo2 size={14} />
+          </button>
+          <div className="w-px h-4 bg-gray-300 dark:bg-gray-600" />
+          <button
+            onClick={() => setHighlightMode(false)}
+            className="p-1 hover:bg-green-100/50 dark:hover:bg-green-900/30 rounded text-green-600"
+          >
+            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>
+          </button>
+          <button
+            onClick={handleClearAllHighlights}
+            className="p-1 hover:bg-red-100/50 dark:hover:bg-red-900/30 rounded text-red-600"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
+      )}
+      
       <div className={`flex max-w-[90%] md:max-w-[85%] ${isUser ? 'flex-row-reverse' : 'flex-row'} gap-4 group`}>
         {/* Avatar */}
         <div className={`flex-shrink-0 ${
@@ -381,47 +475,6 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
              )}
              {!isUser && !message.isStreaming && (
                  <>
-                   <button 
-                     onClick={() => setHighlightMode(!highlightMode)}
-                     className={`opacity-0 group-hover:opacity-100 p-1 rounded transition-all ${
-                       highlightMode 
-                         ? 'bg-[#4485d1] text-white' 
-                         : 'hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] text-[#a0a0a0] hover:text-[#4485d1]'
-                     }`}
-                     title="Highlight Mode"
-                   >
-                     <Highlighter size={12} />
-                   </button>
-                   {highlightMode && (
-                     <div className="flex gap-1 items-center">
-                       {HIGHLIGHT_COLORS.map(c => (
-                         <button
-                           key={c.id}
-                           onClick={() => setSelectedColor(c)}
-                           className={`w-4 h-4 rounded border-2 transition-all ${
-                             selectedColor.id === c.id ? 'border-gray-600 scale-110' : 'border-transparent'
-                           }`}
-                           style={{ backgroundColor: c.color }}
-                         />
-                       ))}
-                       <button
-                         onClick={handleUndo}
-                         disabled={undoStack.length === 0}
-                         className="p-1 hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] rounded text-[#a0a0a0] hover:text-[#4485d1] disabled:opacity-30"
-                         title="Undo"
-                       >
-                         <Undo2 size={12} />
-                       </button>
-                       <button
-                         onClick={handleRedo}
-                         disabled={redoStack.length === 0}
-                         className="p-1 hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] rounded text-[#a0a0a0] hover:text-[#4485d1] disabled:opacity-30"
-                         title="Redo"
-                       >
-                         <Redo2 size={12} />
-                       </button>
-                     </div>
-                   )}
                    <button 
                      onClick={handlePlayAudio}
                      disabled={isLoadingAudio}
@@ -482,8 +535,25 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
               suppressHydrationWarning
               onContextMenu={(e) => {
                 e.preventDefault();
-                const menuItems = createMessageContextMenu(e.currentTarget, message.content);
-                contextMenuManager.showMenu(e.clientX, e.clientY, menuItems, 'message-context-menu');
+                if (!isUser) {
+                  const baseItems = createMessageContextMenu(e.currentTarget, message.content);
+                  const menuItems = [
+                    ...baseItems,
+                    { label: '—', action: () => {} },
+                    { 
+                      label: 'Highlight Text', 
+                      action: () => enableHighlightMode(e.clientX, e.clientY)
+                    },
+                    { 
+                      label: 'Draw on Screen', 
+                      action: () => onEnableDrawing?.(e.clientX, e.clientY)
+                    }
+                  ];
+                  contextMenuManager.showMenu(e.clientX, e.clientY, menuItems, 'message-context-menu');
+                } else {
+                  const menuItems = createMessageContextMenu(e.currentTarget, message.content);
+                  contextMenuManager.showMenu(e.clientX, e.clientY, menuItems, 'message-context-menu');
+                }
               }}
             >
               {isUser ? (

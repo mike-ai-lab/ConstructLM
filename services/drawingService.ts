@@ -1,17 +1,18 @@
-export type DrawingTool = 'pen' | 'none';
+export type DrawingTool = 'pen' | 'rectangle' | 'circle' | 'arrow' | 'line' | 'none';
 
 export interface DrawingColor {
   id: string;
   name: string;
   color: string;
+  hex: string;
 }
 
 export const DRAWING_COLORS: DrawingColor[] = [
-  { id: 'yellow', name: 'Yellow', color: '#E3FA15' },
-  { id: 'green', name: 'Green', color: '#34D399' },
-  { id: 'blue', name: 'Blue', color: '#60A5FA' },
-  { id: 'pink', name: 'Pink', color: '#F472B6' },
-  { id: 'purple', name: 'Purple', color: '#A78BFA' }
+  { id: 'yellow', name: 'Yellow', color: '#E3FA15', hex: '#E3FA15' },
+  { id: 'green', name: 'Green', color: '#34D399', hex: '#34D399' },
+  { id: 'blue', name: 'Blue', color: '#60A5FA', hex: '#60A5FA' },
+  { id: 'pink', name: 'Pink', color: '#F472B6', hex: '#F472B6' },
+  { id: 'purple', name: 'Purple', color: '#A78BFA', hex: '#A78BFA' }
 ];
 
 export interface DrawingState {
@@ -115,7 +116,8 @@ class DrawingService {
       color: this.getCurrentColor().color,
       strokeWidth: this.state.strokeWidth,
       points: [{ x: e.clientX, y: e.clientY }],
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      shape: this.state.tool === 'pen' ? undefined : this.state.tool as any
     };
   }
 
@@ -137,8 +139,33 @@ class DrawingService {
     if (!this.isDrawing || !this.currentStroke) return;
     
     this.isDrawing = false;
-    const beautifiedStroke = this.detectAndBeautifyShape(this.currentStroke);
-    this.strokes.push(beautifiedStroke);
+    
+    // For shape tools, calculate shape data directly
+    if (this.currentStroke.shape && this.currentStroke.shape !== 'freeform') {
+      const points = this.currentStroke.points;
+      if (points.length >= 2) {
+        switch (this.currentStroke.shape) {
+          case 'rectangle':
+            this.currentStroke.shapeData = this.calculateRectangle(points);
+            break;
+          case 'circle':
+            this.currentStroke.shapeData = this.calculateCircleFromPoints(points[0], points[points.length - 1]);
+            break;
+          case 'arrow':
+            this.currentStroke.shapeData = this.calculateArrow(points);
+            break;
+          case 'line':
+            this.currentStroke.shapeData = this.calculateLine(points);
+            break;
+        }
+      }
+      this.strokes.push(this.currentStroke);
+    } else {
+      // For pen tool, use auto-detection
+      const beautifiedStroke = this.detectAndBeautifyShape(this.currentStroke);
+      this.strokes.push(beautifiedStroke);
+    }
+    
     this.redrawAll();
     this.currentStroke = null;
     this.notifyListeners();
@@ -349,6 +376,12 @@ class DrawingService {
     return Math.atan2(to.y - from.y, to.x - from.x);
   }
 
+  private calculateCircleFromPoints(start: { x: number; y: number }, end: { x: number; y: number }) {
+    const center = { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
+    const radius = Math.sqrt((end.x - start.x) ** 2 + (end.y - start.y) ** 2) / 2;
+    return { center, radius };
+  }
+
   private calculateCircle(points: { x: number; y: number }[]) {
     const center = this.getCentroid(points);
     const distances = points.map(p => Math.sqrt((p.x - center.x) ** 2 + (p.y - center.y) ** 2));
@@ -407,10 +440,15 @@ class DrawingService {
     this.state.isActive = tool !== 'none';
     
     if (this.canvas) {
-      this.canvas.style.pointerEvents = (this.state.isActive && tool === 'pen') ? 'auto' : 'none';
+      this.canvas.style.pointerEvents = this.state.isActive ? 'auto' : 'none';
     }
     
     document.body.style.cursor = this.state.isActive ? 'crosshair' : '';
+    if (this.state.isActive) {
+      document.body.style.userSelect = 'none';
+    } else {
+      document.body.style.userSelect = '';
+    }
     this.notifyListeners();
   }
 

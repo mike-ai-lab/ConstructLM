@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { X, FileText, MessageSquare, Sparkles, Keyboard, Settings, Network, Image, Phone, ChevronRight, Search, Bug, Lightbulb, Mail, Database } from 'lucide-react';
+import { X, FileText, MessageSquare, Sparkles, Keyboard, Settings, Network, Image, Phone, ChevronRight, Search, Bug, Lightbulb, Mail, Database, ExternalLink } from 'lucide-react';
+import { DOCUMENTATION_KB } from '../data/documentationKB';
+import ReactMarkdown from 'react-markdown';
 
 interface HelpDocumentationProps {
   onClose: () => void;
@@ -8,6 +10,129 @@ interface HelpDocumentationProps {
 const HelpDocumentation: React.FC<HelpDocumentationProps> = ({ onClose }) => {
   const [activeSection, setActiveSection] = useState('getting-started');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showAssistant, setShowAssistant] = useState(false);
+  const [assistantMessages, setAssistantMessages] = useState<Array<{id: string, role: 'user' | 'model', content: string, timestamp: number}>>([]);
+  const [assistantInput, setAssistantInput] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [lastRelevantSection, setLastRelevantSection] = useState<string | null>(null);
+
+  const navigateToSection = (sectionId: string) => {
+    setActiveSection(sectionId);
+    const contentArea = document.querySelector('.documentation-content');
+    if (contentArea) {
+      contentArea.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const searchKnowledgeBase = (query: string, topK: number = 3) => {
+    const queryLower = query.toLowerCase();
+    const queryWords = queryLower.split(/\s+/);
+    
+    // Check if asking about current page
+    if (queryLower.includes('this page') || queryLower.includes('what is this')) {
+      const currentSection = sections.find(s => s.id === activeSection);
+      return [{
+        id: `current_${activeSection}`,
+        section: activeSection,
+        title: `About ${currentSection?.title}`,
+        content: `This page covers ${currentSection?.title}. ${DOCUMENTATION_KB.units.filter(u => u.section === activeSection).map(u => u.content).join(' ')}`,
+        keywords: []
+      }];
+    }
+    
+    const scored = DOCUMENTATION_KB.units.map(unit => {
+      let score = 0;
+      queryWords.forEach(word => {
+        // Exact keyword match (highest priority)
+        if (unit.keywords.includes(word)) score += 5;
+        // Partial keyword match
+        else if (unit.keywords.some(kw => kw.includes(word) || word.includes(kw))) score += 2;
+        // Content match
+        if (unit.content.toLowerCase().includes(word)) score += 1;
+        // Title match (high priority)
+        if (unit.title.toLowerCase().includes(word)) score += 4;
+      });
+      return { unit, score };
+    });
+    
+    scored.sort((a, b) => b.score - a.score);
+    const results = scored.filter(s => s.score > 0).slice(0, topK);
+    
+    console.log('[DOC-KB] Query:', query);
+    console.log('[DOC-KB] Results:', results.map(r => ({ title: r.unit.title, score: r.score })));
+    
+    return results.map(r => r.unit);
+  };
+
+  const handleSendToAssistant = async (message: string) => {
+    if (!message.trim() || isGenerating) return;
+    
+    const userMessage = { id: `user-${Date.now()}`, role: 'user' as const, content: message, timestamp: Date.now() };
+    setAssistantMessages(prev => [...prev, userMessage]);
+    setAssistantInput('');
+    setIsGenerating(true);
+
+    try {
+      const { sendMessageToLLM } = await import('../services/llmService');
+      
+      const relevantUnits = searchKnowledgeBase(message, 3);
+      const context = relevantUnits.map(u => `${u.title}:\n${u.content}`).join('\n\n');
+      
+      // Set CTA only if highest score meets threshold
+      const highestScore = relevantUnits[0] ? relevantUnits.length > 0 ? Math.max(...relevantUnits.map((_, i) => 
+        relevantUnits.filter(u => u.section === relevantUnits[i].section).length
+      )) : 0 : 0;
+      
+      if (highestScore >= 2 && relevantUnits[0]) {
+        setLastRelevantSection(relevantUnits[0].section);
+      } else {
+        setLastRelevantSection(null);
+      }
+      
+      const enhancedMessage = `You are a helpful ConstructLM documentation assistant.\n\nRelevant Documentation:\n${context}\n\nUser Question: ${message}\n\nProvide a clear, direct answer based on the documentation. Be conversational and focus on the official methods. Present information factually without speculating on outcomes. Format your response in markdown.\n\nAt the very end of your response, on a new line, add: [SECTION:section-id] where section-id is the most relevant documentation section. Valid sections: getting-started, sources, chat, notebook, todos, mindmap, live, graphics, data, shortcuts, settings, support. Only include this if your answer references a specific section.`;
+
+      let response = '';
+      
+      await sendMessageToLLM(
+        'gemini-2.5-flash',
+        assistantMessages,
+        enhancedMessage,
+        [],
+        (chunk) => {
+          response += chunk;
+          setAssistantMessages(prev => {
+            const newMessages = [...prev];
+            const lastMsg = newMessages[newMessages.length - 1];
+            if (lastMsg?.role === 'model') {
+              // Extract section tag and remove it from display
+              const sectionMatch = response.match(/\[SECTION:([a-z-]+)\]/);
+              if (sectionMatch) {
+                setLastRelevantSection(sectionMatch[1]);
+                lastMsg.content = response.replace(/\[SECTION:[a-z-]+\]/, '').trim();
+              } else {
+                lastMsg.content = response;
+              }
+            } else {
+              newMessages.push({ id: `model-${Date.now()}`, role: 'model', content: response, timestamp: Date.now() });
+            }
+            return newMessages;
+          });
+        },
+        []
+      );
+    } catch (error) {
+      console.error('Assistant error:', error);
+      setAssistantMessages(prev => [...prev, { id: `model-${Date.now()}`, role: 'model', content: 'Sorry, I encountered an error. Please try again.', timestamp: Date.now() }]);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const suggestedPrompts = [
+    'How do I get started?',
+    'How do I generate a mind map?',
+    'How do I export my notes?'
+  ];
 
   const sections = [
     { id: 'getting-started', title: 'Getting Started', icon: Sparkles },
@@ -30,8 +155,12 @@ const HelpDocumentation: React.FC<HelpDocumentationProps> = ({ onClose }) => {
       <div className="w-64 border-r border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] flex flex-col">
         <div className="h-[65px] flex items-center justify-between px-4 border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)]">
           <h2 className="text-sm font-semibold text-[#1a1a1a] dark:text-white">Documentation</h2>
-          <button onClick={onClose} className="p-1.5 hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] rounded-full">
-            <X size={16} className="text-[#a0a0a0]" />
+          <button 
+            onClick={() => setShowAssistant(!showAssistant)} 
+            className="p-1.5 hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] rounded-full"
+            title="AI Assistant"
+          >
+            <Sparkles size={16} className={showAssistant ? 'text-[#4485d1]' : 'text-[#a0a0a0]'} />
           </button>
         </div>
         
@@ -78,6 +207,14 @@ const HelpDocumentation: React.FC<HelpDocumentationProps> = ({ onClose }) => {
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto documentation-content">
+        <div className="h-[65px] flex items-center justify-end px-4 border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)]">
+          <button 
+            onClick={onClose} 
+            className="p-2 hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] rounded-full"
+          >
+            <X size={20} className="text-[#a0a0a0]" />
+          </button>
+        </div>
         <div className="max-w-3xl mx-auto px-8 py-8">
           <div className="documentation-section">
             {activeSection === 'getting-started' && <GettingStarted />}
@@ -95,16 +232,107 @@ const HelpDocumentation: React.FC<HelpDocumentationProps> = ({ onClose }) => {
           </div>
         </div>
       </div>
+
+      {/* AI Assistant Sidebar */}
+      {showAssistant && (
+        <div className="w-[450px] border-l border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] flex flex-col bg-white dark:bg-[#1a1a1a]">
+          <div className="h-[65px] flex items-center justify-between px-4 border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)]">
+            <div className="flex items-center gap-2">
+              <Sparkles size={16} className="text-[#4485d1]" />
+              <h3 className="text-sm font-semibold text-[#1a1a1a] dark:text-white">AI Assistant</h3>
+            </div>
+            <button onClick={() => setShowAssistant(false)} className="p-1.5 hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] rounded-full">
+              <X size={16} className="text-[#a0a0a0]" />
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-2 space-y-4">
+            {assistantMessages.length === 0 && (
+              <div className="space-y-2 px-2">
+                <p className="text-xs text-[#666666] dark:text-[#a0a0a0] mb-3">Ask me anything about this documentation:</p>
+                {suggestedPrompts.map((prompt, i) => (
+                  <button
+                    key={i}
+                    onClick={() => handleSendToAssistant(prompt)}
+                    className="w-full text-left px-3 py-2 text-xs bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] hover:bg-[rgba(68,133,209,0.1)] rounded-lg text-[#1a1a1a] dark:text-white transition-colors"
+                  >
+                    {prompt}
+                  </button>
+                ))}
+              </div>
+            )}
+            {assistantMessages.map((msg, i) => (
+              <div key={i} className="px-2">
+                <div className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`px-3 py-2 rounded-lg text-xs ${
+                    msg.role === 'user' 
+                      ? 'bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] text-[#1a1a1a] dark:text-white max-w-[85%]' 
+                      : 'bg-[rgba(68,133,209,0.1)] text-[#1a1a1a] dark:text-white w-full'
+                  }`}>
+                    {msg.role === 'user' ? (
+                      msg.content
+                    ) : (
+                      <div className="prose prose-sm dark:prose-invert max-w-none">
+                        <ReactMarkdown>{msg.content}</ReactMarkdown>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                {msg.role === 'model' && i === assistantMessages.length - 1 && lastRelevantSection && (
+                  <button
+                    onClick={() => navigateToSection(lastRelevantSection)}
+                    className="mt-2 flex items-center gap-1 px-2 py-1 text-xs bg-[#4485d1] text-white rounded hover:bg-[#3a75c1] transition-colors"
+                  >
+                    <ExternalLink size={12} />
+                    View {sections.find(s => s.id === lastRelevantSection)?.title}
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div className="p-4 border-t border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)]">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={assistantInput}
+                onChange={(e) => setAssistantInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey && !isGenerating) {
+                    e.preventDefault();
+                    handleSendToAssistant(assistantInput);
+                  }
+                }}
+                placeholder="Ask a question..."
+                disabled={isGenerating}
+                className="flex-1 px-3 py-2 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] rounded-lg text-sm text-[#1a1a1a] dark:text-white placeholder:text-[#a0a0a0] focus:outline-none focus:ring-1 focus:ring-[rgba(68,133,209,0.5)] disabled:opacity-50"
+              />
+              <button
+                onClick={() => handleSendToAssistant(assistantInput)}
+                disabled={!assistantInput.trim() || isGenerating}
+                className="p-2 bg-[#4485d1] text-white rounded-lg hover:bg-[#3a75c1] disabled:opacity-50 transition-colors"
+                title="Send"
+              >
+                <MessageSquare size={18} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 const SectionTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <h1 className="text-2xl font-semibold text-[#1a1a1a] dark:text-white mb-6">{children}</h1>
+  <h1 className="text-3xl font-bold text-[#1a1a1a] dark:text-white mb-8 pb-3 border-b-2 border-[rgba(0,0,0,0.1)] dark:border-[rgba(255,255,255,0.1)]">{children}</h1>
 );
 
 const SubTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <h2 className="text-lg font-semibold text-[#1a1a1a] dark:text-white mt-6 mb-3">{children}</h2>
+  <h2 className="text-xl font-bold text-[#1a1a1a] dark:text-white mt-8 mb-4">{children}</h2>
+);
+
+const FeatureTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <h3 className="text-lg font-semibold text-[#1a1a1a] dark:text-white mt-6 mb-3">{children}</h3>
 );
 
 const Paragraph: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -212,10 +440,50 @@ const ChatFeatures: React.FC = () => (
   <>
     <SectionTitle>Chat Features</SectionTitle>
 
-    <SubTitle>Multiple Conversations</SubTitle>
+    <SubTitle>Text Highlighter</SubTitle>
     <Paragraph>
-      Manage multiple chat sessions simultaneously:
+      Mark important parts of AI responses with colored highlights:
     </Paragraph>
+    <List>
+      <ListItem>Right-click on any AI message and select "Highlight Text"</ListItem>
+      <ListItem>A floating toolbar appears with 5 color options</ListItem>
+      <ListItem>Select text to highlight it with your chosen color</ListItem>
+      <ListItem>Click highlighted text to remove the highlight</ListItem>
+      <ListItem>Use Undo/Redo buttons to manage your highlights</ListItem>
+      <ListItem>Drag the toolbar to reposition it anywhere on screen</ListItem>
+      <ListItem>Click the checkmark to exit highlight mode</ListItem>
+      <ListItem>Click the trash icon to clear all highlights from the message</ListItem>
+    </List>
+
+    <SubTitle>Drawing Tools</SubTitle>
+    <Paragraph>
+      Draw annotations directly on your screen over any content:
+    </Paragraph>
+    <FeatureTitle>Accessing Drawing Mode</FeatureTitle>
+    <List>
+      <ListItem>Right-click on any AI message and select "Draw on Screen"</ListItem>
+      <ListItem>A floating toolbar appears with drawing tools</ListItem>
+      <ListItem>Drag the toolbar to move it out of your way</ListItem>
+    </List>
+    <FeatureTitle>Available Tools</FeatureTitle>
+    <List>
+      <ListItem><strong>Pen:</strong> Draw freehand - circles and rectangles are auto-detected</ListItem>
+      <ListItem><strong>Rectangle:</strong> Click and drag to draw perfect rectangles</ListItem>
+      <ListItem><strong>Circle:</strong> Click and drag to draw perfect circles</ListItem>
+      <ListItem><strong>Arrow:</strong> Click and drag to draw arrows pointing in any direction</ListItem>
+    </List>
+    <FeatureTitle>Customization</FeatureTitle>
+    <List>
+      <ListItem>Choose from 5 colors for your drawings</ListItem>
+      <ListItem>Adjust stroke width with +/- buttons</ListItem>
+      <ListItem>Click checkmark when done to exit drawing mode</ListItem>
+      <ListItem>Click trash icon to clear all drawings</ListItem>
+    </List>
+    <InfoBox>
+      Tip: With the Pen tool, draw a straight line and add a quick zigzag at the end to create an arrow automatically!
+    </InfoBox>
+
+    <SubTitle>Multiple Conversations</SubTitle>
     <List>
       <ListItem>Click the plus icon in the header to create a new chat</ListItem>
       <ListItem>Switch between chats using the Chats tab in the sidebar</ListItem>
@@ -224,9 +492,6 @@ const ChatFeatures: React.FC = () => (
     </List>
 
     <SubTitle>Model Selection</SubTitle>
-    <Paragraph>
-      Choose from multiple AI models based on your needs:
-    </Paragraph>
     <List>
       <ListItem>Google Gemini: Fast, supports large contexts and images (Free tier available)</ListItem>
       <ListItem>Groq Llama: Extremely fast inference, great for quick tasks (Free tier available)</ListItem>
@@ -240,9 +505,6 @@ const ChatFeatures: React.FC = () => (
     </Paragraph>
 
     <SubTitle>Save to Notebook</SubTitle>
-    <Paragraph>
-      Save important AI responses to your notebook:
-    </Paragraph>
     <List>
       <ListItem>Click the bookmark icon on any AI message to save it</ListItem>
       <ListItem>Saved notes are numbered automatically (Note #1, #2, etc.)</ListItem>
@@ -250,22 +512,7 @@ const ChatFeatures: React.FC = () => (
       <ListItem>Click the bookmark icon again to unsave</ListItem>
     </List>
 
-    <SubTitle>Drawing Tools</SubTitle>
-    <Paragraph>
-      Annotate your chat and documents with drawing tools:
-    </Paragraph>
-    <List>
-      <ListItem>Highlighter: Mark important text passages</ListItem>
-      <ListItem>Pen: Draw freehand annotations</ListItem>
-      <ListItem>Color picker: Choose from multiple colors</ListItem>
-      <ListItem>Stroke width: Adjust pen thickness</ListItem>
-      <ListItem>Clear all: Remove all annotations</ListItem>
-    </List>
-
     <SubTitle>Voice Input</SubTitle>
-    <Paragraph>
-      Use voice-to-text for hands-free input:
-    </Paragraph>
     <List>
       <ListItem>Click the microphone icon in the chat input</ListItem>
       <ListItem>Speak your message clearly</ListItem>
@@ -274,9 +521,6 @@ const ChatFeatures: React.FC = () => (
     </List>
 
     <SubTitle>Web Sources</SubTitle>
-    <Paragraph>
-      Add web pages as context for your conversations:
-    </Paragraph>
     <List>
       <ListItem>Click the link icon in the chat input</ListItem>
       <ListItem>Enter a URL to fetch and include in context</ListItem>
