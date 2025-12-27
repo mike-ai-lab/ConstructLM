@@ -1,5 +1,5 @@
 import React from 'react';
-import { PanelLeft, PanelLeftOpen, Cpu, ChevronDown, Phone, Plus, Edit3, Highlighter, Trash2, Check, Minus, Camera, Image, Moon, Sun, HelpCircle, Settings, BookMarked, CheckSquare, Bell, MessageSquare, FileText } from 'lucide-react';
+import { PanelLeft, PanelLeftOpen, Cpu, ChevronDown, Phone, Plus, Edit3, Trash2, Check, Minus, Camera, Image, Moon, Sun, HelpCircle, Settings, BookMarked, CheckSquare, Bell, MessageSquare, FileText } from 'lucide-react';
 import { MODEL_REGISTRY } from '../../services/modelRegistry';
 import { DRAWING_COLORS } from '../../services/drawingService';
 import GraphicsLibrary from '../../components/GraphicsLibrary';
@@ -74,7 +74,7 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
   }, []);
   
   return (
-    <header ref={headerRef} className="h-[65px] flex-none border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] flex items-center justify-between px-3 md:px-6 bg-white dark:bg-[#1a1a1a] min-w-0 gap-2 relative z-[200]">
+    <header ref={headerRef} className="h-[65px] flex-none border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] flex items-center justify-between px-3 md:px-6 bg-white dark:bg-[#1a1a1a] min-w-0 gap-2 relative z-[300]">
       <div className="flex items-center gap-2 min-w-0 flex-shrink">
         {!props.isMobile && props.activeTab === 'chat' && (
           <button onClick={() => props.setIsSidebarOpen(!props.isSidebarOpen)} className="p-1.5 text-gray-400 hover:bg-gray-100 rounded-md transition-colors flex-shrink-0">
@@ -163,78 +163,22 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
         {/* Drawing Tools - Only show on chat tab */}
         {props.activeTab === 'chat' && !isCompact && (
           <>
-            {/* Drawing Tool Picker */}
-            <div className="relative" ref={props.toolPickerRef}>
-              <button
-                onClick={() => props.setShowToolPicker(!props.showToolPicker)}
-                className={`p-1.5 md:p-2 rounded-full transition-colors flex-shrink-0 ${
-                  props.drawingState.tool === 'highlighter'
-                    ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400'
-                    : props.drawingState.tool === 'pen'
-                    ? 'bg-[rgba(68,133,209,0.1)] text-[#4485d1]'
-                    : 'text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a]'
-                }`}
-                title="Drawing Tools"
-              >
-                {props.drawingState.tool === 'highlighter' ? (
-                  <Highlighter size={16} />
-                ) : props.drawingState.tool === 'pen' ? (
-                  <Edit3 size={16} />
-                ) : (
-                  <Edit3 size={16} />
-                )}
-              </button>
-
-              {/* Tool Picker Dropdown */}
-              {props.showToolPicker && (
-                <div className="absolute right-0 top-full mt-2 bg-white dark:bg-[#222222] rounded-lg shadow-lg border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] p-2 z-50 flex gap-1">
-                  <button
-                    onClick={() => {
-                      props.handleDrawingToolChange('pen');
-                      props.setShowToolPicker(false);
-                    }}
-                    className={`p-2 rounded-full transition-all hover:scale-110 ${
-                      props.drawingState.tool === 'pen'
-                        ? 'bg-[rgba(68,133,209,0.2)] text-[#4485d1] scale-110'
-                        : 'text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a]'
-                    }`}
-                    title="Pen"
-                  >
-                    <Edit3 size={16} />
-                  </button>
-                  <button
-                    onClick={() => {
-                      props.handleDrawingToolChange('highlighter');
-                      props.setShowToolPicker(false);
-                    }}
-                    className={`p-2 rounded-full transition-all hover:scale-110 ${
-                      props.drawingState.tool === 'highlighter'
-                        ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 scale-110'
-                        : 'text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a]'
-                    }`}
-                    title="Highlighter"
-                  >
-                    <Highlighter size={16} />
-                  </button>
-                  {props.drawingState.isActive && (
-                    <button
-                      onClick={() => {
-                        props.handleDrawingToolChange('none');
-                        props.setShowToolPicker(false);
-                      }}
-                      className="p-2 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/40 transition-all hover:scale-110"
-                      title="Disable Drawing"
-                    >
-                      <Check size={16} />
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
+            {/* Pen Tool Button */}
+            <button
+              onClick={() => props.handleDrawingToolChange(props.drawingState.tool === 'pen' ? 'none' : 'pen')}
+              className={`p-1.5 md:p-2 rounded-full transition-colors flex-shrink-0 ${
+                props.drawingState.tool === 'pen'
+                  ? 'bg-[rgba(68,133,209,0.1)] text-[#4485d1]'
+                  : 'text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a]'
+              }`}
+              title="Pen Tool"
+            >
+              <Edit3 size={16} />
+            </button>
 
             {/* Drawing Controls - Positioned below header */}
             {props.drawingState.isActive && props.drawingState.tool !== 'none' && (
-              <div className="fixed top-[65px] left-0 right-0 h-12 bg-white dark:bg-[#1a1a1a] border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] flex items-center justify-center gap-4 z-[200] px-4">
+              <div className="fixed top-[65px] left-0 right-0 h-12 bg-white dark:bg-[#1a1a1a] border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] flex items-center justify-center gap-4 z-[150] px-4">
                 {/* Color Picker */}
                 <div className="relative" ref={props.colorPickerRef}>
                   <button
@@ -269,43 +213,37 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
                   )}
                 </div>
 
-                {/* Stroke Width - Only for pen */}
-                {props.drawingState.tool === 'pen' && (
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => props.handleStrokeWidthChange(-1)}
-                      disabled={props.drawingState.strokeWidth <= 1}
-                      className="p-1 text-[#a0a0a0] hover:text-[#1a1a1a] dark:hover:text-white disabled:opacity-50 rounded transition-colors"
-                      style={{ cursor: props.drawingState.strokeWidth <= 1 ? 'default' : 'pointer' }}
-                      title="Decrease stroke width"
-                    >
-                      <Minus size={14} />
-                    </button>
-                    <div
-                      className="rounded-full border border-[#a0a0a0]"
-                      style={{
-                        width: `${Math.max(4, props.drawingState.strokeWidth * 2)}px`,
-                        height: `${Math.max(4, props.drawingState.strokeWidth * 2)}px`,
-                        backgroundColor: props.currentColor?.hex,
-                      }}
-                    />
-                    <button
-                      onClick={() => props.handleStrokeWidthChange(1)}
-                      disabled={props.drawingState.strokeWidth >= 10}
-                      className="p-1 text-[#a0a0a0] hover:text-[#1a1a1a] dark:hover:text-white disabled:opacity-50 rounded transition-colors"
-                      style={{ cursor: props.drawingState.strokeWidth >= 10 ? 'default' : 'pointer' }}
-                      title="Increase stroke width"
-                    >
-                      <Plus size={14} />
-                    </button>
-                  </div>
-                )}
-
                 <div className="w-px h-6 bg-[rgba(0,0,0,0.15)] dark:bg-[rgba(255,255,255,0.05)]" />
 
-                <span className="text-xs text-[#666666] dark:text-[#a0a0a0] font-medium">
-                  {props.drawingState.tool === 'pen' ? 'Pen' : 'Highlighter'} Active
-                </span>
+                {/* Stroke Width */}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => props.handleStrokeWidthChange(-1)}
+                    disabled={props.drawingState.strokeWidth <= 1}
+                    className="p-1 text-[#a0a0a0] hover:text-[#1a1a1a] dark:hover:text-white disabled:opacity-50 rounded transition-colors"
+                    style={{ cursor: props.drawingState.strokeWidth <= 1 ? 'default' : 'pointer' }}
+                    title="Decrease stroke width"
+                  >
+                    <Minus size={14} />
+                  </button>
+                  <div
+                    className="rounded-full border border-[#a0a0a0]"
+                    style={{
+                      width: `${Math.max(4, props.drawingState.strokeWidth * 2)}px`,
+                      height: `${Math.max(4, props.drawingState.strokeWidth * 2)}px`,
+                      backgroundColor: props.currentColor?.hex,
+                    }}
+                  />
+                  <button
+                    onClick={() => props.handleStrokeWidthChange(1)}
+                    disabled={props.drawingState.strokeWidth >= 10}
+                    className="p-1 text-[#a0a0a0] hover:text-[#1a1a1a] dark:hover:text-white disabled:opacity-50 rounded transition-colors"
+                    style={{ cursor: props.drawingState.strokeWidth >= 10 ? 'default' : 'pointer' }}
+                    title="Increase stroke width"
+                  >
+                    <Plus size={14} />
+                  </button>
+                </div>
               </div>
             )}
 

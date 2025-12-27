@@ -301,8 +301,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
     );
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 backdrop-blur-sm animate-in fade-in duration-200">
-            <div ref={modalRef} className="bg-white dark:bg-[#222222] w-full max-w-md rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[75vh]">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-none animate-in fade-in duration-200">
+            <div ref={modalRef} className="bg-white dark:bg-[#222222] w-full max-w-md rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[75vh] pointer-events-auto">
                 {/* Header */}
                 <div className="px-4 py-2.5 border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] flex items-center justify-between bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a]">
                     <div className="flex items-center gap-2">
@@ -318,6 +318,61 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
 
                 {/* Content */}
                 <div className="p-4 overflow-y-auto space-y-4 flex-1">
+                    {/* Note Style Selector */}
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-1.5">
+                            <span className="text-[#666666] dark:text-[#a0a0a0]">📝</span>
+                            <h3 className="text-xs font-bold text-[#666666] dark:text-[#a0a0a0] uppercase tracking-wider">Note Style</h3>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                            {[
+                                { id: 'border', label: 'Left Border', preview: '│ Note' },
+                                { id: 'glow', label: 'Glow Effect', preview: '✨ Note' },
+                                { id: 'badge', label: 'Corner Badge', preview: '🏷️ Note' },
+                                { id: 'highlight', label: 'Highlight BG', preview: '▓ Note' }
+                            ].map(style => (
+                                <button
+                                    key={style.id}
+                                    onClick={() => {
+                                        localStorage.setItem('noteStyle', style.id);
+                                        window.dispatchEvent(new Event('noteStyleChange'));
+                                    }}
+                                    className="px-2.5 py-1.5 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] hover:bg-[rgba(0,0,0,0.06)] dark:hover:bg-[#222222] text-[#666666] dark:text-[#a0a0a0] rounded-lg text-xs font-medium transition-colors text-left"
+                                >
+                                    <div className="font-semibold">{style.label}</div>
+                                    <div className="text-[10px] opacity-70">{style.preview}</div>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Font Selector Section */}
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-1.5">
+                            <span className="text-[#666666] dark:text-[#a0a0a0]">Aa</span>
+                            <h3 className="text-xs font-bold text-[#666666] dark:text-[#a0a0a0] uppercase tracking-wider">Font Family</h3>
+                        </div>
+                        <div className="bg-[rgba(68,133,209,0.1)] border border-[rgba(68,133,209,0.2)] dark:border-[rgba(68,133,209,0.3)] rounded-lg p-2">
+                            <p className="text-xs text-[#1a1a1a] dark:text-white leading-relaxed">
+                                Test different fonts to find your preference. Changes apply immediately.
+                            </p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                            {['Inter', 'System UI', 'Segoe UI', 'Arial', 'Helvetica', 'Georgia'].map(font => (
+                                <button
+                                    key={font}
+                                    onClick={() => {
+                                        document.body.style.fontFamily = font === 'System UI' ? 'ui-sans-serif, system-ui' : font;
+                                    }}
+                                    className="px-2.5 py-1.5 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] hover:bg-[rgba(0,0,0,0.06)] dark:hover:bg-[#222222] text-[#666666] dark:text-[#a0a0a0] rounded-lg text-xs font-medium transition-colors"
+                                    style={{ fontFamily: font === 'System UI' ? 'ui-sans-serif, system-ui' : font }}
+                                >
+                                    {font}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
                     {/* User Profile Section */}
                     <div className="space-y-3">
                         <div className="flex items-center gap-1.5">

@@ -558,6 +558,11 @@ const App: React.FC = () => {
     chatState.setSelectedSourceIds
   );
 
+  React.useEffect(() => {
+    console.log('[App] Current chat ID changed:', chatState.currentChatId);
+    localStorage.setItem('currentChatId', chatState.currentChatId);
+  }, [chatState.currentChatId]);
+
   const fileHandlers = createFileHandlers(
     fileState.files,
     fileState.setFiles,
@@ -1017,7 +1022,7 @@ const App: React.FC = () => {
 
         {/* Floating Input Area */}
         {!featureState.mindMapData && !featureState.isSettingsOpen && !featureState.isCallingEffect && !featureState.isHelpOpen && activeTab === 'chat' && (
-        <div className="flex justify-center px-4 pb-2 w-full bg-white dark:bg-[#1a1a1a]">
+        <div className="flex justify-center px-4 pb-2 w-full bg-white dark:bg-[#1a1a1a] relative z-[200]">
           <div className="w-full max-w-[800px]">
             <FloatingInput
               input={inputState.input}
@@ -1045,7 +1050,7 @@ const App: React.FC = () => {
               onAddSource={handleAddSource}
               onDeleteSource={handleDeleteSource}
             />
-            <p className="text-[#666666] dark:text-[#a0a0a0] text-xs text-center mt-2">AI can make mistakes. Please verify citations.</p>
+            <p className="text-[#666666] dark:text-[#a0a0a0] text-xs text-center mt-2 relative z-[200]">AI can make mistakes. Please verify citations.</p>
           </div>
         </div>
         )}

@@ -1,18 +1,17 @@
-export type DrawingTool = 'highlighter' | 'pen' | 'none';
+export type DrawingTool = 'pen' | 'none';
 
 export interface DrawingColor {
   id: string;
   name: string;
   color: string;
-  highlightColor: string;
 }
 
 export const DRAWING_COLORS: DrawingColor[] = [
-  { id: 'yellow', name: 'Yellow', color: '#E3FA15', highlightColor: 'rgba(227, 250, 21, 0.4)' },
-  { id: 'green', name: 'Green', color: '#34D399', highlightColor: 'rgba(16, 185, 129, 0.4)' },
-  { id: 'blue', name: 'Blue', color: '#60A5FA', highlightColor: 'rgba(59, 130, 246, 0.4)' },
-  { id: 'pink', name: 'Pink', color: '#F472B6', highlightColor: 'rgba(236, 72, 153, 0.4)' },
-  { id: 'purple', name: 'Purple', color: '#A78BFA', highlightColor: 'rgba(139, 92, 246, 0.4)' }
+  { id: 'yellow', name: 'Yellow', color: '#E3FA15' },
+  { id: 'green', name: 'Green', color: '#34D399' },
+  { id: 'blue', name: 'Blue', color: '#60A5FA' },
+  { id: 'pink', name: 'Pink', color: '#F472B6' },
+  { id: 'purple', name: 'Purple', color: '#A78BFA' }
 ];
 
 export interface DrawingState {
@@ -33,15 +32,6 @@ export interface DrawingStroke {
   shapeData?: any;
 }
 
-export interface HighlightSelection {
-  id: string;
-  text: string;
-  color: string;
-  element: HTMLElement;
-  range: Range;
-  timestamp: number;
-}
-
 class DrawingService {
   private state: DrawingState = {
     isActive: false,
@@ -51,7 +41,6 @@ class DrawingService {
   };
 
   private strokes: DrawingStroke[] = [];
-  private highlights: HighlightSelection[] = [];
   private canvas: HTMLCanvasElement | null = null;
   private ctx: CanvasRenderingContext2D | null = null;
   private isDrawing = false;
@@ -86,14 +75,9 @@ class DrawingService {
 
   private setupEventListeners() {
     window.addEventListener('resize', () => this.updateCanvasSize());
-    
-    // Mouse events for drawing
     document.addEventListener('mousedown', (e) => this.handleMouseDown(e));
     document.addEventListener('mousemove', (e) => this.handleMouseMove(e));
     document.addEventListener('mouseup', () => this.handleMouseUp());
-    
-    // Text selection for highlighting
-    document.addEventListener('mouseup', () => this.handleTextSelection());
   }
 
   private updateCanvasSize() {
@@ -115,19 +99,14 @@ class DrawingService {
   }
 
   private handleMouseDown(e: MouseEvent) {
-    if (!this.state.isActive || this.state.tool === 'none' || this.state.tool === 'highlighter') return;
+    if (!this.state.isActive || this.state.tool === 'none') return;
     
     const target = e.target as HTMLElement;
-    
-    // Allow clicks on buttons and interactive elements
     if (target.tagName === 'BUTTON' || target.closest('button') || target.closest('input') || target.closest('textarea')) {
       return;
     }
     
     if (target !== this.canvas) return;
-    
-    const x = e.clientX;
-    const y = e.clientY;
     
     this.isDrawing = true;
     this.currentStroke = {
@@ -135,7 +114,7 @@ class DrawingService {
       tool: this.state.tool,
       color: this.getCurrentColor().color,
       strokeWidth: this.state.strokeWidth,
-      points: [{ x, y }],
+      points: [{ x: e.clientX, y: e.clientY }],
       timestamp: Date.now()
     };
   }
@@ -143,10 +122,7 @@ class DrawingService {
   private handleMouseMove(e: MouseEvent) {
     if (!this.isDrawing || !this.currentStroke) return;
     
-    const x = e.clientX;
-    const y = e.clientY;
-    
-    this.currentStroke.points.push({ x, y });
+    this.currentStroke.points.push({ x: e.clientX, y: e.clientY });
     
     if (this.ctx) {
       this.ctx.clearRect(0, 0, this.canvas!.width, this.canvas!.height);
@@ -161,80 +137,11 @@ class DrawingService {
     if (!this.isDrawing || !this.currentStroke) return;
     
     this.isDrawing = false;
-    
-    // Detect and beautify shape
     const beautifiedStroke = this.detectAndBeautifyShape(this.currentStroke);
     this.strokes.push(beautifiedStroke);
-    
-    // Redraw to show beautified version
     this.redrawAll();
-    
     this.currentStroke = null;
-    
     this.notifyListeners();
-  }
-
-  private handleTextSelection() {
-    if (!this.state.isActive || this.state.tool !== 'highlighter') return;
-    
-    const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0) return;
-    
-    const range = selection.getRangeAt(0);
-    const text = range.toString().trim();
-    
-    if (text.length === 0) return;
-    
-    // Check if selection is within allowed elements (message content, citations)
-    const container = range.commonAncestorContainer;
-    const element = container.nodeType === Node.TEXT_NODE ? container.parentElement : container as HTMLElement;
-    
-    if (!this.isHighlightableElement(element)) {
-      selection.removeAllRanges();
-      return;
-    }
-    
-    this.createHighlight(text, element, range);
-    selection.removeAllRanges();
-  }
-
-  private isHighlightableElement(element: HTMLElement | null): boolean {
-    if (!element) return false;
-    
-    // Allow highlighting in message content and citation panels
-    return element.closest('.message-content') !== null ||
-           element.closest('.citation-panel') !== null ||
-           element.closest('[data-highlightable="true"]') !== null;
-  }
-
-  private createHighlight(text: string, element: HTMLElement, range: Range) {
-    const highlight: HighlightSelection = {
-      id: Date.now().toString(),
-      text,
-      color: this.getCurrentColor().highlightColor,
-      element,
-      range: range.cloneRange(),
-      timestamp: Date.now()
-    };
-    
-    try {
-      const span = document.createElement('span');
-      span.style.backgroundColor = highlight.color;
-      span.style.padding = '2px 0';
-      span.style.borderRadius = '2px';
-      span.style.color = 'inherit';
-      span.dataset.highlightId = highlight.id;
-      span.className = 'drawing-highlight';
-      
-      const contents = range.extractContents();
-      span.appendChild(contents);
-      range.insertNode(span);
-      
-      this.highlights.push(highlight);
-      this.notifyListeners();
-    } catch (e) {
-      console.warn('Failed to create highlight:', e);
-    }
   }
 
   private drawStroke(stroke: DrawingStroke) {
@@ -243,11 +150,9 @@ class DrawingService {
     this.ctx.globalCompositeOperation = 'source-over';
     this.ctx.strokeStyle = stroke.color;
     this.ctx.lineWidth = stroke.strokeWidth;
-    
     this.ctx.beginPath();
     this.ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
     
-    // Use quadratic curves for smoother lines
     for (let i = 1; i < stroke.points.length - 1; i++) {
       const current = stroke.points[i];
       const next = stroke.points[i + 1];
@@ -256,7 +161,6 @@ class DrawingService {
       this.ctx.quadraticCurveTo(current.x, current.y, midX, midY);
     }
     
-    // Draw to the last point
     if (stroke.points.length > 1) {
       const lastPoint = stroke.points[stroke.points.length - 1];
       this.ctx.lineTo(lastPoint.x, lastPoint.y);
@@ -286,14 +190,12 @@ class DrawingService {
           this.ctx.arc(center.x, center.y, radius, 0, 2 * Math.PI);
         }
         break;
-        
       case 'rectangle':
         if (stroke.shapeData) {
           const { x, y, width, height } = stroke.shapeData;
           this.ctx.rect(x, y, width, height);
         }
         break;
-        
       case 'line':
         if (stroke.shapeData) {
           const { start, end } = stroke.shapeData;
@@ -301,24 +203,19 @@ class DrawingService {
           this.ctx.lineTo(end.x, end.y);
         }
         break;
-        
       case 'arrow':
         if (stroke.shapeData) {
           const { start, end, angle } = stroke.shapeData;
-          // Draw main line
           this.ctx.moveTo(start.x, start.y);
           this.ctx.lineTo(end.x, end.y);
           
-          // Draw arrowhead
           const headLength = 15;
           const headAngle = Math.PI / 6;
-          
           this.ctx.moveTo(end.x, end.y);
           this.ctx.lineTo(
             end.x - headLength * Math.cos(angle - headAngle),
             end.y - headLength * Math.sin(angle - headAngle)
           );
-          
           this.ctx.moveTo(end.x, end.y);
           this.ctx.lineTo(
             end.x - headLength * Math.cos(angle + headAngle),
@@ -365,12 +262,10 @@ class DrawingService {
     const last = points[points.length - 1];
     const distance = Math.sqrt((last.x - first.x) ** 2 + (last.y - first.y) ** 2);
 
-    // Check for closed shapes (circle/rectangle)
     if (distance < 30) {
       return this.isCircular(points) ? 'circle' : 'rectangle';
     }
 
-    // Check for straight line
     if (this.isStraightLine(points)) {
       return this.hasArrowHead(points) ? 'arrow' : 'line';
     }
@@ -406,7 +301,6 @@ class DrawingService {
     const endPoints = points.slice(-5);
     const direction = this.getDirection(points[points.length - 6], points[points.length - 1]);
     
-    // Simple heuristic: check if end points deviate from main direction
     let deviations = 0;
     for (let i = 1; i < endPoints.length; i++) {
       const segmentDir = this.getDirection(endPoints[i - 1], endPoints[i]);
@@ -490,9 +384,7 @@ class DrawingService {
 
   private redrawAll() {
     if (!this.ctx) return;
-    
     this.ctx.clearRect(0, 0, this.canvas!.width, this.canvas!.height);
-    
     for (const stroke of this.strokes) {
       this.drawBeautifiedStroke(stroke);
     }
@@ -506,7 +398,6 @@ class DrawingService {
     this.listeners.forEach(listener => listener());
   }
 
-  // Public API
   getState(): DrawingState {
     return { ...this.state };
   }
@@ -515,18 +406,11 @@ class DrawingService {
     this.state.tool = tool;
     this.state.isActive = tool !== 'none';
     
-    // Update canvas pointer events
     if (this.canvas) {
       this.canvas.style.pointerEvents = (this.state.isActive && tool === 'pen') ? 'auto' : 'none';
     }
     
-    // Update cursor
-    if (this.state.isActive) {
-      document.body.style.cursor = tool === 'highlighter' ? 'text' : 'crosshair';
-    } else {
-      document.body.style.cursor = '';
-    }
-    
+    document.body.style.cursor = this.state.isActive ? 'crosshair' : '';
     this.notifyListeners();
   }
 
@@ -542,31 +426,14 @@ class DrawingService {
 
   clearAll() {
     this.strokes = [];
-    this.highlights.forEach(h => {
-      const element = document.querySelector(`[data-highlight-id="${h.id}"]`);
-      if (element) {
-        const parent = element.parentNode;
-        if (parent) {
-          parent.replaceChild(document.createTextNode(element.textContent || ''), element);
-          parent.normalize();
-        }
-      }
-    });
-    this.highlights = [];
-    
     if (this.ctx) {
       this.ctx.clearRect(0, 0, this.canvas!.width, this.canvas!.height);
     }
-    
     this.notifyListeners();
   }
 
   getStrokes(): DrawingStroke[] {
     return [...this.strokes];
-  }
-
-  getHighlights(): HighlightSelection[] {
-    return [...this.highlights];
   }
 
   onStateChange(listener: () => void) {

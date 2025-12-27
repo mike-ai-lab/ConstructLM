@@ -43,8 +43,15 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   const isUser = message.role === 'user';
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoadingAudio, setIsLoadingAudio] = useState(false);
+  const [noteStyle, setNoteStyle] = useState(localStorage.getItem('noteStyle') || 'border');
   const audioContextRef = useRef<AudioContext | null>(null);
   const sourceRef = useRef<AudioBufferSourceNode | null>(null);
+
+  useEffect(() => {
+    const handleStyleChange = () => setNoteStyle(localStorage.getItem('noteStyle') || 'border');
+    window.addEventListener('noteStyleChange', handleStyleChange);
+    return () => window.removeEventListener('noteStyleChange', handleStyleChange);
+  }, []);
 
 
   const handlePlayAudio = async () => {
@@ -148,11 +155,18 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
                 ? 'bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] text-[#1a1a1a] dark:text-white rounded-tr-sm' 
                 : 'text-[#1a1a1a] dark:text-white'
              }
-             ${noteNumber ? 'border-l-4 border-[#25b5cd]' : ''}
+             ${noteNumber && noteStyle === 'border' ? 'border-l-4 border-[#25b5cd]' : ''}
+             ${noteNumber && noteStyle === 'glow' ? 'shadow-[0_0_20px_rgba(37,181,205,0.4)]' : ''}
+             ${noteNumber && noteStyle === 'highlight' ? 'bg-[rgba(37,181,205,0.1)] dark:bg-[rgba(37,181,205,0.15)]' : ''}
           `}>
             {message.isStreaming && !isUser && (
                  <div className="absolute -left-5 top-4">
                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-ping" />
+                 </div>
+             )}
+             {noteNumber && noteStyle === 'badge' && (
+                 <div className="absolute -top-2 -right-2 bg-[#25b5cd] text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-lg">
+                     Note #{noteNumber}
                  </div>
              )}
              
@@ -194,7 +208,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
           
           {/* Message Footer - Clean and Readable */}
           {!isUser && (
-            <div className="mt-3 px-1 space-y-2">
+            <div className="mt-3 space-y-2" style={{ paddingLeft: '20px', paddingRight: '20px' }}>
               {/* Sources Row */}
               {(files.filter(f => message.content.includes(f.name)).length > 0 || sources.filter(s => s.status === 'fetched').length > 0) && (
                 <div className="flex flex-wrap gap-2">

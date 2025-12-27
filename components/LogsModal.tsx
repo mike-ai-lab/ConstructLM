@@ -176,8 +176,8 @@ const LogsModal: React.FC<LogsModalProps> = ({ isOpen, onClose }) => {
   const logLines = parseLogLines(logContent);
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="w-[95vw] h-[90vh] max-w-6xl bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-[250] flex items-center justify-center p-4 pointer-events-none animate-in fade-in duration-200">
+      <div className="w-full max-w-5xl h-[85vh] bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-2xl flex flex-col overflow-hidden pointer-events-auto">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] bg-[rgba(0,0,0,0.02)] dark:bg-[#2a2a2a]">
           <div className="flex items-center gap-3">

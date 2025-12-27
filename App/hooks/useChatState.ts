@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Message } from '../../types';
 import { ChatMetadata } from '../../services/chatRegistry';
 
@@ -8,6 +8,13 @@ export const useChatState = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedSourceIds, setSelectedSourceIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (currentChatId) {
+      sessionStorage.setItem('currentChatId', currentChatId);
+      localStorage.setItem('lastChatId', currentChatId);
+    }
+  }, [currentChatId]);
 
   return {
     currentChatId,

@@ -19,6 +19,8 @@ export const createChatHandlers = (
     if (chat) {
       activityLogger.logAction('CHAT', 'Chat loaded', { chatId, messageCount: chat.messages.length, modelId: chat.modelId });
       setCurrentChatId(chatId);
+      sessionStorage.setItem('currentChatId', chatId);
+      localStorage.setItem('lastChatId', chatId);
       setMessages(chat.messages);
       setActiveModelId(chat.modelId);
       setSelectedSourceIds(chat.selectedSourceIds || []);
@@ -76,6 +78,8 @@ export const createChatHandlers = (
     const newChat = chatRegistry.createNewChat('New Chat', activeModelId);
     activityLogger.logChatCreated(newChat.id, activeModelId);
     setCurrentChatId(newChat.id);
+    sessionStorage.setItem('currentChatId', newChat.id);
+    localStorage.setItem('lastChatId', newChat.id);
     setMessages(newChat.messages);
     setSelectedSourceIds([]);
     setChats(prev => [{

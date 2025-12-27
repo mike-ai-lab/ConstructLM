@@ -1,0 +1,101 @@
+MARCH DOWN RENDERING
+CHATS SPLIT INTO LINKS AND DOCS TABS
+THE SEND BUTTON COLOR AND FUNCTIONALITY
+sources being added even if not selected, and added to the chats as source even not used
+
+
+
+REPLY TO A SPECIFIC PART WITH SELECTING THE LINES IN THE OUTPUT AND REPLYING TO THEM SPECIFICALLY:
+
+Feature Name: Focused Snippet Priority (FSP)
+
+Goal:
+Allow users to select a part of a text/message so that the AI primarily focuses on that selection while still retaining the overall conversation context.
+
+1. Core Logic
+
+User selects a snippet in your UI.
+
+System captures:
+
+selected_text → the text the user highlighted
+
+full_context → the full conversation or message history
+
+System generates a focus marker (internal metadata) to indicate priority.
+
+Send to AI / NLP engine:
+
+Include the selected_text marked as “priority focus”
+
+Include full_context for reference
+
+Pseudo-structure for sending to AI:
+
+{
+  "priority_snippet": "Step two",
+  "conversation_context": [
+    "Step one",
+    "Step two",
+    "Step three"
+  ],
+  "focus_marker": true
+}
+
+2. AI / NLP Handling
+
+When the AI receives the data:
+
+Check focus_marker.
+
+Apply attention weighting:
+
+Give higher weight to priority_snippet for generating the response.
+
+Treat conversation_context as secondary, only referenced if it adds value.
+
+Example in pseudocode:
+
+def generate_response(priority_snippet, conversation_context):
+    # Step 1: Embed the priority snippet with high attention
+    priority_embedding = embed_text(priority_snippet, weight=1.0)
+    
+    # Step 2: Embed context with lower attention
+    context_embeddings = [embed_text(c, weight=0.2) for c in conversation_context]
+    
+    # Step 3: Combine embeddings
+    combined_embedding = combine_embeddings([priority_embedding] + context_embeddings)
+    
+    # Step 4: Generate response based on combined embedding
+    response = model.generate(combined_embedding)
+    return response
+
+3. UI / UX Implementation
+
+Let the user highlight text in the chat window or editor.
+
+Add a “Focus this snippet” button.
+
+When clicked:
+
+Send only the selected text plus the full context internally.
+
+Mark the selection with a focus_marker.
+
+Optional UI cue: Highlight selected text in a subtle color to indicate it will be prioritized.
+
+4. Advantages
+
+Users get precise responses to a specific part of the conversation.
+
+Context is still available for the AI to maintain continuity.
+
+Works for long conversations or documents, not just chat messages.
+
+5. Advanced Enhancements
+
+Dynamic weighting: Allow the user to choose how much focus the selection gets vs. context.
+
+Multiple selections: Support multiple snippets prioritized differently.
+
+Summarization: If the context is very long, summarize it to reduce model load but retain meaning.
