@@ -421,7 +421,7 @@ const Notebook: React.FC<NotebookProps> = ({ notes, onDeleteNote, onUpdateNote, 
                           onClick={() => {
                             onNavigateToMessage(note.chatId!, note.messageId!);
                           }}
-                          className="p-1.5 hover:bg-green-50 dark:hover:bg-green-900/20 rounded text-green-600 transition-colors"
+                          className="p-1.5 hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[#222222] rounded text-[#1a1a1a] dark:text-white transition-colors"
                           title="Go to conversation"
                         >
                           <ExternalLink size={14} />
@@ -440,13 +440,13 @@ const Notebook: React.FC<NotebookProps> = ({ notes, onDeleteNote, onUpdateNote, 
                       </button>
                       <button
                         onClick={() => copyNote(note.content)}
-                        className="p-1.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded text-blue-600 transition-colors"
+                        className="p-1.5 hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[#222222] rounded text-[#1a1a1a] dark:text-white transition-colors"
                         title="Copy"
                       >
                         <Copy size={14} />
                       </button>
                       <div className="relative group/export">
-                        <button className="p-1.5 hover:bg-green-50 dark:hover:bg-green-900/20 rounded text-green-600 transition-colors" title="Export">
+                        <button className="p-1.5 hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[#222222] rounded text-[#1a1a1a] dark:text-white transition-colors" title="Export">
                           <FileText size={14} />
                         </button>
                         <div className="hidden group-hover/export:flex absolute right-0 top-full mt-1 bg-white dark:bg-[#222222] rounded-lg shadow-lg border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] flex-col overflow-hidden z-10">
@@ -466,7 +466,7 @@ const Notebook: React.FC<NotebookProps> = ({ notes, onDeleteNote, onUpdateNote, 
                       </div>
                       <button
                         onClick={() => onDeleteNote(note.id)}
-                        className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded text-red-600 transition-colors"
+                        className="p-1.5 hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[#222222] rounded text-[#1a1a1a] dark:text-white transition-colors"
                         title="Delete"
                       >
                         <Trash2 size={14} />

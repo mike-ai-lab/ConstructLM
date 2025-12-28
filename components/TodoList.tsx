@@ -170,7 +170,7 @@ const TodoList: React.FC<TodoListProps> = ({ todos, onAddTodo, onToggleTodo, onD
                 <span className="font-semibold text-[#1a1a1a] dark:text-white">{todos.filter(t => t.completed).length}/{todos.length}</span>
               </div>
               <div className="flex-1 bg-[rgba(0,0,0,0.1)] dark:bg-[#1a1a1a] rounded-full h-2">
-                <div className="bg-green-600 h-2 rounded-full transition-all" style={{ width: `${todos.length ? (todos.filter(t => t.completed).length / todos.length) * 100 : 0}%` }} />
+                <div className="bg-[#b8e6f0] dark:bg-[#7dd3e8] h-2 rounded-full transition-all" style={{ width: `${todos.length ? (todos.filter(t => t.completed).length / todos.length) * 100 : 0}%` }} />
               </div>
             </div>
             <div className="space-y-2">
@@ -201,7 +201,7 @@ const TodoList: React.FC<TodoListProps> = ({ todos, onAddTodo, onToggleTodo, onD
                           <div className="flex items-center gap-2 mb-1">
                             <span className="text-xs text-[#666666] dark:text-[#a0a0a0]">{progress}%</span>
                             <div className="flex-1 bg-[rgba(0,0,0,0.1)] dark:bg-[#1a1a1a] rounded-full h-1.5">
-                              <div className="bg-blue-600 h-1.5 rounded-full transition-all" style={{ width: `${progress}%` }} />
+                              <div className="bg-[#a8d5e2] dark:bg-[#6ec9e0] h-1.5 rounded-full transition-all" style={{ width: `${progress}%` }} />
                             </div>
                           </div>
                         </div>

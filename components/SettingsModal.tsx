@@ -318,8 +318,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
 
                 {/* Content */}
                 <div className="p-4 overflow-y-auto space-y-4 flex-1">
-                    {/* Note Style Selector */}
-                    <div className="space-y-3">
+                    {/* Note Style Selector - COMMENTED OUT FOR DEVELOPMENT */}
+                    {/* <div className="space-y-3">
                         <div className="flex items-center gap-1.5">
                             <span className="text-[#666666] dark:text-[#a0a0a0]">📝</span>
                             <h3 className="text-xs font-bold text-[#666666] dark:text-[#a0a0a0] uppercase tracking-wider">Note Style</h3>
@@ -344,10 +344,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                                 </button>
                             ))}
                         </div>
-                    </div>
+                    </div> */}
 
-                    {/* Font Selector Section */}
-                    <div className="space-y-3">
+                    {/* Font Selector Section - COMMENTED OUT FOR DEVELOPMENT */}
+                    {/* <div className="space-y-3">
                         <div className="flex items-center gap-1.5">
                             <span className="text-[#666666] dark:text-[#a0a0a0]">Aa</span>
                             <h3 className="text-xs font-bold text-[#666666] dark:text-[#a0a0a0] uppercase tracking-wider">Font Family</h3>
@@ -371,7 +371,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                                 </button>
                             ))}
                         </div>
-                    </div>
+                    </div> */}
 
                     {/* User Profile Section */}
                     <div className="space-y-3">

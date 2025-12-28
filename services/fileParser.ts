@@ -14,10 +14,21 @@ export const parseFile = async (file: File): Promise<ProcessedFile> => {
   let fileType: ProcessedFile['type'] = 'other';
   
   // Generate content hash for deduplication
-  const arrayBuffer = await file.arrayBuffer();
-  const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const contentHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  let contentHash = '';
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    if (crypto.subtle) {
+      const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      contentHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    } else {
+      // Fallback: use file size + name as hash
+      contentHash = `${file.size}-${file.name}-${Date.now()}`;
+    }
+  } catch (e) {
+    // Fallback if crypto fails
+    contentHash = `${file.size}-${file.name}-${Date.now()}`;
+  }
   
   // Check if file already processed
   const existing = await permanentStorage.getFileByHash(contentHash);

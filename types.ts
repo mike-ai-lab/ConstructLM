@@ -11,6 +11,7 @@ export interface ProcessedFile {
   uploadedAt?: number; // Timestamp when file was uploaded
   contentHash?: string; // SHA-256 hash for deduplication
   sections?: PDFSection[]; // Structured sections for construction PDFs
+  userFolder?: string; // User-created folder path (e.g., "Research/Papers")
 }
 
 export interface PDFSection {

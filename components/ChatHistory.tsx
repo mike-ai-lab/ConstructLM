@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ChatMetadata } from '../services/chatRegistry';
 import { MODEL_REGISTRY } from '../services/modelRegistry';
-import { MessageCircle, Plus, Trash2, Calendar, Hash, History } from 'lucide-react';
+import { MessageCircle, Plus, Trash2, Calendar, Hash } from 'lucide-react';
 
 interface ChatHistoryProps {
   chats: ChatMetadata[];
@@ -9,7 +9,6 @@ interface ChatHistoryProps {
   onSelectChat: (chatId: string) => void;
   onCreateChat: () => void;
   onDeleteChat: (chatId: string) => void;
-  onOpenLogs?: () => void;
 }
 
 const ChatHistory: React.FC<ChatHistoryProps> = ({
@@ -17,8 +16,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
   activeChatId,
   onSelectChat,
   onCreateChat,
-  onDeleteChat,
-  onOpenLogs
+  onDeleteChat
 }) => {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [chatViewTab, setChatViewTab] = useState<'files' | 'links'>('files');
@@ -55,24 +53,13 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
       <div className="px-4 py-2 flex-shrink-0">
         <div className="flex items-center justify-between mb-2">
           <span className="text-[12px] font-medium text-[#666666] dark:text-[#a0a0a0]">{chats.length} chats</span>
-          <div className="flex gap-1">
-            {onOpenLogs && (
-              <button
-                onClick={onOpenLogs}
-                className="p-1.5 text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] rounded-lg transition-colors"
-                title="Open Logs"
-              >
-                <History size={14} />
-              </button>
-            )}
-            <button
-              onClick={onCreateChat}
-              className="p-1.5 text-[#4485d1] hover:bg-[rgba(68,133,209,0.1)] rounded-lg transition-colors"
-              title="New Chat"
-            >
-              <Plus size={14} />
-            </button>
-          </div>
+          <button
+            onClick={onCreateChat}
+            className="p-1.5 text-[#4485d1] hover:bg-[rgba(68,133,209,0.1)] rounded-lg transition-colors"
+            title="New Chat"
+          >
+            <Plus size={14} />
+          </button>
         </div>
         <div className="flex gap-1 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] rounded p-0.5">
           <button

@@ -138,24 +138,28 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
         )}
       </div>
 
-      <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] rounded-full p-1">
-        <button onClick={() => props.onTabChange?.('chat')} className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${props.activeTab === 'chat' ? 'bg-blue-600 text-white' : 'text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[#222222]'}`}>
-          <MessageSquare size={14} />
+      <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-0.5 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] rounded-lg p-0.5">
+        <button onClick={() => props.onTabChange?.('chat')} className={`px-3 py-1.5 rounded-md flex items-center justify-center gap-1.5 transition-all text-xs font-medium ${props.activeTab === 'chat' ? 'bg-white dark:bg-[#1a1a1a] text-[#1a1a1a] dark:text-white shadow-sm' : 'text-[#666666] dark:text-[#a0a0a0] hover:text-[#1a1a1a] dark:hover:text-white'}`}>
+          <MessageSquare size={13} />
+          <span>Chat</span>
         </button>
-        <button onClick={() => { props.onTabChange?.('notebook'); if (props.isViewerOpen) props.onCloseViewer?.(); }} className={`w-8 h-8 rounded-full flex items-center justify-center transition-all relative ${props.activeTab === 'notebook' ? 'bg-[#25b5cd] text-white' : 'text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[#222222]'}`}>
-          <BookMarked size={14} />
+        <button onClick={() => { props.onTabChange?.('notebook'); if (props.isViewerOpen) props.onCloseViewer?.(); }} className={`px-3 py-1.5 rounded-md flex items-center justify-center gap-1.5 transition-all text-xs font-medium relative ${props.activeTab === 'notebook' ? 'bg-white dark:bg-[#1a1a1a] text-[#1a1a1a] dark:text-white shadow-sm' : 'text-[#666666] dark:text-[#a0a0a0] hover:text-[#1a1a1a] dark:hover:text-white'}`}>
+          <BookMarked size={13} />
+          <span>Notes</span>
           {props.notesCount && props.notesCount > 0 && props.activeTab !== 'notebook' && (
-            <span className="absolute -top-1 -right-1 bg-[#25b5cd] text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-semibold">{props.notesCount > 99 ? '99+' : props.notesCount}</span>
+            <span className="absolute -top-1 -right-1 bg-[#666666] dark:bg-[#a0a0a0] text-white text-[9px] rounded-full w-3.5 h-3.5 flex items-center justify-center font-semibold">{props.notesCount > 9 ? '9+' : props.notesCount}</span>
           )}
         </button>
-        <button onClick={() => { props.onTabChange?.('todos'); if (props.isViewerOpen) props.onCloseViewer?.(); }} className={`w-8 h-8 rounded-full flex items-center justify-center transition-all relative ${props.activeTab === 'todos' ? 'bg-green-600 text-white' : 'text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[#222222]'}`}>
-          <CheckSquare size={14} />
+        <button onClick={() => { props.onTabChange?.('todos'); if (props.isViewerOpen) props.onCloseViewer?.(); }} className={`px-3 py-1.5 rounded-md flex items-center justify-center gap-1.5 transition-all text-xs font-medium relative ${props.activeTab === 'todos' ? 'bg-white dark:bg-[#1a1a1a] text-[#1a1a1a] dark:text-white shadow-sm' : 'text-[#666666] dark:text-[#a0a0a0] hover:text-[#1a1a1a] dark:hover:text-white'}`}>
+          <CheckSquare size={13} />
+          <span>Todos</span>
           {props.todosCount && props.todosCount > 0 && props.activeTab !== 'todos' && (
-            <span className="absolute -top-1 -right-1 bg-green-600 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">{props.todosCount > 99 ? '99+' : props.todosCount}</span>
+            <span className="absolute -top-1 -right-1 bg-[#666666] dark:bg-[#a0a0a0] text-white text-[9px] rounded-full w-3.5 h-3.5 flex items-center justify-center font-semibold">{props.todosCount > 9 ? '9+' : props.todosCount}</span>
           )}
         </button>
-        <button onClick={() => { props.onTabChange?.('github'); if (props.isViewerOpen) props.onCloseViewer?.(); }} className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${props.activeTab === 'github' ? 'bg-purple-600 text-white' : 'text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[#222222]'}`} title="GitHub Browser">
-          <Github size={14} />
+        <button onClick={() => { props.onTabChange?.('github'); if (props.isViewerOpen) props.onCloseViewer?.(); }} className={`px-3 py-1.5 rounded-md flex items-center justify-center gap-1.5 transition-all text-xs font-medium ${props.activeTab === 'github' ? 'bg-white dark:bg-[#1a1a1a] text-[#1a1a1a] dark:text-white shadow-sm' : 'text-[#666666] dark:text-[#a0a0a0] hover:text-[#1a1a1a] dark:hover:text-white'}`} title="GitHub Browser">
+          <Github size={13} />
+          <span>GitHub</span>
         </button>
       </div>
 

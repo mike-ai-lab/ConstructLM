@@ -936,6 +936,14 @@ const App: React.FC = () => {
             onDragStateChange={layoutState.setIsSidebarDragOver}
             selectedSourceIds={chatState.selectedSourceIds}
             onToggleSource={handleToggleFileSource}
+            onUpdateFile={(fileId, updates) => {
+              fileState.setFiles(prev => {
+                const updated = prev.map(f => f.id === fileId ? { ...f, ...updates } : f);
+                // Persist to localStorage
+                localStorage.setItem('files', JSON.stringify(updated));
+                return updated;
+              });
+            }}
           />
           {layoutState.isSidebarOpen && !layoutState.isMobile && (
             <div 

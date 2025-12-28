@@ -1,7 +1,8 @@
-import React, { useRef, useState, useMemo, useEffect } from 'react'; 
+import React, { useRef, useState, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom'; 
 import { ProcessedFile } from '../types';
 import { ChatMetadata } from '../services/chatRegistry';
-import { FileText, FileSpreadsheet, File as FileIcon, X, Loader2, FolderOpen, Plus, ChevronRight, ChevronDown, Folder, Image, MessageCircle, Files, BookOpen, Minus, Network, List, GitBranch, History, Download } from 'lucide-react';
+import { FileText, FileSpreadsheet, File as FileIcon, X, Loader2, FolderOpen, Plus, ChevronRight, ChevronDown, Folder, Image, MessageCircle, Files, BookOpen, Minus, Network, List, GitBranch, History, Download, Edit2, FolderPlus, Scissors, Trash2 } from 'lucide-react';
 import ChatHistory from './ChatHistory';
 import DocumentViewer from './DocumentViewer';
 import LogsModal from './LogsModal';
@@ -21,6 +22,20 @@ interface FileSidebarProps {
   onDragStateChange: (isDragging: boolean) => void;
   selectedSourceIds: string[];
   onToggleSource: (fileId: string) => void;
+  onUpdateFile?: (fileId: string, updates: Partial<ProcessedFile>) => void;
+}
+
+interface UserFolder {
+  path: string;
+  name: string;
+  parentPath: string | null;
+}
+
+interface ContextMenu {
+  x: number;
+  y: number;
+  fileIds: string[];
+  folderPath?: string;
 }
 
 const removeFolder = (folderPath: string, files: ProcessedFile[], onRemove: (id: string) => void) => {
@@ -43,7 +58,8 @@ interface TreeNode {
 const FileSidebar: React.FC<FileSidebarProps> = ({ 
   files, onUpload, onRemove, isProcessing, onGenerateMindMap,
   chats, activeChatId, onSelectChat, onCreateChat, onDeleteChat,
-  isDragOver, onDragStateChange, selectedSourceIds, onToggleSource
+  isDragOver, onDragStateChange, selectedSourceIds, onToggleSource,
+  onUpdateFile
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
@@ -51,6 +67,225 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
   const [activeTab, setActiveTab] = useState<'files' | 'chats'>('files');
   const [fileViewTab, setFileViewTab] = useState<'all' | 'folders'>('all');
   const [isLogsModalOpen, setIsLogsModalOpen] = useState(false);
+  const [userFolders, setUserFolders] = useState<UserFolder[]>([]);
+  const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
+  const [cutFiles, setCutFiles] = useState<Set<string>>(new Set());
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+  const [showFolderInput, setShowFolderInput] = useState(false);
+  const [folderInputValue, setFolderInputValue] = useState('');
+  const [folderInputParent, setFolderInputParent] = useState<string | null>(null);
+
+  // Load user folders from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('userFolders');
+    if (saved) setUserFolders(JSON.parse(saved));
+  }, []);
+
+  // Save user folders to localStorage
+  const saveUserFolders = (folders: UserFolder[]) => {
+    setUserFolders(folders);
+    localStorage.setItem('userFolders', JSON.stringify(folders));
+  };
+
+  // Close context menu on click outside
+  useEffect(() => {
+    const handleClick = () => setContextMenu(null);
+    if (contextMenu) {
+      document.addEventListener('click', handleClick);
+      return () => document.removeEventListener('click', handleClick);
+    }
+  }, [contextMenu]);
+
+  // Create new folder
+  const handleCreateFolder = (parentPath: string | null = null) => {
+    setFolderInputParent(parentPath);
+    setFolderInputValue('');
+    setShowFolderInput(true);
+  };
+
+  const confirmCreateFolder = () => {
+    const folderName = folderInputValue.trim();
+    if (!folderName) return;
+    
+    const path = folderInputParent ? `${folderInputParent}/${folderName}` : folderName;
+    if (userFolders.some(f => f.path === path)) {
+      alert('Folder already exists!');
+      return;
+    }
+    
+    saveUserFolders([...userFolders, { path, name: folderName, parentPath: folderInputParent }]);
+    setExpandedFolders(prev => new Set([...prev, path]));
+    setShowFolderInput(false);
+  };
+
+  // Delete folder
+  const handleDeleteFolder = (folderPath: string) => {
+    if (!confirm(`Delete folder "${folderPath}" and move its files to root?`)) return;
+    
+    // Move files to root
+    if (onUpdateFile) {
+      files.forEach(file => {
+        if (file.userFolder === folderPath) {
+          onUpdateFile(file.id, { userFolder: undefined });
+        }
+      });
+    } else {
+      files.forEach(file => {
+        if (file.userFolder === folderPath) {
+          file.userFolder = undefined;
+        }
+      });
+    }
+    
+    // Remove folder and subfolders
+    saveUserFolders(userFolders.filter(f => !f.path.startsWith(folderPath)));
+  };
+
+  // Rename file or folder
+  const handleRename = (id: string, isFolder: boolean) => {
+    if (isFolder) {
+      const folder = userFolders.find(f => f.path === id);
+      if (!folder) return;
+      setRenamingId(id);
+      setRenameValue(folder.name);
+    } else {
+      setRenamingId(id);
+      const file = files.find(f => f.id === id);
+      if (file) setRenameValue(file.name);
+    }
+  };
+
+  // Confirm rename
+  const confirmRename = (id: string, isFolder: boolean) => {
+    const newName = renameValue.trim();
+    if (!newName) return;
+    
+    if (isFolder) {
+      const folder = userFolders.find(f => f.path === id);
+      if (!folder || newName === folder.name) {
+        setRenamingId(null);
+        return;
+      }
+      
+      const newPath = folder.parentPath ? `${folder.parentPath}/${newName}` : newName;
+      
+      // Update folder
+      const updated = userFolders.map(f => {
+        if (f.path === folder.path) return { ...f, path: newPath, name: newName };
+        if (f.path.startsWith(folder.path + '/')) {
+          return { ...f, path: f.path.replace(folder.path, newPath), parentPath: f.parentPath === folder.path ? newPath : f.parentPath };
+        }
+        return f;
+      });
+      
+      // Update files in folder
+      if (onUpdateFile) {
+        files.forEach(file => {
+          if (file.userFolder === folder.path) {
+            onUpdateFile(file.id, { userFolder: newPath });
+          }
+        });
+      } else {
+        files.forEach(file => {
+          if (file.userFolder === folder.path) file.userFolder = newPath;
+        });
+      }
+      
+      saveUserFolders(updated);
+    } else {
+      if (onUpdateFile) {
+        onUpdateFile(id, { name: newName });
+      } else {
+        const file = files.find(f => f.id === id);
+        if (file) file.name = newName;
+      }
+    }
+    setRenamingId(null);
+  };
+
+  // Cut files
+  const handleCut = (fileIds: string[]) => {
+    setCutFiles(new Set(fileIds));
+    setContextMenu(null);
+  };
+
+  // Paste files into folder (move operation)
+  const handlePaste = (targetFolder: string | null) => {
+    // Animate files moving
+    const filesToMove = Array.from(cutFiles);
+    
+    // Add moving animation class
+    filesToMove.forEach(fileId => {
+      const element = document.querySelector(`[data-file-id="${fileId}"]`);
+      if (element) {
+        element.classList.add('animate-pulse');
+      }
+    });
+    
+    // Delay the actual move to show animation
+    setTimeout(() => {
+      filesToMove.forEach(fileId => {
+        if (onUpdateFile) {
+          onUpdateFile(fileId, { userFolder: targetFolder || undefined });
+        } else {
+          const file = files.find(f => f.id === fileId);
+          if (file) file.userFolder = targetFolder || undefined;
+        }
+      });
+      
+      // Clear cut state after moving
+      setCutFiles(new Set());
+      setSelectedFiles(new Set());
+      setContextMenu(null);
+    }, 300);
+  };
+
+  // Handle right-click context menu with smart positioning
+  const handleContextMenu = (e: React.MouseEvent, fileIds: string[], folderPath?: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const menuWidth = 180;
+    const menuHeight = 250;
+    
+    let x = e.clientX;
+    let y = e.clientY;
+    
+    // Adjust if overflowing right
+    if (x + menuWidth > window.innerWidth) {
+      x = window.innerWidth - menuWidth - 10;
+    }
+    
+    // Adjust if overflowing bottom - position above cursor
+    if (y + menuHeight > window.innerHeight) {
+      y = Math.max(10, y - menuHeight);
+    }
+    
+    setContextMenu({ x, y, fileIds, folderPath });
+  };
+
+  // Multi-select with Ctrl/Shift
+  const handleFileClick = (fileId: string, e: React.MouseEvent) => {
+    if (e.ctrlKey || e.metaKey) {
+      setSelectedFiles(prev => {
+        const next = new Set(prev);
+        if (next.has(fileId)) next.delete(fileId);
+        else next.add(fileId);
+        return next;
+      });
+    } else if (e.shiftKey && selectedFiles.size > 0) {
+      const allFiles = files.map(f => f.id);
+      const lastSelected = Array.from(selectedFiles)[selectedFiles.size - 1];
+      const start = allFiles.indexOf(lastSelected);
+      const end = allFiles.indexOf(fileId);
+      const range = allFiles.slice(Math.min(start, end), Math.max(start, end) + 1);
+      setSelectedFiles(new Set(range));
+    } else {
+      setSelectedFiles(new Set([fileId]));
+    }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -113,9 +348,14 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
   const standaloneFiles = useMemo(() => {
       return files.filter(file => {
           const path = file.path || file.name;
-          return !path.includes('/');
+          return !path.includes('/') && !file.userFolder;
       });
   }, [files]);
+
+  // Get files in a user folder
+  const getFilesInFolder = (folderPath: string) => {
+    return files.filter(f => f.userFolder === folderPath);
+  };
 
   const hasTreeStructure = Object.keys(fileTree).length > 0;
 
@@ -372,6 +612,14 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
                     </button>
                   )}
                   <button
+                    onClick={() => handleCreateFolder()}
+                    disabled={isProcessing}
+                    className="p-1.5 text-[#666666] dark:text-[#a0a0a0] hover:bg-[#eaeaea] dark:hover:bg-[#2a2a2a] rounded-lg transition-colors disabled:opacity-50"
+                    title="Create Folder"
+                  >
+                    <FolderPlus size={14} />
+                  </button>
+                  <button
                     onClick={() => fileInputRef.current?.click()}
                     disabled={isProcessing}
                     className="p-1.5 text-[#4485d1] hover:bg-[rgba(68,133,209,0.1)] rounded-lg transition-colors disabled:opacity-50"
@@ -427,11 +675,33 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
             </div>
 
             {/* File Tree area: make this the scrollable flex-1 area */}
-            <div className="flex-1 overflow-y-auto px-2 py-2 custom-scrollbar min-h-0">
+            <div 
+              className="flex-1 overflow-y-auto px-2 py-2 custom-scrollbar min-h-0"
+              onContextMenu={(e) => {
+                if (e.target === e.currentTarget || (e.target as HTMLElement).classList.contains('space-y-0.5')) {
+                  handleContextMenu(e, [], null);
+                }
+              }}
+            >
               {isProcessing && (
                 <div className="flex items-center gap-3 p-3 mx-2 mb-2 text-sm text-blue-700 bg-blue-50 rounded-lg border border-blue-100 animate-pulse">
                   <Loader2 size={16} className="animate-spin" />
                   <span className="font-medium">Processing...</span>
+                </div>
+              )}
+              
+              {cutFiles.size > 0 && (
+                <div className="flex items-center justify-between gap-3 p-2 mx-2 mb-2 text-xs bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <div className="flex items-center gap-2">
+                    <Scissors size={14} className="text-blue-600" />
+                    <span className="font-medium text-blue-700 dark:text-blue-400">{cutFiles.size} file(s) cut - Right-click folder to paste</span>
+                  </div>
+                  <button
+                    onClick={() => setCutFiles(new Set())}
+                    className="p-0.5 hover:bg-blue-100 dark:hover:bg-blue-900/40 rounded"
+                  >
+                    <X size={12} className="text-blue-600" />
+                  </button>
                 </div>
               )}
 
@@ -450,18 +720,104 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
                     {fileViewTab === 'folders' ? (
                       renderTree(fileTree)
                     ) : (
-                      standaloneFiles.map(file => (
+                      <>
+                        {/* User-created folders */}
+                        {userFolders.filter(f => !f.parentPath).map(folder => {
+                          const folderFiles = getFilesInFolder(folder.path);
+                          const isExpanded = expandedFolders.has(folder.path);
+                          
+                          return (
+                            <div key={folder.path} className="mb-1">
+                              <div
+                                className="flex items-center gap-1.5 px-2 py-1.5 hover:bg-[#eaeaea] dark:hover:bg-[#2a2a2a] rounded cursor-pointer text-[#1a1a1a] dark:text-white group mx-2"
+                                onContextMenu={(e) => handleContextMenu(e, [], folder.path)}
+                              >
+                                <div className="w-3 h-3 flex items-center justify-center flex-shrink-0" onClick={() => toggleFolder(folder.path)}>
+                                  {isExpanded ? <ChevronDown size={12} className="text-[#666666] dark:text-[#a0a0a0]"/> : <ChevronRight size={12} className="text-[#666666] dark:text-[#a0a0a0]"/>}
+                                </div>
+                                <Folder size={13} className="text-amber-500 flex-shrink-0" onClick={() => toggleFolder(folder.path)} />
+                                {renamingId === folder.path ? (
+                                  <input
+                                    type="text"
+                                    value={renameValue}
+                                    onChange={(e) => setRenameValue(e.target.value)}
+                                    onBlur={() => confirmRename(folder.path, true)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') confirmRename(folder.path, true);
+                                      if (e.key === 'Escape') setRenamingId(null);
+                                      e.stopPropagation();
+                                    }}
+                                    autoFocus
+                                    className="flex-1 px-1 py-0.5 text-xs bg-white dark:bg-[#1a1a1a] border border-blue-500 rounded"
+                                    onClick={(e) => e.stopPropagation()}
+                                  />
+                                ) : (
+                                  <span className="text-xs font-semibold truncate flex-1" onClick={() => toggleFolder(folder.path)}>{folder.name}</span>
+                                )}
+                                <span className="text-[10px] text-[#a0a0a0] opacity-0 group-hover:opacity-100">{folderFiles.length}</span>
+                              </div>
+                              
+                              {isExpanded && folderFiles.length > 0 && (
+                                <div className="ml-6 space-y-0.5">
+                                  {folderFiles.map(file => (
+                                    <div
+                                      key={file.id}
+                                      data-file-id={file.id}
+                                      className={`
+                                        group relative flex items-center gap-2 px-2 py-2 rounded-md transition-all cursor-pointer mx-2
+                                        ${selectedFiles.has(file.id) ? 'bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-400' : 'hover:bg-[#eaeaea] dark:hover:bg-[#2a2a2a]'}
+                                        ${cutFiles.has(file.id) ? 'opacity-40 scale-95' : ''}
+                                      `}
+                                      onClick={(e) => handleFileClick(file.id, e)}
+                                      onContextMenu={(e) => handleContextMenu(e, selectedFiles.has(file.id) ? Array.from(selectedFiles) : [file.id])}
+                                    >
+                                      <div className="flex-shrink-0">{getIcon(file)}</div>
+                                      
+                                      {renamingId === file.id ? (
+                                        <input
+                                          type="text"
+                                          value={renameValue}
+                                          onChange={(e) => setRenameValue(e.target.value)}
+                                          onBlur={() => confirmRename(file.id, false)}
+                                          onKeyDown={(e) => {
+                                            if (e.key === 'Enter') confirmRename(file.id, false);
+                                            if (e.key === 'Escape') setRenamingId(null);
+                                            e.stopPropagation();
+                                          }}
+                                          autoFocus
+                                          className="flex-1 px-1 py-0.5 text-xs bg-white dark:bg-[#1a1a1a] border border-blue-500 rounded"
+                                          onClick={(e) => e.stopPropagation()}
+                                        />
+                                      ) : (
+                                        <div className="flex flex-col min-w-0 flex-1">
+                                          <span className="text-xs truncate text-[#1a1a1a] dark:text-white font-medium" title={file.name}>
+                                            {file.name}
+                                          </span>
+                                          <span className="text-[12px] text-[#666666] dark:text-[#a0a0a0] whitespace-nowrap">
+                                            {file.tokenCount ? `~${(file.tokenCount / 1000).toFixed(1)}k tokens` : 'Processing...'}
+                                          </span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                        
+                        {/* Standalone files */}
+                        {standaloneFiles.map(file => (
                       <div
                           key={file.id}
-                          draggable
-                          onDragStart={(e) => {
-                            e.dataTransfer.setData('text/plain', `@${file.name}`);
-                            e.dataTransfer.effectAllowed = 'copy';
-                          }}
+                          data-file-id={file.id}
                           className={`
-                              group relative flex items-center gap-2 px-2 py-2 rounded-md transition-all cursor-grab active:cursor-grabbing mx-2
-                              ${file.status === 'error' ? 'bg-red-50 dark:bg-red-900/20' : 'hover:bg-[#eaeaea] dark:hover:bg-[#2a2a2a]'}
+                              group relative flex items-center gap-2 px-2 py-2 rounded-md transition-all cursor-pointer mx-2
+                              ${selectedFiles.has(file.id) ? 'bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-400' : file.status === 'error' ? 'bg-red-50 dark:bg-red-900/20' : 'hover:bg-[#eaeaea] dark:hover:bg-[#2a2a2a]'}
+                              ${cutFiles.has(file.id) ? 'opacity-40 scale-95' : ''}
                           `}
+                          onClick={(e) => handleFileClick(file.id, e)}
+                          onContextMenu={(e) => handleContextMenu(e, selectedFiles.has(file.id) ? Array.from(selectedFiles) : [file.id])}
                       >
                           <input
                               type="checkbox"
@@ -474,57 +830,43 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
                               {file.status === 'processing' ? <Loader2 size={12} className="animate-spin text-blue-500"/> : getIcon(file)}
                           </div>
                           
-                          <div className="flex flex-col min-w-0 flex-1">
-                              <span className={`text-xs truncate ${file.status === 'error' ? 'text-red-700' : 'text-[#1a1a1a] dark:text-white font-medium'}`} title={file.name}>
-                              {file.name}
-                              </span>
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="text-[12px] text-[#666666] dark:text-[#a0a0a0] whitespace-nowrap">
-                                  {file.tokenCount ? `~${(file.tokenCount / 1000).toFixed(1)}k tokens` : 'Processing...'}
+                          {renamingId === file.id ? (
+                            <input
+                              type="text"
+                              value={renameValue}
+                              onChange={(e) => setRenameValue(e.target.value)}
+                              onBlur={() => confirmRename(file.id, false)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') confirmRename(file.id, false);
+                                if (e.key === 'Escape') setRenamingId(null);
+                                e.stopPropagation();
+                              }}
+                              autoFocus
+                              className="flex-1 px-1 py-0.5 text-xs bg-white dark:bg-[#1a1a1a] border border-blue-500 rounded"
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          ) : (
+                            <div className="flex flex-col min-w-0 flex-1">
+                                <span className={`text-xs truncate ${file.status === 'error' ? 'text-red-700' : 'text-[#1a1a1a] dark:text-white font-medium'}`} title={file.name}>
+                                {file.name}
                                 </span>
-                                {file.uploadedAt && (
-                                  <span className="text-[12px] text-[#a0a0a0] whitespace-nowrap">
-                                    {new Date(file.uploadedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-[12px] text-[#666666] dark:text-[#a0a0a0] whitespace-nowrap">
+                                    {file.tokenCount ? `~${(file.tokenCount / 1000).toFixed(1)}k tokens` : 'Processing...'}
                                   </span>
-                                )}
-                              </div>
-                          </div>
-
-                          <button
-                              onClick={(e) => { e.stopPropagation(); setPreviewFileId(file.id); }}
-                              className="opacity-0 group-hover:opacity-100 p-0.5 text-[#a0a0a0] hover:text-[#4485d1] rounded transition-all flex-shrink-0"
-                              title="Preview"
-                          >
-                              <BookOpen size={12} />
-                          </button>
-                          {file.fileHandle && (
-                            <button
-                                onClick={(e) => { e.stopPropagation(); handleDownload(file); }}
-                                className="opacity-0 group-hover:opacity-100 p-0.5 text-[#a0a0a0] hover:text-green-500 rounded transition-all flex-shrink-0"
-                                title="Download file"
-                            >
-                                <Download size={12} />
-                            </button>
+                                  {file.uploadedAt && (
+                                    <span className="text-[12px] text-[#a0a0a0] whitespace-nowrap">
+                                      {new Date(file.uploadedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                                    </span>
+                                  )}
+                                </div>
+                            </div>
                           )}
-                          {onGenerateMindMap && (
-                            <button
-                                onClick={(e) => { e.stopPropagation(); onGenerateMindMap(file.id); }}
-                                className="opacity-0 group-hover:opacity-100 p-0.5 text-[#a0a0a0] hover:text-purple-500 rounded transition-all flex-shrink-0"
-                                title="Generate Mind Map"
-                            >
-                                <Network size={12} />
-                            </button>
-                          )}
-                          <button
-                              onClick={() => onRemove(file.id)}
-                              className="opacity-0 group-hover:opacity-100 p-0.5 text-[#a0a0a0] hover:text-[#ef4444] rounded transition-all flex-shrink-0"
-                              title="Remove source"
-                          >
-                              <X size={12} />
-                          </button>
                       </div>
-                        ))
-                    )}
+                        ))}
+                      </>
+                    )
+                  }
                 </div>
               )}
             </div>
@@ -536,26 +878,187 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
             onSelectChat={onSelectChat}
             onCreateChat={onCreateChat}
             onDeleteChat={onDeleteChat}
-            onOpenLogs={() => setIsLogsModalOpen(true)}
           />
         )}
       </div>
     </div>
-    {previewFile && (
-      <FilePreviewModal file={previewFile} onClose={() => setPreviewFileId(null)} />
+    {showFolderInput && (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]" onClick={() => setShowFolderInput(false)}>
+        <div className="bg-white dark:bg-[#222222] rounded-lg shadow-xl p-4 min-w-[300px]" onClick={(e) => e.stopPropagation()}>
+          <h3 className="text-sm font-semibold mb-3">Create New Folder</h3>
+          <input
+            type="text"
+            value={folderInputValue}
+            onChange={(e) => setFolderInputValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') confirmCreateFolder();
+              if (e.key === 'Escape') setShowFolderInput(false);
+            }}
+            placeholder="Folder name"
+            autoFocus
+            className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded mb-3 bg-white dark:bg-[#1a1a1a]"
+          />
+          <div className="flex gap-2 justify-end">
+            <button
+              onClick={() => setShowFolderInput(false)}
+              className="px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 dark:hover:bg-[#2a2a2a] rounded"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={confirmCreateFolder}
+              className="px-3 py-1.5 text-sm bg-blue-500 text-white hover:bg-blue-600 rounded"
+            >
+              Create
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    {contextMenu && createPortal(
+      <div 
+        className="fixed bg-white dark:bg-[#222222] rounded-lg shadow-2xl border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] py-1 min-w-[180px] max-h-[400px] overflow-y-auto z-[99999]"
+        style={{ 
+          left: `${contextMenu.x}px`, 
+          top: `${contextMenu.y}px`
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {contextMenu.fileIds.length > 0 ? (
+          <>
+            {onGenerateMindMap && contextMenu.fileIds.length === 1 && (
+              <button
+                onClick={() => {
+                  onGenerateMindMap(contextMenu.fileIds[0]);
+                  setContextMenu(null);
+                }}
+                className="w-full px-3 py-2 text-left text-sm hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] flex items-center gap-2"
+              >
+                <Network size={14} className="text-purple-500" />
+                Generate Mind Map
+              </button>
+            )}
+            <button
+              onClick={() => handleCut(contextMenu.fileIds)}
+              className="w-full px-3 py-2 text-left text-sm hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] flex items-center gap-2"
+            >
+              <Scissors size={14} className="text-blue-500" />
+              Cut
+            </button>
+            {contextMenu.fileIds.length === 1 && (
+              <>
+                <button
+                  onClick={() => {
+                    setPreviewFileId(contextMenu.fileIds[0]);
+                    setContextMenu(null);
+                  }}
+                  className="w-full px-3 py-2 text-left text-sm hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] flex items-center gap-2"
+                >
+                  <BookOpen size={14} className="text-blue-500" />
+                  Preview
+                </button>
+                <button
+                  onClick={() => {
+                    const file = files.find(f => f.id === contextMenu.fileIds[0]);
+                    if (file?.fileHandle) handleDownload(file);
+                    setContextMenu(null);
+                  }}
+                  className="w-full px-3 py-2 text-left text-sm hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] flex items-center gap-2"
+                >
+                  <Download size={14} className="text-green-500" />
+                  Download
+                </button>
+                <button
+                  onClick={() => {
+                    handleRename(contextMenu.fileIds[0], false);
+                    setContextMenu(null);
+                  }}
+                  className="w-full px-3 py-2 text-left text-sm hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] flex items-center gap-2"
+                >
+                  <Edit2 size={14} className="text-orange-500" />
+                  Rename
+                </button>
+              </>
+            )}
+            <button
+              onClick={() => {
+                contextMenu.fileIds.forEach(id => onRemove(id));
+                setContextMenu(null);
+              }}
+              className="w-full px-3 py-2 text-left text-sm hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] flex items-center gap-2 text-red-600"
+            >
+              <Trash2 size={14} />
+              Delete
+            </button>
+          </>
+        ) : contextMenu.folderPath !== undefined && (
+          <>
+            {cutFiles.size > 0 && (
+              <button
+                onClick={() => handlePaste(contextMenu.folderPath || null)}
+                className="w-full px-3 py-2 text-left text-sm hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] flex items-center gap-2"
+              >
+                <Download size={14} className="text-blue-500" style={{ transform: 'rotate(180deg)' }} />
+                Paste ({cutFiles.size})
+              </button>
+            )}
+            <button
+              onClick={() => {
+                handleCreateFolder(contextMenu.folderPath || null);
+                setContextMenu(null);
+              }}
+              className="w-full px-3 py-2 text-left text-sm hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] flex items-center gap-2"
+            >
+              <FolderPlus size={14} className="text-blue-500" />
+              New Folder
+            </button>
+            {contextMenu.folderPath && (
+              <>
+                <button
+                  onClick={() => {
+                    handleRename(contextMenu.folderPath!, true);
+                    setContextMenu(null);
+                  }}
+                  className="w-full px-3 py-2 text-left text-sm hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] flex items-center gap-2"
+                >
+                  <Edit2 size={14} className="text-orange-500" />
+                  Rename
+                </button>
+                <button
+                  onClick={() => {
+                    handleDeleteFolder(contextMenu.folderPath!);
+                    setContextMenu(null);
+                  }}
+                  className="w-full px-3 py-2 text-left text-sm hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] flex items-center gap-2 text-red-600"
+                >
+                  <Trash2 size={14} />
+                  Delete Folder
+                </button>
+              </>
+            )}
+          </>
+        )}
+      </div>,
+      document.body
+    )}
+    {previewFile && createPortal(
+      <div className="fixed inset-0 z-[100000] flex items-center justify-center" onClick={() => setPreviewFileId(null)}>
+        <div className="flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center gap-3 px-4 py-2 bg-black/70 backdrop-blur-sm rounded-full mb-3 text-white">
+            <span className="text-sm font-medium">{previewFile.name}</span>
+            <button onClick={() => setPreviewFileId(null)} className="p-1 hover:bg-white/20 rounded-full transition-colors">
+              <X size={16} />
+            </button>
+          </div>
+          <div className="shadow-2xl rounded-lg overflow-hidden" style={{ maxWidth: '210mm', maxHeight: '90vh' }}>
+            <FilePreviewViewer file={previewFile} onClose={() => setPreviewFileId(null)} />
+          </div>
+        </div>
+      </div>,
+      document.body
     )}
     <LogsModal isOpen={isLogsModalOpen} onClose={() => setIsLogsModalOpen(false)} />
     </>
-  );
-};
-
-const FilePreviewModal: React.FC<{ file: ProcessedFile; onClose: () => void }> = ({ file, onClose }) => {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
-      <div className="w-[90vw] h-[90vh] bg-white rounded-lg shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
-        <FilePreviewViewer file={file} onClose={onClose} />
-      </div>
-    </div>
   );
 };
 
@@ -610,45 +1113,28 @@ const FilePreviewViewer: React.FC<{ file: ProcessedFile; onClose: () => void }> 
   const imageUrl = isImage && file.fileHandle ? URL.createObjectURL(file.fileHandle as File) : null;
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between p-4 border-b bg-slate-100">
-        <div className="flex items-center gap-2">
-          <FileText size={18} />
-          <span className="font-semibold">{file.name}</span>
-          {isPdf && numPages > 0 && <span className="text-sm text-gray-500">({numPages} pages)</span>}
+    <div className="bg-white dark:bg-[#1a1a1a] overflow-y-auto" style={{ maxHeight: '90vh' }}>
+      {loading ? (
+        <div className="flex items-center justify-center h-full"><Loader2 className="animate-spin" /></div>
+      ) : isPdf && pdfDoc ? (
+        <div className="space-y-4 p-4">
+          {Array.from({ length: numPages }, (_, i) => (
+            <PdfPageRenderer key={i} pdf={pdfDoc} pageNum={i + 1} scale={scale} />
+          ))}
         </div>
-        <div className="flex items-center gap-2">
-          {(isPdf || isImage) && (
-            <div className="flex items-center gap-1 bg-gray-100 rounded px-2 py-1">
-              <button onClick={() => setScale(s => Math.max(0.5, s - 0.1))} className="p-1 hover:bg-white rounded"><Minus size={14} /></button>
-              <span className="text-xs w-12 text-center">{Math.round(scale * 100)}%</span>
-              <button onClick={() => setScale(s => Math.min(2, s + 0.1))} className="p-1 hover:bg-white rounded"><Plus size={14} /></button>
-            </div>
-          )}
-          <button onClick={onClose} className="p-2 hover:bg-red-50 rounded"><X size={18} /></button>
+      ) : isImage && imageUrl ? (
+        <div className="flex items-center justify-center p-4">
+          <img src={imageUrl} alt={file.name} className="max-w-full max-h-full object-contain" style={{ transform: `scale(${scale})` }} />
         </div>
-      </div>
-      <div ref={containerRef} className="flex-1 overflow-y-auto bg-gray-100 p-4">
-        {loading ? (
-          <div className="flex items-center justify-center h-full"><Loader2 className="animate-spin" /></div>
-        ) : isPdf && pdfDoc ? (
-          <div className="space-y-4">
-            {Array.from({ length: numPages }, (_, i) => (
-              <PdfPageRenderer key={i} pdf={pdfDoc} pageNum={i + 1} scale={scale} />
-            ))}
-          </div>
-        ) : isImage && imageUrl ? (
-          <div className="flex items-center justify-center h-full">
-            <img src={imageUrl} alt={file.name} className="max-w-full max-h-full object-contain" style={{ transform: `scale(${scale})` }} />
-          </div>
-        ) : isExcel && file.fileHandle ? (
+      ) : isExcel && file.fileHandle ? (
+        <div className="p-4">
           <ExcelPreview file={file.fileHandle as File} />
-        ) : (
-          <div className="bg-white p-8 rounded max-w-4xl mx-auto">
-            <pre className="whitespace-pre-wrap text-sm">{file.content}</pre>
-          </div>
-        )}
-      </div>
+        </div>
+      ) : (
+        <div className="p-8">
+          <pre className="whitespace-pre-wrap text-sm">{file.content}</pre>
+        </div>
+      )}
     </div>
   );
 };
