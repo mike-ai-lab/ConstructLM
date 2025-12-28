@@ -18,6 +18,7 @@ import { MIN_SIDEBAR_WIDTH, MAX_SIDEBAR_WIDTH, MIN_VIEWER_WIDTH, MAX_VIEWER_WIDT
 import { MODEL_REGISTRY, DEFAULT_MODEL_ID } from './services/modelRegistry';
 import { mindMapCache } from './services/mindMapCache';
 import { userProfileService } from './services/userProfileService';
+import { permanentStorage } from './services/permanentStorage';
 import FileSidebar from './components/FileSidebar';
 import MessageBubble from './components/MessageBubble';
 import DocumentViewer from './components/DocumentViewer';
@@ -38,6 +39,7 @@ import { FloatingInput } from './App/components/FloatingInput';
 import ContextWarningModal from './components/ContextWarningModal';
 import DrawingToolbar from './components/DrawingToolbar';
 import GitHubBrowser from './components/GitHubBrowser';
+import { PipelineTracker } from './components/PipelineTracker';
 import { Note, Todo, Reminder, Source } from './types';
 
 const App: React.FC = () => {
@@ -52,6 +54,7 @@ const App: React.FC = () => {
   const [notes, setNotes] = React.useState<Note[]>([]);
   const [noteCounter, setNoteCounter] = React.useState(1);
   const [activeTab, setActiveTab] = React.useState<'chat' | 'notebook' | 'todos' | 'github'>('chat');
+  const [isTabSwitching, setIsTabSwitching] = React.useState(false);
   const [todos, setTodos] = React.useState<Todo[]>([]);
   const [reminders, setReminders] = React.useState<Reminder[]>([]);
   const [sources, setSources] = React.useState<Source[]>([]);
@@ -66,6 +69,10 @@ const App: React.FC = () => {
   const [showDrawingToolbar, setShowDrawingToolbar] = React.useState(false);
   const [drawingToolbarPos, setDrawingToolbarPos] = React.useState({ x: 0, y: 0 });
   const [githubRepoUrl, setGithubRepoUrl] = React.useState('');
+
+  // REMOVED: Pipeline tracker moved to Help Documentation
+  // const [pipelineSteps, setPipelineSteps] = React.useState<any[]>([]);
+  // const [isPipelineEnabled, setIsPipelineEnabled] = React.useState(false);
 
   React.useEffect(() => {
     // Initialize activity logger
@@ -390,13 +397,30 @@ const App: React.FC = () => {
     }
   };
 
-  const handleOpenGitHubTab = (url?: string) => {
-    if (url) setGithubRepoUrl(url);
-    setActiveTab('github');
-    if (layoutState.isViewerOpen) {
+  const handleTabChange = (newTab: 'chat' | 'notebook' | 'todos' | 'github') => {
+    if (newTab === activeTab) return;
+    
+    setIsTabSwitching(true);
+    
+    // Close sidebars if switching away from chat
+    if (activeTab === 'chat' && (layoutState.isSidebarOpen || layoutState.viewState || webViewerUrl)) {
+      layoutState.setIsSidebarOpen(false);
       layoutState.setViewState(null);
       setWebViewerUrl(null);
+      
+      setTimeout(() => {
+        setActiveTab(newTab);
+        setIsTabSwitching(false);
+      }, 300);
+    } else {
+      setActiveTab(newTab);
+      setIsTabSwitching(false);
     }
+  };
+
+  const handleOpenGitHubTab = (url?: string) => {
+    if (url) setGithubRepoUrl(url);
+    handleTabChange('github');
   };
 
   const handleImportGitHubFiles = async (files: { name: string; content: string; path: string }[]) => {
@@ -916,7 +940,7 @@ const App: React.FC = () => {
 
       {activeTab === 'chat' && (
         <div 
-          className={`fixed md:relative z-40 h-full bg-[#f9f9f9] dark:bg-[#2a2a2a] flex flex-col border-r border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] ${layoutState.isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} ${!layoutState.isSidebarOpen && !layoutState.isMobile ? 'md:w-0 md:opacity-0 md:overflow-hidden' : ''} overflow-hidden`}
+          className={`fixed md:relative z-40 h-full bg-[#f9f9f9] dark:bg-[#2a2a2a] flex flex-col border-r border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] transition-all duration-300 ease-in-out ${layoutState.isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} ${!layoutState.isSidebarOpen && !layoutState.isMobile ? 'md:w-0 md:opacity-0 md:overflow-hidden' : ''} overflow-hidden`}
           style={{ 
             width: layoutState.isMobile ? '85%' : (layoutState.isSidebarOpen ? layoutState.sidebarWidth : 0)
           }}
@@ -936,11 +960,16 @@ const App: React.FC = () => {
             onDragStateChange={layoutState.setIsSidebarDragOver}
             selectedSourceIds={chatState.selectedSourceIds}
             onToggleSource={handleToggleFileSource}
-            onUpdateFile={(fileId, updates) => {
+            onUpdateFile={async (fileId, updates) => {
               fileState.setFiles(prev => {
                 const updated = prev.map(f => f.id === fileId ? { ...f, ...updates } : f);
-                // Persist to localStorage
-                localStorage.setItem('files', JSON.stringify(updated));
+                // Persist to permanentStorage
+                const updatedFile = updated.find(f => f.id === fileId);
+                if (updatedFile) {
+                  permanentStorage.saveFile(updatedFile).catch(err => 
+                    console.error('Failed to persist file update:', err)
+                  );
+                }
                 return updated;
               });
             }}
@@ -1002,9 +1031,9 @@ const App: React.FC = () => {
           notesCount={notes.length}
           todosCount={todos.filter(t => !t.completed).length}
           remindersCount={reminders.filter(r => r.status === 'pending').length}
-          onOpenNotebook={() => setActiveTab('notebook')}
+          onOpenNotebook={() => handleTabChange('notebook')}
           activeTab={activeTab}
-          onTabChange={setActiveTab}
+          onTabChange={handleTabChange}
           isViewerOpen={!!activeFile || !!webViewerUrl}
           onCloseViewer={() => {
             layoutState.setViewState(null);
@@ -1090,7 +1119,7 @@ const App: React.FC = () => {
           <div className="flex-1 overflow-hidden">
             <GitHubBrowser
               initialUrl={githubRepoUrl}
-              onClose={() => setActiveTab('chat')}
+              onClose={() => handleTabChange('chat')}
               onImportFiles={handleImportGitHubFiles}
             />
           </div>
@@ -1110,8 +1139,9 @@ const App: React.FC = () => {
 
         {/* Floating Input Area */}
         {!featureState.mindMapData && !featureState.isSettingsOpen && !featureState.isCallingEffect && !featureState.isHelpOpen && activeTab === 'chat' && (
-        <div className="flex justify-center px-4 pb-2 w-full bg-white dark:bg-[#1a1a1a] relative z-[200]">
-          <div className="w-full max-w-[800px]">
+        <>
+          <div className="flex justify-center px-4 pb-2 w-full bg-white dark:bg-[#1a1a1a] relative z-[200]">
+            <div className="w-full max-w-[800px]">
             <FloatingInput
               input={inputState.input}
               inputRef={inputState.inputRef}
@@ -1142,6 +1172,7 @@ const App: React.FC = () => {
             <p className="text-[#666666] dark:text-[#a0a0a0] text-xs text-center mt-2 relative z-[200]">AI can make mistakes. Please verify citations.</p>
           </div>
         </div>
+        </>
         )}
       </div>
 
@@ -1150,7 +1181,7 @@ const App: React.FC = () => {
       {/* RIGHT DOCUMENT VIEWER OR WEB VIEWER */}
       {(activeFile || webViewerUrl) && (
         <div 
-          className="fixed md:relative z-30 h-full bg-[#f9f9f9] dark:bg-[#2a2a2a] flex flex-col shadow-2xl md:shadow-none border-l border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] overflow-hidden"
+          className="fixed md:relative z-30 h-full bg-[#f9f9f9] dark:bg-[#2a2a2a] flex flex-col shadow-2xl md:shadow-none border-l border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] overflow-hidden transition-all duration-300 ease-in-out"
           style={{ 
             width: layoutState.isMobile ? '100%' : layoutState.viewerWidth
           }}

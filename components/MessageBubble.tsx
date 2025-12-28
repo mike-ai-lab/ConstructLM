@@ -123,7 +123,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   const isUser = message.role === 'user';
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoadingAudio, setIsLoadingAudio] = useState(false);
-  const [noteStyle, setNoteStyle] = useState(localStorage.getItem('noteStyle') || 'border');
+  const [noteStyle, setNoteStyle] = useState(localStorage.getItem('noteStyle') || 'highlight');
   
   // Highlight State
   const [highlights, setHighlights] = useState<Highlight[]>([]);

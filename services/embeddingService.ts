@@ -1,10 +1,16 @@
+/**
+ * embeddingService.ts
+ * Uses Gemini API for embeddings - reliable and free
+ */
+
 import { vectorStore, ChunkRecord } from './vectorStore';
 import { generateFileHash, estimateTokens, chunkText } from './embeddingUtils';
 import { ProcessedFile } from '../types';
 import { diagnosticLogger } from './diagnosticLogger';
+import { getStoredApiKey } from './modelRegistry';
 
-const EMBEDDING_VERSION = 'MiniLM-L6-v2';
-const CHUNK_SIZE = 500; // ~500 tokens per chunk
+const EMBEDDING_VERSION = 'gemini-embedding-004';
+const CHUNK_SIZE = 500;
 const OVERLAP_PERCENT = 10;
 
 interface EmbeddingProgress {
@@ -15,50 +21,40 @@ interface EmbeddingProgress {
 }
 
 class EmbeddingService {
-  private pipeline: any = null;
-  private isLoading = false;
-  private loadPromise: Promise<void> | null = null;
+  private isReady = true; // Always ready with API
 
   async loadModel(): Promise<void> {
-    if (this.pipeline) return;
-    if (this.loadPromise) return this.loadPromise;
-
-    this.isLoading = true;
-    this.loadPromise = (async () => {
-      try {
-        // Set custom cache directory and model source
-        const { pipeline, env } = await import('@xenova/transformers');
-        
-        // Use HuggingFace Hub directly with fallback
-        env.allowRemoteModels = true;
-        env.allowLocalModels = true;
-        
-        console.log('[EMBEDDING] Attempting to load model from HuggingFace...');
-        this.pipeline = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2', {
-          revision: 'main',
-          cache_dir: './.cache/transformers'
-        });
-        console.log('[EMBEDDING] Model loaded successfully');
-      } catch (error) {
-        console.error('[EMBEDDING] Failed to load model:', error);
-        throw error;
-      } finally {
-        this.isLoading = false;
-      }
-    })();
-
-    return this.loadPromise;
+    // No model to load - using API
+    console.log('[EMBEDDING] Using Gemini Embeddings API');
   }
 
   isReady(): boolean {
-    return this.pipeline !== null;
+    return true;
   }
 
   async generateEmbedding(text: string): Promise<number[]> {
-    if (!this.pipeline) await this.loadModel();
-    
-    const output = await this.pipeline(text, { pooling: 'mean', normalize: true });
-    return Array.from(output.data);
+    const apiKey = getStoredApiKey('GEMINI_API_KEY');
+    if (!apiKey) {
+      throw new Error('Gemini API key not found');
+    }
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content: { parts: [{ text: text.slice(0, 2048) }] } // Limit to 2048 chars
+        })
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Embedding API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.embedding.values;
   }
 
   async processFile(
@@ -67,12 +63,9 @@ class EmbeddingService {
   ): Promise<void> {
     const fileHash = await generateFileHash(file.content);
     
-    // Check if already embedded with same hash
     const existing = await vectorStore.getEmbeddingByHash(fileHash);
     if (existing && existing.version === EMBEDDING_VERSION) {
-      console.log(`Reusing embeddings for ${file.name} (hash match)`);
-      
-      // Copy to current fileId
+      console.log(`Reusing embeddings for ${file.name}`);
       await vectorStore.saveEmbedding({
         fileId: file.id,
         fileHash,
@@ -91,20 +84,12 @@ class EmbeddingService {
       return;
     }
 
-    // Generate new embeddings
-    if (!this.pipeline) await this.loadModel();
-
     const chunks = chunkText(file.content, CHUNK_SIZE, OVERLAP_PERCENT);
     
-    // DIAGNOSTIC: 2. UNIT/CHUNK CREATION LOG
     diagnosticLogger.log('2. CHUNK CREATION START', {
       source_file: file.name,
       file_id: file.id,
-      total_content_length: file.content.length,
-      chunk_size: CHUNK_SIZE,
-      overlap_percent: OVERLAP_PERCENT,
-      total_chunks_created: chunks.length,
-      chunking_strategy: 'fixed-size-with-overlap'
+      total_chunks_created: chunks.length
     });
     
     const chunkRecords: ChunkRecord[] = [];
@@ -130,25 +115,10 @@ class EmbeddingService {
       };
       chunkRecords.push(chunkRecord);
       
-      // DIAGNOSTIC: Log each unit created
-      diagnosticLogger.log(`2. UNIT_CREATED [${i + 1}/${chunks.length}]`, {
-        unit_id: chunkRecord.id,
-        source_file: file.name,
-        chunk_index: i,
-        unit_type: 'chunk',
-        character_count: chunks[i].length,
-        token_count: chunkRecord.tokens,
-        chunking_strategy: 'fixed-size-with-overlap',
-        text_preview: chunks[i].substring(0, 200),
-        metadata: {
-          fileId: file.id,
-          chunkIndex: i,
-          embeddingDimension: embedding.length
-        }
-      });
+      // Small delay to avoid rate limits
+      await new Promise(r => setTimeout(r, 100));
     }
 
-    // Save file-level embedding (average of chunks)
     const avgEmbedding = this.averageEmbeddings(chunkRecords.map(c => c.embedding));
     await vectorStore.saveEmbedding({
       fileId: file.id,
@@ -160,15 +130,10 @@ class EmbeddingService {
 
     await vectorStore.saveChunks(chunkRecords);
     
-    // DIAGNOSTIC: 3. EMBEDDING & INDEXING LOG
     diagnosticLogger.log('3. EMBEDDING & INDEXING COMPLETE', {
-      embedding_model_name: 'Xenova/all-MiniLM-L6-v2',
-      embedding_version: EMBEDDING_VERSION,
-      embedding_dimension: avgEmbedding.length,
+      embedding_model_name: 'Gemini text-embedding-004',
       total_units_embedded: chunkRecords.length,
-      storage_backend: 'IndexedDB (vectorStore)',
-      file_id: file.id,
-      file_name: file.name
+      file_id: file.id
     });
   }
 

@@ -34,8 +34,8 @@ const MODEL_LIMITS: Record<string, number> = {
   'gemini-1.5-pro': 2000000,
   'gemini-1.5-flash': 1000000,
   'gemini-flash-latest': 1000000,
-  'llama-3.3-70b-versatile': 1000,  // Very conservative limit
-  'llama-3.1-8b-instant': 1500,
+  'llama-3.3-70b-versatile': 6000,  // 50% of 12k limit
+  'llama-3.1-8b-instant': 750,      // 50% of 1.5k limit
 };
 
 export async function selectHybridContext(
@@ -44,7 +44,7 @@ export async function selectHybridContext(
   modelId: string
 ): Promise<HybridContextSelection> {
   const modelLimit = MODEL_LIMITS[modelId] || 32000;
-  const maxTokenBudget = Math.floor(modelLimit * 0.05); // Use only 5% for ultra-strict selection
+  const maxTokenBudget = modelLimit; // Use the limit directly (already set to 50%)
   
   // LOG: Context selection start
   activityLogger.logSessionMarker('NEW QUERY TEST');
@@ -62,23 +62,13 @@ export async function selectHybridContext(
 
   // Try to load embedding model
   try {
-    console.log('[EMBEDDING] Embedding service temporarily disabled due to network issues');
-    throw new Error('Embedding service disabled - using keyword fallback');
-    
-    // Commented out until network issues resolved
-    // console.log('[EMBEDDING] Checking if embedding service is ready...');
-    // if (!embeddingService.isReady()) {
-    //   console.log('[EMBEDDING] Loading embedding model...');
-    //   await embeddingService.loadModel();
-    //   console.log('[EMBEDDING] Model loaded successfully');
-    // }
-    // useSemanticSearch = true;
-    // activityLogger.logRetrievalMethodUsed('hybrid_semantic', 'embedding_service_ready', 'ready');
+    console.log('[EMBEDDING] Using Gemini Embeddings API');
+    useSemanticSearch = true;
+    activityLogger.logRetrievalMethodUsed('hybrid_semantic', 'gemini_api', 'ready');
   } catch (error) {
-    console.log('[EMBEDDING] Using keyword-only retrieval (embeddings disabled)');
+    console.log('[EMBEDDING] Failed to initialize, using keyword fallback:', error);
     useSemanticSearch = false;
-    // LOG: Retrieval method - keyword fallback
-    activityLogger.logRetrievalMethodUsed('keyword_fallback', 'embedding_service_disabled', 'disabled');
+    activityLogger.logRetrievalMethodUsed('keyword_fallback', 'embedding_init_failed', String(error));
   }
 
   // Collect all sections

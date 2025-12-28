@@ -93,6 +93,8 @@ export const createFileHandlers = (
       }
     }
     
+    console.log(`[FILE HANDLER] Scheduling clear in 2 seconds`);
+    
     if (setUploadProgress) setUploadProgress(null);
     setIsProcessingFiles(false);
     

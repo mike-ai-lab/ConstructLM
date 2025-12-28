@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, FileText, MessageSquare, Sparkles, Keyboard, Settings, Network, Image, Phone, ChevronRight, Search, Bug, Lightbulb, Mail, Database, ExternalLink } from 'lucide-react';
 import { DOCUMENTATION_KB } from '../data/documentationKB';
 import ReactMarkdown from 'react-markdown';
+import { PipelineTracker } from './PipelineTracker';
 
 interface HelpDocumentationProps {
   onClose: () => void;
@@ -135,18 +136,22 @@ const HelpDocumentation: React.FC<HelpDocumentationProps> = ({ onClose }) => {
   ];
 
   const sections = [
-    { id: 'getting-started', title: 'Getting Started', icon: Sparkles },
-    { id: 'sources', title: 'Managing Sources', icon: FileText },
-    { id: 'chat', title: 'Chat Features', icon: MessageSquare },
-    { id: 'notebook', title: 'Notebook', icon: FileText },
-    { id: 'todos', title: 'Tasks & Todos', icon: MessageSquare },
-    { id: 'mindmap', title: 'Mind Maps', icon: Network },
-    { id: 'live', title: 'Live Mode', icon: Phone },
-    { id: 'graphics', title: 'Graphics Library', icon: Image },
-    { id: 'data', title: 'Data Management', icon: Database },
-    { id: 'shortcuts', title: 'Keyboard Shortcuts', icon: Keyboard },
-    { id: 'settings', title: 'Configuration', icon: Settings },
-    { id: 'support', title: 'Support & Feedback', icon: Mail },
+    { id: 'getting-started', title: 'Getting Started', icon: Sparkles, category: 'Basics' },
+    { id: 'how-it-works', title: 'How It Works', icon: Network, category: 'Basics' },
+    { id: 'document-sources', title: 'Document Sources', icon: FileText, category: 'Sources' },
+    { id: 'web-sources', title: 'Web Sources', icon: ExternalLink, category: 'Sources' },
+    { id: 'chat', title: 'Chat Features', icon: MessageSquare, category: 'Features' },
+    { id: 'notebook', title: 'Notebook', icon: FileText, category: 'Features' },
+    { id: 'todos', title: 'Tasks & Todos', icon: MessageSquare, category: 'Features' },
+    { id: 'reminders', title: 'Reminders', icon: MessageSquare, category: 'Features' },
+    { id: 'mindmap', title: 'Mind Maps', icon: Network, category: 'Features' },
+    { id: 'web', title: 'Web Integration', icon: ExternalLink, category: 'Features' },
+    { id: 'live', title: 'Live Mode', icon: Phone, category: 'Features' },
+    { id: 'graphics', title: 'Graphics Library', icon: Image, category: 'Features' },
+    { id: 'data', title: 'Data Management', icon: Database, category: 'Advanced' },
+    { id: 'shortcuts', title: 'Keyboard Shortcuts', icon: Keyboard, category: 'Advanced' },
+    { id: 'settings', title: 'Configuration', icon: Settings, category: 'Advanced' },
+    { id: 'support', title: 'Support & Feedback', icon: Mail, category: 'Advanced' },
   ];
 
   return (
@@ -178,28 +183,35 @@ const HelpDocumentation: React.FC<HelpDocumentationProps> = ({ onClose }) => {
         </div>
 
         <nav className="flex-1 overflow-y-auto px-2 pb-4">
-          {sections.map((section) => {
-            const Icon = section.icon;
+          {['Basics', 'Sources', 'Features', 'Advanced'].map(category => {
+            const categoryItems = sections.filter(s => s.category === category);
             return (
-              <button
-                key={section.id}
-                onClick={() => {
-                  setActiveSection(section.id);
-                  // Smooth scroll to top of content
-                  const contentArea = document.querySelector('.documentation-content');
-                  if (contentArea) {
-                    contentArea.scrollTo({ top: 0, behavior: 'smooth' });
-                  }
-                }}
-                className={`documentation-nav-button w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium ${
-                  activeSection === section.id
-                    ? 'active bg-[rgba(37,99,235,0.15)] text-[rgb(37,99,235)]'
-                    : 'text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a]'
-                }`}
-              >
-                <Icon size={14} />
-                <span>{section.title}</span>
-              </button>
+              <div key={category} className="mb-4">
+                <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-[#a0a0a0]">{category}</div>
+                {categoryItems.map((section) => {
+                  const Icon = section.icon;
+                  return (
+                    <button
+                      key={section.id}
+                      onClick={() => {
+                        setActiveSection(section.id);
+                        const contentArea = document.querySelector('.documentation-content');
+                        if (contentArea) {
+                          contentArea.scrollTo({ top: 0, behavior: 'smooth' });
+                        }
+                      }}
+                      className={`documentation-nav-button w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium ${
+                        activeSection === section.id
+                          ? 'active bg-[rgba(37,99,235,0.15)] text-[rgb(37,99,235)]'
+                          : 'text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a]'
+                      }`}
+                    >
+                      <Icon size={14} />
+                      <span>{section.title}</span>
+                    </button>
+                  );
+                })}
+              </div>
             );
           })}
         </nav>
@@ -218,11 +230,15 @@ const HelpDocumentation: React.FC<HelpDocumentationProps> = ({ onClose }) => {
         <div className="max-w-3xl mx-auto px-8 py-8">
           <div className="documentation-section">
             {activeSection === 'getting-started' && <GettingStarted />}
-            {activeSection === 'sources' && <ManagingSources />}
+            {activeSection === 'how-it-works' && <HowItWorks />}
+            {activeSection === 'document-sources' && <DocumentSources />}
+            {activeSection === 'web-sources' && <WebSources />}
             {activeSection === 'chat' && <ChatFeatures />}
             {activeSection === 'notebook' && <NotebookFeature />}
             {activeSection === 'todos' && <TodosFeature />}
+            {activeSection === 'reminders' && <RemindersFeature />}
             {activeSection === 'mindmap' && <MindMaps />}
+            {activeSection === 'web' && <WebIntegration />}
             {activeSection === 'live' && <LiveMode />}
             {activeSection === 'graphics' && <GraphicsLibrary />}
             {activeSection === 'data' && <DataManagement />}
@@ -323,16 +339,45 @@ const HelpDocumentation: React.FC<HelpDocumentationProps> = ({ onClose }) => {
   );
 };
 
-const SectionTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <h1 className="text-3xl font-bold text-[#1a1a1a] dark:text-white mb-8 pb-3 border-b-2 border-[rgba(0,0,0,0.1)] dark:border-[rgba(255,255,255,0.1)]">{children}</h1>
+const PageTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <h1 className="text-4xl font-bold text-[#1a1a1a] dark:text-white mb-2">{children}</h1>
+);
+
+const PageDescription: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <p className="text-base text-[#666666] dark:text-[#a0a0a0] mb-8 pb-6 border-b border-[rgba(0,0,0,0.1)] dark:border-[rgba(255,255,255,0.1)]">{children}</p>
+);
+
+const TOC: React.FC<{ items: string[] }> = ({ items }) => (
+  <div className="bg-[rgba(37,99,235,0.05)] dark:bg-[rgba(37,99,235,0.1)] border border-[rgba(37,99,235,0.2)] rounded-lg p-4 mb-8">
+    <h3 className="text-sm font-semibold text-[#1a1a1a] dark:text-white mb-3">On This Page</h3>
+    <ul className="space-y-2">
+      {items.map((item, i) => (
+        <li key={i} className="flex items-start gap-2 text-sm text-[#666666] dark:text-[#a0a0a0] hover:text-[rgb(37,99,235)] cursor-pointer transition-colors">
+          <span className="text-[rgb(37,99,235)] font-mono text-xs mt-0.5">{i + 1}.</span>
+          <span>{item}</span>
+        </li>
+      ))}
+    </ul>
+  </div>
+);
+
+const SectionDivider: React.FC = () => (
+  <div className="my-8 border-t border-[rgba(0,0,0,0.1)] dark:border-[rgba(255,255,255,0.1)]" />
+);
+
+const SectionTitle: React.FC<{ number?: string; children: React.ReactNode }> = ({ number, children }) => (
+  <h2 className="text-2xl font-bold text-[#1a1a1a] dark:text-white mt-8 mb-4 flex items-center gap-3">
+    {number && <span className="text-[rgb(37,99,235)] font-mono text-xl">{number}</span>}
+    <span>{children}</span>
+  </h2>
 );
 
 const SubTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <h2 className="text-xl font-bold text-[#1a1a1a] dark:text-white mt-8 mb-4">{children}</h2>
+  <h3 className="text-lg font-semibold text-[#1a1a1a] dark:text-white mt-6 mb-3">{children}</h3>
 );
 
 const FeatureTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <h3 className="text-lg font-semibold text-[#1a1a1a] dark:text-white mt-6 mb-3">{children}</h3>
+  <h4 className="text-base font-semibold text-[#1a1a1a] dark:text-white mt-5 mb-2">{children}</h4>
 );
 
 const Paragraph: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -362,14 +407,90 @@ const InfoBox: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   </div>
 );
 
+const HowItWorks: React.FC = () => (
+  <>
+    <PageTitle>How ConstructLM Works</PageTitle>
+    <PageDescription>
+      Understanding the processing pipeline helps you work more efficiently with ConstructLM. Here's what happens behind the scenes when you upload files and ask questions.
+    </PageDescription>
+
+    <TOC items={[
+      'File Upload Process',
+      'Query Processing Pipeline',
+      'Smart Context Management',
+      'Performance Optimization'
+    ]} />
+
+    <SectionTitle number="1">File Upload Process</SectionTitle>
+    <Paragraph>
+      When you upload a document, ConstructLM processes it through several stages:
+    </Paragraph>
+    <List>
+      <ListItem><strong>Upload:</strong> File is read from your device into browser memory</ListItem>
+      <ListItem><strong>Parse:</strong> Content is extracted based on file type (PDF text, Excel tables, image analysis, etc.)</ListItem>
+      <ListItem><strong>Embed:</strong> Text is converted to vector embeddings for semantic search capabilities</ListItem>
+      <ListItem><strong>Index:</strong> Vectors are stored in IndexedDB for fast retrieval</ListItem>
+      <ListItem><strong>Ready:</strong> File is now available for AI conversations with full search support</ListItem>
+    </List>
+
+    <InfoBox>
+      Most files process in under 1 second. Large PDFs (50+ pages) may take 2-3 seconds. The app shows real-time progress for batch uploads.
+    </InfoBox>
+
+    <SectionDivider />
+
+    <SectionTitle number="2">Query Processing Pipeline</SectionTitle>
+    <Paragraph>
+      When you send a message with file context, the system intelligently retrieves relevant information:
+    </Paragraph>
+    <List>
+      <ListItem><strong>Query Analysis:</strong> Your question is analyzed to understand intent</ListItem>
+      <ListItem><strong>Semantic Search:</strong> Vector embeddings find the most relevant document sections</ListItem>
+      <ListItem><strong>Context Selection:</strong> Top matching chunks are selected (typically 3-5 sections)</ListItem>
+      <ListItem><strong>AI Processing:</strong> Selected context + your question is sent to the AI model</ListItem>
+      <ListItem><strong>Response Generation:</strong> AI streams back an answer with inline citations</ListItem>
+    </List>
+
+    <SectionDivider />
+
+    <SectionTitle number="3">Smart Context Management</SectionTitle>
+    <Paragraph>
+      ConstructLM automatically manages context to stay within model limits:
+    </Paragraph>
+    <List>
+      <ListItem>Monitors total token count across all selected files</ListItem>
+      <ListItem>Warns when approaching model context limits (typically 30-50k tokens)</ListItem>
+      <ListItem>Uses semantic search to include only relevant sections</ListItem>
+      <ListItem>Compresses large documents while preserving key information</ListItem>
+      <ListItem>Handles rate limits with intelligent retry mechanisms</ListItem>
+    </List>
+
+    <SectionDivider />
+
+    <SectionTitle number="4">Performance Optimization</SectionTitle>
+    <List>
+      <ListItem><strong>Caching:</strong> Processed files persist across sessions - no re-processing needed</ListItem>
+      <ListItem><strong>Batch Processing:</strong> Multiple files upload in parallel for speed</ListItem>
+      <ListItem><strong>Incremental Loading:</strong> Large documents load progressively</ListItem>
+      <ListItem><strong>Duplicate Detection:</strong> Identical files are automatically skipped</ListItem>
+    </List>
+  </>
+);
+
 const GettingStarted: React.FC = () => (
   <>
-    <SectionTitle>Getting Started</SectionTitle>
-    <Paragraph>
+    <PageTitle>Getting Started</PageTitle>
+    <PageDescription>
       ConstructLM is an AI-powered document analysis and chat application that helps you interact with your files using advanced language models.
-    </Paragraph>
+    </PageDescription>
 
-    <SubTitle>Quick Start</SubTitle>
+    <TOC items={[
+      'Quick Start',
+      'Supported File Types',
+      'Privacy & Security'
+    ]} />
+
+    <SectionTitle number="1">Quick Start</SectionTitle>
     <List>
       <ListItem>Configure your API keys in Settings (click the gear icon in the header)</ListItem>
       <ListItem>Upload documents by clicking the plus icon in the Sources panel or drag files anywhere</ListItem>
@@ -378,7 +499,9 @@ const GettingStarted: React.FC = () => (
       <ListItem>Start chatting with your documents</ListItem>
     </List>
 
-    <SubTitle>Supported File Types</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="2">Supported File Types</SectionTitle>
     <List>
       <ListItem>PDF documents</ListItem>
       <ListItem>Excel spreadsheets (.xlsx, .xls, .csv)</ListItem>
@@ -394,22 +517,130 @@ const GettingStarted: React.FC = () => (
   </>
 );
 
-const ManagingSources: React.FC = () => (
+const DocumentSources: React.FC = () => (
   <>
-    <SectionTitle>Managing Sources</SectionTitle>
+    <PageTitle>Document Sources</PageTitle>
+    <PageDescription>
+      ConstructLM's document processing is one of its most powerful features. Upload files once, and the AI can reference them across all conversations with intelligent semantic search.
+    </PageDescription>
+
+    <TOC items={[
+      'Supported Document Types',
+      'Adding Documents',
+      'Organizing Files with Folders',
+      'File Selection & Sources Panel',
+      'Using Files in Chat',
+      'File Actions',
+      'View Modes'
+    ]} />
+
+    <SectionTitle number="1">Supported Document Types</SectionTitle>
     
-    <SubTitle>Adding Files</SubTitle>
-    <Paragraph>
-      You can add files to your workspace in multiple ways:
-    </Paragraph>
+    <FeatureTitle>PDF Documents</FeatureTitle>
     <List>
-      <ListItem>Click the plus icon in the Sources panel</ListItem>
-      <ListItem>Drag and drop files anywhere in the application</ListItem>
-      <ListItem>Drag files directly into the chat input field</ListItem>
-      <ListItem>Upload entire folders using the folder icon</ListItem>
+      <ListItem>Full text extraction from all PDF versions</ListItem>
+      <ListItem>Table detection and structured data extraction</ListItem>
+      <ListItem>Page-level navigation with direct citations</ListItem>
+      <ListItem>Handles scanned PDFs with OCR capabilities</ListItem>
+      <ListItem>Preserves document structure and formatting</ListItem>
+      <ListItem>Ideal for: Reports, specifications, contracts, manuals</ListItem>
     </List>
 
-    <SubTitle>Using Files in Chat</SubTitle>
+    <FeatureTitle>Excel & Spreadsheets</FeatureTitle>
+    <List>
+      <ListItem>Formats: .xlsx, .xls, .csv</ListItem>
+      <ListItem>Multi-sheet support with sheet names preserved</ListItem>
+      <ListItem>Cell-level precision in citations</ListItem>
+      <ListItem>Formula and calculated value extraction</ListItem>
+      <ListItem>Table structure maintained for AI analysis</ListItem>
+      <ListItem>Ideal for: BOQ, cost estimates, schedules, data analysis</ListItem>
+    </List>
+
+    <FeatureTitle>Word Documents</FeatureTitle>
+    <List>
+      <ListItem>Formats: .doc, .docx</ListItem>
+      <ListItem>Heading hierarchy preserved</ListItem>
+      <ListItem>Lists, tables, and formatting maintained</ListItem>
+      <ListItem>Comments and tracked changes extracted</ListItem>
+      <ListItem>Ideal for: Proposals, specifications, meeting notes</ListItem>
+    </List>
+
+    <FeatureTitle>Images</FeatureTitle>
+    <List>
+      <ListItem>Formats: .png, .jpg, .jpeg, .gif, .bmp, .webp</ListItem>
+      <ListItem>AI vision analysis (with compatible models)</ListItem>
+      <ListItem>Text extraction from images (OCR)</ListItem>
+      <ListItem>Diagram and chart interpretation</ListItem>
+      <ListItem>Ideal for: Site photos, diagrams, blueprints, charts</ListItem>
+    </List>
+
+    <FeatureTitle>Text & Code Files</FeatureTitle>
+    <List>
+      <ListItem>Formats: .txt, .md, .json, .xml, .html</ListItem>
+      <ListItem>Code files: .js, .ts, .py, .java, .c, .cpp, .cs, .css</ListItem>
+      <ListItem>Syntax highlighting and structure preservation</ListItem>
+      <ListItem>Markdown rendering with formatting</ListItem>
+      <ListItem>Ideal for: Documentation, code review, configuration files</ListItem>
+    </List>
+
+    <FeatureTitle>Presentations</FeatureTitle>
+    <List>
+      <ListItem>Formats: .ppt, .pptx</ListItem>
+      <ListItem>Slide-by-slide content extraction</ListItem>
+      <ListItem>Speaker notes included</ListItem>
+      <ListItem>Ideal for: Project presentations, training materials</ListItem>
+    </List>
+
+    <SectionDivider />
+
+    <SectionTitle number="2">Adding Documents</SectionTitle>
+    <Paragraph>
+      Multiple ways to add files to your workspace:
+    </Paragraph>
+    <List>
+      <ListItem><strong>Click Upload:</strong> Click the + icon in Sources panel</ListItem>
+      <ListItem><strong>Drag & Drop:</strong> Drag files anywhere in the app</ListItem>
+      <ListItem><strong>Drag to Chat:</strong> Drop files directly into chat input</ListItem>
+      <ListItem><strong>Folder Upload:</strong> Upload entire folder structures</ListItem>
+      <ListItem><strong>Batch Upload:</strong> Select multiple files at once</ListItem>
+    </List>
+
+    <InfoBox>
+      Files are processed instantly (typically under 1 second) and stored in IndexedDB. They persist across sessions - no need to re-upload!
+    </InfoBox>
+
+    <SectionDivider />
+
+    <SectionTitle number="3">Organizing Files with Folders</SectionTitle>
+    <Paragraph>
+      Create custom folders to organize your documents:
+    </Paragraph>
+    <List>
+      <ListItem>Click the folder+ icon to create a new folder</ListItem>
+      <ListItem>Right-click files and select "Cut" to move them</ListItem>
+      <ListItem>Right-click a folder and select "Paste" to move files into it</ListItem>
+      <ListItem>Rename folders by right-clicking and selecting "Rename"</ListItem>
+      <ListItem>Delete folders (files are moved to root, not deleted)</ListItem>
+      <ListItem>Folders persist across sessions</ListItem>
+    </List>
+
+    <SectionDivider />
+
+    <SectionTitle number="4">File Selection & Sources Panel</SectionTitle>
+    <Paragraph>
+      Control which files are included in your AI conversations:
+    </Paragraph>
+    <List>
+      <ListItem>Check/uncheck files to include/exclude them from context</ListItem>
+      <ListItem>Click "Select All" to check all files at once</ListItem>
+      <ListItem>Click "Deselect All" to uncheck all files</ListItem>
+      <ListItem>Folder checkboxes select/deselect all files within</ListItem>
+      <ListItem>Only checked files are sent to the AI model</ListItem>
+    </List>
+
+    <SectionDivider />
+
+    <SectionTitle number="5">Using Files in Chat</SectionTitle>
     <Paragraph>
       Files must be explicitly mentioned using the @ symbol to be included in your conversation:
     </Paragraph>
@@ -418,29 +649,87 @@ const ManagingSources: React.FC = () => (
       <ListItem>Select a file from the dropdown or continue typing to filter</ListItem>
       <ListItem>You can mention multiple files in a single message</ListItem>
       <ListItem>Drag a file from the sidebar into the chat input to mention it</ListItem>
+      <ListItem>Files work even when inside folders - just drag or mention them</ListItem>
     </List>
 
     <InfoBox>
       The app shows token counts for each file. Most models support 30-50k tokens of context. If you exceed this limit, you'll receive a warning.
     </InfoBox>
 
-    <SubTitle>File Actions</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="6">File Actions</SectionTitle>
     <Paragraph>
       Hover over any file in the Sources panel to access these actions:
     </Paragraph>
     <List>
       <ListItem>Preview: View the file content in a modal</ListItem>
+      <ListItem>Download: Save the file to your computer</ListItem>
       <ListItem>Mind Map: Generate an interactive visualization of the document structure</ListItem>
       <ListItem>Remove: Delete the file from your workspace</ListItem>
+    </List>
+
+    <SectionDivider />
+
+    <SectionTitle number="7">View Modes</SectionTitle>
+    <Paragraph>
+      Switch between two view modes in the Sources panel:
+    </Paragraph>
+    <List>
+      <ListItem><strong>Files Only:</strong> Flat list of all files with checkboxes</ListItem>
+      <ListItem><strong>Folders:</strong> Tree view showing folder structure from uploaded folders</ListItem>
     </List>
   </>
 );
 
 const ChatFeatures: React.FC = () => (
   <>
-    <SectionTitle>Chat Features</SectionTitle>
+    <PageTitle>Chat Features</PageTitle>
+    <PageDescription>
+      Powerful chat capabilities with message controls, highlighting, drawing tools, and multi-model support.
+    </PageDescription>
 
-    <SubTitle>Text Highlighter</SubTitle>
+    <TOC items={[
+      'Message Controls',
+      'Alternative Outputs',
+      'Text Highlighter',
+      'Drawing Tools',
+      'Multiple Conversations',
+      'Model Selection',
+      'Citations',
+      'Save to Notebook',
+      'Note Styling',
+      'Voice Input',
+      'Web Sources'
+    ]} />
+
+    <SectionTitle number="1">Message Controls</SectionTitle>
+    <Paragraph>
+      Every AI message has powerful controls:
+    </Paragraph>
+    <List>
+      <ListItem><strong>Read Aloud:</strong> Click the speaker icon to hear the AI response with text-to-speech</ListItem>
+      <ListItem><strong>Regenerate:</strong> Click the refresh icon to get a new response to the same question</ListItem>
+      <ListItem><strong>Delete:</strong> Remove messages from the conversation</ListItem>
+      <ListItem><strong>Save to Notebook:</strong> Bookmark important responses for later reference</ListItem>
+    </List>
+
+    <SectionDivider />
+
+    <SectionTitle number="2">Alternative Outputs</SectionTitle>
+    <Paragraph>
+      When you regenerate a response, you can view all variations:
+    </Paragraph>
+    <List>
+      <ListItem>Use left/right arrows to navigate between different AI responses</ListItem>
+      <ListItem>Shows "1 of 3" indicator when multiple outputs exist</ListItem>
+      <ListItem>Each output is saved and can be revisited</ListItem>
+      <ListItem>Useful for comparing different AI perspectives</ListItem>
+    </List>
+
+    <SectionDivider />
+
+    <SectionTitle number="3">Text Highlighter</SectionTitle>
     <Paragraph>
       Mark important parts of AI responses with colored highlights:
     </Paragraph>
@@ -455,7 +744,9 @@ const ChatFeatures: React.FC = () => (
       <ListItem>Click the trash icon to clear all highlights from the message</ListItem>
     </List>
 
-    <SubTitle>Drawing Tools</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="4">Drawing Tools</SectionTitle>
     <Paragraph>
       Draw annotations directly on your screen over any content:
     </Paragraph>
@@ -483,7 +774,9 @@ const ChatFeatures: React.FC = () => (
       Tip: With the Pen tool, draw a straight line and add a quick zigzag at the end to create an arrow automatically!
     </InfoBox>
 
-    <SubTitle>Multiple Conversations</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="5">Multiple Conversations</SectionTitle>
     <List>
       <ListItem>Click the plus icon in the header to create a new chat</ListItem>
       <ListItem>Switch between chats using the Chats tab in the sidebar</ListItem>
@@ -491,7 +784,9 @@ const ChatFeatures: React.FC = () => (
       <ListItem>Chats are automatically saved to your browser's local storage</ListItem>
     </List>
 
-    <SubTitle>Model Selection</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="6">Model Selection</SectionTitle>
     <List>
       <ListItem>Google Gemini: Fast, supports large contexts and images (Free tier available)</ListItem>
       <ListItem>Groq Llama: Extremely fast inference, great for quick tasks (Free tier available)</ListItem>
@@ -499,20 +794,43 @@ const ChatFeatures: React.FC = () => (
       <ListItem>AWS Bedrock: Claude 3.5 Sonnet, Haiku, Llama 3, Mistral (requires AWS account)</ListItem>
     </List>
 
-    <SubTitle>Citations</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="7">Citations</SectionTitle>
     <Paragraph>
       When the AI references your documents, clickable citations appear in the response. Click any citation to view the exact location in the source document.
     </Paragraph>
 
-    <SubTitle>Save to Notebook</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="8">Save to Notebook</SectionTitle>
+    <Paragraph>
+      Save important AI responses with visual styling:
+    </Paragraph>
     <List>
       <ListItem>Click the bookmark icon on any AI message to save it</ListItem>
       <ListItem>Saved notes are numbered automatically (Note #1, #2, etc.)</ListItem>
+      <ListItem>Saved messages get a blue highlight background by default</ListItem>
       <ListItem>Access all saved notes from the Notebook tab in the header</ListItem>
       <ListItem>Click the bookmark icon again to unsave</ListItem>
     </List>
 
-    <SubTitle>Voice Input</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="9">Note Styling</SectionTitle>
+    <Paragraph>
+      Customize how saved notes appear in chat (Settings → Note Style):
+    </Paragraph>
+    <List>
+      <ListItem><strong>Highlight BG (Default):</strong> Blue background tint</ListItem>
+      <ListItem><strong>Left Border:</strong> Blue vertical line on the left</ListItem>
+      <ListItem><strong>Glow Effect:</strong> Subtle shadow around the message</ListItem>
+      <ListItem><strong>Corner Badge:</strong> Note number badge in top-right corner</ListItem>
+    </List>
+
+    <SectionDivider />
+
+    <SectionTitle number="10">Voice Input</SectionTitle>
     <List>
       <ListItem>Click the microphone icon in the chat input</ListItem>
       <ListItem>Speak your message clearly</ListItem>
@@ -520,7 +838,9 @@ const ChatFeatures: React.FC = () => (
       <ListItem>Edit the transcribed text before sending</ListItem>
     </List>
 
-    <SubTitle>Web Sources</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="11">Web Sources</SectionTitle>
     <List>
       <ListItem>Click the link icon in the chat input</ListItem>
       <ListItem>Enter a URL to fetch and include in context</ListItem>
@@ -532,14 +852,27 @@ const ChatFeatures: React.FC = () => (
 
 const MindMaps: React.FC = () => (
   <>
-    <SectionTitle>Mind Maps</SectionTitle>
+    <PageTitle>Mind Maps</PageTitle>
+    <PageDescription>
+      Interactive visualizations that show the hierarchical structure of your documents with AI-powered analysis.
+    </PageDescription>
 
-    <SubTitle>What are Mind Maps?</SubTitle>
+    <TOC items={[
+      'What are Mind Maps?',
+      'Generating Mind Maps',
+      'Interacting with Mind Maps',
+      'Mind Map Cache',
+      'Best Use Cases'
+    ]} />
+
+    <SectionTitle number="1">What are Mind Maps?</SectionTitle>
     <Paragraph>
       Mind maps are interactive visualizations that show the hierarchical structure of your documents. The AI analyzes your file and creates a tree diagram showing relationships between concepts.
     </Paragraph>
 
-    <SubTitle>Generating Mind Maps</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="2">Generating Mind Maps</SectionTitle>
     <List>
       <ListItem>Hover over any file in the Sources panel</ListItem>
       <ListItem>Click the Network icon (purple)</ListItem>
@@ -547,7 +880,9 @@ const MindMaps: React.FC = () => (
       <ListItem>The mind map opens in fullscreen mode</ListItem>
     </List>
 
-    <SubTitle>Interacting with Mind Maps</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="3">Interacting with Mind Maps</SectionTitle>
     <List>
       <ListItem>Click nodes to expand or collapse branches</ListItem>
       <ListItem>Scroll to zoom in and out</ListItem>
@@ -555,7 +890,9 @@ const MindMaps: React.FC = () => (
       <ListItem>Click the fullscreen button to toggle fullscreen mode</ListItem>
     </List>
 
-    <SubTitle>Mind Map Cache</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="4">Mind Map Cache</SectionTitle>
     <List>
       <ListItem>Generated mind maps are cached locally in IndexedDB</ListItem>
       <ListItem>Access cached mind maps from the Graphics Library</ListItem>
@@ -563,7 +900,9 @@ const MindMaps: React.FC = () => (
       <ListItem>Cache persists across browser sessions</ListItem>
     </List>
 
-    <SubTitle>Best Use Cases</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="5">Best Use Cases</SectionTitle>
     <List>
       <ListItem>Bill of Quantities (BOQ) documents</ListItem>
       <ListItem>Technical specifications</ListItem>
@@ -579,22 +918,43 @@ const MindMaps: React.FC = () => (
 
 const NotebookFeature: React.FC = () => (
   <>
-    <SectionTitle>Notebook</SectionTitle>
+    <PageTitle>Notebook</PageTitle>
+    <PageDescription>
+      Your personal knowledge base for saving, organizing, and managing important AI responses and notes.
+    </PageDescription>
 
-    <SubTitle>What is the Notebook?</SubTitle>
+    <TOC items={[
+      'What is the Notebook?',
+      'Saving Notes',
+      'Organizing Notes',
+      'View Modes',
+      'Search and Filter',
+      'Editing Notes',
+      'Multi-Select & Batch Operations',
+      'Exporting Notes',
+      'Navigation'
+    ]} />
+
+    <SectionTitle number="1">What is the Notebook?</SectionTitle>
     <Paragraph>
       The Notebook is your personal knowledge base where you can save, organize, and manage important AI responses and notes.
     </Paragraph>
 
-    <SubTitle>Saving Notes</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="2">Saving Notes</SectionTitle>
     <List>
       <ListItem>Click the bookmark icon on any AI message to save it</ListItem>
       <ListItem>Notes are automatically numbered (Note #1, #2, etc.)</ListItem>
+      <ListItem>Saved messages appear with blue highlight in chat</ListItem>
       <ListItem>Each note includes the model used and timestamp</ListItem>
       <ListItem>Notes maintain links to their original chat conversation</ListItem>
+      <ListItem>Change note styling in Settings (4 visual styles available)</ListItem>
     </List>
 
-    <SubTitle>Organizing Notes</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="3">Organizing Notes</SectionTitle>
     <List>
       <ListItem>Add titles to notes for easy identification</ListItem>
       <ListItem>Add tags to categorize notes by topic</ListItem>
@@ -602,7 +962,9 @@ const NotebookFeature: React.FC = () => (
       <ListItem>Mark notes as favorites with the star icon</ListItem>
     </List>
 
-    <SubTitle>View Modes</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="4">View Modes</SectionTitle>
     <Paragraph>
       Switch between different view modes:
     </Paragraph>
@@ -612,7 +974,9 @@ const NotebookFeature: React.FC = () => (
       <ListItem>Details View: Table format showing metadata</ListItem>
     </List>
 
-    <SubTitle>Search and Filter</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="5">Search and Filter</SectionTitle>
     <List>
       <ListItem>Search notes by content, title, or tags</ListItem>
       <ListItem>Filter by category</ListItem>
@@ -620,15 +984,30 @@ const NotebookFeature: React.FC = () => (
       <ListItem>Toggle sort order (ascending/descending)</ListItem>
     </List>
 
-    <SubTitle>Editing Notes</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="6">Editing Notes</SectionTitle>
     <List>
-      <ListItem>Click any note to open the full editor</ListItem>
-      <ListItem>Edit content and title directly</ListItem>
+      <ListItem>Click any note to open the full editor in a modal</ListItem>
+      <ListItem>Edit content and title directly in the large text area</ListItem>
       <ListItem>Changes are tracked with "Last Modified" timestamp</ListItem>
       <ListItem>Click Save to apply changes</ListItem>
+      <ListItem>Modal shows note number, model, and creation date</ListItem>
     </List>
 
-    <SubTitle>Exporting Notes</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="7">Multi-Select & Batch Operations</SectionTitle>
+    <List>
+      <ListItem>Click checkboxes to select multiple notes</ListItem>
+      <ListItem>Export selected notes as a ZIP file</ListItem>
+      <ListItem>Use "Select All" to quickly select all visible notes</ListItem>
+      <ListItem>Selected count shows in the header</ListItem>
+    </List>
+
+    <SectionDivider />
+
+    <SectionTitle number="8">Exporting Notes</SectionTitle>
     <List>
       <ListItem>Export individual notes as Markdown or Text</ListItem>
       <ListItem>Select multiple notes and export as ZIP</ListItem>
@@ -636,7 +1015,9 @@ const NotebookFeature: React.FC = () => (
       <ListItem>Copy note content to clipboard</ListItem>
     </List>
 
-    <SubTitle>Navigation</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="9">Navigation</SectionTitle>
     <List>
       <ListItem>Click the external link icon to jump to the original conversation</ListItem>
       <ListItem>The chat will scroll to the exact message</ListItem>
@@ -647,36 +1028,59 @@ const NotebookFeature: React.FC = () => (
 
 const TodosFeature: React.FC = () => (
   <>
-    <SectionTitle>Tasks & Todos</SectionTitle>
+    <PageTitle>Tasks & Todos</PageTitle>
+    <PageDescription>
+      Track action items, to-dos, and follow-ups from your conversations with priorities, due dates, and subtasks.
+    </PageDescription>
 
-    <SubTitle>What are Tasks?</SubTitle>
+    <TOC items={[
+      'What are Tasks?',
+      'Creating Tasks',
+      'Task Properties',
+      'Managing Tasks',
+      'Filtering and Sorting',
+      'Time Indicators'
+    ]} />
+
+    <SectionTitle number="1">What are Tasks?</SectionTitle>
     <Paragraph>
       The Tasks feature helps you track action items, to-dos, and follow-ups from your conversations and work.
     </Paragraph>
 
-    <SubTitle>Creating Tasks</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="2">Creating Tasks</SectionTitle>
     <List>
       <ListItem>Type your task in the input field at the top</ListItem>
       <ListItem>Press Enter or click Add to create</ListItem>
       <ListItem>Tasks are automatically timestamped</ListItem>
     </List>
 
-    <SubTitle>Task Properties</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="3">Task Properties</SectionTitle>
     <List>
       <ListItem>Priority: Set as Low, Medium, or High (shown as colored dots)</ListItem>
       <ListItem>Due Date: Set deadlines for time-sensitive tasks</ListItem>
       <ListItem>Completion Status: Check off completed tasks</ListItem>
+      <ListItem>Subtasks: Break down complex tasks into smaller steps</ListItem>
+      <ListItem>Categories: Organize tasks by project or type</ListItem>
     </List>
 
-    <SubTitle>Managing Tasks</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="4">Managing Tasks</SectionTitle>
     <List>
       <ListItem>Click the checkbox to mark tasks as complete</ListItem>
       <ListItem>Completed tasks show with strikethrough text</ListItem>
       <ListItem>Delete tasks by clicking the trash icon</ListItem>
       <ListItem>Hover over tasks to reveal action buttons</ListItem>
+      <ListItem>Progress bars show completion percentage for tasks with subtasks</ListItem>
     </List>
 
-    <SubTitle>Filtering and Sorting</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="5">Filtering and Sorting</SectionTitle>
     <List>
       <ListItem>Filter: All, Active, or Completed tasks</ListItem>
       <ListItem>Sort by: Created date, Due date, or Priority</ListItem>
@@ -684,7 +1088,9 @@ const TodosFeature: React.FC = () => (
       <ListItem>Overdue tasks are highlighted in red</ListItem>
     </List>
 
-    <SubTitle>Time Indicators</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="6">Time Indicators</SectionTitle>
     <List>
       <ListItem>Tasks show time remaining (e.g., "2d", "5h", "30m")</ListItem>
       <ListItem>Overdue tasks display "Overdue" badge</ListItem>
@@ -693,16 +1099,177 @@ const TodosFeature: React.FC = () => (
   </>
 );
 
+const WebIntegration: React.FC = () => (
+  <>
+    <PageTitle>Web Integration</PageTitle>
+    <PageDescription>
+      Browse websites, import GitHub code, and add web pages as context for AI conversations.
+    </PageDescription>
+
+    <TOC items={[
+      'Web Viewer',
+      'GitHub Integration',
+      'Web Sources'
+    ]} />
+
+    <SectionTitle number="1">Web Viewer</SectionTitle>
+    <Paragraph>
+      Browse websites directly within ConstructLM:
+    </Paragraph>
+    <List>
+      <ListItem>Click the globe icon in the header to open the web viewer</ListItem>
+      <ListItem>Multiple tabs supported - browse several sites at once</ListItem>
+      <ListItem>Cookies persist across sessions</ListItem>
+      <ListItem>Use for research while chatting with AI</ListItem>
+      <ListItem>Copy content from web pages to chat</ListItem>
+    </List>
+
+    <SectionDivider />
+
+    <SectionTitle number="2">GitHub Integration</SectionTitle>
+    <Paragraph>
+      Import code directly from GitHub repositories:
+    </Paragraph>
+    <List>
+      <ListItem>Enter any public GitHub repository URL</ListItem>
+      <ListItem>Browse folders and files in the repository</ListItem>
+      <ListItem>Switch between branches</ListItem>
+      <ListItem>Select multiple files for batch import</ListItem>
+      <ListItem>Smart import of README and config files</ListItem>
+      <ListItem>AI can analyze and explain imported code</ListItem>
+      <ListItem>Search through repository files</ListItem>
+    </List>
+
+    <SectionDivider />
+
+    <SectionTitle number="3">Web Sources</SectionTitle>
+    <Paragraph>
+      Add web pages as context for AI conversations:
+    </Paragraph>
+    <List>
+      <ListItem>Click the link icon in the chat input</ListItem>
+      <ListItem>Enter a URL to fetch and include in context</ListItem>
+      <ListItem>The AI can reference content from added URLs</ListItem>
+      <ListItem>Remove sources by clicking the X icon</ListItem>
+      <ListItem>CORS proxy automatically handles restricted sites</ListItem>
+    </List>
+  </>
+);
+
+const WebSources: React.FC = () => (
+  <>
+    <PageTitle>Web Sources</PageTitle>
+    <PageDescription>
+      Fetch and analyze content from the web, giving your AI conversations access to live information, documentation, and online resources.
+    </PageDescription>
+
+    <TOC items={[
+      'Adding Web URLs',
+      'CORS Proxy',
+      'Web Viewer',
+      'GitHub Integration',
+      'Best Use Cases'
+    ]} />
+
+    <SectionTitle number="1">Adding Web URLs</SectionTitle>
+    <Paragraph>
+      Include web pages as context for AI conversations:
+    </Paragraph>
+    <List>
+      <ListItem>Click the link icon in the chat input area</ListItem>
+      <ListItem>Enter any URL (articles, documentation, GitHub, etc.)</ListItem>
+      <ListItem>The system fetches and processes the content</ListItem>
+      <ListItem>AI can now reference the web content in responses</ListItem>
+      <ListItem>Remove sources by clicking the X icon</ListItem>
+    </List>
+
+    <SectionDivider />
+
+    <SectionTitle number="2">CORS Proxy</SectionTitle>
+    <Paragraph>
+      ConstructLM automatically handles restricted websites:
+    </Paragraph>
+    <List>
+      <ListItem>Automatic proxy rotation for blocked sites</ListItem>
+      <ListItem>Handles CORS restrictions transparently</ListItem>
+      <ListItem>Fetches content from sites that block direct access</ListItem>
+      <ListItem>No configuration needed - works automatically</ListItem>
+    </List>
+
+    <SectionDivider />
+
+    <SectionTitle number="3">Web Viewer</SectionTitle>
+    <Paragraph>
+      Browse websites directly within ConstructLM:
+    </Paragraph>
+    <List>
+      <ListItem>Click the globe icon in the header to open web viewer</ListItem>
+      <ListItem>Multiple tabs supported - browse several sites at once</ListItem>
+      <ListItem>Cookies persist across sessions</ListItem>
+      <ListItem>Use for research while chatting with AI</ListItem>
+      <ListItem>Copy content from web pages to chat</ListItem>
+      <ListItem>Full browser functionality within the app</ListItem>
+    </List>
+
+    <SectionDivider />
+
+    <SectionTitle number="4">GitHub Integration</SectionTitle>
+    <Paragraph>
+      Import code directly from GitHub repositories:
+    </Paragraph>
+    <List>
+      <ListItem>Enter any public GitHub repository URL</ListItem>
+      <ListItem>Browse folders and files in the repository</ListItem>
+      <ListItem>Switch between branches</ListItem>
+      <ListItem>Select multiple files for batch import</ListItem>
+      <ListItem>Smart import of README and config files</ListItem>
+      <ListItem>AI can analyze and explain imported code</ListItem>
+      <ListItem>Search through repository files</ListItem>
+      <ListItem>Perfect for code review and documentation</ListItem>
+    </List>
+
+    <SectionDivider />
+
+    <SectionTitle number="5">Best Use Cases</SectionTitle>
+    <List>
+      <ListItem><strong>Research:</strong> Add technical articles and documentation as context</ListItem>
+      <ListItem><strong>Code Analysis:</strong> Import GitHub repos for AI code review</ListItem>
+      <ListItem><strong>Standards:</strong> Reference online specifications and standards</ListItem>
+      <ListItem><strong>Comparison:</strong> Compare multiple web sources side-by-side</ListItem>
+      <ListItem><strong>Learning:</strong> Use tutorials and guides as reference material</ListItem>
+    </List>
+
+    <InfoBox>
+      Web sources are fetched once and cached. The AI can reference them across multiple conversations without re-fetching.
+    </InfoBox>
+  </>
+);
+
 const RemindersFeature: React.FC = () => (
   <>
-    <SectionTitle>Reminders</SectionTitle>
+    <PageTitle>Reminders</PageTitle>
+    <PageDescription>
+      Set time-based reminders with automatic notifications to remember important deadlines, meetings, and time-sensitive tasks.
+    </PageDescription>
 
-    <SubTitle>What are Reminders?</SubTitle>
+    <TOC items={[
+      'What are Reminders?',
+      'Creating Reminders',
+      'Reminder Notifications',
+      'Managing Active Reminders',
+      'Reminder States',
+      'Filtering',
+      'Time Display'
+    ]} />
+
+    <SectionTitle number="1">What are Reminders?</SectionTitle>
     <Paragraph>
       Reminders help you remember important deadlines, meetings, and time-sensitive tasks with automatic notifications.
     </Paragraph>
 
-    <SubTitle>Creating Reminders</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="2">Creating Reminders</SectionTitle>
     <List>
       <ListItem>Enter a reminder title in the input field</ListItem>
       <ListItem>Select date and time using the datetime picker</ListItem>
@@ -710,7 +1277,9 @@ const RemindersFeature: React.FC = () => (
       <ListItem>Reminders must be set for future times</ListItem>
     </List>
 
-    <SubTitle>Reminder Notifications</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="3">Reminder Notifications</SectionTitle>
     <List>
       <ListItem>System checks for due reminders every 10 seconds</ListItem>
       <ListItem>Toast notification appears when reminder triggers</ListItem>
@@ -718,28 +1287,36 @@ const RemindersFeature: React.FC = () => (
       <ListItem>Reminder card pulses and highlights in red</ListItem>
     </List>
 
-    <SubTitle>Managing Active Reminders</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="4">Managing Active Reminders</SectionTitle>
     <List>
       <ListItem>Snooze: Postpone for 5 min, 15 min, or 1 hour</ListItem>
       <ListItem>Done: Mark as completed and dismiss</ListItem>
       <ListItem>Delete: Remove reminder permanently</ListItem>
     </List>
 
-    <SubTitle>Reminder States</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="5">Reminder States</SectionTitle>
     <List>
       <ListItem>Pending: Waiting for trigger time (blue badge)</ListItem>
       <ListItem>Triggered: Time has arrived (red badge, pulsing)</ListItem>
       <ListItem>Dismissed: Marked as done (grayed out)</ListItem>
     </List>
 
-    <SubTitle>Filtering</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="6">Filtering</SectionTitle>
     <List>
       <ListItem>All: Show all reminders regardless of status</ListItem>
       <ListItem>Pending: Only upcoming reminders</ListItem>
       <ListItem>Triggered: Only active notifications</ListItem>
     </List>
 
-    <SubTitle>Time Display</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="7">Time Display</SectionTitle>
     <List>
       <ListItem>Shows countdown: "in 2d", "in 5h", "in 30m"</ListItem>
       <ListItem>Urgent reminders (under 1 hour) show yellow badge</ListItem>
@@ -750,9 +1327,19 @@ const RemindersFeature: React.FC = () => (
 
 const LiveMode: React.FC = () => (
   <>
-    <SectionTitle>Live Mode</SectionTitle>
+    <PageTitle>Live Mode</PageTitle>
+    <PageDescription>
+      Real-time voice conversations with Gemini AI. Speak naturally and receive audio responses for a conversational experience.
+    </PageDescription>
 
-    <SubTitle>What is Live Mode?</SubTitle>
+    <TOC items={[
+      'What is Live Mode?',
+      'Starting a Live Session',
+      'During a Live Session',
+      'Tips for Best Results'
+    ]} />
+
+    <SectionTitle number="1">What is Live Mode?</SectionTitle>
     <Paragraph>
       Live Mode enables real-time voice conversations with Gemini AI. Speak naturally and receive audio responses, creating a conversational experience similar to talking with an assistant.
     </Paragraph>
@@ -761,7 +1348,9 @@ const LiveMode: React.FC = () => (
       Live Mode is only available in the browser version. It requires a Google Gemini API key and microphone access.
     </InfoBox>
 
-    <SubTitle>Starting a Live Session</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="2">Starting a Live Session</SectionTitle>
     <List>
       <ListItem>Click the phone icon in the header</ListItem>
       <ListItem>Grant microphone permissions when prompted</ListItem>
@@ -769,7 +1358,9 @@ const LiveMode: React.FC = () => (
       <ListItem>Start speaking naturally</ListItem>
     </List>
 
-    <SubTitle>During a Live Session</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="3">During a Live Session</SectionTitle>
     <List>
       <ListItem>Speak clearly into your microphone</ListItem>
       <ListItem>The AI responds with voice output</ListItem>
@@ -778,7 +1369,9 @@ const LiveMode: React.FC = () => (
       <ListItem>Click the end call button to disconnect</ListItem>
     </List>
 
-    <SubTitle>Tips for Best Results</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="4">Tips for Best Results</SectionTitle>
     <List>
       <ListItem>Use a quiet environment to minimize background noise</ListItem>
       <ListItem>Speak clearly and at a normal pace</ListItem>
@@ -790,14 +1383,25 @@ const LiveMode: React.FC = () => (
 
 const GraphicsLibrary: React.FC = () => (
   <>
-    <SectionTitle>Graphics Library</SectionTitle>
+    <PageTitle>Graphics Library</PageTitle>
+    <PageDescription>
+      Store and manage all your snapshots and generated mind maps in one centralized location.
+    </PageDescription>
 
-    <SubTitle>What is the Graphics Library?</SubTitle>
+    <TOC items={[
+      'What is the Graphics Library?',
+      'Snapshots',
+      'Mind Map Gallery'
+    ]} />
+
+    <SectionTitle number="1">What is the Graphics Library?</SectionTitle>
     <Paragraph>
       The Graphics Library stores all your snapshots and generated mind maps in one place. Access it by clicking the image icon in the header.
     </Paragraph>
 
-    <SubTitle>Snapshots</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="2">Snapshots</SectionTitle>
     <Paragraph>
       Snapshots are screenshots of your chat conversations:
     </Paragraph>
@@ -809,7 +1413,9 @@ const GraphicsLibrary: React.FC = () => (
       <ListItem>Copy snapshots to clipboard for quick sharing</ListItem>
     </List>
 
-    <SubTitle>Mind Map Gallery</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="3">Mind Map Gallery</SectionTitle>
     <Paragraph>
       All generated mind maps are automatically saved to the library:
     </Paragraph>
@@ -828,14 +1434,29 @@ const GraphicsLibrary: React.FC = () => (
 
 const DataManagement: React.FC = () => (
   <>
-    <SectionTitle>Data Management</SectionTitle>
+    <PageTitle>Data Management</PageTitle>
+    <PageDescription>
+      Comprehensive tools to backup, restore, and manage your application data with export/import capabilities.
+    </PageDescription>
 
-    <SubTitle>Overview</SubTitle>
+    <TOC items={[
+      'Overview',
+      'Export Data',
+      'What Gets Exported',
+      'Import Data',
+      'Clear All App Data',
+      'Best Practices',
+      'Troubleshooting'
+    ]} />
+
+    <SectionTitle number="1">Overview</SectionTitle>
     <Paragraph>
       ConstructLM provides comprehensive tools to backup, restore, and manage your application data. All features are accessible through the Settings menu.
     </Paragraph>
 
-    <SubTitle>Export Data</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="2">Export Data</SectionTitle>
     <Paragraph>
       Create a complete backup of all your ConstructLM data:
     </Paragraph>
@@ -846,7 +1467,9 @@ const DataManagement: React.FC = () => (
       <ListItem>A ZIP file will be downloaded to your default Downloads folder</ListItem>
     </List>
 
-    <SubTitle>What Gets Exported</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="3">What Gets Exported</SectionTitle>
     <Paragraph>
       The export includes everything you need to restore your ConstructLM experience:
     </Paragraph>
@@ -862,7 +1485,9 @@ const DataManagement: React.FC = () => (
       Export files are named with the current date (e.g., "constructlm-backup-2024-01-15.zip") and saved to your system's default Downloads folder.
     </InfoBox>
 
-    <SubTitle>Import Data</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="4">Import Data</SectionTitle>
     <Paragraph>
       Restore your data from a previously exported backup:
     </Paragraph>
@@ -874,7 +1499,9 @@ const DataManagement: React.FC = () => (
       <ListItem>The app will automatically refresh after import</ListItem>
     </List>
 
-    <SubTitle>Clear All App Data</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="5">Clear All App Data</SectionTitle>
     <Paragraph>
       Reset ConstructLM to a completely fresh state:
     </Paragraph>
@@ -900,7 +1527,9 @@ const DataManagement: React.FC = () => (
       </div>
     </div>
 
-    <SubTitle>Best Practices</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="6">Best Practices</SectionTitle>
     <List>
       <ListItem><strong>Regular Backups:</strong> Export your data weekly or after important conversations</ListItem>
       <ListItem><strong>Before Updates:</strong> Always export before updating the application</ListItem>
@@ -908,7 +1537,9 @@ const DataManagement: React.FC = () => (
       <ListItem><strong>Storage Management:</strong> Use "Clear All Data" when storage space is low</ListItem>
     </List>
 
-    <SubTitle>Troubleshooting</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="7">Troubleshooting</SectionTitle>
     <Paragraph>
       Common issues and solutions:
     </Paragraph>
@@ -923,9 +1554,18 @@ const DataManagement: React.FC = () => (
 
 const KeyboardShortcuts: React.FC = () => (
   <>
-    <SectionTitle>Keyboard Shortcuts</SectionTitle>
+    <PageTitle>Keyboard Shortcuts</PageTitle>
+    <PageDescription>
+      Speed up your workflow with keyboard shortcuts for common actions and navigation.
+    </PageDescription>
 
-    <SubTitle>Chat Input</SubTitle>
+    <TOC items={[
+      'Chat Input',
+      'Application',
+      'Context Menus'
+    ]} />
+
+    <SectionTitle number="1">Chat Input</SectionTitle>
     <List>
       <ListItem>Enter: Send message</ListItem>
       <ListItem>Shift+Enter: New line</ListItem>
@@ -934,13 +1574,17 @@ const KeyboardShortcuts: React.FC = () => (
       <ListItem>Escape: Close mention menu</ListItem>
     </List>
 
-    <SubTitle>Application</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="2">Application</SectionTitle>
     <List>
       <ListItem>Ctrl+Shift+S (Cmd+Shift+S): Take snapshot</ListItem>
       <ListItem>Escape: Close modals and menus</ListItem>
     </List>
 
-    <SubTitle>Context Menus</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="3">Context Menus</SectionTitle>
     <Paragraph>
       Right-click on various elements to access context-specific actions:
     </Paragraph>
@@ -953,9 +1597,50 @@ const KeyboardShortcuts: React.FC = () => (
 
 const Configuration: React.FC = () => (
   <>
-    <SectionTitle>Configuration</SectionTitle>
+    <PageTitle>Configuration</PageTitle>
+    <PageDescription>
+      Configure API keys, personalize your experience, and manage application settings.
+    </PageDescription>
 
-    <SubTitle>API Keys</SubTitle>
+    <TOC items={[
+      'User Profile',
+      'Note Style',
+      'API Keys',
+      'Getting API Keys',
+      'Theme',
+      'Data Management',
+      'Local Models (Ollama)',
+      'Activity Logging',
+      'Data Storage'
+    ]} />
+
+    <SectionTitle number="1">User Profile</SectionTitle>
+    <Paragraph>
+      Personalize your experience with smart greetings:
+    </Paragraph>
+    <List>
+      <ListItem>Set your name for personalized greetings</ListItem>
+      <ListItem>Add your role (e.g., Developer, Designer, Engineer)</ListItem>
+      <ListItem>Choose greeting style: Professional, Casual, or Minimal</ListItem>
+      <ListItem>AI adapts greetings based on time of day and usage patterns</ListItem>
+    </List>
+
+    <SectionDivider />
+
+    <SectionTitle number="2">Note Style</SectionTitle>
+    <Paragraph>
+      Choose how saved notes appear in your chat:
+    </Paragraph>
+    <List>
+      <ListItem><strong>Highlight BG:</strong> Blue background tint (default)</ListItem>
+      <ListItem><strong>Left Border:</strong> Blue vertical line on the left side</ListItem>
+      <ListItem><strong>Glow Effect:</strong> Subtle shadow around the message</ListItem>
+      <ListItem><strong>Corner Badge:</strong> Note number badge in top-right corner</ListItem>
+    </List>
+
+    <SectionDivider />
+
+    <SectionTitle number="3">API Keys</SectionTitle>
     <Paragraph>
       ConstructLM requires API keys to communicate with AI models. Configure them in Settings:
     </Paragraph>
@@ -966,7 +1651,9 @@ const Configuration: React.FC = () => (
       <ListItem>Click "Save & Apply" to store your configuration</ListItem>
     </List>
 
-    <SubTitle>Getting API Keys</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="4">Getting API Keys</SectionTitle>
     <Paragraph>
       Google Gemini (Free tier available):
     </Paragraph>
@@ -1010,12 +1697,16 @@ const Configuration: React.FC = () => (
       API keys are stored locally in your browser's local storage. They are never sent to any server except the respective AI provider when making requests.
     </InfoBox>
 
-    <SubTitle>Theme</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="5">Theme</SectionTitle>
     <Paragraph>
       Toggle between light and dark mode using the sun/moon icon in the header. Your preference is saved automatically.
     </Paragraph>
 
-    <SubTitle>Data Management</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="6">Data Management</SectionTitle>
     <Paragraph>
       ConstructLM provides comprehensive data backup and management tools:
     </Paragraph>
@@ -1029,35 +1720,82 @@ const Configuration: React.FC = () => (
       Export your data regularly to prevent loss. The export includes everything: conversations, generated mind maps, screenshots, and all your settings.
     </InfoBox>
 
-    <SubTitle>Data Storage</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="7">Local Models (Ollama)</SectionTitle>
+    <Paragraph>
+      Run AI models offline on your computer:
+    </Paragraph>
+    <List>
+      <ListItem>Download and install Ollama from ollama.ai</ListItem>
+      <ListItem>Pull models like Code Llama, Mistral, or Llama 3</ListItem>
+      <ListItem>Click "Test Connection" in Settings to verify Ollama is running</ListItem>
+      <ListItem>Select local models from the model dropdown</ListItem>
+      <ListItem>No API keys needed - runs completely offline</ListItem>
+      <ListItem>Great for when you hit API quota limits</ListItem>
+    </List>
+
+    <SectionDivider />
+
+    <SectionTitle number="8">Activity Logging</SectionTitle>
+    <Paragraph>
+      Track your usage and monitor performance:
+    </Paragraph>
+    <List>
+      <ListItem>View detailed logs of all API calls and file operations</ListItem>
+      <ListItem>Monitor token usage per conversation</ListItem>
+      <ListItem>Track which models you use most</ListItem>
+      <ListItem>Debug issues with detailed error logs</ListItem>
+      <ListItem>Export logs for analysis</ListItem>
+    </List>
+
+    <SectionDivider />
+
+    <SectionTitle number="9">Data Storage</SectionTitle>
     <Paragraph>
       All data is stored locally in your browser:
     </Paragraph>
     <List>
       <ListItem>API keys: Browser local storage</ListItem>
       <ListItem>Chat history: Browser local storage</ListItem>
-      <ListItem>Uploaded files: Browser memory (cleared on refresh)</ListItem>
+      <ListItem>User folders: Browser local storage</ListItem>
+      <ListItem>Uploaded files: IndexedDB (persists across sessions)</ListItem>
       <ListItem>Mind maps: IndexedDB</ListItem>
       <ListItem>Snapshots: IndexedDB</ListItem>
+      <ListItem>Notes: Browser local storage</ListItem>
+      <ListItem>Todos & Reminders: Browser local storage</ListItem>
     </List>
   </>
 );
 
 const SupportFeedback: React.FC = () => (
   <>
-    <SectionTitle>Support & Feedback</SectionTitle>
+    <PageTitle>Support & Feedback</PageTitle>
+    <PageDescription>
+      Get help, report bugs, request features, and contribute to making ConstructLM better.
+    </PageDescription>
+
+    <TOC items={[
+      'Download & Updates',
+      'Report a Bug',
+      'Request a Feature',
+      'Contact Information',
+      'Contributing'
+    ]} />
 
     <Paragraph>
       ConstructLM is actively developed and we value your feedback. Here's how you can get help or contribute to making the app better.
     </Paragraph>
 
-    <SubTitle>Download & Updates</SubTitle>
+    <SectionTitle number="1">Download & Updates</SectionTitle>
     <InfoBox>
       ConstructLM is available for download at: <strong>https://mimevents.com/</strong>
       <br />Check this page regularly for the latest updates and new features.
     </InfoBox>
 
-    <SubTitle>Report a Bug</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="2">Report a Bug</SectionTitle>
     <Paragraph>
       Found an issue? Help us fix it by reporting bugs:
     </Paragraph>
@@ -1086,7 +1824,9 @@ const SupportFeedback: React.FC = () => (
       </div>
     </div>
 
-    <SubTitle>Request a Feature</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="3">Request a Feature</SectionTitle>
     <Paragraph>
       Have an idea for a new feature or improvement? We'd love to hear it:
     </Paragraph>
@@ -1114,7 +1854,9 @@ const SupportFeedback: React.FC = () => (
       </div>
     </div>
 
-    <SubTitle>Contact Information</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="4">Contact Information</SectionTitle>
     <div className="bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg p-4 mb-4">
       <div className="flex items-center gap-3 mb-3">
         <Mail size={20} className="text-gray-600 dark:text-gray-400" />
@@ -1129,7 +1871,9 @@ const SupportFeedback: React.FC = () => (
       </div>
     </div>
 
-    <SubTitle>Contributing</SubTitle>
+    <SectionDivider />
+
+    <SectionTitle number="5">Contributing</SectionTitle>
     <Paragraph>
       ConstructLM is designed specifically for construction and engineering professionals. Your feedback helps us:
     </Paragraph>

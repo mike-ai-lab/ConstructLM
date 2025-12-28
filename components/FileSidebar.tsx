@@ -396,6 +396,7 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
           if (node.type === 'folder') {
               const isExpanded = expandedFolders.has(node.path);
               const folderFiles = files.filter(f => (f.path || f.name).startsWith(node.path + '/'));
+              const childFolderCount = Object.values(node.children).filter(c => c.type === 'folder').length;
               const allFolderFilesSelected = folderFiles.length > 0 && folderFiles.every(f => selectedSourceIds.includes(f.id));
               const someFolderFilesSelected = folderFiles.some(f => selectedSourceIds.includes(f.id)) && !allFolderFilesSelected;
               
@@ -403,7 +404,8 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
                   <div key={node.path} className="select-none">
                       <div 
                         className="flex items-center gap-1.5 px-2 py-1.5 hover:bg-[#eaeaea] dark:hover:bg-[#2a2a2a] rounded cursor-pointer text-[#1a1a1a] dark:text-white group"
-                        style={{ paddingLeft: `${depth * 16 + 8}px` }}
+                        style={{ paddingLeft: `${depth * 12 + 8}px` }}
+                        onClick={() => toggleFolder(node.path)}
                       >
                           <input
                               type="checkbox"
@@ -416,16 +418,16 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
                                   folderFiles.forEach(f => { if (!selectedSourceIds.includes(f.id)) onToggleSource(f.id); });
                                 }
                               }}
-                              className="w-3 h-3 rounded border-gray-300 text-blue-600 focus:ring-blue-500 flex-shrink-0 cursor-pointer"
+                              className="w-3 h-3 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 flex-shrink-0 cursor-pointer bg-white dark:bg-gray-700"
                               onClick={(e) => e.stopPropagation()}
                           />
-                          <div className="w-3 h-3 flex items-center justify-center flex-shrink-0" onClick={() => toggleFolder(node.path)}>
+                          <div className="w-3 h-3 flex items-center justify-center flex-shrink-0">
                             {isExpanded ? <ChevronDown size={12} className="text-[#666666] dark:text-[#a0a0a0]"/> : <ChevronRight size={12} className="text-[#666666] dark:text-[#a0a0a0]"/>}
                           </div>
-                          <Folder size={13} className="text-amber-500 flex-shrink-0" onClick={() => toggleFolder(node.path)} />
-                          <span className="text-xs font-semibold truncate flex-1" onClick={() => toggleFolder(node.path)}>{node.name}</span>
-                          <span className="text-[10px] text-[#a0a0a0] opacity-0 group-hover:opacity-100">
-                            {Object.keys(node.children).length}
+                          <Folder size={14} className={isExpanded ? 'text-amber-600' : 'text-amber-500'} />
+                          <span className="text-xs font-semibold truncate flex-1">{node.name}</span>
+                          <span className="text-[10px] text-[#a0a0a0] opacity-0 group-hover:opacity-100 flex items-center gap-1">
+                            {folderFiles.length > 0 && <span>{folderFiles.length} files</span>}
                           </span>
                           <button
                               onClick={(e) => { e.stopPropagation(); removeFolder(node.path, files, onRemove); }}
@@ -436,7 +438,7 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
                           </button>
                       </div>
                       {isExpanded && (
-                          <div className="border-l border-[rgba(0,0,0,0.1)] dark:border-[rgba(255,255,255,0.05)] ml-3" style={{ marginLeft: `${depth * 16 + 16}px` }}>
+                          <div className="border-l-2 border-[rgba(68,133,209,0.2)] dark:border-[rgba(68,133,209,0.3)]" style={{ marginLeft: `${depth * 12 + 20}px` }}>
                             {renderTree(node.children, depth + 1)}
                           </div>
                       )}
@@ -457,13 +459,13 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
                         group relative flex items-center gap-1.5 px-2 py-1.5 rounded-md transition-all cursor-grab active:cursor-grabbing
                         ${file.status === 'error' ? 'bg-red-50 dark:bg-red-900/20' : 'hover:bg-[#eaeaea] dark:hover:bg-[#2a2a2a]'}
                     `}
-                    style={{ marginLeft: `${depth * 16 + 8}px` }}
+                    style={{ paddingLeft: `${depth * 12 + 8}px` }}
                 >
                     <input
                         type="checkbox"
                         checked={selectedSourceIds.includes(file.id)}
                         onChange={() => onToggleSource(file.id)}
-                        className="w-3 h-3 rounded border-gray-300 text-blue-600 focus:ring-blue-500 flex-shrink-0 cursor-pointer"
+                        className="w-3 h-3 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 flex-shrink-0 cursor-pointer bg-white dark:bg-gray-700"
                         onClick={(e) => e.stopPropagation()}
                     />
                     <div className="flex-shrink-0">
@@ -763,14 +765,26 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
                                     <div
                                       key={file.id}
                                       data-file-id={file.id}
+                                      draggable
+                                      onDragStart={(e) => {
+                                        e.dataTransfer.setData('text/plain', `@${file.name}`);
+                                        e.dataTransfer.effectAllowed = 'copy';
+                                      }}
                                       className={`
-                                        group relative flex items-center gap-2 px-2 py-2 rounded-md transition-all cursor-pointer mx-2
+                                        group relative flex items-center gap-2 px-2 py-2 rounded-md transition-all cursor-grab active:cursor-grabbing mx-2
                                         ${selectedFiles.has(file.id) ? 'bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-400' : 'hover:bg-[#eaeaea] dark:hover:bg-[#2a2a2a]'}
                                         ${cutFiles.has(file.id) ? 'opacity-40 scale-95' : ''}
                                       `}
                                       onClick={(e) => handleFileClick(file.id, e)}
                                       onContextMenu={(e) => handleContextMenu(e, selectedFiles.has(file.id) ? Array.from(selectedFiles) : [file.id])}
                                     >
+                                      <input
+                                        type="checkbox"
+                                        checked={selectedSourceIds.includes(file.id)}
+                                        onChange={() => onToggleSource(file.id)}
+                                        className="w-3 h-3 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 flex-shrink-0 cursor-pointer bg-white dark:bg-gray-700"
+                                        onClick={(e) => e.stopPropagation()}
+                                      />
                                       <div className="flex-shrink-0">{getIcon(file)}</div>
                                       
                                       {renamingId === file.id ? (
@@ -811,8 +825,13 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
                       <div
                           key={file.id}
                           data-file-id={file.id}
+                          draggable
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData('text/plain', `@${file.name}`);
+                            e.dataTransfer.effectAllowed = 'copy';
+                          }}
                           className={`
-                              group relative flex items-center gap-2 px-2 py-2 rounded-md transition-all cursor-pointer mx-2
+                              group relative flex items-center gap-2 px-2 py-2 rounded-md transition-all cursor-grab active:cursor-grabbing mx-2
                               ${selectedFiles.has(file.id) ? 'bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-400' : file.status === 'error' ? 'bg-red-50 dark:bg-red-900/20' : 'hover:bg-[#eaeaea] dark:hover:bg-[#2a2a2a]'}
                               ${cutFiles.has(file.id) ? 'opacity-40 scale-95' : ''}
                           `}
@@ -823,7 +842,7 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
                               type="checkbox"
                               checked={selectedSourceIds.includes(file.id)}
                               onChange={() => onToggleSource(file.id)}
-                              className="w-3.5 h-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 flex-shrink-0 cursor-pointer"
+                              className="w-3.5 h-3.5 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 flex-shrink-0 cursor-pointer bg-white dark:bg-gray-700"
                               onClick={(e) => e.stopPropagation()}
                           />
                           <div className="flex-shrink-0">

@@ -75,6 +75,7 @@
       const [rightWidth, setRightWidth] = useState(400);
       const [isResizing, setIsResizing] = useState(null);
       const [activeCitation, setActiveCitation] = useState(null);
+      const [activeTab, setActiveTab] = useState('chat');
 
       useEffect(() => {
         if (!isResizing) return;
@@ -116,7 +117,8 @@
 
       return (
         <div className="flex h-screen w-full bg-slate-100 text-slate-900 overflow-hidden">
-          <aside className={`fixed inset-y-0 left-0 z-50 lg:relative bg-white border-r-2 border-slate-300 ${leftOpen ? "" : "w-0"} overflow-hidden`} style={{ width: leftOpen ? `${leftWidth}px` : '0' }}>
+          {activeTab === 'chat' && (
+          <aside className="fixed inset-y-0 left-0 z-50 lg:relative bg-white border-r-2 border-slate-300 overflow-hidden transition-all duration-300 ease-in-out" style={{ width: leftOpen ? `${leftWidth}px` : '0' }}>
             <div className="h-full flex flex-col" style={{ width: `${leftWidth}px` }}>
               <div className="h-[70px] p-4 border-b-2 border-slate-300 font-bold flex items-center gap-2">
                 <Icon name="history" size={18} className="text-blue-600" />
@@ -133,18 +135,33 @@
             </div>
             {leftOpen && <div className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500 transition-colors" onMouseDown={() => setIsResizing('left')} />}
           </aside>
+          )}
 
           <main className="flex-1 flex flex-col bg-white relative z-10 overflow-hidden">
             <header className="h-[70px] border-b-2 border-slate-300 flex items-center justify-between px-4 w-full bg-white">
+              {activeTab === 'chat' && (
               <button onClick={() => setLeftOpen(!leftOpen)} className="p-2 rounded-lg bg-slate-300 hover:bg-slate-400 transition-colors">
                 <Icon name="panel-left" size={20} className="text-slate-800" />
               </button>
-              <strong>ConstructLM - Scrolling Citations</strong>
+              )}
+              {activeTab === 'workspace' && <div />}
+              <div className="flex gap-2">
+                <button onClick={() => setActiveTab('chat')} className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'chat' ? 'bg-blue-500 text-white' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'}`}>
+                  Chat
+                </button>
+                <button onClick={() => setActiveTab('workspace')} className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'workspace' ? 'bg-blue-500 text-white' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'}`}>
+                  Workspace
+                </button>
+              </div>
+              {activeTab === 'chat' && (
               <button onClick={() => setRightOpen(!rightOpen)} className="p-2 rounded-lg bg-slate-300 hover:bg-slate-400 transition-colors">
                 <Icon name="panel-right" size={20} className="text-slate-800" />
               </button>
+              )}
+              {activeTab === 'workspace' && <div />}
             </header>
 
+            {activeTab === 'chat' ? (
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
               {messages.map((msg, idx) => (
                 <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -180,7 +197,16 @@
                 </div>
               ))}
             </div>
+            ) : (
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="max-w-4xl mx-auto">
+                <h2 className="text-2xl font-bold mb-4">Workspace</h2>
+                <p className="text-slate-600">This is a placeholder for the workspace tab.</p>
+              </div>
+            </div>
+            )}
 
+            {activeTab === 'chat' && (
             <footer className="border-t-2 border-slate-300 p-4 bg-white">
               <div className="flex gap-2">
                 <input
@@ -195,10 +221,11 @@
                 </button>
               </div>
             </footer>
+            )}
           </main>
 
-          {rightOpen && (
-            <aside className="w-0 lg:w-auto bg-white border-l-2 border-slate-300 relative" style={{ width: `${rightWidth}px` }}>
+          {activeTab === 'chat' && (
+          <aside className="fixed inset-y-0 right-0 z-50 lg:relative bg-white border-l-2 border-slate-300 overflow-hidden transition-all duration-300 ease-in-out" style={{ width: rightOpen ? `${rightWidth}px` : '0' }}>
               <div className="h-full flex flex-col" style={{ width: `${rightWidth}px` }}>
                 <div className="h-[70px] p-4 border-b-2 border-slate-300 font-bold flex items-center gap-2">
                   <Icon name="file-text" size={18} className="text-blue-600" />
@@ -208,7 +235,7 @@
                   <p className="text-sm text-slate-500">Document viewer panel</p>
                 </div>
               </div>
-              <div className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500 transition-colors" onMouseDown={() => setIsResizing('right')} />
+              {rightOpen && <div className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500 transition-colors" onMouseDown={() => setIsResizing('right')} />}
             </aside>
           )}
         </div>

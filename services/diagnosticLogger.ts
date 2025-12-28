@@ -3,7 +3,7 @@
 
 class DiagnosticLogger {
   private logs: string[] = [];
-  private enabled = true;
+  private enabled = false; // Disabled by default for production
 
   log(section: string, data: any) {
     if (!this.enabled) return;

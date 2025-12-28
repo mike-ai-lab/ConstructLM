@@ -9,6 +9,18 @@ export default defineConfig(({ mode }) => {
       server: {
         port: 3000,
         host: '0.0.0.0',
+        proxy: {
+          // Don't proxy HuggingFace requests
+          '/huggingface': {
+            target: 'https://huggingface.co',
+            changeOrigin: true,
+            rewrite: (path) => path.replace(/^\/huggingface/, '')
+          }
+        },
+        fs: {
+          // Allow serving files from node_modules
+          allow: ['..', '.'],
+        }
       },
       plugins: [react()],
       build: {

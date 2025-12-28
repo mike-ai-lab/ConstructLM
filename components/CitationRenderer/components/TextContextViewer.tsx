@@ -124,9 +124,6 @@ const TextContextViewer: React.FC<TextContextViewerProps> = ({ file, quote, loca
   }
   
   if ((file?.type === 'markdown' || file?.name.endsWith('.md')) && file.content) {
-    console.log('[TextContextViewer] Markdown file detected:', file.name);
-    console.log('[TextContextViewer] Looking for quote:', quote);
-    console.log('[TextContextViewer] Location:', location);
     const parseMarkdown = (md: string): string => {
       const lines = md.split('\n');
       const result: string[] = [];
@@ -225,13 +222,11 @@ const TextContextViewer: React.FC<TextContextViewerProps> = ({ file, quote, loca
         contextStart = Math.max(0, i - 2);
         contextEnd = Math.min(lines.length, i + 3);
         highlightLineIndex = i - contextStart;
-        console.log('[TextContextViewer] Found quote at line', i);
         break;
       }
     }
     
     if (contextStart === -1) {
-      console.log('[TextContextViewer] Quote not found in lines, trying fallback search');
     }
     
     if (contextStart !== -1) {
@@ -267,7 +262,6 @@ const TextContextViewer: React.FC<TextContextViewerProps> = ({ file, quote, loca
     // Fallback: if quote not found in lines, search entire content
     const contentLower = normalizeForSearch(file.content);
     if (contentLower.includes(quoteNorm)) {
-      console.log('[TextContextViewer] Fallback found quote in content');
       const startIdx = contentLower.indexOf(quoteNorm);
       const contextStart = Math.max(0, startIdx - 200);
       const contextEnd = Math.min(file.content.length, startIdx + quote.length + 200);
@@ -288,7 +282,6 @@ const TextContextViewer: React.FC<TextContextViewerProps> = ({ file, quote, loca
         </div>
       );
     } else {
-      console.log('[TextContextViewer] Quote not found anywhere in content, rendering location context');
       // Quote not found, but render the section mentioned in location
       const locationMatch = location.match(/Section\s+([\d.]+\s+[A-Z\s&]+)/i);
       if (locationMatch) {
