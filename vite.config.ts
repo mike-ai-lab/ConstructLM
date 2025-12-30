@@ -27,7 +27,8 @@ export default defineConfig(({ mode }) => {
         cssCodeSplit: false,
         rollupOptions: {
           output: {
-            manualChunks: undefined
+            manualChunks: undefined,
+            inlineDynamicImports: true
           }
         }
       },

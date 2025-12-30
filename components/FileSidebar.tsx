@@ -1138,7 +1138,7 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
               <X size={16} />
             </button>
           </div>
-          <div className="shadow-2xl rounded-lg overflow-hidden" style={{ maxWidth: '210mm', maxHeight: '90vh' }}>
+          <div className="shadow-2xl rounded-lg overflow-hidden max-w-[90vw] max-h-[90vh]">
             <FilePreviewViewer file={previewFile} onClose={() => setPreviewFileId(null)} />
           </div>
         </div>
@@ -1151,18 +1151,16 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
 };
 
 const FilePreviewViewer: React.FC<{ file: ProcessedFile; onClose: () => void }> = ({ file, onClose }) => {
-  const [scale, setScale] = useState(1.0);
-  const containerRef = useRef<HTMLDivElement>(null);
   const [pdfDoc, setPdfDoc] = useState<any>(null);
   const [numPages, setNumPages] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [excelHtml, setExcelHtml] = useState('');
 
   useEffect(() => {
     if (file.type === 'pdf' && file.fileHandle) {
       const loadPdf = async () => {
         try {
-          if (window.pdfWorkerReady) await window.pdfWorkerReady;
-          const arrayBuffer = await (file.fileHandle as File).arrayBuffer();
+          const arrayBuffer = await file.fileHandle.arrayBuffer();
           const pdf = await window.pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
           setPdfDoc(pdf);
           setNumPages(pdf.numPages);
@@ -1173,14 +1171,18 @@ const FilePreviewViewer: React.FC<{ file: ProcessedFile; onClose: () => void }> 
         }
       };
       loadPdf();
-    } else if (file.type === 'excel' && file.fileHandle) {
+    } else if ((file.type === 'excel' || file.type === 'csv') && file.fileHandle) {
       const loadExcel = async () => {
         try {
-          let attempts = 0;
-          while (!(window as any).XLSX && attempts < 50) {
-            await new Promise(resolve => setTimeout(resolve, 100));
-            attempts++;
-          }
+          const arrayBuffer = await file.fileHandle.arrayBuffer();
+          const workbook = (window as any).XLSX.read(arrayBuffer, { type: 'array' });
+          let html = '';
+          workbook.SheetNames.forEach((sheetName: string) => {
+            const sheet = workbook.Sheets[sheetName];
+            const sheetHtml = (window as any).XLSX.utils.sheet_to_html(sheet);
+            html += `<div class="mb-6"><h3 class="text-lg font-bold mb-2 text-gray-800 dark:text-gray-200">${sheetName}</h3>${sheetHtml}</div>`;
+          });
+          setExcelHtml(html);
           setLoading(false);
         } catch (err) {
           console.error('Excel load error:', err);
@@ -1188,43 +1190,65 @@ const FilePreviewViewer: React.FC<{ file: ProcessedFile; onClose: () => void }> 
         }
       };
       loadExcel();
-    } else if (file.type === 'image' && file.fileHandle) {
-      setLoading(false);
     } else {
       setLoading(false);
     }
   }, [file]);
 
-  const isPdf = file.type === 'pdf';
-  const isImage = file.type === 'image';
-  const isExcel = file.type === 'excel';
-  const imageUrl = isImage && file.fileHandle ? URL.createObjectURL(file.fileHandle as File) : null;
+  if (loading) return <div className="flex items-center justify-center p-8"><Loader2 className="animate-spin" /></div>;
 
-  return (
-    <div className="bg-white dark:bg-[#1a1a1a] overflow-y-auto" style={{ maxHeight: '90vh' }}>
-      {loading ? (
-        <div className="flex items-center justify-center h-full"><Loader2 className="animate-spin" /></div>
-      ) : isPdf && pdfDoc ? (
-        <div className="space-y-4 p-4">
+  if (file.type === 'pdf') {
+    if (!pdfDoc) return <div className="p-8 text-center">Failed to load PDF</div>;
+    return (
+      <div className="bg-gray-100 dark:bg-[#1a1a1a] p-4 overflow-auto" style={{ maxHeight: '85vh', maxWidth: '90vw' }}>
+        <div className="space-y-4">
           {Array.from({ length: numPages }, (_, i) => (
-            <PdfPageRenderer key={i} pdf={pdfDoc} pageNum={i + 1} scale={scale} />
+            <PdfPageRenderer key={i + 1} pdf={pdfDoc} pageNum={i + 1} scale={1.5} />
           ))}
         </div>
-      ) : isImage && imageUrl ? (
-        <div className="flex items-center justify-center p-4">
-          <img src={imageUrl} alt={file.name} className="max-w-full max-h-full object-contain" style={{ transform: `scale(${scale})` }} />
-        </div>
-      ) : isExcel && file.fileHandle ? (
-        <div className="p-4">
-          <ExcelPreview file={file.fileHandle as File} />
-        </div>
-      ) : (
-        <div className="p-8">
-          <pre className="whitespace-pre-wrap text-sm">{file.content}</pre>
-        </div>
-      )}
-    </div>
-  );
+      </div>
+    );
+  }
+
+  if (file.type === 'excel' || file.type === 'csv') {
+    return (
+      <div className="bg-white dark:bg-[#1a1a1a] p-6 overflow-auto" style={{ maxHeight: '85vh', maxWidth: '90vw' }}>
+        <style>{`
+          table { border-collapse: collapse; width: 100%; margin-bottom: 1rem; }
+          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+          th { background-color: #f3f4f6; font-weight: 600; }
+          tr:nth-child(even) { background-color: #f9fafb; }
+        `}</style>
+        <div dangerouslySetInnerHTML={{ __html: excelHtml }} />
+      </div>
+    );
+  }
+
+  if (file.type === 'markdown') {
+    return (
+      <div className="bg-white dark:bg-[#1a1a1a] p-6 overflow-auto prose dark:prose-invert max-w-none" style={{ maxHeight: '85vh', maxWidth: '90vw' }}>
+        <div dangerouslySetInnerHTML={{ __html: file.content || '' }} />
+      </div>
+    );
+  }
+
+  if (file.type === 'text' || file.type === 'document') {
+    return (
+      <div className="bg-white dark:bg-[#1a1a1a] p-6 overflow-auto" style={{ maxHeight: '85vh', maxWidth: '90vw' }}>
+        <pre className="whitespace-pre-wrap text-sm">{file.content}</pre>
+      </div>
+    );
+  }
+
+  if (file.type === 'image') {
+    return (
+      <div className="bg-gray-100 dark:bg-[#1a1a1a] p-4 overflow-auto flex items-center justify-center" style={{ maxHeight: '85vh', maxWidth: '90vw' }}>
+        <img src={URL.createObjectURL(file.fileHandle as File)} alt={file.name} className="max-w-full max-h-full" />
+      </div>
+    );
+  }
+
+  return <div className="p-8 text-center">Preview not available for this file type</div>;
 };
 
 const PdfPageRenderer: React.FC<{ pdf: any; pageNum: number; scale: number }> = ({ pdf, pageNum, scale }) => {

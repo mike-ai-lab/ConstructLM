@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
-import { Link, Trash2, ExternalLink, CheckCircle, XCircle, Loader, ChevronDown, ChevronUp, FileText, Download } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Link, Trash2, ExternalLink, CheckCircle, XCircle, Loader, ChevronDown, ChevronUp, FileText, Download, Eye } from 'lucide-react';
 import { Source } from '../types';
+import { createPortal } from 'react-dom';
+import DocumentViewer from './DocumentViewer';
+import { ProcessedFile } from '../types';
 
 interface SourcesProps {
   sources: Source[];
@@ -12,6 +15,9 @@ interface SourcesProps {
 const Sources: React.FC<SourcesProps> = ({ sources, onAddSource, onDeleteSource, onToggleSource }) => {
   const [newUrl, setNewUrl] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [previewSource, setPreviewSource] = useState<Source | null>(null);
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
+  const cancelRef = React.useRef(false);
 
   const handleAdd = () => {
     if (newUrl.trim()) {
@@ -34,7 +40,60 @@ const Sources: React.FC<SourcesProps> = ({ sources, onAddSource, onDeleteSource,
     URL.revokeObjectURL(url);
   };
 
+  const convertSourceToFile = async (source: Source): Promise<ProcessedFile | null> => {
+    if (!source.content) return null;
+    
+    const url = source.url.toLowerCase();
+    let type: ProcessedFile['type'] = 'text';
+    let content = source.content;
+    
+    // Detect type from URL or content
+    if (url.endsWith('.pdf')) type = 'pdf';
+    else if (url.endsWith('.xlsx') || url.endsWith('.xls')) {
+      type = 'excel';
+      // Parse Excel-like content if it's CSV format
+      if (!content.includes('--- [Sheet:')) {
+        content = `--- [Sheet: Sheet1] ---\n${content}`;
+      }
+    }
+    else if (url.endsWith('.csv')) type = 'csv';
+    else if (url.endsWith('.md') || url.endsWith('.markdown')) type = 'markdown';
+    else if (url.match(/\.(png|jpg|jpeg|gif|webp|bmp)$/)) type = 'image';
+    // Auto-detect markdown from content
+    else if (content.match(/^#{1,6}\s/m) || content.includes('```') || content.match(/\[.*?\]\(.*?\)/)) {
+      type = 'markdown';
+    }
+    // Auto-detect CSV from content
+    else if (content.split('\n').slice(0, 5).every(line => line.includes(',') || line.includes('\t'))) {
+      type = 'csv';
+    }
+    
+    return {
+      id: source.id,
+      name: source.title || source.url.split('/').pop() || 'source',
+      type,
+      content,
+      status: 'processed',
+      tokenCount: Math.ceil(content.length / 4)
+    };
+  };
+
+  const handlePreview = async (source: Source) => {
+    console.log('🔍 PREVIEW CLICKED:', source.url);
+    cancelRef.current = false;
+    setIsLoadingPreview(true);
+    setPreviewSource(source);
+  };
+
+  const handleClosePreview = () => {
+    console.log('❌ CLOSE PREVIEW CLICKED');
+    cancelRef.current = true;
+    setPreviewSource(null);
+    setIsLoadingPreview(false);
+  };
+
   return (
+    <>
     <div className="h-full flex flex-col bg-white dark:bg-[#1a1a1a]">
       <div className="h-[60px] flex-none border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] flex items-center px-4 gap-2 bg-white/70 dark:bg-[#1a1a1a]/70 backdrop-blur-md">
         <input
@@ -125,8 +184,15 @@ const Sources: React.FC<SourcesProps> = ({ sources, onAddSource, onDeleteSource,
                   {source.status === 'fetched' && source.content && (
                     <>
                       <button
+                        onClick={() => handlePreview(source)}
+                        className="p-1.5 text-[#a0a0a0] hover:text-blue-600 dark:hover:text-blue-400 hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] rounded transition-colors"
+                        title="Preview content"
+                      >
+                        <Eye size={14} />
+                      </button>
+                      <button
                         onClick={() => handleDownload(source)}
-                        className="p-1.5 text-[#a0a0a0] hover:text-[#1a1a1a] dark:hover:text-white hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] rounded transition-colors"
+                        className="p-1.5 text-[#a0a0a0] hover:text-green-600 dark:hover:text-green-400 hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] rounded transition-colors"
                         title="Download source content"
                       >
                         <Download size={14} />
@@ -134,7 +200,7 @@ const Sources: React.FC<SourcesProps> = ({ sources, onAddSource, onDeleteSource,
                       <button
                         onClick={() => setExpandedId(expandedId === source.id ? null : source.id)}
                         className="p-1.5 text-[#a0a0a0] hover:text-[#1a1a1a] dark:hover:text-white hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] rounded transition-colors"
-                        title="View extracted content"
+                        title="View raw text"
                       >
                         {expandedId === source.id ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                       </button>
@@ -166,7 +232,121 @@ const Sources: React.FC<SourcesProps> = ({ sources, onAddSource, onDeleteSource,
         )}
       </div>
     </div>
+    {previewSource && previewSource.content && createPortal(
+      <div className="fixed inset-0 z-[100000] bg-black/50 backdrop-blur-sm" onClick={handleClosePreview}>
+        <div className="h-full w-full flex items-center justify-center p-4" onClick={(e) => e.stopPropagation()}>
+          {isLoadingPreview ? (
+            <div className="bg-white dark:bg-[#1a1a1a] rounded-lg shadow-2xl p-8 flex flex-col items-center gap-4">
+              <Loader className="animate-spin text-blue-600" size={32} />
+              <p className="text-sm text-[#666666] dark:text-[#a0a0a0]">Loading preview...</p>
+              <button
+                onClick={handleClosePreview}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <div className="bg-white dark:bg-[#1a1a1a] rounded-lg shadow-2xl overflow-hidden" style={{ width: '90vw', height: '90vh', maxWidth: '1400px' }}>
+              <PreviewContent source={previewSource} onClose={handleClosePreview} onLoaded={() => setIsLoadingPreview(false)} cancelRef={cancelRef} />
+            </div>
+          )}
+        </div>
+      </div>,
+      document.body
+    )}
+    </>
   );
+};
+
+const PreviewContent: React.FC<{ source: Source; onClose: () => void; onLoaded: () => void; cancelRef: React.RefObject<boolean> }> = ({ source, onClose, onLoaded, cancelRef }) => {
+  const [file, setFile] = useState<ProcessedFile | null>(null);
+
+  useEffect(() => {
+    console.log('🚀 PreviewContent MOUNTED');
+    const load = async () => {
+      console.log('⏳ Starting load...');
+      // Small delay to allow cancel to register
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
+      console.log('✅ After delay, cancelRef.current:', cancelRef.current);
+      if (cancelRef.current) {
+        console.log('🛑 CANCELLED - Stopping load');
+        return;
+      }
+      
+      const url = source.url.toLowerCase();
+      let type: ProcessedFile['type'] = 'text';
+      let content = source.content || '';
+      
+      console.log('📄 URL:', url);
+      console.log('📝 Content preview:', content.substring(0, 200));
+      
+      // Detect markdown first
+      if (url.endsWith('.md') || url.endsWith('.markdown') || 
+          content.match(/^#{1,6}\s/m) || 
+          content.includes('```') || 
+          content.match(/\[.+?\]\(.+?\)/) ||
+          content.match(/^[-*+]\s/m) ||
+          content.match(/^>\s/m)) {
+        type = 'markdown';
+        console.log('✅ DETECTED AS MARKDOWN');
+      }
+      // Detect Excel
+      else if (url.endsWith('.xlsx') || url.endsWith('.xls')) {
+        type = 'excel';
+        console.log('✅ DETECTED AS EXCEL');
+        if (!content.includes('--- [Sheet:')) {
+          content = `--- [Sheet: Sheet1] ---\n${content}`;
+        }
+      }
+      // Detect CSV
+      else if (url.endsWith('.csv') || content.split('\n').slice(0, 5).every(line => line.includes(',') || line.includes('\t'))) {
+        type = 'csv';
+        console.log('✅ DETECTED AS CSV');
+      }
+      
+      console.log('🎯 Final type:', type);
+      
+      if (cancelRef.current) {
+        console.log('🛑 CANCELLED - Before setFile');
+        return;
+      }
+      
+      const fileObj = {
+        id: source.id,
+        name: source.title || source.url.split('/').pop() || 'source',
+        type,
+        content,
+        status: 'processed' as const,
+        tokenCount: Math.ceil(content.length / 4)
+      };
+      
+      console.log('📦 Setting file:', fileObj.name, fileObj.type);
+      setFile(fileObj);
+      
+      if (!cancelRef.current) {
+        console.log('✅ Calling onLoaded');
+        onLoaded();
+      } else {
+        console.log('🛑 CANCELLED - Skipping onLoaded');
+      }
+    };
+    
+    load();
+  }, [source, onLoaded, cancelRef]);
+
+  if (!file) {
+    console.log('⏳ No file yet, showing loader');
+    return (
+      <div className="h-full flex items-center justify-center">
+        <Loader className="animate-spin text-blue-600" size={32} />
+      </div>
+    );
+  }
+
+  console.log('🎬 Rendering DocumentViewer with file:', file.name, file.type);
+  return <DocumentViewer file={file} onClose={onClose} />;
 };
 
 export default Sources;

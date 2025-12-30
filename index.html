@@ -150,12 +150,6 @@
   }
 }
 </script>
-</head>
-  <body class="bg-white dark:bg-[#1a1a1a] text-[#1a1a1a] dark:text-white font-sans antialiased h-screen overflow-hidden selection:bg-blue-100 dark:selection:bg-blue-900 selection:text-blue-900 dark:selection:text-blue-100">
-    <div id="root" class="h-full w-full flex items-center justify-center text-gray-400">Loading ConstructLM...</div>
-    <script type="module" src="/index.tsx"></script>
-  </body>
-</html>
 
     <style>
       /* Custom scrollbar */
@@ -179,17 +173,21 @@
       .dark ::-webkit-scrollbar-thumb:hover {
         background: #4a4a4a;
       }
+      
+      /* URL Citation styling */
+      .citation-url {
+        background: linear-gradient(135deg, #4485d1 0%, #5b9bd5 100%);
+        color: white;
+        font-weight: 600;
+      }
+      .citation-url:hover {
+        background: linear-gradient(135deg, #3a75c1 0%, #4a8bc5 100%);
+        transform: scale(1.1);
+      }
     </style>
-
-<style>
-/* URL Citation styling */
-.citation-url {
-  background: linear-gradient(135deg, #4485d1 0%, #5b9bd5 100%);
-  color: white;
-  font-weight: 600;
-}
-.citation-url:hover {
-  background: linear-gradient(135deg, #3a75c1 0%, #4a8bc5 100%);
-  transform: scale(1.1);
-}
-</style>
+  </head>
+  <body class="bg-white dark:bg-[#1a1a1a] text-[#1a1a1a] dark:text-white font-sans antialiased h-screen overflow-hidden selection:bg-blue-100 dark:selection:bg-blue-900 selection:text-blue-900 dark:selection:text-blue-100">
+    <div id="root" class="h-full w-full flex items-center justify-center text-gray-400">Loading ConstructLM...</div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>

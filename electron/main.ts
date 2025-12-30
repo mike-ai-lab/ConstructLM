@@ -8,6 +8,7 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
+    icon: path.join(__dirname, '../icon.ico'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
@@ -17,7 +18,7 @@ function createWindow() {
   });
 
   if (process.env.NODE_ENV === 'development') {
-    mainWindow.loadURL('http://localhost:3000');
+    mainWindow.loadURL('http://localhost:5173');
     mainWindow.webContents.openDevTools();
   } else {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
@@ -63,7 +64,7 @@ function proxyRequest(url: string, apiKey: string, requestBody: any, event: Elec
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
-        'Content-Length': Buffer.byteLength(data)
+        'Content-Length': Buffer.byteLength(data, 'utf8')
       }
     };
     
@@ -87,7 +88,11 @@ function proxyRequest(url: string, apiKey: string, requestBody: any, event: Elec
         });
         
         res.on('end', () => {
-          resolve({ ok: true, streaming: true });
+          resolve({ ok: res.statusCode === 200, status: res.statusCode, streaming: true });
+        });
+        
+        res.on('error', (error) => {
+          resolve({ ok: false, status: res.statusCode, error: error.message });
         });
       } else {
         let body = '';

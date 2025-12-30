@@ -190,6 +190,27 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
 
         {props.activeTab === 'chat' && !isCompact && (
           <>
+            {/* Live Call */}
+            {!props.isElectron && (
+              <button
+                onClick={() => {
+                  props.setIsCallingEffect(true);
+                  setTimeout(() => {
+                    props.setIsCallingEffect(false);
+                    props.setIsLiveMode(true);
+                  }, 1000);
+                }}
+                className={`p-1.5 md:p-2 rounded-full transition-colors flex-shrink-0 ${
+                  props.isLiveMode
+                    ? 'text-[#16b47e] bg-[#16b47e]/10 hover:bg-[#16b47e]/20'
+                    : 'text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] hover:text-[#1a1a1a] dark:hover:text-white'
+                }`}
+                title="Live Call with Gemini"
+              >
+                <Phone size={16} />
+              </button>
+            )}
+
             {/* Take Snapshot */}
             <button
               onClick={props.handleTakeSnapshot}

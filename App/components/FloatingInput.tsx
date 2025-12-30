@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, FileText, Mic, Sparkles, Plus, X } from 'lucide-react';
+import { Send, FileText, Mic, Sparkles, Plus, X, Eye, Loader } from 'lucide-react';
 import { ProcessedFile } from '../../types';
 import { contextMenuManager, createInputContextMenu } from '../../utils/uiHelpers';
+import { createPortal } from 'react-dom';
+import DocumentViewer from '../../components/DocumentViewer';
 
 interface FloatingInputProps {
   input: string;
@@ -68,6 +70,9 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
   const [showSourcePopup, setShowSourcePopup] = useState(false);
   const [sourceUrl, setSourceUrl] = useState('');
   const sourceInputRef = useRef<HTMLInputElement>(null);
+  const [previewSource, setPreviewSource] = useState<any>(null);
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
+  const cancelRef = useRef(false);
 
   useEffect(() => {
     if (showSourcePopup && sourceInputRef.current) {
@@ -80,6 +85,20 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
       onAddSource(sourceUrl.trim());
       setSourceUrl('');
     }
+  };
+
+  const handlePreview = (source: any) => {
+    console.log('🔍 PREVIEW CLICKED:', source.url);
+    cancelRef.current = false;
+    setIsLoadingPreview(true);
+    setPreviewSource(source);
+  };
+
+  const handleClosePreview = () => {
+    console.log('❌ CLOSE PREVIEW');
+    cancelRef.current = true;
+    setPreviewSource(null);
+    setIsLoadingPreview(false);
   };
 
   const checkedCount = sources.filter(s => s.selected !== false).length;
@@ -107,12 +126,23 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
                     {source.title || source.url}
                   </span>
                 </div>
-                <button
-                  onClick={() => onDeleteSource(source.id)}
-                  className="text-[#0078d4] hover:text-[#1a1a1a] dark:hover:text-white text-xl w-5 h-5 flex items-center justify-center flex-shrink-0"
-                >
-                  ×
-                </button>
+                <div className="flex items-center gap-1">
+                  {source.content && source.status === 'fetched' && (
+                    <button
+                      onClick={() => handlePreview(source)}
+                      className="text-blue-600 hover:text-blue-800 w-5 h-5 flex items-center justify-center flex-shrink-0"
+                      title="Preview"
+                    >
+                      <Eye size={16} />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => onDeleteSource(source.id)}
+                    className="text-[#0078d4] hover:text-[#1a1a1a] dark:hover:text-white text-xl w-5 h-5 flex items-center justify-center flex-shrink-0"
+                  >
+                    ×
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -335,6 +365,117 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
           </button>
         </div>
       </div>
+      
+      {previewSource && previewSource.content && createPortal(
+        <div className="fixed inset-0 z-[100000] bg-black/50 backdrop-blur-sm" onClick={handleClosePreview}>
+          <div className="h-full w-full flex items-center justify-center p-4" onClick={(e) => e.stopPropagation()}>
+            {isLoadingPreview ? (
+              <div className="bg-white dark:bg-[#1a1a1a] rounded-lg shadow-2xl p-8 flex flex-col items-center gap-4">
+                <Loader className="animate-spin text-blue-600" size={32} />
+                <p className="text-sm text-[#666666] dark:text-[#a0a0a0]">Loading preview...</p>
+                <button
+                  onClick={handleClosePreview}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <div className="bg-white dark:bg-[#1a1a1a] rounded-lg shadow-2xl overflow-hidden" style={{ width: '90vw', height: '90vh', maxWidth: '1400px' }}>
+                <PreviewContent source={previewSource} onClose={handleClosePreview} onLoaded={() => setIsLoadingPreview(false)} cancelRef={cancelRef} />
+              </div>
+            )}
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
+};
+
+const PreviewContent: React.FC<{ source: any; onClose: () => void; onLoaded: () => void; cancelRef: React.RefObject<boolean> }> = ({ source, onClose, onLoaded, cancelRef }) => {
+  const [file, setFile] = useState<ProcessedFile | null>(null);
+
+  useEffect(() => {
+    console.log('🚀 PreviewContent MOUNTED');
+    const load = async () => {
+      console.log('⏳ Starting load...');
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
+      console.log('✅ After delay, cancelRef.current:', cancelRef.current);
+      if (cancelRef.current) {
+        console.log('🛑 CANCELLED');
+        return;
+      }
+      
+      const url = source.url.toLowerCase();
+      let type: ProcessedFile['type'] = 'text';
+      let content = source.content || '';
+      
+      console.log('📄 URL:', url);
+      console.log('📝 Content preview:', content.substring(0, 200));
+      
+      // Detect markdown FIRST
+      if (url.endsWith('.md') || url.endsWith('.markdown') || 
+          content.match(/^#{1,6}\s/m) || 
+          content.includes('```') || 
+          content.match(/\[.+?\]\(.+?\)/) ||
+          content.match(/^[-*+]\s/m) ||
+          content.match(/^>\s/m)) {
+        type = 'markdown';
+        console.log('✅ DETECTED AS MARKDOWN');
+      }
+      // Detect Excel
+      else if (url.endsWith('.xlsx') || url.endsWith('.xls')) {
+        type = 'excel';
+        console.log('✅ DETECTED AS EXCEL');
+        if (!content.includes('--- [Sheet:')) {
+          content = `--- [Sheet: Sheet1] ---\n${content}`;
+        }
+      }
+      // Detect CSV
+      else if (url.endsWith('.csv') || content.split('\n').slice(0, 5).every(line => line.includes(',') || line.includes('\t'))) {
+        type = 'csv';
+        console.log('✅ DETECTED AS CSV');
+      }
+      
+      console.log('🎯 Final type:', type);
+      
+      if (cancelRef.current) {
+        console.log('🛑 CANCELLED before setFile');
+        return;
+      }
+      
+      const fileObj = {
+        id: source.id,
+        name: source.title || source.url.split('/').pop() || 'source',
+        type,
+        content,
+        status: 'processed' as const,
+        tokenCount: Math.ceil(content.length / 4)
+      };
+      
+      console.log('📦 Setting file:', fileObj.name, fileObj.type);
+      setFile(fileObj);
+      
+      if (!cancelRef.current) {
+        console.log('✅ Calling onLoaded');
+        onLoaded();
+      }
+    };
+    
+    load();
+  }, [source, onLoaded, cancelRef]);
+
+  if (!file) {
+    console.log('⏳ No file yet');
+    return (
+      <div className="h-full flex items-center justify-center">
+        <Loader className="animate-spin text-blue-600" size={32} />
+      </div>
+    );
+  }
+
+  console.log('🎬 Rendering DocumentViewer:', file.name, file.type);
+  return <DocumentViewer file={file} onClose={onClose} />;
 };

@@ -25,6 +25,7 @@ export class LiveManager {
     private isMuted = false;
     private config: LiveConfig | null = null;
     public analyser: AnalyserNode | null = null;
+    private isSetupComplete = false;
 
     constructor() {
         const apiKey = getApiKey();
@@ -72,27 +73,34 @@ export class LiveManager {
             console.log("[LiveManager DEBUG] Microphone granted, tracks:", this.stream.getTracks().length);
             
             console.log("[LiveManager] Connecting to Gemini Live API...");
+            console.log("[LiveManager DEBUG] Using model: gemini-2.0-flash-live-001");
             this.sessionPromise = this.ai.live.connect({
-                model: 'gemini-2.5-flash-native-audio-preview-09-2025',
+                model: 'models/gemini-2.0-flash-live-001',
+                config: {
+                    responseModalities: [Modality.AUDIO],
+                    audioConfig: {
+                        audioEncoding: 'LINEAR16',
+                        sampleRateHertz: 24000
+                    }
+                },
                 callbacks: {
                     onopen: async () => {
                         console.log("[LiveManager] Session OPEN");
-                        console.log("[LiveManager DEBUG] Setting isConnected=true, isConnecting=false");
                         this.isConnecting = false;
                         this.isConnected = true;
-                        console.log("[LiveManager DEBUG] Calling startAudioInputStream(), stream=", !!this.stream, "audioContext=", !!this.audioContext, "sessionPromise=", !!this.sessionPromise);
-                        await this.startAudioInputStream();
+                        console.log("[LiveManager DEBUG] Waiting for setupComplete...");
                     },
                     onmessage: async (message: LiveServerMessage) => {
-                        console.log("[LiveManager DEBUG] Message received:", JSON.stringify(message).substring(0, 200));
+                        console.log("[LiveManager DEBUG] Message:", JSON.stringify(message).substring(0, 200));
                         
                         if (message.setupComplete) {
-                            console.log("[LiveManager] Setup complete - ready for audio input");
+                            console.log("[LiveManager] Setup complete");
+                            this.isSetupComplete = true;
+                            await this.startAudioInputStream();
                             return;
                         }
                         
                         if (message.serverContent?.interrupted) {
-                            console.log("[LiveManager] Interrupted by user");
                             this.stopAllAudio();
                             if (this.audioContext) this.nextStartTime = this.audioContext.currentTime;
                             return;
@@ -100,10 +108,9 @@ export class LiveManager {
 
                         const base64Audio = message.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
                         if (base64Audio && this.audioContext && this.outputNode) {
-                            console.log("[LiveManager DEBUG] Received audio response, length:", base64Audio.length);
                             try {
                                 const pcmData = base64ToUint8Array(base64Audio);
-                                const audioBuffer = await decodeAudioData(pcmData, this.audioContext, LIVE_SAMPLE_RATE);
+                                const audioBuffer = await decodeAudioData(pcmData, this.audioContext, 24000);
                                 
                                 const channelData = audioBuffer.getChannelData(0);
                                 let sum = 0;
@@ -113,31 +120,23 @@ export class LiveManager {
 
                                 this.queueAudio(audioBuffer);
                             } catch (e) {
-                                console.warn("Error decoding audio chunk", e);
+                                console.warn("Error decoding audio", e);
                             }
-                        } else if (message.serverContent?.modelTurn) {
-                            console.log("[LiveManager DEBUG] Model turn but no audio:", message.serverContent.modelTurn);
                         }
                     },
                     onclose: () => {
                         console.log("[LiveManager] Session CLOSED");
-                        console.log("[LiveManager DEBUG] onclose callback triggered");
+                        console.error("[LiveManager] CLOSE EVENT - No error provided by SDK");
+                        console.error("[LiveManager] This usually means: Invalid model name, wrong config structure, or API key issue");
                         this.cleanup();
-                        console.log("[LiveManager DEBUG] Calling config.onClose()");
                         config.onClose();
                     },
                     onerror: (e) => {
-                        console.error("[LiveManager] Session ERROR:", e);
+                        console.error("[LiveManager] ERROR:", e);
+                        console.error("[LiveManager] Error details:", JSON.stringify(e, null, 2));
                         config.onError(new Error("Session error"));
                         this.cleanup();
                     }
-                },
-                config: {
-                    responseModalities: [Modality.AUDIO],
-                    speechConfig: {
-                        voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Zephyr' } },
-                    },
-                    systemInstruction: "You are a helpful assistant. Keep your responses concise and conversational."
                 }
             });
 
@@ -173,7 +172,7 @@ export class LiveManager {
         
         this.processor.onaudioprocess = (e) => {
             try {
-                if (!this.isConnected || this.isMuted) return;
+                if (!this.isConnected || this.isMuted || !this.isSetupComplete) return;
                 
                 // Throttle: Process every other chunk to reduce load
                 skipCounter++;
@@ -289,6 +288,7 @@ export class LiveManager {
         // CRITICAL: Stop processing immediately
         this.isConnected = false;
         this.isConnecting = false;
+        this.isSetupComplete = false;
         
         // Stop processor first to prevent more audio chunks
         if (this.processor) {

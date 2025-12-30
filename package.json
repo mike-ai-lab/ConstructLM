@@ -10,7 +10,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "electron:start": "npm run electron:dev",
-    "electron:dev": "concurrently \"vite\" \"vite build --config electron.vite.config.ts --watch\" \"wait-on http://localhost:5173 && electron .\"",
+    "electron:dev": "concurrently \"vite --port 5173 --strictPort\" \"vite build --config electron.vite.config.ts --watch\" \"wait-on http://localhost:5173 && set NODE_ENV=development&& electron .\"",
     "electron:build": "vite build && vite build --config electron.vite.config.ts && electron-builder",
     "electron:pack": "vite build && vite build --config electron.vite.config.ts && electron-builder --dir"
   },
@@ -62,8 +62,11 @@
     "win": {
       "target": "nsis",
       "icon": "icon.ico",
-      "publisherName": "Studiø",
-      "verifyUpdateCodeSignature": false
+      "verifyUpdateCodeSignature": false,
+      "requestedExecutionLevel": "asInvoker",
+      "signtoolOptions": {
+        "publisherName": "Studio"
+      }
     },
     "nsis": {
       "oneClick": false,
