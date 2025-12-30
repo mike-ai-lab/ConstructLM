@@ -76,9 +76,25 @@ export const createFeatureHandlers = (
   };
 
   const handleClearAll = () => {
-    if (confirm('Clear all drawings and highlights?')) {
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black/50 backdrop-blur-sm z-[500] flex items-center justify-center';
+    modal.innerHTML = `
+      <div class="bg-white dark:bg-[#222222] rounded-xl shadow-2xl p-6 max-w-md mx-4">
+        <h3 class="text-lg font-semibold text-[#1a1a1a] dark:text-white mb-2">Clear All Drawings?</h3>
+        <p class="text-sm text-[#666666] dark:text-[#a0a0a0] mb-6">This will remove all drawings and highlights from the current view.</p>
+        <div class="flex gap-3 justify-end">
+          <button id="cancel-btn" class="px-4 py-2 rounded-lg text-sm font-medium text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] transition-colors">Cancel</button>
+          <button id="confirm-btn" class="px-4 py-2 rounded-lg text-sm font-medium bg-[#f07a76] text-white hover:bg-[#e06a66] transition-colors">Clear All</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    modal.querySelector('#confirm-btn')?.addEventListener('click', () => {
       drawingService.clearAll();
-    }
+      document.body.removeChild(modal);
+    });
+    modal.querySelector('#cancel-btn')?.addEventListener('click', () => document.body.removeChild(modal));
+    modal.addEventListener('click', (e) => { if (e.target === modal) document.body.removeChild(modal); });
   };
 
   const handleGenerateMindMap = async (fileId: string) => {

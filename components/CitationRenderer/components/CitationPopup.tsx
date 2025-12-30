@@ -140,7 +140,7 @@ const CitationPopup: React.FC<CitationPopupProps> = ({
       role="dialog"
       aria-modal="true"
       className="
-        fixed z-[100]
+        fixed z-[9]
         bg-white dark:bg-[#222]
         rounded-lg shadow-2xl
         border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)]

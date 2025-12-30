@@ -213,7 +213,7 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
             <path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/>
           </svg>
         </button>
-        <button
+        {/* <button
           onClick={onToggleRecording}
           disabled={isTranscribing}
           className={`absolute left-[50px] top-1/2 -translate-y-1/2 p-0 bg-transparent border-none transition-all ${
@@ -230,10 +230,10 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
           ) : (
             <Mic size={20} className={isRecording ? 'animate-pulse' : ''} />
           )}
-        </button>
+        </button> */}
         <label
           htmlFor="chat-file-input"
-          className="absolute left-[80px] top-1/2 -translate-y-1/2 p-0 flex items-center justify-center text-[#a0a0a0] hover:text-[#4485d1] transition-colors cursor-pointer"
+          className="absolute left-[50px] top-1/2 -translate-y-1/2 p-0 flex items-center justify-center text-[#a0a0a0] hover:text-[#4485d1] transition-colors cursor-pointer"
           title="Attach files"
         >
           <Plus size={24} />
@@ -308,7 +308,7 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
           disabled={isGenerating}
           autoComplete="off"
           rows={1}
-          style={{ height: 'auto', paddingLeft: '130px', paddingRight: '56px' }}
+          style={{ height: 'auto', paddingLeft: '90px', paddingRight: '56px' }}
           onInput={(e) => {
             const target = e.target as HTMLTextAreaElement;
             target.style.height = 'auto';

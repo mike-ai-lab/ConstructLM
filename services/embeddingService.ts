@@ -38,8 +38,8 @@ class EmbeddingService {
       throw new Error('Gemini API key not found');
     }
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${apiKey}`,
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${apiKey}`;
+    const response = await fetch(apiUrl,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

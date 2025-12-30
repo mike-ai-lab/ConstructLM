@@ -8,6 +8,11 @@ import {
 } from "./audioUtils";
 
 export function getApiKey(): string | undefined {
+  // Use same storage format as modelRegistry
+  const keyWithPrefix = localStorage.getItem('constructlm_config_GEMINI_API_KEY');
+  if (keyWithPrefix) return keyWithPrefix;
+  
+  // Fallback to old formats
   const key = localStorage.getItem('GEMINI_API_KEY');
   return key || undefined;
 }
@@ -77,8 +82,8 @@ export async function sendMessageToGemini(
   console.log('🔵 [GEMINI] Total content messages:', contents.length);
   console.log('🔵 [GEMINI] Sending request to API...');
   
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:streamGenerateContent?key=${apiKey}&alt=sse`,
+  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:streamGenerateContent?key=${apiKey}&alt=sse`;
+  const response = await fetch(apiUrl,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -144,8 +149,8 @@ export async function generateSpeech(text: string): Promise<Uint8Array | null> {
     const apiKey = getApiKey();
     if (!apiKey) throw new Error("API Key missing");
     
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`,
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`;
+    const response = await fetch(apiUrl,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },

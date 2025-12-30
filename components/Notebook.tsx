@@ -244,8 +244,8 @@ const Notebook: React.FC<NotebookProps> = ({ notes, onDeleteNote, onUpdateNote, 
         viewControls: (
           <div className="flex items-center gap-1 bg-slate-100 dark:bg-[#2a2a2a] rounded-lg p-1">
             <button
-              onClick={() => setViewMode('list')}
-              className={`p-1.5 rounded transition-colors ${viewMode === 'list' ? 'bg-white dark:bg-[#1a1a1a] text-blue-600 shadow-sm' : 'text-[#666666] dark:text-[#a0a0a0]'}`}
+              onClick={() => setViewMode('details')}
+              className={`p-1.5 rounded transition-colors ${viewMode === 'details' ? 'bg-white dark:bg-[#1a1a1a] text-blue-600 shadow-sm' : 'text-[#666666] dark:text-[#a0a0a0]'}`}
               title="List View"
             >
               <List size={16} />
@@ -258,8 +258,8 @@ const Notebook: React.FC<NotebookProps> = ({ notes, onDeleteNote, onUpdateNote, 
               <Grid size={16} />
             </button>
             <button
-              onClick={() => setViewMode('details')}
-              className={`p-1.5 rounded transition-colors ${viewMode === 'details' ? 'bg-white dark:bg-[#1a1a1a] text-blue-600 shadow-sm' : 'text-[#666666] dark:text-[#a0a0a0]'}`}
+              onClick={() => setViewMode('list')}
+              className={`p-1.5 rounded transition-colors ${viewMode === 'list' ? 'bg-white dark:bg-[#1a1a1a] text-blue-600 shadow-sm' : 'text-[#666666] dark:text-[#a0a0a0]'}`}
               title="Details View"
             >
               <FileText size={16} />

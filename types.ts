@@ -72,6 +72,15 @@ export interface Todo {
   estimatedTime?: number;
   category?: string;
   attachments?: string[];
+  archived?: boolean;
+  groupId?: string;
+}
+
+export interface TodoGroup {
+  id: string;
+  name: string;
+  color: string;
+  timestamp: number;
 }
 
 export interface Reminder {

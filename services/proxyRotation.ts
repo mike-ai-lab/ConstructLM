@@ -22,7 +22,8 @@ export async function sendMessageToGeminiViaProxy(
   onStream: (chunk: string) => void
 ): Promise<void> {
   const proxy = getNextProxy();
-  const url = `${proxy}${encodeURIComponent(`https://generativelanguage.googleapis.com/v1beta/models/${modelId}:streamGenerateContent?key=${apiKey}&alt=sse`)}`;
+  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:streamGenerateContent?key=${apiKey}&alt=sse`;
+  const url = `${proxy}${encodeURIComponent(apiUrl)}`;
   
   const response = await fetch(url, {
     method: "POST",

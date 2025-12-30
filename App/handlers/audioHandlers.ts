@@ -12,39 +12,44 @@ export const createAudioHandlers = (
   const transcribeAudio = async (audioBlob: Blob) => {
     setIsTranscribing(true);
     try {
-      const arrayBuffer = await audioBlob.arrayBuffer();
-      const base64Audio = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
-      
       const apiKey = getApiKey();
       if (!apiKey) {
         setIsTranscribing(false);
         return;
       }
       
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{
-              parts: [
-                { text: 'Transcribe this audio accurately.' },
-                { inlineData: { mimeType: 'audio/webm', data: base64Audio } }
-              ]
-            }]
-          })
-        }
-      );
+      const arrayBuffer = await audioBlob.arrayBuffer();
+      const base64Audio = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+      
+      // Use Google Speech-to-Text API (correct endpoint)
+      const apiUrl = `https://speech.googleapis.com/v1/speech:recognize?key=${apiKey}`;
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          config: {
+            encoding: 'WEBM_OPUS',
+            sampleRateHertz: 48000,
+            languageCode: 'en-US',
+            enableAutomaticPunctuation: true
+          },
+          audio: {
+            content: base64Audio
+          }
+        })
+      });
       
       if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Transcription API error:', errorData);
         throw new Error(`API error: ${response.status}`);
       }
       
       const result = await response.json();
-      const transcription = result.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const transcription = result.results?.[0]?.alternatives?.[0]?.transcript || '';
+      
       if (transcription) {
-        setInput(prev => prev + (prev ? ' ' : '') + transcription);
+        setInput(prev => prev + (prev ? ' ' : '') + transcription.trim());
       }
     } catch (error) {
       console.error('Transcription error:', error);
@@ -55,24 +60,56 @@ export const createAudioHandlers = (
 
   const handleToggleRecording = async () => {
     if (isRecording) {
-      if (mediaRecorder) {
+      // Stop recording
+      if (mediaRecorder && mediaRecorder.state === 'recording') {
         mediaRecorder.stop();
         setIsRecording(false);
       }
     } else {
+      // Start recording
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        const recorder = new MediaRecorder(stream);
+        const apiKey = getApiKey();
+        
+        if (!apiKey) {
+          return;
+        }
+        
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          } 
+        });
+        
+        const recorder = new MediaRecorder(stream, {
+          mimeType: 'audio/webm'
+        });
+        
         const chunks: Blob[] = [];
         
         recorder.ondataavailable = (e) => {
-          if (e.data.size > 0) chunks.push(e.data);
+          if (e.data.size > 0) {
+            chunks.push(e.data);
+          }
         };
         
         recorder.onstop = async () => {
-          const audioBlob = new Blob(chunks, { type: 'audio/webm' });
           stream.getTracks().forEach(track => track.stop());
-          await transcribeAudio(audioBlob);
+          
+          if (chunks.length > 0) {
+            const audioBlob = new Blob(chunks, { type: 'audio/webm' });
+            await transcribeAudio(audioBlob);
+          }
+          
+          setMediaRecorder(null);
+        };
+        
+        recorder.onerror = (e) => {
+          console.error('MediaRecorder error:', e);
+          stream.getTracks().forEach(track => track.stop());
+          setIsRecording(false);
+          setMediaRecorder(null);
         };
         
         recorder.start();
@@ -80,6 +117,7 @@ export const createAudioHandlers = (
         setIsRecording(true);
       } catch (error) {
         console.error('Failed to start recording:', error);
+        setIsRecording(false);
       }
     }
   };

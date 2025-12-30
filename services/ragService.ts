@@ -12,7 +12,26 @@ interface RAGResult {
 }
 
 class RAGService {
+  private enabled: boolean = false; // Disabled by default to save API quota
+
+  setEnabled(enabled: boolean) {
+    this.enabled = enabled;
+    localStorage.setItem('constructlm_rag_enabled', enabled ? 'true' : 'false');
+  }
+
+  isEnabled(): boolean {
+    if (this.enabled) return true;
+    const stored = localStorage.getItem('constructlm_rag_enabled');
+    this.enabled = stored === 'true';
+    return this.enabled;
+  }
+
   async searchRelevantChunks(query: string, limit: number = 5): Promise<RAGResult[]> {
+    // Skip if RAG is disabled
+    if (!this.isEnabled()) {
+      return [];
+    }
+    
     try {
       const { embeddingService } = await import('./embeddingService');
       const { vectorStore } = await import('./vectorStore');

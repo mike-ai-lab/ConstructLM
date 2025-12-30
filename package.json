@@ -9,8 +9,8 @@
     "proxy": "node server/proxy.js",
     "build": "vite build",
     "preview": "vite preview",
-    "electron:start": "vite build --config electron.vite.config.ts && set NODE_ENV=development&& electron .",
-    "electron:dev": "concurrently \"vite\" \"vite build --config electron.vite.config.ts --watch\" \"wait-on dist-electron/main.cjs && electron .\"",
+    "electron:start": "npm run electron:dev",
+    "electron:dev": "concurrently \"vite\" \"vite build --config electron.vite.config.ts --watch\" \"wait-on http://localhost:5173 && electron .\"",
     "electron:build": "vite build && vite build --config electron.vite.config.ts && electron-builder",
     "electron:pack": "vite build && vite build --config electron.vite.config.ts && electron-builder --dir"
   },
@@ -42,9 +42,15 @@
     "vite": "^6.2.0",
     "wait-on": "^8.0.0"
   },
+  "author": {
+    "name": "Int. Arch. M.Shkeir",
+    "email": "contact@studio.com"
+  },
+  "description": "AI-Powered Document Analysis & Multi-Model Chat Assistant",
   "build": {
     "appId": "com.constructlm.app",
     "productName": "ConstructLM",
+    "copyright": "Copyright © 2025 Int. Arch. M.Shkeir",
     "directories": {
       "output": "release"
     },
@@ -55,15 +61,26 @@
     ],
     "win": {
       "target": "nsis",
-      "icon": "logo.png"
+      "icon": "icon.ico",
+      "publisherName": "Studiø",
+      "verifyUpdateCodeSignature": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "ConstructLM"
     },
     "mac": {
       "target": "dmg",
-      "icon": "logo.png"
+      "icon": "logo.png",
+      "category": "public.app-category.productivity"
     },
     "linux": {
       "target": "AppImage",
-      "icon": "logo.png"
+      "icon": "logo.png",
+      "category": "Office"
     }
   }
 }

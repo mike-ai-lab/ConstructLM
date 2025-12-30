@@ -214,6 +214,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
     };
 
     const handleSave = () => {
+        console.log('[Settings] Saving API keys:', { google: keys.google ? 'Present' : 'Empty' });
+        
         // Save User Profile
         userProfileService.saveProfile({
             ...userProfile,
@@ -226,6 +228,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
         saveApiKey('GROQ_API_KEY', keys.groq);
         saveApiKey('AWS_ACCESS_KEY_ID', keys.aws);
         saveApiKey('AWS_SECRET_ACCESS_KEY', keys.awsSecret);
+        
+        console.log('[Settings] After save, localStorage:', Object.keys(localStorage));
+        console.log('[Settings] Gemini key saved as:', localStorage.getItem('constructlm_config_GEMINI_API_KEY'));
         
         setShowSuccess(true);
         setTimeout(() => {

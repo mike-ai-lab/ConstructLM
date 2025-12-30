@@ -108,7 +108,6 @@ html.dark {
   backdrop-filter: blur(10px);
   transition: none;
   position: relative;
-  z-index: 200;
 }
 
 html.dark .floating-input-wrapper {

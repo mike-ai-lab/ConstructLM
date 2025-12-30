@@ -16,15 +16,14 @@ const TextContextViewer: React.FC<TextContextViewerProps> = ({ file, quote, loca
       if (tableRef.current) {
         const highlightedRow = tableRef.current.querySelector('.highlighted-row, .highlight-target');
         if (highlightedRow) {
-          highlightedRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          highlightedRow.scrollIntoView({ behavior: 'instant', block: 'center' });
           return true;
         }
       }
       return false;
     };
     
-    setTimeout(() => scrollToRow(), 100);
-    setTimeout(() => scrollToRow(), 300);
+    requestAnimationFrame(() => scrollToRow());
   }, [file, location, quote]);
   
   if (file?.type === 'excel' && location) {
@@ -95,8 +94,7 @@ const TextContextViewer: React.FC<TextContextViewerProps> = ({ file, quote, loca
       }
       
       return (
-        <div ref={tableRef} className="overflow-auto" style={{ maxHeight: '400px' }} onWheel={(e) => e.stopPropagation()}>
-          <table className="w-full text-[9px] border-collapse">
+        <table ref={tableRef} className="w-full text-[9px] border-collapse">
             <thead className="sticky top-0 bg-gray-100 dark:bg-[#2a2a2a] z-10">
               <tr>
                 {headers.map((h, idx) => (
@@ -118,7 +116,6 @@ const TextContextViewer: React.FC<TextContextViewerProps> = ({ file, quote, loca
               })}
             </tbody>
           </table>
-        </div>
       );
     }
   }
@@ -248,15 +245,7 @@ const TextContextViewer: React.FC<TextContextViewerProps> = ({ file, quote, loca
       }).join('\n');
       const contextHtml = parseMarkdown(contextMd);
       
-      return (
-        <div ref={tableRef} className="p-2 overflow-auto" style={{ maxHeight: '400px' }}>
-          <div className="text-xs leading-relaxed max-w-none">
-            <div 
-              dangerouslySetInnerHTML={{ __html: contextHtml }}
-            />
-          </div>
-        </div>
-      );
+      return <div ref={tableRef} className="p-2"><div className="text-xs leading-relaxed max-w-none" dangerouslySetInnerHTML={{ __html: contextHtml }} /></div>;
     }
     
     // Fallback: if quote not found in lines, search entire content
@@ -272,15 +261,7 @@ const TextContextViewer: React.FC<TextContextViewerProps> = ({ file, quote, loca
       const highlighted = `${before}<mark class="bg-yellow-300 dark:bg-yellow-700 highlight-target">${match}</mark>${after}`;
       const contextHtml = parseMarkdown(highlighted);
       
-      return (
-        <div ref={tableRef} className="p-2 overflow-auto" style={{ maxHeight: '400px' }}>
-          <div className="text-xs leading-relaxed max-w-none">
-            <div 
-              dangerouslySetInnerHTML={{ __html: contextHtml }}
-            />
-          </div>
-        </div>
-      );
+      return <div ref={tableRef} className="p-2"><div className="text-xs leading-relaxed max-w-none" dangerouslySetInnerHTML={{ __html: contextHtml }} /></div>;
     } else {
       // Quote not found, but render the section mentioned in location
       const locationMatch = location.match(/Section\s+([\d.]+\s+[A-Z\s&]+)/i);
@@ -294,13 +275,7 @@ const TextContextViewer: React.FC<TextContextViewerProps> = ({ file, quote, loca
           const contextMd = lines.slice(contextStart, contextEnd).join('\n');
           const contextHtml = parseMarkdown(contextMd);
           
-          return (
-            <div ref={tableRef} className="p-2 overflow-auto" style={{ maxHeight: '400px' }}>
-              <div className="text-xs leading-relaxed max-w-none">
-                <div dangerouslySetInnerHTML={{ __html: contextHtml }} />
-              </div>
-            </div>
-          );
+          return <div ref={tableRef} className="p-2"><div className="text-xs leading-relaxed max-w-none" dangerouslySetInnerHTML={{ __html: contextHtml }} /></div>;
         }
       }
     }

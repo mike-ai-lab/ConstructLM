@@ -79,8 +79,8 @@ export const generateMindMapData = async (
 };
 
 const generateWithGemini = async (apiKey: string, modelId: string, userPrompt: string): Promise<MindMapNode> => {
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1/models/${modelId}:generateContent?key=${apiKey}`,
+  const apiUrl = `https://generativelanguage.googleapis.com/v1/models/${modelId}:generateContent?key=${apiKey}`;
+  const response = await fetch(apiUrl,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

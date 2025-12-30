@@ -143,7 +143,7 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({ file, location, textScale }) 
   return (
     <div className="overflow-auto w-full h-full">
       <div className="bg-white dark:bg-[#2a2a2a] shadow-sm border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] w-full max-w-5xl min-h-full mx-auto my-8" style={{ fontSize: `${textScale * 0.875}rem` }}>
-        <div className="p-12">{parseExcelContent(file.content, location)}</div>
+        <div className="p-2">{parseExcelContent(file.content, location)}</div>
       </div>
     </div>
   );

@@ -40,7 +40,7 @@ import ContextWarningModal from './components/ContextWarningModal';
 import DrawingToolbar from './components/DrawingToolbar';
 import GitHubBrowser from './components/GitHubBrowser';
 import { PipelineTracker } from './components/PipelineTracker';
-import { Note, Todo, Reminder, Source } from './types';
+import { Note, Todo, TodoGroup, Reminder, Source } from './types';
 
 const App: React.FC = () => {
   useUIHelpersInit();
@@ -56,6 +56,7 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = React.useState<'chat' | 'notebook' | 'todos' | 'github'>('chat');
   const [isTabSwitching, setIsTabSwitching] = React.useState(false);
   const [todos, setTodos] = React.useState<Todo[]>([]);
+  const [todoGroups, setTodoGroups] = React.useState<TodoGroup[]>([]);
   const [reminders, setReminders] = React.useState<Reminder[]>([]);
   const [sources, setSources] = React.useState<Source[]>([]);
   const [toastMessage, setToastMessage] = React.useState<{ message: string; id: string } | null>(null);
@@ -94,191 +95,21 @@ const App: React.FC = () => {
     const savedTodos = localStorage.getItem('todos');
     const savedReminders = localStorage.getItem('reminders');
     const savedSources = localStorage.getItem('sources');
+    const savedGroups = localStorage.getItem('todoGroups');
     if (saved) setNotes(JSON.parse(saved));
     if (savedCounter) setNoteCounter(parseInt(savedCounter));
     
-    const demoTasks: Todo[] = [
-      {
-        id: 'demo1',
-        title: 'Design new landing page',
-        completed: false,
-        timestamp: Date.now(),
-        priority: 'high' as const,
-        category: 'Design',
-        estimatedTime: 180,
-        tags: ['ui', 'urgent', 'client'],
-        notes: 'Focus on mobile-first approach with modern aesthetics',
-        subtasks: [
-          { id: 'sub1', title: 'Create wireframes', completed: true },
-          { id: 'sub2', title: 'Design mockups', completed: true },
-          { id: 'sub3', title: 'Get client approval', completed: false },
-          { id: 'sub4', title: 'Implement responsive design', completed: false }
-        ],
-        progress: 50
-      },
-      {
-        id: 'demo2',
-        title: 'Refactor authentication system',
-        completed: false,
-        timestamp: Date.now() - 3600000,
-        priority: 'high' as const,
-        category: 'Backend',
-        estimatedTime: 240,
-        tags: ['security', 'refactor'],
-        notes: 'Migrate to JWT tokens and add 2FA support',
-        subtasks: [
-          { id: 'sub5', title: 'Research JWT best practices', completed: true },
-          { id: 'sub6', title: 'Implement token refresh', completed: false },
-          { id: 'sub7', title: 'Add 2FA integration', completed: false },
-          { id: 'sub8', title: 'Write unit tests', completed: false },
-          { id: 'sub9', title: 'Update documentation', completed: false }
-        ],
-        progress: 20
-      },
-      {
-        id: 'demo3',
-        title: 'Optimize database queries',
-        completed: false,
-        timestamp: Date.now() - 7200000,
-        priority: 'medium' as const,
-        category: 'Performance',
-        estimatedTime: 120,
-        tags: ['optimization', 'database'],
-        notes: 'Focus on slow queries identified in monitoring',
-        subtasks: [
-          { id: 'sub10', title: 'Analyze query performance', completed: true },
-          { id: 'sub11', title: 'Add database indexes', completed: true },
-          { id: 'sub12', title: 'Implement query caching', completed: false }
-        ],
-        progress: 67
-      },
-      {
-        id: 'demo4',
-        title: 'Write API documentation',
-        completed: true,
-        timestamp: Date.now() - 86400000,
-        priority: 'medium' as const,
-        category: 'Documentation',
-        estimatedTime: 90,
-        tags: ['docs', 'api'],
-        notes: 'Complete OpenAPI spec with examples',
-        subtasks: [
-          { id: 'sub13', title: 'Document all endpoints', completed: true },
-          { id: 'sub14', title: 'Add code examples', completed: true },
-          { id: 'sub15', title: 'Review with team', completed: true }
-        ],
-        progress: 100
-      },
-      {
-        id: 'demo5',
-        title: 'Implement dark mode',
-        completed: false,
-        timestamp: Date.now() - 10800000,
-        priority: 'low' as const,
-        category: 'Feature',
-        estimatedTime: 150,
-        tags: ['ui', 'enhancement'],
-        notes: 'Add theme toggle with system preference detection',
-        subtasks: [
-          { id: 'sub16', title: 'Create color palette', completed: true },
-          { id: 'sub17', title: 'Update all components', completed: false },
-          { id: 'sub18', title: 'Add theme persistence', completed: false },
-          { id: 'sub19', title: 'Test accessibility', completed: false }
-        ],
-        progress: 25
-      },
-      {
-        id: 'demo6',
-        title: 'Fix mobile navigation bugs',
-        completed: true,
-        timestamp: Date.now() - 172800000,
-        priority: 'high' as const,
-        category: 'Bug Fix',
-        estimatedTime: 60,
-        tags: ['mobile', 'bug'],
-        notes: 'Menu not closing on iOS devices',
-        subtasks: [
-          { id: 'sub20', title: 'Reproduce issue', completed: true },
-          { id: 'sub21', title: 'Implement fix', completed: true },
-          { id: 'sub22', title: 'Test on multiple devices', completed: true }
-        ],
-        progress: 100
-      },
-      {
-        id: 'demo7',
-        title: 'Set up CI/CD pipeline',
-        completed: false,
-        timestamp: Date.now() - 14400000,
-        priority: 'medium' as const,
-        category: 'DevOps',
-        estimatedTime: 200,
-        tags: ['automation', 'deployment'],
-        notes: 'Configure GitHub Actions for automated testing and deployment',
-        subtasks: [
-          { id: 'sub23', title: 'Configure test workflow', completed: true },
-          { id: 'sub24', title: 'Set up staging deployment', completed: false },
-          { id: 'sub25', title: 'Configure production deployment', completed: false },
-          { id: 'sub26', title: 'Add deployment notifications', completed: false }
-        ],
-        progress: 25
-      },
-      {
-        id: 'demo8',
-        title: 'Conduct security audit',
-        completed: false,
-        timestamp: Date.now() - 18000000,
-        priority: 'high' as const,
-        category: 'Security',
-        estimatedTime: 300,
-        tags: ['security', 'audit'],
-        notes: 'Comprehensive security review before launch',
-        subtasks: [
-          { id: 'sub27', title: 'Run automated security scan', completed: true },
-          { id: 'sub28', title: 'Review dependencies', completed: true },
-          { id: 'sub29', title: 'Manual code review', completed: false },
-          { id: 'sub30', title: 'Penetration testing', completed: false },
-          { id: 'sub31', title: 'Fix identified issues', completed: false }
-        ],
-        progress: 40
-      },
-      {
-        id: 'demo9',
-        title: 'Create onboarding tutorial',
-        completed: false,
-        timestamp: Date.now() - 21600000,
-        priority: 'low' as const,
-        category: 'UX',
-        estimatedTime: 100,
-        tags: ['tutorial', 'ux'],
-        notes: 'Interactive walkthrough for new users',
-        subtasks: [
-          { id: 'sub32', title: 'Design tutorial flow', completed: true },
-          { id: 'sub33', title: 'Write copy', completed: false },
-          { id: 'sub34', title: 'Implement interactive elements', completed: false }
-        ],
-        progress: 33
-      },
-      {
-        id: 'demo10',
-        title: 'Upgrade to React 19',
-        completed: false,
-        timestamp: Date.now() - 25200000,
-        priority: 'medium' as const,
-        category: 'Maintenance',
-        estimatedTime: 180,
-        tags: ['upgrade', 'react'],
-        notes: 'Update dependencies and refactor deprecated APIs',
-        subtasks: [
-          { id: 'sub35', title: 'Update package.json', completed: true },
-          { id: 'sub36', title: 'Fix breaking changes', completed: false },
-          { id: 'sub37', title: 'Update tests', completed: false },
-          { id: 'sub38', title: 'Performance testing', completed: false }
-        ],
-        progress: 25
-      }
+    const demoGroups: TodoGroup[] = [
+      { id: 'work', name: 'Work', color: '#4485d1', timestamp: Date.now() },
+      { id: 'personal', name: 'Personal', color: '#a8d5e2', timestamp: Date.now() },
+      { id: 'urgent', name: 'Urgent', color: '#f07a76', timestamp: Date.now() }
     ];
-    setTodos(demoTasks);
-    localStorage.setItem('todos', JSON.stringify(demoTasks));
+    setTodoGroups(savedGroups ? JSON.parse(savedGroups) : demoGroups);
+    if (!savedGroups) localStorage.setItem('todoGroups', JSON.stringify(demoGroups));
+    
+    if (savedTodos) {
+      setTodos(JSON.parse(savedTodos));
+    }
     
     if (savedReminders) setReminders(JSON.parse(savedReminders));
     if (savedSources) setSources(JSON.parse(savedSources));
@@ -350,7 +181,12 @@ const App: React.FC = () => {
       const blob = new Blob([summary], { type: 'text/markdown' });
       const file = new File([blob], fileData.name!, { type: 'text/markdown' });
       
-      await fileHandlers.handleFileUpload([file]);
+      const fileList = Object.assign([file], {
+        item: (index: number) => index === 0 ? file : null,
+        length: 1
+      }) as unknown as FileList;
+      
+      await fileHandlers.handleFileUpload(fileList);
       alert('Summary document created and added as source!');
     } catch (error) {
       console.error('Failed to create summary:', error);
@@ -371,6 +207,29 @@ const App: React.FC = () => {
         setTimeout(() => msgElement.classList.remove('highlight-flash'), 2000);
       }
     }, 100);
+  };
+
+  const handleAddTodoGroup = (group: Omit<TodoGroup, 'id' | 'timestamp'>) => {
+    const newGroup: TodoGroup = { ...group, id: Date.now().toString(), timestamp: Date.now() };
+    const updated = [...todoGroups, newGroup];
+    setTodoGroups(updated);
+    localStorage.setItem('todoGroups', JSON.stringify(updated));
+  };
+
+  const handleDeleteTodoGroup = (id: string) => {
+    const updated = todoGroups.filter(g => g.id !== id);
+    setTodoGroups(updated);
+    localStorage.setItem('todoGroups', JSON.stringify(updated));
+    const defaultGroupId = todoGroups.find(g => g.id !== id)?.id || 'work';
+    const updatedTodos = todos.map(t => t.groupId === id ? { ...t, groupId: defaultGroupId } : t);
+    setTodos(updatedTodos);
+    localStorage.setItem('todos', JSON.stringify(updatedTodos));
+  };
+
+  const handleUpdateTodoGroup = (id: string, updates: Partial<TodoGroup>) => {
+    const updated = todoGroups.map(g => g.id === id ? { ...g, ...updates } : g);
+    setTodoGroups(updated);
+    localStorage.setItem('todoGroups', JSON.stringify(updated));
   };
 
   const handleAddTodo = (todo: Omit<Todo, 'id' | 'timestamp'>) => {
@@ -462,7 +321,11 @@ const App: React.FC = () => {
     for (const file of files) {
       const blob = new Blob([file.content], { type: 'text/plain' });
       const fileObj = new File([blob], file.name, { type: 'text/plain' });
-      await fileHandlers.handleFileUpload([fileObj]);
+      const fileList = Object.assign([fileObj], {
+        item: (index: number) => index === 0 ? fileObj : null,
+        length: 1
+      }) as unknown as FileList;
+      await fileHandlers.handleFileUpload(fileList);
     }
   };
 
@@ -975,11 +838,9 @@ const App: React.FC = () => {
 
       {activeTab === 'chat' && (
         <div 
-          className={`flex flex-col bg-[#f9f9f9] dark:bg-[#2a2a2a] border-r border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] transition-all duration-300 ease-in-out overflow-hidden`}
+          className={`fixed md:relative z-40 h-full bg-[#f9f9f9] dark:bg-[#2a2a2a] flex flex-col border-r border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] transition-all duration-300 ease-in-out ${layoutState.isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} ${!layoutState.isSidebarOpen && !layoutState.isMobile ? 'md:w-0 md:opacity-0 md:overflow-hidden' : ''} overflow-hidden`}
           style={{ 
-            width: layoutState.isSidebarOpen ? layoutState.sidebarWidth : 0,
-            height: 'calc(100vh - 65px)',
-            flexShrink: 0
+            width: layoutState.isMobile ? '85%' : (layoutState.isSidebarOpen ? layoutState.sidebarWidth : 0)
           }}
         >
           <FileSidebar 
@@ -1011,7 +872,7 @@ const App: React.FC = () => {
               });
             }}
           />
-          {layoutState.isSidebarOpen && (
+          {layoutState.isSidebarOpen && !layoutState.isMobile && (
             <div 
               className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500 transition-colors z-50"
               onMouseDown={() => layoutState.setIsResizing('left')}
@@ -1083,7 +944,7 @@ const App: React.FC = () => {
         )}
 
         {activeTab === 'chat' ? (
-          <div ref={layoutState.messagesContainerRef} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 scroll-smooth bg-white dark:bg-[#1a1a1a]" style={{ marginTop: featureState.drawingState.isActive && featureState.drawingState.tool !== 'none' ? '48px' : '0' }}>
+          <div ref={layoutState.messagesContainerRef} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 scroll-smooth bg-white dark:bg-[#1a1a1a]">
             <div className="max-w-3xl mx-auto w-full relative overflow-hidden" style={{ paddingBottom: `${Math.max(0, (inputState.inputHeight || 56) - 40)}px` }}>
               {chatState.messages.map((msg) => (
                 <MessageBubble 
@@ -1147,11 +1008,15 @@ const App: React.FC = () => {
           <div className="flex-1 overflow-hidden">
             <TodoList
               todos={todos}
+              groups={todoGroups}
               onAddTodo={handleAddTodo}
               onToggleTodo={handleToggleTodo}
               onDeleteTodo={handleDeleteTodo}
               onUpdateTodo={handleUpdateTodo}
               onDeleteSubtask={handleDeleteSubtask}
+              onAddGroup={handleAddTodoGroup}
+              onDeleteGroup={handleDeleteTodoGroup}
+              onUpdateGroup={handleUpdateTodoGroup}
             />
           </div>
         ) : activeTab === 'github' ? (
@@ -1181,8 +1046,7 @@ const App: React.FC = () => {
 
         {/* Floating Input Area */}
         {!featureState.mindMapData && !featureState.isSettingsOpen && !featureState.isCallingEffect && !featureState.isHelpOpen && activeTab === 'chat' && (
-        <>
-          <div className="flex justify-center px-4 pb-2 w-full bg-white dark:bg-[#1a1a1a] relative z-[200]">
+        <div className="flex justify-center px-4 pb-2 w-full bg-white dark:bg-[#1a1a1a] relative z-10">
             <div className="w-full max-w-[800px]">
             <FloatingInput
               input={inputState.input}
@@ -1211,10 +1075,9 @@ const App: React.FC = () => {
               onDeleteSource={handleDeleteSource}
               onToggleSource={handleToggleSourceLink}
             />
-            <p className="text-[#666666] dark:text-[#a0a0a0] text-xs text-center mt-2 relative z-[200]">AI can make mistakes. Please verify citations.</p>
+            <p className="text-[#666666] dark:text-[#a0a0a0] text-xs text-center mt-2">AI can make mistakes. Please verify citations.</p>
           </div>
         </div>
-        </>
         )}
       </div>
 

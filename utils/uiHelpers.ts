@@ -379,8 +379,11 @@ export const showCheckmark = (): void => {
   setTimeout(() => checkmark.remove(), 600);
 };
 
-// Toast Notifications
-export const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info', duration: number = 3000): void => {
+// Toast Notifications with limit
+let activeToasts: HTMLElement[] = [];
+const MAX_TOASTS = 2;
+
+export const showToast = (message: string, type: 'success' | 'error' | 'info' | 'warning' = 'info', duration: number = 3000): void => {
   // Create toast container if it doesn't exist
   let container = document.querySelector('.toast-container') as HTMLElement;
   if (!container) {
@@ -389,12 +392,22 @@ export const showToast = (message: string, type: 'success' | 'error' | 'info' = 
     document.body.appendChild(container);
   }
 
+  // Remove oldest toast if limit reached
+  if (activeToasts.length >= MAX_TOASTS) {
+    const oldestToast = activeToasts.shift();
+    if (oldestToast && oldestToast.parentNode) {
+      oldestToast.classList.add('removing');
+      setTimeout(() => oldestToast.remove(), 300);
+    }
+  }
+
   // Create toast element
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
   toast.textContent = message;
 
   container.appendChild(toast);
+  activeToasts.push(toast);
 
   // Remove toast after duration
   setTimeout(() => {
@@ -403,6 +416,7 @@ export const showToast = (message: string, type: 'success' | 'error' | 'info' = 
       if (toast.parentNode) {
         toast.parentNode.removeChild(toast);
       }
+      activeToasts = activeToasts.filter(t => t !== toast);
     }, 300);
   }, duration);
 };

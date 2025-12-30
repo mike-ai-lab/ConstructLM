@@ -6,10 +6,11 @@ dist
 dist-electron
 release
 
-# Environment variables
+# Environment variables (CRITICAL: Never commit API keys)
 .env
 .env.local
 .env.*.local
+.env.production
 
 # Logs
 *.log

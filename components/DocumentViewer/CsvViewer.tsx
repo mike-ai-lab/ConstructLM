@@ -69,7 +69,7 @@ const CsvViewer: React.FC<CsvViewerProps> = ({ file, textScale }) => {
 
   return (
     <div className="overflow-auto w-full h-full">
-      <div className="bg-white dark:bg-[#1e1e1e] w-full max-w-7xl min-h-full mx-auto p-6" style={{ fontSize: `${textScale * 0.875}rem` }}>
+      <div className="bg-white dark:bg-[#1e1e1e] w-full max-w-7xl min-h-full mx-auto p-2" style={{ fontSize: `${textScale * 0.875}rem` }}>
         <div className="flex items-center gap-2 mb-3 px-2 py-1.5">
           <Table size={16} className="text-blue-600 dark:text-blue-400" />
           <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
