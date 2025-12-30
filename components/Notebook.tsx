@@ -16,9 +16,10 @@ interface NotebookProps {
   chats?: any[];
   onRenderControls?: (controls: React.ReactNode) => void;
   onImportNotes?: (notes: Note[]) => void;
+  isSidebarOpen: boolean;
 }
 
-const Notebook: React.FC<NotebookProps> = ({ notes, onDeleteNote, onUpdateNote, onNavigateToMessage, files, onViewDocument, chats = [], onRenderControls, onImportNotes }) => {
+const Notebook: React.FC<NotebookProps> = ({ notes, onDeleteNote, onUpdateNote, onNavigateToMessage, files, onViewDocument, chats = [], onRenderControls, onImportNotes, isSidebarOpen }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -202,7 +203,46 @@ const Notebook: React.FC<NotebookProps> = ({ notes, onDeleteNote, onUpdateNote, 
       const controls = {
         element: (
           <>
-            <div className="flex items-center gap-1 bg-slate-100 dark:bg-[#2a2a2a] rounded-lg p-1">
+            {selectedNotes.size > 0 && (
+              <>
+                <button onClick={exportSelectedNotes} className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 flex items-center gap-1 transition-colors" title="Export Selected">
+                  <Download size={14} />
+                  Export ({selectedNotes.size})
+                </button>
+                <button onClick={deselectAll} className="text-sm text-[#666666] dark:text-[#a0a0a0] hover:text-[#1a1a1a] dark:hover:text-white px-2">Clear</button>
+              </>
+            )}
+            {selectedNotes.size === 0 && (
+              <>
+                <button onClick={handleImportNotes} className="p-2 hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[#2a2a2a] rounded-lg text-[#666666] dark:text-[#a0a0a0] transition-colors" title="Import Notes">
+                  <FileText size={18} />
+                </button>
+                <button onClick={exportNotes} className="p-2 hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[#2a2a2a] rounded-lg text-[#666666] dark:text-[#a0a0a0] transition-colors" title="Export All">
+                  <Download size={18} />
+                </button>
+              </>
+            )}
+            
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="px-3 py-1.5 rounded-lg text-sm bg-slate-100 dark:bg-[#2a2a2a] text-[#666666] dark:text-[#a0a0a0] border-none focus:outline-none cursor-pointer"
+            >
+              <option value="date">Created</option>
+              <option value="modified">Modified</option>
+              <option value="model">Model</option>
+            </select>
+            <button
+              onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+              className="p-2 rounded-lg hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[#2a2a2a] transition-colors"
+              title={sortOrder === 'asc' ? 'Ascending' : 'Descending'}
+            >
+              <ArrowUpDown size={16} className={`transition-transform ${sortOrder === 'asc' ? 'rotate-180' : ''}`} />
+            </button>
+          </>
+        ),
+        viewControls: (
+          <div className="flex items-center gap-1 bg-slate-100 dark:bg-[#2a2a2a] rounded-lg p-1">
             <button
               onClick={() => setViewMode('list')}
               className={`p-1.5 rounded transition-colors ${viewMode === 'list' ? 'bg-white dark:bg-[#1a1a1a] text-blue-600 shadow-sm' : 'text-[#666666] dark:text-[#a0a0a0]'}`}
@@ -225,44 +265,6 @@ const Notebook: React.FC<NotebookProps> = ({ notes, onDeleteNote, onUpdateNote, 
               <FileText size={16} />
             </button>
           </div>
-
-          {selectedNotes.size > 0 && (
-            <>
-              <button onClick={exportSelectedNotes} className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 flex items-center gap-1 transition-colors" title="Export Selected">
-                <Download size={14} />
-                Export ({selectedNotes.size})
-              </button>
-              <button onClick={deselectAll} className="text-sm text-[#666666] dark:text-[#a0a0a0] hover:text-[#1a1a1a] dark:hover:text-white px-2">Clear</button>
-            </>
-          )}
-          {selectedNotes.size === 0 && (
-            <>
-              <button onClick={handleImportNotes} className="p-2 hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[#2a2a2a] rounded-lg text-[#666666] dark:text-[#a0a0a0] transition-colors" title="Import Notes">
-                <FileText size={18} />
-              </button>
-              <button onClick={exportNotes} className="p-2 hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[#2a2a2a] rounded-lg text-[#666666] dark:text-[#a0a0a0] transition-colors" title="Export All">
-                <Download size={18} />
-              </button>
-            </>
-          )}
-          
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as any)}
-            className="px-3 py-1.5 rounded-lg text-sm bg-slate-100 dark:bg-[#2a2a2a] text-[#666666] dark:text-[#a0a0a0] border-none focus:outline-none cursor-pointer"
-          >
-            <option value="date">Created</option>
-            <option value="modified">Modified</option>
-            <option value="model">Model</option>
-          </select>
-          <button
-            onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-            className="p-2 rounded-lg hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[#2a2a2a] transition-colors"
-            title={sortOrder === 'asc' ? 'Ascending' : 'Descending'}
-          >
-            <ArrowUpDown size={16} className={`transition-transform ${sortOrder === 'asc' ? 'rotate-180' : ''}`} />
-          </button>
-          </>
         )
       };
       onRenderControls(controls as any);
@@ -351,7 +353,7 @@ const Notebook: React.FC<NotebookProps> = ({ notes, onDeleteNote, onUpdateNote, 
   return (
     <div className="flex h-full w-full relative box-border bg-white dark:bg-[#1a1a1a]">
       {/* Sidebar */}
-      <div className="flex flex-col h-full w-80 flex-shrink-0">
+      <div className={`flex flex-col h-full w-80 flex-shrink-0 transition-all duration-300 ${!isSidebarOpen ? '-ml-80' : ''}`}>
         {/* Tab Navigation */}
         <div className="h-[65px] flex-shrink-0 flex bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] border-b border-[rgba(0,0,0,0.1)] dark:border-[rgba(255,255,255,0.05)]">
           <div className="flex-1 h-full px-2 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 text-[#333333] dark:text-[#cccccc] border-b-2 border-[#4485d1]">

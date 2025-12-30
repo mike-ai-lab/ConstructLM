@@ -70,6 +70,7 @@ const App: React.FC = () => {
   const [drawingToolbarPos, setDrawingToolbarPos] = React.useState({ x: 0, y: 0 });
   const [githubRepoUrl, setGithubRepoUrl] = React.useState('');
   const [notebookControls, setNotebookControls] = React.useState<React.ReactNode>(null);
+  const [notebookSidebarOpen, setNotebookSidebarOpen] = React.useState(true);
 
   // REMOVED: Pipeline tracker moved to Help Documentation
   // const [pipelineSteps, setPipelineSteps] = React.useState<any[]>([]);
@@ -974,9 +975,11 @@ const App: React.FC = () => {
 
       {activeTab === 'chat' && (
         <div 
-          className={`fixed md:relative z-40 h-full bg-[#f9f9f9] dark:bg-[#2a2a2a] flex flex-col border-r border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] transition-all duration-300 ease-in-out ${layoutState.isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} ${!layoutState.isSidebarOpen && !layoutState.isMobile ? 'md:w-0 md:opacity-0 md:overflow-hidden' : ''} overflow-hidden`}
+          className={`flex flex-col bg-[#f9f9f9] dark:bg-[#2a2a2a] border-r border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] transition-all duration-300 ease-in-out overflow-hidden`}
           style={{ 
-            width: layoutState.isMobile ? '85%' : (layoutState.isSidebarOpen ? layoutState.sidebarWidth : 0)
+            width: layoutState.isSidebarOpen ? layoutState.sidebarWidth : 0,
+            height: 'calc(100vh - 65px)',
+            flexShrink: 0
           }}
         >
           <FileSidebar 
@@ -1008,7 +1011,7 @@ const App: React.FC = () => {
               });
             }}
           />
-          {layoutState.isSidebarOpen && !layoutState.isMobile && (
+          {layoutState.isSidebarOpen && (
             <div 
               className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500 transition-colors z-50"
               onMouseDown={() => layoutState.setIsResizing('left')}
@@ -1024,8 +1027,8 @@ const App: React.FC = () => {
         {!featureState.isHelpOpen && (
           <AppHeader
           isMobile={layoutState.isMobile}
-          isSidebarOpen={layoutState.isSidebarOpen}
-          setIsSidebarOpen={layoutState.setIsSidebarOpen}
+          isSidebarOpen={activeTab === 'notebook' ? notebookSidebarOpen : layoutState.isSidebarOpen}
+          setIsSidebarOpen={activeTab === 'notebook' ? setNotebookSidebarOpen : layoutState.setIsSidebarOpen}
           activeModel={activeModel}
           showModelMenu={featureState.showModelMenu}
           setShowModelMenu={featureState.setShowModelMenu}
@@ -1171,6 +1174,7 @@ const App: React.FC = () => {
               chats={chatState.chats}
               onRenderControls={setNotebookControls}
               onImportNotes={handleImportNotes}
+              isSidebarOpen={notebookSidebarOpen}
             />
           </div>
         )}

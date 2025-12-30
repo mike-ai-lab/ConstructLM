@@ -120,7 +120,47 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
     setShowFolderInput(false);
   };
 
-  // Delete folder
+  // Auto-organize files by extension
+  const handleAutoOrganize = () => {
+    if (!confirm('Automatically organize files into folders by extension?')) return;
+    
+    const extensionFolders = new Set<string>();
+    const updates: Array<{ fileId: string; folder: string }> = [];
+    
+    // Group files by extension
+    files.forEach(file => {
+      if (file.userFolder) return; // Skip files already in folders
+      
+      const ext = file.name.split('.').pop()?.toLowerCase();
+      if (!ext) return;
+      
+      const folderName = `.${ext}`;
+      extensionFolders.add(folderName);
+      updates.push({ fileId: file.id, folder: folderName });
+    });
+    
+    // Create folders
+    const newFolders = Array.from(extensionFolders).map(name => ({
+      path: name,
+      name,
+      parentPath: null
+    }));
+    
+    const existingPaths = new Set(userFolders.map(f => f.path));
+    const foldersToAdd = newFolders.filter(f => !existingPaths.has(f.path));
+    
+    if (foldersToAdd.length > 0) {
+      saveUserFolders([...userFolders, ...foldersToAdd]);
+      foldersToAdd.forEach(f => setExpandedFolders(prev => new Set([...prev, f.path])));
+    }
+    
+    // Move files
+    if (onUpdateFile) {
+      updates.forEach(({ fileId, folder }) => {
+        onUpdateFile(fileId, { userFolder: folder });
+      });
+    }
+  };
   const handleDeleteFolder = (folderPath: string) => {
     if (!confirm(`Delete folder "${folderPath}" and move its files to root?`)) return;
     
@@ -607,20 +647,29 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
                 </div>
                 <div className="flex gap-1">
                   {files.length > 0 && (
-                    <button
-                      onClick={() => {
-                        const allSelected = files.every(f => selectedSourceIds.includes(f.id));
-                        if (allSelected) {
-                          files.forEach(f => onToggleSource(f.id));
-                        } else {
-                          files.filter(f => !selectedSourceIds.includes(f.id)).forEach(f => onToggleSource(f.id));
-                        }
-                      }}
-                      className="p-1.5 text-[#666666] dark:text-[#a0a0a0] hover:bg-[#eaeaea] dark:hover:bg-[#2a2a2a] rounded-lg transition-colors text-[10px] font-semibold"
-                      title={files.every(f => selectedSourceIds.includes(f.id)) ? "Deselect All" : "Select All"}
-                    >
-                      {files.every(f => selectedSourceIds.includes(f.id)) ? "Deselect All" : "Select All"}
-                    </button>
+                    <>
+                      <button
+                        onClick={handleAutoOrganize}
+                        className="p-1.5 text-[#666666] dark:text-[#a0a0a0] hover:bg-[#eaeaea] dark:hover:bg-[#2a2a2a] rounded-lg transition-colors text-[10px] font-semibold"
+                        title="Auto-organize by extension"
+                      >
+                        <List size={14} />
+                      </button>
+                      <button
+                        onClick={() => {
+                          const allSelected = files.every(f => selectedSourceIds.includes(f.id));
+                          if (allSelected) {
+                            files.forEach(f => onToggleSource(f.id));
+                          } else {
+                            files.filter(f => !selectedSourceIds.includes(f.id)).forEach(f => onToggleSource(f.id));
+                          }
+                        }}
+                        className="p-1.5 text-[#666666] dark:text-[#a0a0a0] hover:bg-[#eaeaea] dark:hover:bg-[#2a2a2a] rounded-lg transition-colors text-[10px] font-semibold"
+                        title={files.every(f => selectedSourceIds.includes(f.id)) ? "Deselect All" : "Select All"}
+                      >
+                        {files.every(f => selectedSourceIds.includes(f.id)) ? "Deselect All" : "Select All"}
+                      </button>
+                    </>
                   )}
                   <button
                     onClick={() => handleCreateFolder()}
@@ -630,50 +679,51 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
                   >
                     <FolderPlus size={14} />
                   </button>
-                  <button
-                    onClick={(e) => {
-                      if (fileInputRef.current) {
-                        (fileInputRef.current as any).forceReupload = e.ctrlKey || e.metaKey;
-                        fileInputRef.current.click();
-                      }
-                    }}
-                    disabled={isProcessing}
-                    className="p-1.5 text-[#4485d1] hover:bg-[rgba(68,133,209,0.1)] rounded-lg transition-colors disabled:opacity-50"
-                    title={"Add File (Ctrl+Click to force re-upload)"}
-                  >
-                    <Plus size={14} />
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      if (folderInputRef.current) {
-                        (folderInputRef.current as any).forceReupload = e.ctrlKey || e.metaKey;
-                        folderInputRef.current.click();
-                      }
-                    }}
-                    disabled={isProcessing}
-                    className="p-1.5 text-[#666666] dark:text-[#a0a0a0] hover:bg-[#eaeaea] dark:hover:bg-[#2a2a2a] rounded-lg transition-colors disabled:opacity-50"
-                    title={"Add Folder (Ctrl+Click to force re-upload)"}
-                  >
-                    <FolderOpen size={14} />
-                  </button>
+                  {fileViewTab === 'all' ? (
+                    <button
+                      onClick={(e) => {
+                        if (fileInputRef.current) {
+                          (fileInputRef.current as any).forceReupload = e.ctrlKey || e.metaKey;
+                          fileInputRef.current.click();
+                        }
+                      }}
+                      disabled={isProcessing}
+                      className="p-1.5 text-[#4485d1] hover:bg-[rgba(68,133,209,0.1)] rounded-lg transition-colors disabled:opacity-50"
+                      title={"Add File (Ctrl+Click to force re-upload)"}
+                    >
+                      <Plus size={14} />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={(e) => {
+                        if (folderInputRef.current) {
+                          (folderInputRef.current as any).forceReupload = e.ctrlKey || e.metaKey;
+                          folderInputRef.current.click();
+                        }
+                      }}
+                      disabled={isProcessing}
+                      className="p-1.5 text-[#666666] dark:text-[#a0a0a0] hover:bg-[#eaeaea] dark:hover:bg-[#2a2a2a] rounded-lg transition-colors disabled:opacity-50"
+                      title={"Add Folder (Ctrl+Click to force re-upload)"}
+                    >
+                      <FolderOpen size={14} />
+                    </button>
+                  )}
                 </div>
               </div>
-              {hasTreeStructure && (
-                <div className="flex gap-1 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] rounded p-0.5">
-                  <button
-                    onClick={() => setFileViewTab('all')}
-                    className={`flex-1 px-2 py-1 rounded text-[10px] font-semibold uppercase transition-colors ${fileViewTab === 'all' ? 'bg-white dark:bg-[#1a1a1a] text-[#4485d1]' : 'text-[#666666] dark:text-[#a0a0a0]'}`}
-                  >
-                    Files Only
-                  </button>
-                  <button
-                    onClick={() => setFileViewTab('folders')}
-                    className={`flex-1 px-2 py-1 rounded text-[10px] font-semibold uppercase transition-colors ${fileViewTab === 'folders' ? 'bg-white dark:bg-[#1a1a1a] text-[#4485d1]' : 'text-[#666666] dark:text-[#a0a0a0]'}`}
-                  >
-                    Folders
-                  </button>
-                </div>
-              )}
+              <div className="flex gap-1 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] rounded p-0.5">
+                <button
+                  onClick={() => setFileViewTab('all')}
+                  className={`flex-1 px-2 py-1 rounded text-[10px] font-semibold uppercase transition-colors ${fileViewTab === 'all' ? 'bg-white dark:bg-[#1a1a1a] text-[#4485d1]' : 'text-[#666666] dark:text-[#a0a0a0]'}`}
+                >
+                  Files
+                </button>
+                <button
+                  onClick={() => setFileViewTab('folders')}
+                  className={`flex-1 px-2 py-1 rounded text-[10px] font-semibold uppercase transition-colors ${fileViewTab === 'folders' ? 'bg-white dark:bg-[#1a1a1a] text-[#4485d1]' : 'text-[#666666] dark:text-[#a0a0a0]'}`}
+                >
+                  Folders
+                </button>
+              </div>
             </div>
             
             <div className="hidden">

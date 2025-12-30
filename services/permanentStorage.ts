@@ -47,13 +47,13 @@ class PermanentStorageService {
   async saveFile(file: ProcessedFile): Promise<void> {
     if (!this.db) await this.init();
     
-    // Get ArrayBuffer BEFORE starting transaction
+    // Get ArrayBuffer for ALL file types BEFORE starting transaction
     let rawContent: ArrayBuffer | undefined;
-    if (file.type === 'pdf' && file.fileHandle) {
+    if (file.fileHandle) {
       try {
         rawContent = await file.fileHandle.arrayBuffer();
       } catch (e) {
-        console.warn('Failed to store PDF raw content:', e);
+        console.warn(`Failed to store raw content for ${file.name}:`, e);
       }
     }
     
@@ -135,18 +135,25 @@ class PermanentStorageService {
       const request = store.getAll();
       request.onsuccess = () => {
         const files = request.result || [];
-        // Restore File objects from rawContent for PDFs
+        // Restore File objects from rawContent
         const restoredFiles = files.map((f: any) => {
-          if (f.type === 'pdf') {
-            if (f.rawContent) {
-              const blob = new Blob([f.rawContent], { type: 'application/pdf' });
-              const file = new File([blob], f.name, { type: 'application/pdf' });
-              const { rawContent, ...fileData } = f;
-              return { ...fileData, fileHandle: file };
-            } else {
-              console.warn(`PDF "${f.name}" has no rawContent - re-upload to enable preview`);
-            }
+          if (f.rawContent) {
+            // Restore fileHandle for any file type that has rawContent
+            const mimeType = f.type === 'pdf' ? 'application/pdf' : 
+                           f.type === 'docx' ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' :
+                           f.type === 'xlsx' ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' :
+                           'text/plain';
+            const blob = new Blob([f.rawContent], { type: mimeType });
+            const file = new File([blob], f.name, { type: mimeType });
+            const { rawContent, ...fileData } = f;
+            return { ...fileData, fileHandle: file };
+          } else if (f.content) {
+            // Fallback: create fileHandle from text content for old files
+            const blob = new Blob([f.content], { type: 'text/plain' });
+            const file = new File([blob], f.name, { type: 'text/plain' });
+            return { ...f, fileHandle: file };
           }
+          console.warn(`File "${f.name}" has no content - citations may not work`);
           return f;
         });
         resolve(restoredFiles);

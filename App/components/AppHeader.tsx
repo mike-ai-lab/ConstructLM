@@ -78,7 +78,7 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
   return (
     <header ref={headerRef} className="h-[65px] flex-none border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] flex items-center justify-between px-3 md:px-6 bg-white dark:bg-[#1a1a1a] min-w-0 gap-2 relative z-[300]">
       <div className="flex items-center gap-2 min-w-0 flex-shrink">
-        {!props.isMobile && props.activeTab === 'chat' && (
+        {!props.isMobile && (props.activeTab === 'chat' || props.activeTab === 'notebook') && (
           <button onClick={() => props.setIsSidebarOpen(!props.isSidebarOpen)} className="p-1.5 text-gray-400 hover:bg-gray-100 rounded-md transition-colors flex-shrink-0">
             {props.isSidebarOpen ? <PanelLeft size={18} /> : <PanelLeftOpen size={18} />}
           </button>
@@ -86,6 +86,11 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
         <div className="flex-shrink-0 flex items-center justify-center">
           <InteractiveBlob size={28} color="#4485d1" />
         </div>
+        {props.activeTab === 'notebook' && props.notebookControls && (
+          <div className="flex items-center gap-2">
+            {(props.notebookControls as any).viewControls}
+          </div>
+        )}
         <h1 className="font-semibold text-[#1a1a1a] dark:text-white text-base md:text-lg tracking-tight truncate hidden sm:block">ConstructLM</h1>
         {props.activeTab === 'chat' && (
           <>
@@ -165,7 +170,6 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
       </div>
 
       <div className="flex items-center gap-1 md:gap-2 flex-shrink-0 pl-20">
-        {/* Notebook Controls - Only show on notebook tab */}
         {props.activeTab === 'notebook' && props.notebookControls && (props.notebookControls as any).element}
         
         {/* Drawing Tools - Only show on chat tab */}

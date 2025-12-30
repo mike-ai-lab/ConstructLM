@@ -56,7 +56,24 @@ const CitationPopup: React.FC<CitationPopupProps> = ({
   const isPdfMode = file?.type === 'pdf' && pdfPageNumber !== null;
 
   useEffect(() => {
-    const found = files.find(f => f.name === fileName);
+    const found = files.find(f => {
+      const normalizedFileName = fileName.toLowerCase().trim();
+      const normalizedFilename = f.name.toLowerCase().trim();
+      
+      if (normalizedFilename === normalizedFileName) return true;
+      
+      const fileNameWithoutExt = normalizedFileName.replace(/\.[^.]+$/, '');
+      const fNameWithoutExt = normalizedFilename.replace(/\.[^.]+$/, '');
+      if (fileNameWithoutExt === fNameWithoutExt) return true;
+      
+      const fileNameBase = fileNameWithoutExt.replace(/\s*\(\d+\)$/, '');
+      const fNameBase = fNameWithoutExt.replace(/\s*\(\d+\)$/, '');
+      if (fileNameBase === fNameBase) return true;
+      
+      if (normalizedFilename.includes(normalizedFileName) || normalizedFileName.includes(normalizedFilename)) return true;
+      
+      return false;
+    });
     setFile(found);
 
     if (found?.type === 'pdf' && location) {

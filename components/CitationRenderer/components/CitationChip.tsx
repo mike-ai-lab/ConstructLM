@@ -41,11 +41,21 @@ const CitationChip: React.FC<CitationChipProps> = ({ index, fileName, location, 
     const fNameWithoutExt = normalizedFilename.replace(/\.[^.]+$/, '');
     if (fileNameWithoutExt === fNameWithoutExt) return true;
     
+    // Handle duplicate suffixes like " (1)", " (2)", etc.
+    const fileNameBase = fileNameWithoutExt.replace(/\s*\(\d+\)$/, '');
+    const fNameBase = fNameWithoutExt.replace(/\s*\(\d+\)$/, '');
+    if (fileNameBase === fNameBase) return true;
+    
     // Partial match (citation might have truncated name)
     if (normalizedFilename.includes(normalizedFileName) || normalizedFileName.includes(normalizedFilename)) return true;
     
     return false;
   });
+  
+  // Debug logging
+  if (!isUrl && !fileExists) {
+    console.warn(`Citation file not found: "${fileName}". Available files:`, files.map(f => f.name));
+  }
 
   // Register close function when opened
   useEffect(() => {
@@ -138,6 +148,11 @@ const CitationChip: React.FC<CitationChipProps> = ({ index, fileName, location, 
       const fileNameWithoutExt = normalizedFileName.replace(/\.[^.]+$/, '');
       const fNameWithoutExt = normalizedFilename.replace(/\.[^.]+$/, '');
       if (fileNameWithoutExt === fNameWithoutExt) return true;
+      
+      // Handle duplicate suffixes
+      const fileNameBase = fileNameWithoutExt.replace(/\s*\(\d+\)$/, '');
+      const fNameBase = fNameWithoutExt.replace(/\s*\(\d+\)$/, '');
+      if (fileNameBase === fNameBase) return true;
       
       if (normalizedFilename.includes(normalizedFileName) || normalizedFileName.includes(normalizedFilename)) return true;
       
