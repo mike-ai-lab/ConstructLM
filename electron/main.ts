@@ -1,5 +1,6 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, ipcMain } from 'electron';
 import * as path from 'path';
+import https from 'https';
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -10,7 +11,8 @@ function createWindow() {
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
-      nodeIntegration: false
+      nodeIntegration: false,
+      webviewTag: true
     }
   });
 
@@ -39,3 +41,73 @@ app.on('activate', () => {
     createWindow();
   }
 });
+
+// IPC Handlers for API proxying
+ipcMain.handle('proxy-groq', async (event, apiKey, requestBody) => {
+  return proxyRequest('https://api.groq.com/openai/v1/chat/completions', apiKey, requestBody, event);
+});
+
+ipcMain.handle('proxy-openai', async (event, apiKey, requestBody) => {
+  return proxyRequest('https://api.openai.com/v1/chat/completions', apiKey, requestBody, event);
+});
+
+function proxyRequest(url: string, apiKey: string, requestBody: any, event: Electron.IpcMainInvokeEvent) {
+  return new Promise((resolve) => {
+    const data = JSON.stringify(requestBody);
+    const urlObj = new URL(url);
+    
+    const options = {
+      hostname: urlObj.hostname,
+      path: urlObj.pathname,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Length': Buffer.byteLength(data)
+      }
+    };
+    
+    const req = https.request(options, (res) => {
+      if (requestBody.stream) {
+        let buffer = '';
+        res.on('data', (chunk) => {
+          buffer += chunk.toString();
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+          
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed.startsWith('data: ')) {
+              const dataStr = trimmed.slice(6);
+              if (dataStr !== '[DONE]') {
+                event.sender.send('stream-chunk', dataStr);
+              }
+            }
+          }
+        });
+        
+        res.on('end', () => {
+          resolve({ ok: true, streaming: true });
+        });
+      } else {
+        let body = '';
+        res.on('data', (chunk) => body += chunk);
+        res.on('end', () => {
+          try {
+            const data = JSON.parse(body);
+            resolve({ ok: res.statusCode === 200, status: res.statusCode, data });
+          } catch (e) {
+            resolve({ ok: false, status: res.statusCode, error: body });
+          }
+        });
+      }
+    });
+    
+    req.on('error', (error) => {
+      resolve({ ok: false, error: error.message });
+    });
+    
+    req.write(data);
+    req.end();
+  });
+}

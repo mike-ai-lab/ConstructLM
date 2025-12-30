@@ -31,9 +31,10 @@ export const createFileHandlers = (
   viewState: ViewState | null,
   setViewState: (state: ViewState | null) => void,
   setUploadFeedback?: (feedback: UploadResult | null) => void,
-  setUploadProgress?: (progress: UploadProgress | null) => void
+  setUploadProgress?: (progress: UploadProgress | null) => void,
+  forceUpload: boolean = false
 ) => {
-  const handleFileUpload = async (fileList: FileList) => {
+  const handleFileUpload = async (fileList: FileList, forceReupload: boolean = false) => {
     setIsProcessingFiles(true);
     const newFiles: ProcessedFile[] = [];
     const skippedFiles: string[] = [];
@@ -81,7 +82,7 @@ export const createFileHandlers = (
         }
         
         try {
-          const processed = await parseFile(file);
+          const processed = await parseFile(file, forceReupload);
           newFiles.push(processed);
           setFiles(prev => [...prev, processed]);
           activityLogger.logFileUploaded(file.name, file.type, file.size);

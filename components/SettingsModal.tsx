@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Save, Key, ShieldCheck, CheckCircle, Loader2, Play, AlertCircle, Cpu, ExternalLink, Download, Upload, Database, Trash2, User } from 'lucide-react';
+import { X, Save, Key, ShieldCheck, CheckCircle, Loader2, Play, AlertCircle, Cpu, ExternalLink, Download, Upload, Database, Trash2, User, CheckSquare, Square } from 'lucide-react';
 import { saveApiKey, getStoredApiKey } from '../services/modelRegistry';
 import { checkOllamaConnection, getAvailableOllamaModels, getLocalModelSetupInstructions } from '../services/localModelService';
-import { dataExportService } from '../services/dataExportService';
+import { dataExportService, ExportOptions } from '../services/dataExportService';
 import { userProfileService, UserProfile } from '../services/userProfileService';
 
 interface SettingsModalProps {
@@ -20,6 +20,39 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
         role: '',
         greetingStyle: 'casual'
     });
+    
+    // Export/Import Options State
+    const [showExportOptions, setShowExportOptions] = useState(false);
+    const [showImportOptions, setShowImportOptions] = useState(false);
+    const [exportOptions, setExportOptions] = useState<ExportOptions>({
+        settings: true,
+        chats: true,
+        mindMaps: true,
+        snapshots: true,
+        notes: true,
+        todos: true,
+        reminders: true,
+        sources: true,
+        userProfile: true,
+        userFolders: true,
+        processedFiles: true,
+        activityLogs: true
+    });
+    const [importOptions, setImportOptions] = useState<ExportOptions>({
+        settings: true,
+        chats: true,
+        mindMaps: true,
+        snapshots: true,
+        notes: true,
+        todos: true,
+        reminders: true,
+        sources: true,
+        userProfile: true,
+        userFolders: true,
+        processedFiles: true,
+        activityLogs: false
+    });
+    const [importMode, setImportMode] = useState<'merge' | 'replace'>('merge');
     
     // API Keys State
     const [keys, setKeys] = useState({
@@ -202,36 +235,116 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
     };
 
     const handleExportData = async () => {
-        await dataExportService.exportData();
+        if (showExportOptions) {
+            await dataExportService.exportData(exportOptions);
+            setShowExportOptions(false);
+        } else {
+            setShowExportOptions(true);
+        }
     };
 
     const handleImportData = () => {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.zip';
-        input.onchange = async (e) => {
-            const file = (e.target as HTMLInputElement).files?.[0];
-            if (file) {
-                const mode = confirm(
-                    'Import Mode:\n\n' +
-                    'Click OK to MERGE with existing data\n' +
-                    'Click Cancel to REPLACE all data\n\n' +
-                    'Merge: Combines imported data with current data\n' +
-                    'Replace: Deletes current data and imports backup'
-                ) ? 'merge' : 'replace';
-                await dataExportService.importData(file, mode);
-            }
-        };
-        input.click();
+        if (showImportOptions) {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.zip';
+            input.onchange = async (e) => {
+                const file = (e.target as HTMLInputElement).files?.[0];
+                if (file) {
+                    await dataExportService.importData(file, importOptions, importMode);
+                }
+            };
+            input.click();
+            setShowImportOptions(false);
+        } else {
+            setShowImportOptions(true);
+        }
+    };
+
+    const toggleExportOption = (key: keyof ExportOptions) => {
+        setExportOptions(prev => ({ ...prev, [key]: !prev[key] }));
+    };
+
+    const toggleImportOption = (key: keyof ExportOptions) => {
+        setImportOptions(prev => ({ ...prev, [key]: !prev[key] }));
+    };
+
+    const selectAllExport = () => {
+        setExportOptions({
+            settings: true,
+            chats: true,
+            mindMaps: true,
+            snapshots: true,
+            notes: true,
+            todos: true,
+            reminders: true,
+            sources: true,
+            userProfile: true,
+            userFolders: true,
+            processedFiles: true,
+            activityLogs: true
+        });
+    };
+
+    const selectAllImport = () => {
+        setImportOptions({
+            settings: true,
+            chats: true,
+            mindMaps: true,
+            snapshots: true,
+            notes: true,
+            todos: true,
+            reminders: true,
+            sources: true,
+            userProfile: true,
+            userFolders: true,
+            processedFiles: true,
+            activityLogs: false
+        });
+    };
+
+    const deselectAllExport = () => {
+        setExportOptions({
+            settings: false,
+            chats: false,
+            mindMaps: false,
+            snapshots: false,
+            notes: false,
+            todos: false,
+            reminders: false,
+            sources: false,
+            userProfile: false,
+            userFolders: false,
+            processedFiles: false,
+            activityLogs: false
+        });
+    };
+
+    const deselectAllImport = () => {
+        setImportOptions({
+            settings: false,
+            chats: false,
+            mindMaps: false,
+            snapshots: false,
+            notes: false,
+            todos: false,
+            reminders: false,
+            sources: false,
+            userProfile: false,
+            userFolders: false,
+            processedFiles: false,
+            activityLogs: false
+        });
     };
 
     const handleClearAppData = () => {
         const confirmed = confirm(
             'Clear All App Data?\n\n' +
             'This will permanently delete:\n' +
+            '• All uploaded files and folders\n' +
             '• All chat conversations\n' +
-            '• All mind maps\n' +
-            '• All snapshots\n' +
+            '• All mind maps and snapshots\n' +
+            '• All notes, todos, and reminders\n' +
             '• API keys and settings\n\n' +
             'This action cannot be undone. Continue?'
         );
@@ -247,8 +360,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                 // Clear all localStorage data
                 localStorage.clear();
                 
-                // Clear IndexedDB data
+                // Clear ALL IndexedDB databases
                 if ('indexedDB' in window) {
+                    indexedDB.deleteDatabase('ConstructLM_PermanentStorage');
                     indexedDB.deleteDatabase('constructlm_mindmap_cache');
                     indexedDB.deleteDatabase('constructlm_snapshots');
                 }
@@ -471,7 +585,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                         <div className="bg-[rgba(0,0,0,0.03)] dark:bg-[#1a1a1a] border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] rounded-lg p-2 flex gap-2 mb-3">
                             <div className="flex-1">
                                 <p className="text-xs text-[#1a1a1a] dark:text-white leading-relaxed">
-                                    <strong>Backup & Restore:</strong> Export all your chats, mind maps, notes, settings, and snapshots. Import with merge or replace options.
+                                    <strong>Selective Backup & Restore:</strong> Choose exactly what data to export or import. Perfect for transferring specific content between devices.
                                 </p>
                             </div>
                         </div>
@@ -482,16 +596,133 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                                     className="flex-1 px-2.5 py-1.5 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] hover:bg-[rgba(0,0,0,0.06)] dark:hover:bg-[#222222] text-[#666666] dark:text-[#a0a0a0] rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5"
                                 >
                                     <Download size={10} />
-                                    Export Data
+                                    {showExportOptions ? 'Confirm Export' : 'Export Data'}
                                 </button>
                                 <button
                                     onClick={handleImportData}
                                     className="flex-1 px-2.5 py-1.5 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] hover:bg-[rgba(0,0,0,0.06)] dark:hover:bg-[#222222] text-[#666666] dark:text-[#a0a0a0] rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5"
                                 >
                                     <Upload size={10} />
-                                    Import Data
+                                    {showImportOptions ? 'Select File' : 'Import Data'}
                                 </button>
                             </div>
+                            
+                            {/* Export Options */}
+                            {showExportOptions && (
+                                <div className="bg-[rgba(0,0,0,0.03)] dark:bg-[#1a1a1a] border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] rounded-lg p-3 space-y-2">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="text-xs font-bold text-[#1a1a1a] dark:text-white">Select Data to Export</span>
+                                        <div className="flex gap-1">
+                                            <button onClick={selectAllExport} className="text-[10px] text-[#4485d1] hover:underline">All</button>
+                                            <span className="text-[10px] text-[#666666] dark:text-[#a0a0a0]">|</span>
+                                            <button onClick={deselectAllExport} className="text-[10px] text-[#4485d1] hover:underline">None</button>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {[
+                                            { key: 'chats', label: 'Chats' },
+                                            { key: 'notes', label: 'Notes' },
+                                            { key: 'todos', label: 'Todos' },
+                                            { key: 'reminders', label: 'Reminders' },
+                                            { key: 'mindMaps', label: 'Mind Maps' },
+                                            { key: 'snapshots', label: 'Snapshots' },
+                                            { key: 'sources', label: 'Web Sources' },
+                                            { key: 'processedFiles', label: 'Files & Embeddings' },
+                                            { key: 'userProfile', label: 'User Profile' },
+                                            { key: 'userFolders', label: 'Folders' },
+                                            { key: 'settings', label: 'Settings' },
+                                            { key: 'activityLogs', label: 'Activity Logs' }
+                                        ].map(({ key, label }) => (
+                                            <button
+                                                key={key}
+                                                onClick={() => toggleExportOption(key as keyof ExportOptions)}
+                                                className="flex items-center gap-2 px-2 py-1.5 bg-white dark:bg-[#2a2a2a] hover:bg-[rgba(0,0,0,0.02)] dark:hover:bg-[#222222] rounded text-left transition-colors"
+                                            >
+                                                {exportOptions[key as keyof ExportOptions] ? 
+                                                    <CheckSquare size={14} className="text-[#4485d1] flex-shrink-0" /> : 
+                                                    <Square size={14} className="text-[#cccccc] dark:text-[#666666] flex-shrink-0" />
+                                                }
+                                                <span className="text-xs text-[#1a1a1a] dark:text-white">{label}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <button
+                                        onClick={() => setShowExportOptions(false)}
+                                        className="w-full px-2 py-1 text-[10px] text-[#666666] dark:text-[#a0a0a0] hover:text-[#1a1a1a] dark:hover:text-white transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            )}
+                            
+                            {/* Import Options */}
+                            {showImportOptions && (
+                                <div className="bg-[rgba(0,0,0,0.03)] dark:bg-[#1a1a1a] border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] rounded-lg p-3 space-y-2">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="text-xs font-bold text-[#1a1a1a] dark:text-white">Select Data to Import</span>
+                                        <div className="flex gap-1">
+                                            <button onClick={selectAllImport} className="text-[10px] text-[#4485d1] hover:underline">All</button>
+                                            <span className="text-[10px] text-[#666666] dark:text-[#a0a0a0]">|</span>
+                                            <button onClick={deselectAllImport} className="text-[10px] text-[#4485d1] hover:underline">None</button>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {[
+                                            { key: 'chats', label: 'Chats' },
+                                            { key: 'notes', label: 'Notes' },
+                                            { key: 'todos', label: 'Todos' },
+                                            { key: 'reminders', label: 'Reminders' },
+                                            { key: 'mindMaps', label: 'Mind Maps' },
+                                            { key: 'snapshots', label: 'Snapshots' },
+                                            { key: 'sources', label: 'Web Sources' },
+                                            { key: 'processedFiles', label: 'Files & Embeddings' },
+                                            { key: 'userProfile', label: 'User Profile' },
+                                            { key: 'userFolders', label: 'Folders' },
+                                            { key: 'settings', label: 'Settings' }
+                                        ].map(({ key, label }) => (
+                                            <button
+                                                key={key}
+                                                onClick={() => toggleImportOption(key as keyof ExportOptions)}
+                                                className="flex items-center gap-2 px-2 py-1.5 bg-white dark:bg-[#2a2a2a] hover:bg-[rgba(0,0,0,0.02)] dark:hover:bg-[#222222] rounded text-left transition-colors"
+                                            >
+                                                {importOptions[key as keyof ExportOptions] ? 
+                                                    <CheckSquare size={14} className="text-[#4485d1] flex-shrink-0" /> : 
+                                                    <Square size={14} className="text-[#cccccc] dark:text-[#666666] flex-shrink-0" />
+                                                }
+                                                <span className="text-xs text-[#1a1a1a] dark:text-white">{label}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <div className="flex gap-2 pt-2 border-t border-[rgba(0,0,0,0.08)] dark:border-[rgba(255,255,255,0.08)]">
+                                        <button
+                                            onClick={() => setImportMode('merge')}
+                                            className={`flex-1 px-2 py-1.5 rounded text-xs font-medium transition-colors ${
+                                                importMode === 'merge' 
+                                                    ? 'bg-[#4485d1] text-white' 
+                                                    : 'bg-white dark:bg-[#2a2a2a] text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.02)] dark:hover:bg-[#222222]'
+                                            }`}
+                                        >
+                                            Merge
+                                        </button>
+                                        <button
+                                            onClick={() => setImportMode('replace')}
+                                            className={`flex-1 px-2 py-1.5 rounded text-xs font-medium transition-colors ${
+                                                importMode === 'replace' 
+                                                    ? 'bg-[#4485d1] text-white' 
+                                                    : 'bg-white dark:bg-[#2a2a2a] text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.02)] dark:hover:bg-[#222222]'
+                                            }`}
+                                        >
+                                            Replace
+                                        </button>
+                                    </div>
+                                    <button
+                                        onClick={() => setShowImportOptions(false)}
+                                        className="w-full px-2 py-1 text-[10px] text-[#666666] dark:text-[#a0a0a0] hover:text-[#1a1a1a] dark:hover:text-white transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            )}
                             <button
                                 onClick={handleClearAppData}
                                 className="w-full px-2.5 py-1.5 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5"

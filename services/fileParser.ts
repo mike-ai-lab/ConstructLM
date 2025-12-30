@@ -9,7 +9,7 @@ const MAX_PDF_PAGES = 200;
 
 export const generateId = () => Math.random().toString(36).substr(2, 9);
 
-export const parseFile = async (file: File): Promise<ProcessedFile> => {
+export const parseFile = async (file: File, forceUpload: boolean = false): Promise<ProcessedFile> => {
   const fileName = file.name.toLowerCase();
   let fileType: ProcessedFile['type'] = 'other';
   
@@ -32,9 +32,14 @@ export const parseFile = async (file: File): Promise<ProcessedFile> => {
   
   // Check if file already processed
   const existing = await permanentStorage.getFileByHash(contentHash);
-  if (existing) {
+  if (existing && !forceUpload) {
     console.log(`✅ File "${file.name}" already processed (hash match) - reusing`);
     return { ...existing, fileHandle: file, status: 'ready' };
+  }
+  
+  if (existing && forceUpload) {
+    console.log(`🔄 File "${file.name}" already exists but force upload enabled - reprocessing`);
+    await permanentStorage.deleteFile(existing.id);
   }
 
   if (fileName.endsWith('.pdf')) {

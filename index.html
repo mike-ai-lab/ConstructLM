@@ -45,6 +45,17 @@
         originalWarn.apply(console, args);
       };
       
+      // Debug: Log when PDF.js loads
+      window.addEventListener('load', () => {
+        setTimeout(() => {
+          if (window.pdfjsLib) {
+            console.log('✅ PDF.js loaded successfully:', window.pdfjsLib.version);
+          } else {
+            console.error('❌ PDF.js failed to load');
+          }
+        }, 1000);
+      });
+      
       // Create a global promise that resolves when the PDF worker is ready
       window.pdfWorkerReady = new Promise((resolve, reject) => {
         let initialized = false;

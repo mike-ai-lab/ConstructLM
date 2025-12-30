@@ -16,9 +16,15 @@ interface TabbedWebViewerProps {
 }
 
 const TabbedWebViewer: React.FC<TabbedWebViewerProps> = ({ initialUrl, onClose, onNewTabRequest }) => {
-  const [tabs, setTabs] = useState<WebTab[]>([
-    { id: Date.now().toString(), url: initialUrl, title: new URL(initialUrl).hostname, isLoading: true }
-  ]);
+  const [tabs, setTabs] = useState<WebTab[]>(() => {
+    // Ensure initial URL has protocol
+    let validUrl = initialUrl;
+    if (!initialUrl.startsWith('http://') && !initialUrl.startsWith('https://')) {
+      validUrl = 'https://' + initialUrl;
+    }
+    console.log('🚀 TabbedWebViewer initialized with URL:', validUrl);
+    return [{ id: Date.now().toString(), url: validUrl, title: new URL(validUrl).hostname, isLoading: true }];
+  });
   const [activeTabId, setActiveTabId] = useState(tabs[0].id);
   const [tabsScrollPosition, setTabsScrollPosition] = useState(0);
   const tabsContainerRef = useRef<HTMLDivElement>(null);
@@ -50,10 +56,16 @@ const TabbedWebViewer: React.FC<TabbedWebViewerProps> = ({ initialUrl, onClose, 
   };
 
   const handleNewTab = (url: string) => {
+    // Ensure URL has protocol
+    let validUrl = url;
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      validUrl = 'https://' + url;
+    }
+    
     const newTab: WebTab = {
       id: Date.now().toString(),
-      url,
-      title: new URL(url).hostname,
+      url: validUrl,
+      title: new URL(validUrl).hostname,
       isLoading: true
     };
     setTabs([...tabs, newTab]);
@@ -96,7 +108,8 @@ const TabbedWebViewer: React.FC<TabbedWebViewerProps> = ({ initialUrl, onClose, 
   };
 
   const handleTabLoad = (tabId: string) => {
-    console.log(`✅ Tab loaded: ${tabId}`);
+    const tab = tabs.find(t => t.id === tabId);
+    console.log(`✅ Tab loaded: ${tabId}, URL: ${tab?.url}`);
     
     const iframe = iframeRefs.current[tabId];
     
@@ -334,12 +347,18 @@ const TabbedWebViewer: React.FC<TabbedWebViewerProps> = ({ initialUrl, onClose, 
             ) : (
               <iframe
                 ref={el => { 
-                  if (el && !iframeRefs.current[tab.id]) {
-                    iframeRefs.current[tab.id] = el;
+                  iframeRefs.current[tab.id] = el;
+                  if (el) {
                     console.log(`🔗 Iframe mounted for tab: ${tab.id}, URL: ${tab.url}`);
+                    // Force load if src is not set
+                    if (!el.src || el.src === 'about:blank') {
+                      console.log('⚠️ Forcing iframe src:', tab.url);
+                      el.src = tab.url;
+                    }
                   }
                 }}
                 src={tab.url}
+                key={tab.url}
                 style={{ 
                   width: '100%', 
                   height: '100%', 

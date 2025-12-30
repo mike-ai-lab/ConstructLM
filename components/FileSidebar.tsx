@@ -9,7 +9,7 @@ import LogsModal from './LogsModal';
 
 interface FileSidebarProps {
   files: ProcessedFile[];
-  onUpload: (files: FileList) => void;
+  onUpload: (files: FileList, forceReupload?: boolean) => void;
   onRemove: (id: string) => void;
   isProcessing: boolean;
   onGenerateMindMap?: (fileId: string) => void;
@@ -289,16 +289,24 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      onUpload(e.target.files);
+      const forceReupload = (e.target as any).forceReupload || false;
+      onUpload(e.target.files, forceReupload);
     }
-    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+      (fileInputRef.current as any).forceReupload = false;
+    }
   };
 
   const handleFolderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       if (e.target.files && e.target.files.length > 0) {
-          onUpload(e.target.files);
+          const forceReupload = (e.target as any).forceReupload || false;
+          onUpload(e.target.files, forceReupload);
       }
-      if (folderInputRef.current) folderInputRef.current.value = '';
+      if (folderInputRef.current) {
+        folderInputRef.current.value = '';
+        (folderInputRef.current as any).forceReupload = false;
+      }
   }
 
   const toggleFolder = (path: string) => {
@@ -543,7 +551,8 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
         onDragStateChange(false);
         const droppedFiles = e.dataTransfer.files;
         if (droppedFiles.length > 0) {
-          onUpload(droppedFiles);
+          const forceReupload = e.ctrlKey || e.metaKey;
+          onUpload(droppedFiles, forceReupload);
         }
       }}
     >
@@ -622,18 +631,28 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
                     <FolderPlus size={14} />
                   </button>
                   <button
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={(e) => {
+                      if (fileInputRef.current) {
+                        (fileInputRef.current as any).forceReupload = e.ctrlKey || e.metaKey;
+                        fileInputRef.current.click();
+                      }
+                    }}
                     disabled={isProcessing}
                     className="p-1.5 text-[#4485d1] hover:bg-[rgba(68,133,209,0.1)] rounded-lg transition-colors disabled:opacity-50"
-                    title="Add File"
+                    title={"Add File (Ctrl+Click to force re-upload)"}
                   >
                     <Plus size={14} />
                   </button>
                   <button
-                    onClick={() => folderInputRef.current?.click()}
+                    onClick={(e) => {
+                      if (folderInputRef.current) {
+                        (folderInputRef.current as any).forceReupload = e.ctrlKey || e.metaKey;
+                        folderInputRef.current.click();
+                      }
+                    }}
                     disabled={isProcessing}
                     className="p-1.5 text-[#666666] dark:text-[#a0a0a0] hover:bg-[#eaeaea] dark:hover:bg-[#2a2a2a] rounded-lg transition-colors disabled:opacity-50"
-                    title="Add Folder"
+                    title={"Add Folder (Ctrl+Click to force re-upload)"}
                   >
                     <FolderOpen size={14} />
                   </button>

@@ -27,7 +27,25 @@ const CitationChip: React.FC<CitationChipProps> = ({ index, fileName, location, 
   const [isInTable, setIsInTable] = useState(false);
   const citationId = useRef(`${fileName}-${index}-${Date.now()}`).current;
   const isUrl = isUrlCitation(fileName);
-  const fileExists = isUrl ? true : files.find(f => f.name === fileName);
+  
+  // More robust file matching: case-insensitive and handles partial matches
+  const fileExists = isUrl ? true : files.find(f => {
+    const normalizedFileName = fileName.toLowerCase().trim();
+    const normalizedFilename = f.name.toLowerCase().trim();
+    
+    // Exact match
+    if (normalizedFilename === normalizedFileName) return true;
+    
+    // Match without extension
+    const fileNameWithoutExt = normalizedFileName.replace(/\.[^.]+$/, '');
+    const fNameWithoutExt = normalizedFilename.replace(/\.[^.]+$/, '');
+    if (fileNameWithoutExt === fNameWithoutExt) return true;
+    
+    // Partial match (citation might have truncated name)
+    if (normalizedFilename.includes(normalizedFileName) || normalizedFileName.includes(normalizedFilename)) return true;
+    
+    return false;
+  });
 
   // Register close function when opened
   useEffect(() => {
@@ -109,12 +127,31 @@ const CitationChip: React.FC<CitationChipProps> = ({ index, fileName, location, 
       return;
     }
     if (!fileExists) return;
+    
+    // Find the actual file using the same robust matching
+    const actualFile = files.find(f => {
+      const normalizedFileName = fileName.toLowerCase().trim();
+      const normalizedFilename = f.name.toLowerCase().trim();
+      
+      if (normalizedFilename === normalizedFileName) return true;
+      
+      const fileNameWithoutExt = normalizedFileName.replace(/\.[^.]+$/, '');
+      const fNameWithoutExt = normalizedFilename.replace(/\.[^.]+$/, '');
+      if (fileNameWithoutExt === fNameWithoutExt) return true;
+      
+      if (normalizedFilename.includes(normalizedFileName) || normalizedFileName.includes(normalizedFilename)) return true;
+      
+      return false;
+    });
+    
+    if (!actualFile) return;
+    
     let page = 1;
     if (location) {
       const pageMatch = location.match(/Page\s*(\d+)/i);
       if (pageMatch) page = parseInt(pageMatch[1], 10);
     }
-    onViewDocument(fileName, page, quote, location);
+    onViewDocument(actualFile.name, page, quote, location);
     setIsOpen(false);
   };
 

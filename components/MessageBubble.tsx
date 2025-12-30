@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
 import { Message, ProcessedFile, Highlight } from '../types';
-import { Sparkles, User, Volume2, Loader2, StopCircle, BookmarkPlus, FileText, ExternalLink, Trash2, RotateCcw, ChevronLeft, ChevronRight, Highlighter, Undo2, Redo2 } from 'lucide-react';
+import { Sparkles, User, Volume2, Loader2, StopCircle, BookmarkPlus, FileText, ExternalLink, Trash2, RotateCcw, ChevronLeft, ChevronRight, Highlighter, Undo2, Redo2, FileDown } from 'lucide-react';
 import CitationRenderer from './CitationRenderer';
 import { generateSpeech } from '../services/geminiService';
 import { decodeAudioData } from '../services/audioUtils';
@@ -92,6 +92,7 @@ interface MessageBubbleProps {
   onOpenWebViewer?: (url: string) => void;
   onOpenWebViewerNewTab?: (url: string) => void;
   onEnableDrawing?: (x: number, y: number) => void;
+  onCreateSummaryDoc?: (content: string, modelId: string) => void;
 }
 
 const HIGHLIGHT_COLORS = [
@@ -118,7 +119,8 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   onSwitchOutput,
   onOpenWebViewer,
   onOpenWebViewerNewTab,
-  onEnableDrawing
+  onEnableDrawing,
+  onCreateSummaryDoc
 }) => {
   const isUser = message.role === 'user';
   const [isPlaying, setIsPlaying] = useState(false);
@@ -490,6 +492,15 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
                        title="Regenerate"
                      >
                        <RotateCcw size={12} />
+                     </button>
+                   )}
+                   {onCreateSummaryDoc && (
+                     <button
+                       onClick={() => onCreateSummaryDoc(message.content, message.modelId || 'gemini-2.0-flash-exp')}
+                       className="opacity-0 group-hover:opacity-100 p-1 hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] rounded text-[#a0a0a0] hover:text-green-600 transition-all"
+                       title="Create Summary Document"
+                     >
+                       <FileDown size={12} />
                      </button>
                    )}
                  </>

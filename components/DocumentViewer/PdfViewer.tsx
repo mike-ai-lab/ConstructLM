@@ -33,8 +33,13 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ file, initialPage, highlightQuote
   useEffect(() => {
     let isMounted = true;
     const loadPdf = async () => {
-      if (!file.fileHandle || !window.pdfjsLib) {
-        console.warn('[PdfViewer] Missing fileHandle or pdfjsLib');
+      if (!window.pdfjsLib) {
+        console.warn('[PdfViewer] PDF.js library not loaded');
+        setLoading(false);
+        return;
+      }
+      if (!file.fileHandle) {
+        console.warn('[PdfViewer] Missing fileHandle - file needs to be re-uploaded');
         setLoading(false);
         return;
       }
@@ -236,6 +241,19 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ file, initialPage, highlightQuote
           <div className="flex flex-col items-center gap-3">
             <div className="w-8 h-8 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
             <span className="text-xs font-medium text-gray-500">Rendering...</span>
+          </div>
+        </div>
+      )}
+      {!loading && !pdfDocument && (
+        <div className="absolute inset-0 flex items-center justify-center z-30">
+          <div className="flex flex-col items-center gap-3 max-w-md text-center p-6">
+            <div className="text-4xl">📄</div>
+            <div className="text-sm font-medium text-gray-700 dark:text-gray-300">PDF Preview Unavailable</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">
+              {!window.pdfjsLib ? 'PDF.js library failed to load. Please refresh the page.' : 
+               !file.fileHandle ? 'This PDF needs to be re-uploaded to enable preview. The text content is still available for chat.' :
+               'Unable to load PDF. Please try re-uploading the file.'}
+            </div>
           </div>
         </div>
       )}

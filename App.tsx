@@ -69,6 +69,7 @@ const App: React.FC = () => {
   const [showDrawingToolbar, setShowDrawingToolbar] = React.useState(false);
   const [drawingToolbarPos, setDrawingToolbarPos] = React.useState({ x: 0, y: 0 });
   const [githubRepoUrl, setGithubRepoUrl] = React.useState('');
+  const [notebookControls, setNotebookControls] = React.useState<React.ReactNode>(null);
 
   // REMOVED: Pipeline tracker moved to Help Documentation
   // const [pipelineSteps, setPipelineSteps] = React.useState<any[]>([]);
@@ -323,6 +324,39 @@ const App: React.FC = () => {
     localStorage.setItem('notes', JSON.stringify(updated));
   };
 
+  const handleImportNotes = (importedNotes: Note[]) => {
+    const updated = [...importedNotes, ...notes];
+    setNotes(updated);
+    localStorage.setItem('notes', JSON.stringify(updated));
+    setNoteCounter(Math.max(noteCounter, ...importedNotes.map(n => n.noteNumber)) + 1);
+    localStorage.setItem('noteCounter', (Math.max(noteCounter, ...importedNotes.map(n => n.noteNumber)) + 1).toString());
+  };
+
+  const handleCreateSummaryDoc = async (content: string, modelId: string) => {
+    if (!confirm('Create a clean summary document from this message?\n\nThis will:\n• Remove all citation markers\n• Reformat content using AI\n• Add as a new source file\n\nContinue?')) return;
+    
+    try {
+      const { summaryGeneratorService } = await import('./services/summaryGeneratorService');
+      const summary = await summaryGeneratorService.generateSummaryDocument(content, modelId, { title: 'AI Summary', includeMetadata: true });
+      const validation = summaryGeneratorService.validateForRAG(summary);
+      
+      if (!validation.valid) {
+        alert('Summary validation failed:\n' + validation.issues.join('\n'));
+        return;
+      }
+      
+      const fileData = summaryGeneratorService.createSummaryFile(summary, `Summary-${Date.now()}`);
+      const blob = new Blob([summary], { type: 'text/markdown' });
+      const file = new File([blob], fileData.name!, { type: 'text/markdown' });
+      
+      await fileHandlers.handleFileUpload([file]);
+      alert('Summary document created and added as source!');
+    } catch (error) {
+      console.error('Failed to create summary:', error);
+      alert('Failed to create summary document');
+    }
+  };
+
   const handleNavigateToMessage = (chatId: string, messageId: string) => {
     if (chatId !== chatState.currentChatId) {
       chatHandlers.handleSelectChat(chatId);
@@ -499,25 +533,25 @@ const App: React.FC = () => {
           }
         }
       } else {
-        // Regular URL handling - try multiple CORS proxies
+        // Regular URL handling - try multiple CORS proxies with better fallback
         let response;
         let data;
         
         try {
-          // Try allorigins first
-          response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
-          if (response.ok) {
-            data = await response.json();
-          } else {
-            throw new Error('allorigins failed');
-          }
+          // Try corsproxy.io first (more reliable)
+          response = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`);
+          if (!response.ok) throw new Error('corsproxy failed');
+          const html = await response.text();
+          data = { contents: html };
         } catch (e) {
-          // Fallback to corsproxy
           try {
-            response = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`);
-            if (!response.ok) throw new Error('corsproxy failed');
-            const html = await response.text();
-            data = { contents: html };
+            // Fallback to allorigins
+            response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+            if (response.ok) {
+              data = await response.json();
+            } else {
+              throw new Error('allorigins failed');
+            }
           } catch (e2) {
             // Last resort: try direct fetch (may fail due to CORS)
             response = await fetch(url);
@@ -1041,6 +1075,7 @@ const App: React.FC = () => {
           }}
           onOpenLogs={() => setIsLogsOpen(true)}
           onOpenGitHub={() => handleOpenGitHubTab()}
+          notebookControls={notebookControls}
         />
         )}
 
@@ -1099,6 +1134,7 @@ const App: React.FC = () => {
                     }
                   }}
                   onEnableDrawing={enableDrawingMode}
+                  onCreateSummaryDoc={msg.role === 'model' && msg.id !== 'intro' ? handleCreateSummaryDoc : undefined}
                 />
               ))}
               <div ref={layoutState.messagesEndRef} className="snapshot-ignore" />
@@ -1133,6 +1169,8 @@ const App: React.FC = () => {
               files={fileState.files} 
               onViewDocument={fileHandlers.handleViewDocument} 
               chats={chatState.chats}
+              onRenderControls={setNotebookControls}
+              onImportNotes={handleImportNotes}
             />
           </div>
         )}

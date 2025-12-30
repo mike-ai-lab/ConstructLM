@@ -1,7 +1,7 @@
 // Notebook.tsx
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { X, BookMarked, Trash2, Star, Search, Tag, Download, Copy, Edit2, Check, ExternalLink, FileText, Grid, List, CheckSquare, Square, Save, ArrowUpDown } from 'lucide-react';
+import { X, BookMarked, Trash2, Star, Search, Tag, Download, Copy, Edit2, Check, ExternalLink, FileText, Grid, List, CheckSquare, Square, Save, ArrowUpDown, Folder, ChevronRight, Maximize2, Minimize2, Bold, Italic, Type, Menu } from 'lucide-react';
 import { Note } from '../types';
 import CitationRenderer from './CitationRenderer';
 import { ProcessedFile } from '../types';
@@ -14,9 +14,11 @@ interface NotebookProps {
   files: ProcessedFile[];
   onViewDocument: (fileName: string, page?: number, quote?: string, location?: string) => void;
   chats?: any[];
+  onRenderControls?: (controls: React.ReactNode) => void;
+  onImportNotes?: (notes: Note[]) => void;
 }
 
-const Notebook: React.FC<NotebookProps> = ({ notes, onDeleteNote, onUpdateNote, onNavigateToMessage, files, onViewDocument, chats = [] }) => {
+const Notebook: React.FC<NotebookProps> = ({ notes, onDeleteNote, onUpdateNote, onNavigateToMessage, files, onViewDocument, chats = [], onRenderControls, onImportNotes }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -27,6 +29,7 @@ const Notebook: React.FC<NotebookProps> = ({ notes, onDeleteNote, onUpdateNote, 
   const [editContent, setEditContent] = useState('');
   const [sortBy, setSortBy] = useState<'date' | 'modified' | 'model'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const categories = ['all', ...Array.from(new Set(notes.map(n => n.category).filter(Boolean)))];
   
@@ -104,6 +107,36 @@ const Notebook: React.FC<NotebookProps> = ({ notes, onDeleteNote, onUpdateNote, 
     setSelectedNotes(new Set());
   };
 
+  const handleImportNotes = () => {
+    if (!onImportNotes) return;
+    
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.md,.txt,.json';
+    input.multiple = true;
+    input.onchange = async (e: any) => {
+      const files = Array.from(e.target.files || []) as File[];
+      const importedNotes: Note[] = [];
+      
+      for (const file of files) {
+        const content = await file.text();
+        const newNote: Note = {
+          id: Date.now().toString() + Math.random(),
+          noteNumber: notes.length + importedNotes.length + 1,
+          content,
+          timestamp: Date.now(),
+          title: file.name.replace(/\.(md|txt|json)$/, '')
+        };
+        importedNotes.push(newNote);
+      }
+      
+      if (importedNotes.length > 0) {
+        onImportNotes(importedNotes);
+      }
+    };
+    input.click();
+  };
+
   const toggleSelectNote = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     const newSelected = new Set(selectedNotes);
@@ -140,95 +173,83 @@ const Notebook: React.FC<NotebookProps> = ({ notes, onDeleteNote, onUpdateNote, 
     }
   };
 
+  const insertFormat = (startTag: string, endTag: string = '') => {
+    const textarea = textareaRef.current;
+    if (!textarea || !openNoteId) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = editContent;
+    const before = text.substring(0, start);
+    const selection = text.substring(start, end);
+    const after = text.substring(end);
+
+    const newContent = `${before}${startTag}${selection}${endTag}${after}`;
+    setEditContent(newContent);
+    
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + startTag.length, end + startTag.length);
+    }, 0);
+  };
+
   const openedNote = openNoteId ? notes.find(n => n.id === openNoteId) : null;
+  const wordCount = editContent.split(/\s+/).filter(w => w.length > 0).length;
 
-  if (openedNote) {
-    return createPortal(
-      <div className="fixed inset-0 bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)]" style={{ transform: 'scale(0.8)', top: '23.6727px', margin: '11.8409px auto' }}>
-        <div className="flex items-center justify-between p-4 border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)]">
-          <div className="flex items-center gap-3 flex-1">
-            <span className="text-xs px-2 py-1 bg-[#25b5cd]/20 dark:bg-[#25b5cd]/10 text-[#25b5cd] dark:text-[#5bd8bb] rounded font-mono font-semibold">
-              Note #{openedNote.noteNumber}
-            </span>
-            <input
-              type="text"
-              value={editTitle}
-              onChange={(e) => setEditTitle(e.target.value)}
-              placeholder="Add title..."
-              className="flex-1 text-lg font-semibold text-[#1a1a1a] dark:text-white bg-transparent border-none focus:outline-none"
-            />
-          </div>
-          <div className="flex gap-2">
-            <button onClick={saveNote} className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 flex items-center gap-1">
-              <Save size={14} />
-              Save
+  // Render header controls
+  React.useEffect(() => {
+    if (onRenderControls) {
+      const controls = {
+        element: (
+          <>
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-[#2a2a2a] rounded-lg p-1">
+            <button
+              onClick={() => setViewMode('list')}
+              className={`p-1.5 rounded transition-colors ${viewMode === 'list' ? 'bg-white dark:bg-[#1a1a1a] text-blue-600 shadow-sm' : 'text-[#666666] dark:text-[#a0a0a0]'}`}
+              title="List View"
+            >
+              <List size={16} />
             </button>
-            <button onClick={() => setOpenNoteId(null)} className="p-2 hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[#2a2a2a] rounded-lg">
-              <X size={20} className="text-[#666666] dark:text-[#a0a0a0]" />
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`p-1.5 rounded transition-colors ${viewMode === 'grid' ? 'bg-white dark:bg-[#1a1a1a] text-blue-600 shadow-sm' : 'text-[#666666] dark:text-[#a0a0a0]'}`}
+              title="Grid View"
+            >
+              <Grid size={16} />
+            </button>
+            <button
+              onClick={() => setViewMode('details')}
+              className={`p-1.5 rounded transition-colors ${viewMode === 'details' ? 'bg-white dark:bg-[#1a1a1a] text-blue-600 shadow-sm' : 'text-[#666666] dark:text-[#a0a0a0]'}`}
+              title="Details View"
+            >
+              <FileText size={16} />
             </button>
           </div>
-        </div>
 
-        <textarea
-          value={editContent}
-          onChange={(e) => setEditContent(e.target.value)}
-          className="flex-1 w-full bg-transparent text-[#1a1a1a] dark:text-white resize-none focus:outline-none text-sm leading-7 p-6"
-          placeholder="Note content..."
-        />
-
-        <div className="p-4 border-t border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] text-xs text-[#666666] dark:text-[#a0a0a0]">
-          {openedNote.modelId || 'AI'} • {new Date(openedNote.timestamp).toLocaleString()}
-        </div>
-      </div>,
-      document.body
-    );
-  }
-
-  return (
-    <div className="flex flex-col h-full bg-white dark:bg-[#1a1a1a]">
-      <div className="bg-white dark:bg-[#1a1a1a] border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] p-3">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <BookMarked size={18} className="text-blue-600" />
-            <h2 className="text-base font-semibold text-[#1a1a1a] dark:text-white">Notebook</h2>
-            <span className="text-xs text-[#666666] dark:text-[#a0a0a0]">({filteredNotes.length})</span>
-          </div>
-          <div className="flex items-center gap-2">
-            {selectedNotes.size > 0 && (
-              <>
-                <button onClick={exportSelectedNotes} className="p-1.5 hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[#2a2a2a] rounded text-blue-600" title="Export Selected">
-                  <Download size={14} />
-                </button>
-                <span className="text-xs text-[#666666] dark:text-[#a0a0a0]">{selectedNotes.size}</span>
-                <button onClick={deselectAll} className="text-xs text-[#666666] dark:text-[#a0a0a0] hover:text-[#1a1a1a] dark:hover:text-white">Clear</button>
-              </>
-            )}
-            <button onClick={viewMode === 'list' ? () => setViewMode('grid') : viewMode === 'grid' ? () => setViewMode('details') : () => setViewMode('list')} className="p-1.5 hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[#2a2a2a] rounded text-[#666666] dark:text-[#a0a0a0]" title="Toggle View">
-              {viewMode === 'list' ? <Grid size={14} /> : viewMode === 'grid' ? <List size={14} /> : <Grid size={14} />}
-            </button>
-            {selectedNotes.size === 0 && (
-              <button onClick={exportNotes} className="p-1.5 hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[#2a2a2a] rounded text-[#666666] dark:text-[#a0a0a0]" title="Export All">
+          {selectedNotes.size > 0 && (
+            <>
+              <button onClick={exportSelectedNotes} className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 flex items-center gap-1 transition-colors" title="Export Selected">
                 <Download size={14} />
+                Export ({selectedNotes.size})
               </button>
-            )}
-          </div>
-        </div>
-
-        <div className="flex gap-2 items-center">
-          <div className="relative flex-1">
-            <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-[#666666] dark:text-[#a0a0a0]" />
-            <input
-              type="text"
-              placeholder="Search..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] rounded text-xs text-[#1a1a1a] dark:text-white border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] focus:outline-none focus:border-blue-500"
-            />
-          </div>
+              <button onClick={deselectAll} className="text-sm text-[#666666] dark:text-[#a0a0a0] hover:text-[#1a1a1a] dark:hover:text-white px-2">Clear</button>
+            </>
+          )}
+          {selectedNotes.size === 0 && (
+            <>
+              <button onClick={handleImportNotes} className="p-2 hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[#2a2a2a] rounded-lg text-[#666666] dark:text-[#a0a0a0] transition-colors" title="Import Notes">
+                <FileText size={18} />
+              </button>
+              <button onClick={exportNotes} className="p-2 hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[#2a2a2a] rounded-lg text-[#666666] dark:text-[#a0a0a0] transition-colors" title="Export All">
+                <Download size={18} />
+              </button>
+            </>
+          )}
+          
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as any)}
-            className="px-2 py-1.5 rounded text-xs bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] text-[#666666] dark:text-[#a0a0a0] border-none focus:outline-none"
+            className="px-3 py-1.5 rounded-lg text-sm bg-slate-100 dark:bg-[#2a2a2a] text-[#666666] dark:text-[#a0a0a0] border-none focus:outline-none cursor-pointer"
           >
             <option value="date">Created</option>
             <option value="modified">Modified</option>
@@ -236,43 +257,205 @@ const Notebook: React.FC<NotebookProps> = ({ notes, onDeleteNote, onUpdateNote, 
           </select>
           <button
             onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-            className="p-1.5 rounded hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[#2a2a2a]"
+            className="p-2 rounded-lg hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[#2a2a2a] transition-colors"
             title={sortOrder === 'asc' ? 'Ascending' : 'Descending'}
           >
-            <ArrowUpDown size={14} className={sortOrder === 'asc' ? 'rotate-180' : ''} />
+            <ArrowUpDown size={16} className={`transition-transform ${sortOrder === 'asc' ? 'rotate-180' : ''}`} />
           </button>
-          {viewMode === 'grid' && filteredNotes.length > 0 && (
-            <button
-              onClick={selectedNotes.size === filteredNotes.length ? deselectAll : selectAll}
-              className="px-2 py-1.5 rounded text-xs font-medium bg-blue-600 text-white hover:bg-blue-700"
-            >
-              {selectedNotes.size === filteredNotes.length ? 'Deselect' : 'Select All'}
-            </button>
-          )}
-          {categories.length > 1 && categories.map(cat => (
-            <button
-              key={cat}
-              onClick={() => setFilterCategory(cat)}
-              className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                filterCategory === cat
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.06)] dark:hover:bg-[#222222]'
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
+          </>
+        )
+      };
+      onRenderControls(controls as any);
+    }
+  }, [viewMode, selectedNotes.size, sortBy, sortOrder, onRenderControls]);
+
+  if (openedNote) {
+    return createPortal(
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[100000] p-4">
+        <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)]">
+          <div className="flex items-center justify-between p-4 border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)]">
+            <div className="flex items-center gap-3 flex-1">
+              <span className="text-xs px-2 py-1 bg-[#25b5cd]/20 dark:bg-[#25b5cd]/10 text-[#25b5cd] dark:text-[#5bd8bb] rounded font-mono font-semibold">
+                Note #{openedNote.noteNumber}
+              </span>
+              <input
+                type="text"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                placeholder="Untitled Note"
+                className="flex-1 text-2xl font-bold text-[#1a1a1a] dark:text-white bg-transparent border-none focus:outline-none placeholder-slate-300"
+              />
+            </div>
+            <div className="flex gap-2">
+              <span className="text-xs text-[#666666] dark:text-[#a0a0a0] px-3 py-2">
+                {wordCount} words
+              </span>
+              <button onClick={saveNote} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 flex items-center gap-2 transition-colors">
+                <Save size={16} />
+                Save
+              </button>
+              <button onClick={() => setOpenNoteId(null)} className="p-2 hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[#2a2a2a] rounded-lg transition-colors">
+                <X size={20} className="text-[#666666] dark:text-[#a0a0a0]" />
+              </button>
+            </div>
+          </div>
+
+          <div className="px-6 py-3 border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] bg-[#fcfcfc] dark:bg-[#0f0f0f]">
+            <div className="flex items-center gap-2">
+              <button onClick={() => insertFormat('**', '**')} className="p-2 rounded-lg hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[#2a2a2a] text-[#666666] dark:text-[#a0a0a0] transition-colors" title="Bold">
+                <Bold size={16} />
+              </button>
+              <button onClick={() => insertFormat('_', '_')} className="p-2 rounded-lg hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[#2a2a2a] text-[#666666] dark:text-[#a0a0a0] transition-colors" title="Italic">
+                <Italic size={16} />
+              </button>
+              <div className="w-px h-4 bg-[rgba(0,0,0,0.15)] dark:bg-[rgba(255,255,255,0.05)] mx-1"></div>
+              <button onClick={() => insertFormat('- ')} className="p-2 rounded-lg hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[#2a2a2a] text-[#666666] dark:text-[#a0a0a0] transition-colors" title="List">
+                <List size={16} />
+              </button>
+              <button onClick={() => insertFormat('# ')} className="p-2 rounded-lg hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[#2a2a2a] text-[#666666] dark:text-[#a0a0a0] transition-colors" title="Heading">
+                <Type size={16} />
+              </button>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-6">
+            <div className="max-w-3xl mx-auto">
+              <div className="mb-6 flex items-center gap-4 text-xs text-[#666666] dark:text-[#a0a0a0] font-medium tracking-wide uppercase">
+                <span>{new Date(openedNote.timestamp).toLocaleString(undefined, { weekday: 'long', hour: 'numeric', minute: 'numeric' })}</span>
+                <span>•</span>
+                <span>{openedNote.category || 'Uncategorized'}</span>
+              </div>
+              <textarea
+                ref={textareaRef}
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                className="w-full min-h-[400px] bg-transparent text-[#1a1a1a] dark:text-white resize-none focus:outline-none text-lg leading-relaxed font-serif"
+                placeholder="Start typing your story..."
+                spellCheck="false"
+              />
+            </div>
+          </div>
+
+          <div className="p-4 border-t border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] text-xs text-[#666666] dark:text-[#a0a0a0] flex items-center justify-between">
+            <span>{openedNote.modelId || 'AI'} • {new Date(openedNote.timestamp).toLocaleDateString()}</span>
+            {openedNote.lastModified && (
+              <span>Last modified: {new Date(openedNote.lastModified).toLocaleString()}</span>
+            )}
+          </div>
+        </div>
+      </div>,
+      document.body
+    );
+  }
+
+  return (
+    <div className="flex h-full w-full relative box-border bg-white dark:bg-[#1a1a1a]">
+      {/* Sidebar */}
+      <div className="flex flex-col h-full w-80 flex-shrink-0">
+        {/* Tab Navigation */}
+        <div className="h-[65px] flex-shrink-0 flex bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] border-b border-[rgba(0,0,0,0.1)] dark:border-[rgba(255,255,255,0.05)]">
+          <div className="flex-1 h-full px-2 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 text-[#333333] dark:text-[#cccccc] border-b-2 border-[#4485d1]">
+            <BookMarked size={14} className="flex-shrink-0" />
+            <span className="truncate">Notes</span>
+          </div>
+        </div>
+
+        {/* Content Area */}
+        <div style={{ height: 'calc(100% - 65px)' }} className="flex flex-col min-h-0 box-border bg-white dark:bg-[#1a1a1a] border-r border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)]">
+          <div className="flex flex-col min-h-0 w-full relative box-border">
+            {/* Toolbar */}
+            <div className="px-4 py-2 flex-shrink-0 bg-transparent">
+              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                {categories.map(cat => (
+                  <button
+                    key={cat}
+                    onClick={() => setFilterCategory(cat)}
+                    className={`whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                      filterCategory === cat 
+                        ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800' 
+                        : 'bg-slate-50 dark:bg-[#2a2a2a] text-slate-500 dark:text-[#a0a0a0] border border-slate-200 dark:border-[rgba(255,255,255,0.05)] hover:bg-slate-100 dark:hover:bg-[#222222]'
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#666666] dark:text-[#a0a0a0]" size={16} />
+                <input 
+                  type="text" 
+                  placeholder="Search notes..." 
+                  className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-[#2a2a2a] border border-slate-200 dark:border-[rgba(255,255,255,0.05)] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/30 focus:border-blue-400 dark:focus:border-blue-600 transition-all placeholder-slate-400 dark:placeholder-[#666666]"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Scrollable List */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar min-h-0 px-2 py-2">
+              {filteredNotes.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-40 text-[#666666] dark:text-[#a0a0a0] text-sm">
+                  <Folder size={32} className="mb-2 opacity-50" />
+                  <span>No notes in {filterCategory}</span>
+                </div>
+              ) : (
+                <div className="space-y-0.5">
+                  {filteredNotes.map(note => (
+                    <div 
+                      key={note.id}
+                      onClick={() => openNote(note)}
+                      className={`group relative p-3 rounded-md cursor-pointer transition-all ${
+                        openNoteId === note.id 
+                          ? 'bg-blue-50 dark:bg-blue-900/20' 
+                          : 'hover:bg-[#eaeaea] dark:hover:bg-[#2a2a2a]'
+                      }`}
+                    >
+                      <div className="mb-1 pr-6">
+                        <h3 className={`font-semibold text-sm truncate ${openNoteId === note.id ? 'text-blue-900 dark:text-blue-300' : 'text-slate-700 dark:text-white'}`}>
+                          {note.title || 'Untitled Note'}
+                        </h3>
+                      </div>
+                      <p className="text-xs text-[#666666] dark:text-[#a0a0a0] line-clamp-2 font-medium leading-relaxed">
+                        {note.content || 'No content yet...'}
+                      </p>
+                      <div className="flex items-center justify-between mt-3">
+                        <span className="text-[10px] text-[#666666] dark:text-[#a0a0a0] font-medium bg-slate-100 dark:bg-[#222222] px-2 py-0.5 rounded-full">
+                          {note.category || 'Uncategorized'}
+                        </span>
+                        <span className="text-[10px] text-[#666666] dark:text-[#a0a0a0]">
+                          {new Date(note.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                        </span>
+                      </div>
+
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); onDeleteNote(note.id); }}
+                        className="absolute top-2 right-2 p-1 rounded text-slate-400 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4">
-          {filteredNotes.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-center py-12">
-              <BookMarked size={48} className="text-[#666666] dark:text-[#a0a0a0] mb-4 opacity-50" />
-              <p className="text-[#666666] dark:text-[#a0a0a0] text-lg">No notes found</p>
-            </div>
-          ) : viewMode === 'grid' ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+      {/* Main Content Area */}
+      <main className="flex-1 flex flex-col h-full bg-white dark:bg-[#1a1a1a] relative min-w-0">
+          <div className="p-6">
+            {filteredNotes.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-center py-12">
+                <div className="w-20 h-20 bg-white dark:bg-[#2a2a2a] rounded-2xl flex items-center justify-center mb-6 shadow-sm border border-slate-100 dark:border-[rgba(255,255,255,0.05)]">
+                  <BookMarked size={40} className="text-blue-200 dark:text-blue-800" />
+                </div>
+                <p className="text-xl font-medium text-slate-500 dark:text-[#a0a0a0]">Notebook</p>
+                <p className="text-sm mt-2 text-[#666666] dark:text-[#a0a0a0]">Select a note from the sidebar to begin.</p>
+              </div>
+            ) : viewMode === 'grid' ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
               {filteredNotes.map((note) => (
                 <div
                   key={note.id}
@@ -303,9 +486,9 @@ const Notebook: React.FC<NotebookProps> = ({ notes, onDeleteNote, onUpdateNote, 
                   </div>
                 </div>
               ))}
-            </div>
-          ) : viewMode === 'details' ? (
-            <div className="space-y-2">
+                </div>
+            ) : viewMode === 'details' ? (
+                <div className="space-y-2">
               <div className="grid grid-cols-6 gap-3 px-3 py-2 text-xs font-semibold text-[#666666] dark:text-[#a0a0a0] border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)]">
                 <div>ID</div>
                 <div className="col-span-2">Title</div>
@@ -344,9 +527,9 @@ const Notebook: React.FC<NotebookProps> = ({ notes, onDeleteNote, onUpdateNote, 
                   </div>
                 );
               })}
-            </div>
-          ) : (
-            <div className="space-y-3">
+                </div>
+            ) : (
+                <div className="space-y-3">
               {filteredNotes.map((note) => (
                 <div key={note.id} className="bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] rounded-xl p-4 border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] hover:border-blue-500 transition-colors group">
                   <div className="flex items-start justify-between mb-2">
@@ -478,9 +661,10 @@ const Notebook: React.FC<NotebookProps> = ({ notes, onDeleteNote, onUpdateNote, 
                   </div>
                 </div>
               ))}
-            </div>
-          )}
-        </div>
+                </div>
+            )}
+          </div>
+      </main>
     </div>
   );
 };

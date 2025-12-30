@@ -150,7 +150,7 @@ const CitationPopup: React.FC<CitationPopupProps> = ({
         <div className="flex gap-0.5">
           {isUrl ? (
             <>
-              <button onClick={() => { onOpenWebViewerNewTab?.(fileName); onClose(); }} className="p-0.5 hover:text-blue-600" title="Open link">
+              <button onClick={() => { onOpenWebViewer?.(fileName); onClose(); }} className="p-0.5 hover:text-blue-600" title="Open in web viewer">
                 <Maximize2 size={12} />
               </button>
             </>

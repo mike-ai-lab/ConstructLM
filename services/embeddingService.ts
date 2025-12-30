@@ -21,7 +21,7 @@ interface EmbeddingProgress {
 }
 
 class EmbeddingService {
-  private isReady = true; // Always ready with API
+  private pipeline: any = null;
 
   async loadModel(): Promise<void> {
     // No model to load - using API

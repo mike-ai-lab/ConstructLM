@@ -15,10 +15,13 @@ interface TabbedWebViewerElectronProps {
 }
 
 const TabbedWebViewerElectron: React.FC<TabbedWebViewerElectronProps> = ({ initialUrl, onClose, onNewTabRequest }) => {
+  console.log('🚀 TabbedWebViewerElectron initialUrl:', initialUrl);
   const [tabs, setTabs] = useState<WebTab[]>([
     { id: Date.now().toString(), url: initialUrl, title: new URL(initialUrl).hostname, isLoading: true }
   ]);
   const [activeTabId, setActiveTabId] = useState(tabs[0].id);
+  console.log('📋 Initial tabs:', tabs);
+  console.log('🎯 Active tab ID:', activeTabId);
   const [tabsScrollPosition, setTabsScrollPosition] = useState(0);
   const tabsContainerRef = useRef<HTMLDivElement>(null);
   const webviewRefs = useRef<{ [key: string]: any }>({});
@@ -255,10 +258,17 @@ const TabbedWebViewerElectron: React.FC<TabbedWebViewerElectronProps> = ({ initi
 
       {/* Content Area - Using Electron webview */}
       <div style={{ flex: 1, display: 'flex', position: 'relative', overflow: 'hidden' }}>
-        {tabs.map(tab => (
+        {tabs.map(tab => {
+          console.log(`🔗 Rendering webview for tab ${tab.id}, active: ${tab.id === activeTabId}, url: ${tab.url}`);
+          return (
           <webview
             key={tab.id}
-            ref={(el: any) => { if (el) webviewRefs.current[tab.id] = el; }}
+            ref={(el: any) => { 
+              if (el) {
+                console.log(`✅ Webview ref set for tab ${tab.id}`);
+                webviewRefs.current[tab.id] = el;
+              }
+            }}
             src={tab.url}
             style={{ 
               flex: 1,
@@ -270,11 +280,11 @@ const TabbedWebViewerElectron: React.FC<TabbedWebViewerElectronProps> = ({ initi
               display: tab.id === activeTabId ? 'flex' : 'none'
             }}
             partition="persist:webview"
-            allowpopups={true}
-            plugins={true}
+            allowpopups="true"
+            plugins="true"
             webpreferences="plugins=true"
           />
-        ))}
+        );})}
       </div>
     </div>
   );

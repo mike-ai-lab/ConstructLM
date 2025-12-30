@@ -55,6 +55,7 @@ interface AppHeaderProps {
   onCloseViewer?: () => void;
   onOpenLogs?: () => void;
   onOpenGitHub?: () => void;
+  notebookControls?: React.ReactNode;
 }
 
 const AppHeader: React.FC<AppHeaderProps> = (props) => {
@@ -164,6 +165,9 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
       </div>
 
       <div className="flex items-center gap-1 md:gap-2 flex-shrink-0 pl-20">
+        {/* Notebook Controls - Only show on notebook tab */}
+        {props.activeTab === 'notebook' && props.notebookControls && (props.notebookControls as any).element}
+        
         {/* Drawing Tools - Only show on chat tab */}
         {props.activeTab === 'chat' && !isCompact && (
           <>
