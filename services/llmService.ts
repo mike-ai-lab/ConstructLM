@@ -6,6 +6,7 @@ import { streamLocalModel } from "./localModelService";
 import { ragService } from "./ragService";
 import { streamAWSBedrock } from "./awsBedrockService";
 import { diagnosticLogger } from "./diagnosticLogger";
+import { getNextProxy } from "./proxyRotation";
 
 // --- System Prompt Construction ---
 export const constructBaseSystemPrompt = (hasFiles: boolean = false, hasSources: boolean = false, sources: any[] = []) => {
@@ -578,38 +579,15 @@ const streamOpenAICompatible = async (
         }
     }
 
-    // Try local proxy first, fallback to public CORS proxy
+    // Use existing proxy rotation service for better reliability
     let baseUrl = 'https://api.openai.com/v1/chat/completions';
-    let useProxy = false;
     
     if (model.provider === 'groq') {
-        // Try local proxy first
-        try {
-            const testResponse = await fetch('http://localhost:3002/api/proxy/groq', { method: 'HEAD' }).catch(() => null);
-            if (testResponse?.ok) {
-                baseUrl = 'http://localhost:3002/api/proxy/groq';
-                useProxy = true;
-            }
-        } catch (e) {}
-        
-        // Fallback to public CORS proxy
-        if (!useProxy) {
-            baseUrl = 'https://corsproxy.io/?' + encodeURIComponent('https://api.groq.com/openai/v1/chat/completions');
-        }
+        const proxy = getNextProxy();
+        baseUrl = proxy + encodeURIComponent('https://api.groq.com/openai/v1/chat/completions');
     } else if (model.provider === 'openai') {
-        // Try local proxy first
-        try {
-            const testResponse = await fetch('http://localhost:3002/api/proxy/openai', { method: 'HEAD' }).catch(() => null);
-            if (testResponse?.ok) {
-                baseUrl = 'http://localhost:3002/api/proxy/openai';
-                useProxy = true;
-            }
-        } catch (e) {}
-        
-        // Fallback to public CORS proxy
-        if (!useProxy) {
-            baseUrl = 'https://corsproxy.io/?' + encodeURIComponent('https://api.openai.com/v1/chat/completions');
-        }
+        const proxy = getNextProxy();
+        baseUrl = proxy + encodeURIComponent('https://api.openai.com/v1/chat/completions');
     }
 
     try {
