@@ -61,6 +61,7 @@ export interface Todo {
   title: string;
   completed: boolean;
   timestamp: number;
+  boardOrder?: number;
   dueDate?: number;
   priority?: 'low' | 'medium' | 'high';
   chatId?: string;
@@ -74,6 +75,13 @@ export interface Todo {
   attachments?: string[];
   archived?: boolean;
   groupId?: string;
+  recurring?: {
+    enabled: boolean;
+    frequency: 'daily' | 'weekly' | 'monthly' | 'custom';
+    interval?: number;
+    lastCompleted?: number;
+    nextDue?: number;
+  };
 }
 
 export interface TodoGroup {

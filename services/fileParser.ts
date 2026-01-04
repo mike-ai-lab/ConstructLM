@@ -267,7 +267,11 @@ const extractExcelText = async (file: File): Promise<string> => {
 
 const extractImageInfo = async (file: File): Promise<string> => {
   try {
-    // Create image element to get dimensions
+    // Convert image to base64 for AI model processing
+    const arrayBuffer = await file.arrayBuffer();
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+    
+    // Get image dimensions
     const img = new Image();
     const url = URL.createObjectURL(file);
     
@@ -275,22 +279,23 @@ const extractImageInfo = async (file: File): Promise<string> => {
       img.onload = () => {
         URL.revokeObjectURL(url);
         const sizeKB = Math.round(file.size / 1024);
-        const content = `[METADATA: Image File "${file.name}"]\n` +
-                      `Type: ${file.type || 'Unknown'}\n` +
+        // Store base64 data with special marker for AI processing
+        const content = `[IMAGE_DATA:${base64}]\n` +
+                      `[METADATA: Image File "${file.name}"]\n` +
+                      `Type: ${file.type || 'image/jpeg'}\n` +
                       `Dimensions: ${img.width} x ${img.height} pixels\n` +
-                      `Size: ${sizeKB} KB\n\n` +
-                      `[IMAGE CONTENT: This is an image file that can be viewed but not processed as text. ` +
-                      `You can ask questions about this image and I'll help analyze it based on the filename and metadata.]`;
+                      `Size: ${sizeKB} KB`;
         resolve(content);
       };
       
       img.onerror = () => {
         URL.revokeObjectURL(url);
         const sizeKB = Math.round(file.size / 1024);
-        const content = `[METADATA: Image File "${file.name}"]\n` +
-                      `Type: ${file.type || 'Unknown'}\n` +
-                      `Size: ${sizeKB} KB\n\n` +
-                      `[IMAGE CONTENT: This is an image file. Unable to read dimensions.]`;
+        // Still include base64 even if dimensions fail
+        const content = `[IMAGE_DATA:${base64}]\n` +
+                      `[METADATA: Image File "${file.name}"]\n` +
+                      `Type: ${file.type || 'image/jpeg'}\n` +
+                      `Size: ${sizeKB} KB`;
         resolve(content);
       };
       
@@ -301,7 +306,7 @@ const extractImageInfo = async (file: File): Promise<string> => {
     const sizeKB = Math.round(file.size / 1024);
     return `[METADATA: Image File "${file.name}"]\n` +
            `Size: ${sizeKB} KB\n\n` +
-           `[IMAGE CONTENT: This is an image file.]`;
+           `[ERROR: Unable to process image data]`;
   }
 };
 

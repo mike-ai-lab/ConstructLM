@@ -79,13 +79,8 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
 
   // Load user folders from localStorage
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('userFolders');
-      if (saved) setUserFolders(JSON.parse(saved));
-    } catch (error) {
-      console.error('Failed to load user folders:', error);
-      localStorage.removeItem('userFolders');
-    }
+    const saved = localStorage.getItem('userFolders');
+    if (saved) setUserFolders(JSON.parse(saved));
   }, []);
 
   // Save user folders to localStorage
@@ -169,11 +164,17 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
   const handleDeleteFolder = (folderPath: string) => {
     if (!confirm(`Delete folder "${folderPath}" and move its files to root?`)) return;
     
-    // Move files to root (only if onUpdateFile is available)
+    // Move files to root
     if (onUpdateFile) {
       files.forEach(file => {
         if (file.userFolder === folderPath) {
           onUpdateFile(file.id, { userFolder: undefined });
+        }
+      });
+    } else {
+      files.forEach(file => {
+        if (file.userFolder === folderPath) {
+          file.userFolder = undefined;
         }
       });
     }
@@ -226,11 +227,20 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
             onUpdateFile(file.id, { userFolder: newPath });
           }
         });
+      } else {
+        files.forEach(file => {
+          if (file.userFolder === folder.path) file.userFolder = newPath;
+        });
       }
       
       saveUserFolders(updated);
-    } else if (onUpdateFile) {
-      onUpdateFile(id, { name: newName });
+    } else {
+      if (onUpdateFile) {
+        onUpdateFile(id, { name: newName });
+      } else {
+        const file = files.find(f => f.id === id);
+        if (file) file.name = newName;
+      }
     }
     setRenamingId(null);
   };
@@ -256,11 +266,14 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
     
     // Delay the actual move to show animation
     setTimeout(() => {
-      if (onUpdateFile) {
-        filesToMove.forEach(fileId => {
+      filesToMove.forEach(fileId => {
+        if (onUpdateFile) {
           onUpdateFile(fileId, { userFolder: targetFolder || undefined });
-        });
-      }
+        } else {
+          const file = files.find(f => f.id === fileId);
+          if (file) file.userFolder = targetFolder || undefined;
+        }
+      });
       
       // Clear cut state after moving
       setCutFiles(new Set());
@@ -314,29 +327,25 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
     }
   };
 
-  interface ExtendedHTMLInputElement extends HTMLInputElement {
-    forceReupload?: boolean;
-  }
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      const forceReupload = (e.target as ExtendedHTMLInputElement).forceReupload || false;
+      const forceReupload = (e.target as any).forceReupload || false;
       onUpload(e.target.files, forceReupload);
     }
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
-      (fileInputRef.current as ExtendedHTMLInputElement).forceReupload = false;
+      (fileInputRef.current as any).forceReupload = false;
     }
   };
 
   const handleFolderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       if (e.target.files && e.target.files.length > 0) {
-          const forceReupload = (e.target as ExtendedHTMLInputElement).forceReupload || false;
+          const forceReupload = (e.target as any).forceReupload || false;
           onUpload(e.target.files, forceReupload);
       }
       if (folderInputRef.current) {
         folderInputRef.current.value = '';
-        (folderInputRef.current as ExtendedHTMLInputElement).forceReupload = false;
+        (folderInputRef.current as any).forceReupload = false;
       }
   }
 
@@ -674,7 +683,7 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
                     <button
                       onClick={(e) => {
                         if (fileInputRef.current) {
-                          (fileInputRef.current as ExtendedHTMLInputElement).forceReupload = e.ctrlKey || e.metaKey;
+                          (fileInputRef.current as any).forceReupload = e.ctrlKey || e.metaKey;
                           fileInputRef.current.click();
                         }
                       }}
@@ -688,7 +697,7 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
                     <button
                       onClick={(e) => {
                         if (folderInputRef.current) {
-                          (folderInputRef.current as ExtendedHTMLInputElement).forceReupload = e.ctrlKey || e.metaKey;
+                          (folderInputRef.current as any).forceReupload = e.ctrlKey || e.metaKey;
                           folderInputRef.current.click();
                         }
                       }}
@@ -1141,7 +1150,6 @@ const FilePreviewViewer: React.FC<{ file: ProcessedFile; onClose: () => void }> 
   const [loading, setLoading] = useState(true);
   const [excelHtml, setExcelHtml] = useState('');
   const [pdfScale, setPdfScale] = useState(1.5);
-  const [imageUrl, setImageUrl] = useState<string>('');
 
   useEffect(() => {
     if (file.type === 'pdf' && file.fileHandle) {
@@ -1158,7 +1166,7 @@ const FilePreviewViewer: React.FC<{ file: ProcessedFile; onClose: () => void }> 
         }
       };
       loadPdf();
-    } else if ((file.type === 'excel' || file.type === 'csv') && file.fileHandle && file.fileHandle instanceof File) {
+    } else if ((file.type === 'excel' || file.type === 'csv') && file.fileHandle) {
       const loadExcel = async () => {
         try {
           const arrayBuffer = await file.fileHandle.arrayBuffer();
@@ -1167,8 +1175,7 @@ const FilePreviewViewer: React.FC<{ file: ProcessedFile; onClose: () => void }> 
           workbook.SheetNames.forEach((sheetName: string) => {
             const sheet = workbook.Sheets[sheetName];
             const sheetHtml = (window as any).XLSX.utils.sheet_to_html(sheet);
-            const sanitizedName = sheetName.replace(/[<>"'&]/g, (c) => ({'<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','&':'&amp;'}[c] || c));
-            html += `<div class="mb-6"><h3 class="text-lg font-bold mb-2 text-gray-800 dark:text-gray-200">${sanitizedName}</h3>${sheetHtml}</div>`;
+            html += `<div class="mb-6"><h3 class="text-lg font-bold mb-2 text-gray-800 dark:text-gray-200">${sheetName}</h3>${sheetHtml}</div>`;
           });
           setExcelHtml(html);
           setLoading(false);
@@ -1180,12 +1187,6 @@ const FilePreviewViewer: React.FC<{ file: ProcessedFile; onClose: () => void }> 
       loadExcel();
     } else {
       setLoading(false);
-    }
-    
-    if (file.type === 'image' && file.fileHandle && file.fileHandle instanceof File) {
-      const url = URL.createObjectURL(file.fileHandle);
-      setImageUrl(url);
-      return () => URL.revokeObjectURL(url);
     }
   }, [file]);
 
@@ -1238,9 +1239,9 @@ const FilePreviewViewer: React.FC<{ file: ProcessedFile; onClose: () => void }> 
           <pre className="whitespace-pre-wrap text-sm">{file.content}</pre>
         </div>
       )}
-      {file.type === 'image' && imageUrl && (
+      {file.type === 'image' && (
         <div className="flex-1 overflow-y-auto bg-gray-100 dark:bg-[#1a1a1a] flex items-center justify-center scroll-smooth">
-          <img src={imageUrl} alt={file.name} className="max-w-full max-h-full object-contain" />
+          <img src={URL.createObjectURL(file.fileHandle as File)} alt={file.name} className="max-w-full max-h-full object-contain" />
         </div>
       )}
       {!['pdf', 'excel', 'csv', 'markdown', 'document', 'other', 'image'].includes(file.type) && (

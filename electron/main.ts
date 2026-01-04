@@ -1,8 +1,13 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
+import { autoUpdater } from 'electron-updater';
 import * as path from 'path';
 import https from 'https';
 
 let mainWindow: BrowserWindow | null = null;
+
+// Configure auto-updater
+autoUpdater.autoDownload = false;
+autoUpdater.autoInstallOnAppQuit = true;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -41,6 +46,53 @@ app.on('activate', () => {
   if (mainWindow === null) {
     createWindow();
   }
+});
+
+// Auto-updater events
+autoUpdater.on('update-available', (info) => {
+  mainWindow?.webContents.send('update-available', info);
+});
+
+autoUpdater.on('update-not-available', () => {
+  mainWindow?.webContents.send('update-not-available');
+});
+
+autoUpdater.on('download-progress', (progress) => {
+  mainWindow?.webContents.send('download-progress', progress);
+});
+
+autoUpdater.on('update-downloaded', (info) => {
+  mainWindow?.webContents.send('update-downloaded', info);
+});
+
+autoUpdater.on('error', (error) => {
+  mainWindow?.webContents.send('update-error', error.message);
+});
+
+// IPC Handlers for updates
+ipcMain.handle('check-for-updates', async () => {
+  if (process.env.NODE_ENV === 'development') {
+    return { available: false, message: 'Updates disabled in development' };
+  }
+  try {
+    const result = await autoUpdater.checkForUpdates();
+    return { available: true, info: result?.updateInfo };
+  } catch (error: any) {
+    return { available: false, error: error.message };
+  }
+});
+
+ipcMain.handle('download-update', async () => {
+  try {
+    await autoUpdater.downloadUpdate();
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('install-update', () => {
+  autoUpdater.quitAndInstall(false, true);
 });
 
 // IPC Handlers for API proxying

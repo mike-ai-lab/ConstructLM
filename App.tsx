@@ -33,6 +33,7 @@ import TodoList from './components/TodoList';
 import ReminderOverlay from './components/ReminderOverlay';
 import LogsModal from './components/LogsModal';
 import ClearMarkdownStorage from './components/ClearMarkdownStorage';
+
 // import Sources from './components/Sources';
 import AppHeader from './App/components/AppHeader';
 import { FloatingInput } from './App/components/FloatingInput';
@@ -690,6 +691,7 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen w-full bg-white dark:bg-[#1a1a1a] overflow-hidden text-sm relative">
+
       {triggeredReminder && (
         <ReminderOverlay
           reminder={triggeredReminder}

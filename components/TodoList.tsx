@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
-import { CheckSquare, Square, Trash2, Plus, Calendar, Tag, Clock, X, ChevronDown, ChevronRight, Copy, Download, Circle, CheckCircle2, MoreHorizontal, Archive, Folder, Edit2, ArrowUpDown } from 'lucide-react';
+import { CheckSquare, Square, Trash2, Calendar, Tag, Clock, X, ChevronDown, ChevronRight, Copy, Circle, CheckCircle2, Edit2, Repeat } from 'lucide-react';
 import { Todo, TodoGroup } from '../types';
-import { exportTodosToPDF } from '../services/pdfExport';
+import TodoHeader from './TodoList/TodoHeader';
+import TodoStats from './TodoList/TodoStats';
+import TodoBoardView from './TodoList/TodoBoardView';
+import TodoGroupsSidebar from './TodoList/TodoGroupsSidebar';
+import TodoAddForm from './TodoList/TodoAddForm';
 
 interface TodoListProps {
   todos: Todo[];
@@ -18,16 +22,20 @@ interface TodoListProps {
 
 const TodoList: React.FC<TodoListProps> = ({ todos, groups, onAddTodo, onToggleTodo, onDeleteTodo, onUpdateTodo, onDeleteSubtask, onAddGroup, onDeleteGroup, onUpdateGroup }) => {
   const [filter, setFilter] = useState<'all' | 'active' | 'archived'>('all');
+  const [viewMode, setViewMode] = useState<'list' | 'board'>('list');
   const [sortBy, setSortBy] = useState<'created' | 'modified' | 'priority-high' | 'priority-low' | 'duedate'>('created');
   const [showAddForm, setShowAddForm] = useState(false);
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
-  const [formData, setFormData] = useState({ title: '', priority: 'medium', dueDate: '', tags: '', notes: '', category: '', estimatedTime: '', groupId: '' });
+  const [formData, setFormData] = useState({ title: '', priority: 'medium', dueDate: '', tags: '', notes: '', category: '', estimatedTime: '', groupId: '', recurring: false, recurringFrequency: 'daily', recurringInterval: '1' });
   const [editingTask, setEditingTask] = useState<string | null>(null);
-  const [editFormData, setEditFormData] = useState({ title: '', priority: 'medium', dueDate: '', tags: '', notes: '', category: '', estimatedTime: '', groupId: '' });
+  const [editFormData, setEditFormData] = useState({ title: '', priority: 'medium', dueDate: '', tags: '', notes: '', category: '', estimatedTime: '', groupId: '', recurring: false, recurringFrequency: 'daily', recurringInterval: '1' });
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
   const [showGroupForm, setShowGroupForm] = useState(false);
   const [groupFormData, setGroupFormData] = useState({ name: '', color: '#4485d1' });
   const [editingGroup, setEditingGroup] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [completingId, setCompletingId] = useState<string | null>(null);
+  const [highlightFilter, setHighlightFilter] = useState<string | null>(null);
 
   const getCountdown = (dueDate: number) => {
     const now = Date.now();
@@ -58,6 +66,13 @@ const TodoList: React.FC<TodoListProps> = ({ todos, groups, onAddTodo, onToggleT
     if (selectedGroup) return t.groupId === selectedGroup && !t.archived;
     return !t.archived;
   }).sort((a, b) => {
+    // Board view uses boardOrder, list view uses sortBy
+    if (viewMode === 'board') {
+      const aOrder = a.boardOrder ?? a.timestamp;
+      const bOrder = b.boardOrder ?? b.timestamp;
+      return aOrder - bOrder; // ASCENDING: lower number = first
+    }
+    
     if (sortBy === 'created') return b.timestamp - a.timestamp;
     if (sortBy === 'modified') {
       const aModified = (a as any).lastModified || a.timestamp;
@@ -91,7 +106,10 @@ const TodoList: React.FC<TodoListProps> = ({ todos, groups, onAddTodo, onToggleT
       notes: todo.notes || '',
       category: todo.category || '',
       estimatedTime: todo.estimatedTime?.toString() || '',
-      groupId: todo.groupId || ''
+      groupId: todo.groupId || '',
+      recurring: todo.recurring?.enabled || false,
+      recurringFrequency: todo.recurring?.frequency || 'daily',
+      recurringInterval: todo.recurring?.interval?.toString() || '1'
     });
   };
 
@@ -104,6 +122,16 @@ const TodoList: React.FC<TodoListProps> = ({ todos, groups, onAddTodo, onToggleT
     if (editFormData.category) updates.category = editFormData.category;
     if (editFormData.estimatedTime) updates.estimatedTime = parseInt(editFormData.estimatedTime);
     if (editFormData.groupId) updates.groupId = editFormData.groupId;
+    if (editFormData.recurring) {
+      updates.recurring = {
+        enabled: true,
+        frequency: editFormData.recurringFrequency,
+        interval: parseInt(editFormData.recurringInterval) || 1,
+        nextDue: updates.dueDate || Date.now()
+      };
+    } else {
+      updates.recurring = { enabled: false };
+    }
     onUpdateTodo(editingTask, updates);
     setEditingTask(null);
   };
@@ -116,8 +144,16 @@ const TodoList: React.FC<TodoListProps> = ({ todos, groups, onAddTodo, onToggleT
     if (formData.notes) todo.notes = formData.notes;
     if (formData.category) todo.category = formData.category;
     if (formData.estimatedTime) todo.estimatedTime = parseInt(formData.estimatedTime);
+    if (formData.recurring) {
+      todo.recurring = {
+        enabled: true,
+        frequency: formData.recurringFrequency,
+        interval: parseInt(formData.recurringInterval) || 1,
+        nextDue: todo.dueDate || Date.now()
+      };
+    }
     onAddTodo(todo);
-    setFormData({ title: '', priority: 'medium', dueDate: '', tags: '', notes: '', category: '', estimatedTime: '', groupId: '' });
+    setFormData({ title: '', priority: 'medium', dueDate: '', tags: '', notes: '', category: '', estimatedTime: '', groupId: '', recurring: false, recurringFrequency: 'daily', recurringInterval: '1' });
     setShowAddForm(false);
   };
 
@@ -132,11 +168,42 @@ const TodoList: React.FC<TodoListProps> = ({ todos, groups, onAddTodo, onToggleT
     todos.filter(t => t.completed && !t.archived).forEach(t => onUpdateTodo(t.id, { archived: true }));
   };
 
+  const calculateNextDue = (recurring: NonNullable<Todo['recurring']>) => {
+    const now = Date.now();
+    const interval = recurring.interval || 1;
+    const base = recurring.nextDue || now;
+    
+    switch (recurring.frequency) {
+      case 'daily':
+        return base + (interval * 24 * 60 * 60 * 1000);
+      case 'weekly':
+        return base + (interval * 7 * 24 * 60 * 60 * 1000);
+      case 'monthly':
+        const date = new Date(base);
+        date.setMonth(date.getMonth() + interval);
+        return date.getTime();
+      case 'custom':
+        return base + (interval * 24 * 60 * 60 * 1000);
+      default:
+        return base + (24 * 60 * 60 * 1000);
+    }
+  };
+
   const handleToggleTodo = (id: string) => {
     const todo = todos.find(t => t.id === id);
-    if (todo && !todo.completed) {
+    if (!todo) return;
+    
+    if (!todo.completed && todo.recurring?.enabled) {
+      const nextDue = calculateNextDue(todo.recurring);
+      onUpdateTodo(id, { 
+        completed: true,
+        archived: true,
+        recurring: { ...todo.recurring, lastCompleted: Date.now() }
+      });
+      onAddTodo({ ...todo, id: undefined, timestamp: undefined, completed: false, dueDate: nextDue, recurring: { ...todo.recurring, nextDue } } as any);
+    } else if (!todo.completed) {
       onUpdateTodo(id, { completed: true, archived: true });
-    } else if (todo) {
+    } else {
       onUpdateTodo(id, { completed: false, archived: false });
     }
   };
@@ -164,163 +231,76 @@ const TodoList: React.FC<TodoListProps> = ({ todos, groups, onAddTodo, onToggleT
     onAddTodo({ ...todo, id: undefined, timestamp: undefined, title: `${todo.title} (Copy)`, completed: false } as any);
   };
 
+  const handleDeleteWithAnimation = (id: string) => {
+    setDeletingId(id);
+    setTimeout(() => {
+      onDeleteTodo(id);
+      setDeletingId(null);
+    }, 400);
+  };
+
+  const handleToggleWithAnimation = (id: string) => {
+    setCompletingId(id);
+    setTimeout(() => {
+      handleToggleTodo(id);
+      setCompletingId(null);
+    }, 300);
+  };
+
   return (
     <div className="flex h-full bg-white dark:bg-[#1a1a1a]">
-      {/* Groups Sidebar */}
-      <div className="w-64 flex-shrink-0 border-r border-[rgba(0,0,0,0.08)] dark:border-[rgba(255,255,255,0.08)] flex flex-col">
-        <div className="p-4 border-b border-[rgba(0,0,0,0.08)] dark:border-[rgba(255,255,255,0.08)]">
-          <h2 className="text-sm font-semibold text-[#1a1a1a] dark:text-white mb-3">Groups</h2>
-          <button onClick={() => setShowGroupForm(!showGroupForm)} className="w-full px-3 py-2 text-sm bg-[#4485d1] hover:bg-[#3674c1] text-white rounded-lg transition-colors flex items-center justify-center gap-2">
-            <Plus size={14} />
-            New Group
-          </button>
-          {showGroupForm && (
-            <div className="mt-3 space-y-2">
-              <input type="text" value={groupFormData.name} onChange={(e) => setGroupFormData({...groupFormData, name: e.target.value})} placeholder="Group name..." className="w-full px-3 py-2 text-sm bg-white dark:bg-[#2a2a2a] rounded-lg border border-[rgba(0,0,0,0.08)] dark:border-[rgba(255,255,255,0.08)] focus:outline-none focus:border-[#4485d1]" />
-              <input type="color" value={groupFormData.color} onChange={(e) => setGroupFormData({...groupFormData, color: e.target.value})} className="w-full h-8 rounded-lg cursor-pointer" />
-              <div className="flex gap-2">
-                <button onClick={() => setShowGroupForm(false)} className="flex-1 px-3 py-1.5 text-xs text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.04)] dark:hover:bg-[#2a2a2a] rounded-lg">Cancel</button>
-                <button onClick={handleAddGroup} className="flex-1 px-3 py-1.5 text-xs bg-[#4485d1] text-white rounded-lg hover:bg-[#3674c1]">Add</button>
-              </div>
-            </div>
-          )}
-        </div>
-        <div className="flex-1 overflow-y-auto p-2">
-          <button onClick={() => setSelectedGroup(null)} className={`w-full px-3 py-2 text-sm rounded-lg transition-colors flex items-center justify-between mb-1 ${!selectedGroup ? 'bg-[#4485d1] text-white' : 'text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.04)] dark:hover:bg-[#2a2a2a]'}`}>
-            <span className="flex items-center gap-2"><Folder size={16} /> All Tasks</span>
-            <span className="text-xs">{todos.filter(t => !t.archived).length}</span>
-          </button>
-          {groups.map(group => (
-            <div key={group.id} className="relative group/item">
-              <button onClick={() => setSelectedGroup(group.id)} className={`w-full px-3 py-2 text-sm rounded-lg transition-colors flex items-center justify-between mb-1 ${selectedGroup === group.id ? 'bg-[#4485d1] text-white' : 'text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.04)] dark:hover:bg-[#2a2a2a]'}`}>
-                <span className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: group.color }} />
-                  {group.name}
-                </span>
-                <span className="text-xs">{todos.filter(t => t.groupId === group.id && !t.archived).length}</span>
-              </button>
-              <button onClick={() => onDeleteGroup(group.id)} className="absolute right-1 top-1/2 -translate-y-1/2 p-1 opacity-0 group-hover/item:opacity-100 hover:bg-[rgba(0,0,0,0.1)] dark:hover:bg-[rgba(255,255,255,0.1)] rounded" title="Delete group">
-                <X size={12} />
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
+      <TodoGroupsSidebar
+        todos={todos}
+        groups={groups}
+        selectedGroup={selectedGroup}
+        showGroupForm={showGroupForm}
+        groupFormData={groupFormData}
+        onSelectGroup={setSelectedGroup}
+        onToggleGroupForm={() => setShowGroupForm(!showGroupForm)}
+        onGroupFormChange={setGroupFormData}
+        onAddGroup={handleAddGroup}
+        onDeleteGroup={onDeleteGroup}
+      />
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
       {/* Header */}
       <div className="flex-shrink-0 px-6 py-4 border-b border-[rgba(0,0,0,0.08)] dark:border-[rgba(255,255,255,0.08)]">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <h1 className="text-xl font-semibold text-[#1a1a1a] dark:text-white">Tasks</h1>
-            <span className="text-sm text-[#666666] dark:text-[#a0a0a0]">{todos.filter(t => !t.archived).length} total</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <button onClick={() => exportTodosToPDF(todos)} className="px-3 py-2 text-sm text-[#666666] dark:text-[#a0a0a0] hover:text-[#1a1a1a] dark:hover:text-white hover:bg-[rgba(0,0,0,0.04)] dark:hover:bg-[#2a2a2a] rounded-lg transition-colors flex items-center gap-2">
-              <Download size={16} />
-              Export
-            </button>
-            <button onClick={() => setShowAddForm(!showAddForm)} className="px-4 py-2 text-sm bg-[#4485d1] hover:bg-[#3674c1] text-white rounded-lg transition-colors flex items-center gap-2">
-              <Plus size={16} />
-              New Task
-            </button>
-          </div>
-        </div>
+        <TodoHeader
+          todos={todos}
+          showAddForm={showAddForm}
+          filter={filter}
+          viewMode={viewMode}
+          sortBy={sortBy}
+          activeTodos={activeTodos}
+          onToggleAddForm={() => setShowAddForm(!showAddForm)}
+          onFilterChange={setFilter}
+          onViewModeChange={setViewMode}
+          onSortChange={(sort) => setSortBy(sort as any)}
+          onArchiveCompleted={archiveCompleted}
+        />
 
-        {/* Stats Visualization */}
-        <div className="grid grid-cols-5 gap-4">
-          <div className="bg-[#f8f9fa] dark:bg-[#2a2a2a] rounded-xl p-4">
-            <div className="text-xs text-[#666666] dark:text-[#a0a0a0] mb-2 font-medium">Active</div>
-            <div className="text-3xl font-bold text-[#1a1a1a] dark:text-white mb-1">{activeTodos.length}</div>
-            <div className="h-1 bg-[rgba(0,0,0,0.06)] dark:bg-[rgba(255,255,255,0.06)] rounded-full overflow-hidden">
-              <div className="h-full bg-[#4485d1]" style={{ width: `${todos.length ? (activeTodos.length / todos.length) * 100 : 0}%` }} />
-            </div>
-          </div>
-          <div className="bg-[#f8f9fa] dark:bg-[#2a2a2a] rounded-xl p-4">
-            <div className="text-xs text-[#666666] dark:text-[#a0a0a0] mb-2 font-medium">Archived</div>
-            <div className="text-3xl font-bold text-[#1a1a1a] dark:text-white mb-1">{archivedTodos.length}</div>
-            <div className="h-1 bg-[rgba(0,0,0,0.06)] dark:bg-[rgba(255,255,255,0.06)] rounded-full overflow-hidden">
-              <div className="h-full bg-[#a8d5e2]" style={{ width: `${todos.length ? (archivedTodos.length / todos.length) * 100 : 0}%` }} />
-            </div>
-          </div>
-          <div className="bg-[#f8f9fa] dark:bg-[#2a2a2a] rounded-xl p-4">
-            <div className="text-xs text-[#666666] dark:text-[#a0a0a0] mb-2 font-medium">High Priority</div>
-            <div className="text-3xl font-bold text-[#1a1a1a] dark:text-white mb-1">{highPriority}</div>
-            <div className="h-1 bg-[rgba(0,0,0,0.06)] dark:bg-[rgba(255,255,255,0.06)] rounded-full overflow-hidden">
-              <div className="h-full bg-[#666666]" style={{ width: `${activeTodos.length ? (highPriority / activeTodos.length) * 100 : 0}%` }} />
-            </div>
-          </div>
-          <div className="bg-[#f8f9fa] dark:bg-[#2a2a2a] rounded-xl p-4">
-            <div className="text-xs text-[#666666] dark:text-[#a0a0a0] mb-2 font-medium">Medium Priority</div>
-            <div className="text-3xl font-bold text-[#1a1a1a] dark:text-white mb-1">{mediumPriority}</div>
-            <div className="h-1 bg-[rgba(0,0,0,0.06)] dark:bg-[rgba(255,255,255,0.06)] rounded-full overflow-hidden">
-              <div className="h-full bg-[#999999]" style={{ width: `${activeTodos.length ? (mediumPriority / activeTodos.length) * 100 : 0}%` }} />
-            </div>
-          </div>
-          <div className="bg-[#f8f9fa] dark:bg-[#2a2a2a] rounded-xl p-4">
-            <div className="text-xs text-[#666666] dark:text-[#a0a0a0] mb-2 font-medium">Low Priority</div>
-            <div className="text-3xl font-bold text-[#1a1a1a] dark:text-white mb-1">{lowPriority}</div>
-            <div className="h-1 bg-[rgba(0,0,0,0.06)] dark:bg-[rgba(255,255,255,0.06)] rounded-full overflow-hidden">
-              <div className="h-full bg-[#cccccc]" style={{ width: `${activeTodos.length ? (lowPriority / activeTodos.length) * 100 : 0}%` }} />
-            </div>
-          </div>
-        </div>
-
-        {/* Filters */}
         {!showAddForm && (
-          <div className="flex items-center justify-between mt-4">
-            <div className="flex items-center gap-2">
-              {['all', 'active', 'archived'].map(f => (
-                <button key={f} onClick={() => setFilter(f as any)} className={`px-4 py-2 text-sm rounded-lg transition-colors ${filter === f ? 'bg-[#1a1a1a] dark:bg-white text-white dark:text-[#1a1a1a]' : 'text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.04)] dark:hover:bg-[#2a2a2a]'}`}>
-                  {f.charAt(0).toUpperCase() + f.slice(1)}
-                </button>
-              ))}
-              <div className="ml-2 flex items-center gap-2">
-                <ArrowUpDown size={14} className="text-[#666666] dark:text-[#a0a0a0]" />
-                <select value={sortBy} onChange={(e) => setSortBy(e.target.value as any)} className="px-3 py-2 text-sm bg-white dark:bg-[#2a2a2a] text-[#666666] dark:text-[#a0a0a0] rounded-lg border border-[rgba(0,0,0,0.08)] dark:border-[rgba(255,255,255,0.08)] focus:outline-none">
-                  <option value="created">Last Created</option>
-                  <option value="modified">Last Modified</option>
-                  <option value="priority-high">Priority: High to Low</option>
-                  <option value="priority-low">Priority: Low to High</option>
-                  <option value="duedate">Due Date</option>
-                </select>
-              </div>
-            </div>
-            {filter !== 'archived' && activeTodos.some(t => t.completed) && (
-              <button onClick={archiveCompleted} className="px-3 py-2 text-sm text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.04)] dark:hover:bg-[#2a2a2a] rounded-lg transition-colors flex items-center gap-2">
-                <Archive size={14} />
-                Archive Completed
-              </button>
-            )}
-          </div>
+          <TodoStats
+            todos={todos}
+            activeTodos={activeTodos}
+            archivedTodos={archivedTodos}
+            highPriority={highPriority}
+            mediumPriority={mediumPriority}
+            lowPriority={lowPriority}
+            highlightFilter={highlightFilter}
+            onHighlightFilter={setHighlightFilter}
+          />
         )}
 
-        {/* Add Form */}
         {showAddForm && (
-          <div className="mt-4 bg-[#e8e9ea] dark:bg-[#252525] rounded-xl p-4 space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              <input type="text" value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} placeholder="Task title..." className="col-span-2 px-4 py-3 text-sm bg-white dark:bg-[#1a1a1a] rounded-lg border border-[rgba(0,0,0,0.08)] dark:border-[rgba(255,255,255,0.08)] focus:outline-none focus:border-[#4485d1]" />
-              <select value={formData.priority} onChange={(e) => setFormData({...formData, priority: e.target.value})} className="px-4 py-3 text-sm bg-white dark:bg-[#1a1a1a] rounded-lg border border-[rgba(0,0,0,0.08)] dark:border-[rgba(255,255,255,0.08)] focus:outline-none">
-                <option value="high">High Priority</option>
-                <option value="medium">Medium Priority</option>
-                <option value="low">Low Priority</option>
-              </select>
-              <input type="text" value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value})} placeholder="Category" className="px-4 py-3 text-sm bg-white dark:bg-[#1a1a1a] rounded-lg border border-[rgba(0,0,0,0.08)] dark:border-[rgba(255,255,255,0.08)] focus:outline-none" />
-              <input type="datetime-local" value={formData.dueDate} onChange={(e) => setFormData({...formData, dueDate: e.target.value})} className="px-4 py-3 text-sm bg-white dark:bg-[#1a1a1a] rounded-lg border border-[rgba(0,0,0,0.08)] dark:border-[rgba(255,255,255,0.08)] focus:outline-none" />
-              <input type="number" value={formData.estimatedTime} onChange={(e) => setFormData({...formData, estimatedTime: e.target.value})} placeholder="Est. mins" className="px-4 py-3 text-sm bg-white dark:bg-[#1a1a1a] rounded-lg border border-[rgba(0,0,0,0.08)] dark:border-[rgba(255,255,255,0.08)] focus:outline-none" />
-              <select value={formData.groupId} onChange={(e) => setFormData({...formData, groupId: e.target.value})} className="px-4 py-3 text-sm bg-white dark:bg-[#1a1a1a] rounded-lg border border-[rgba(0,0,0,0.08)] dark:border-[rgba(255,255,255,0.08)] focus:outline-none">
-                <option value="">Select Group</option>
-                {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-              </select>
-              <input type="text" value={formData.tags} onChange={(e) => setFormData({...formData, tags: e.target.value})} placeholder="Tags (comma separated)" className="px-4 py-3 text-sm bg-white dark:bg-[#1a1a1a] rounded-lg border border-[rgba(0,0,0,0.08)] dark:border-[rgba(255,255,255,0.08)] focus:outline-none" />
-              <textarea value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})} placeholder="Notes..." rows={2} className="col-span-2 px-4 py-3 text-sm bg-white dark:bg-[#1a1a1a] rounded-lg border border-[rgba(0,0,0,0.08)] dark:border-[rgba(255,255,255,0.08)] focus:outline-none resize-none" />
-            </div>
-            <div className="flex gap-2 justify-end">
-              <button onClick={() => { setShowAddForm(false); setFormData({ title: '', priority: 'medium', dueDate: '', tags: '', notes: '', category: '', estimatedTime: '', groupId: '' }); }} className="px-4 py-2 text-sm text-[#666666] dark:text-[#a0a0a0] hover:bg-white dark:hover:bg-[#1a1a1a] rounded-lg transition-colors">Cancel</button>
-              <button onClick={handleAdd} className="px-4 py-2 text-sm bg-[#4485d1] text-white rounded-lg hover:bg-[#3674c1] transition-colors">Add Task</button>
-            </div>
-          </div>
+          <TodoAddForm
+            formData={formData}
+            groups={groups}
+            onFormChange={setFormData}
+            onCancel={() => { setShowAddForm(false); setFormData({ title: '', priority: 'medium', dueDate: '', tags: '', notes: '', category: '', estimatedTime: '', groupId: '', recurring: false, recurringFrequency: 'daily', recurringInterval: '1' }); }}
+            onAdd={handleAdd}
+          />
         )}
       </div>
 
@@ -331,6 +311,84 @@ const TodoList: React.FC<TodoListProps> = ({ todos, groups, onAddTodo, onToggleT
             <CheckSquare size={64} className="text-[#e0e0e0] dark:text-[#3a3a3a] mb-4" />
             <p className="text-sm text-[#666666] dark:text-[#a0a0a0]">No tasks found</p>
           </div>
+        ) : viewMode === 'board' ? (
+          <>
+            <TodoBoardView
+              todos={filteredTodos}
+              deletingId={deletingId}
+              completingId={completingId}
+              onToggle={handleToggleWithAnimation}
+              onDelete={handleDeleteWithAnimation}
+              highlightFilter={highlightFilter}
+              onEdit={handleEdit}
+              onDuplicate={duplicateTodo}
+              onReorder={(reorderedTodos) => {
+                console.log('🔧 PARENT REORDER CALLED:', reorderedTodos.map(t => t.title));
+                const baseOrder = Date.now();
+                
+                // Batch update all at once to prevent re-sorting mid-update
+                const updates = reorderedTodos.map((todo, idx) => ({
+                  id: todo.id,
+                  boardOrder: baseOrder + idx
+                }));
+                
+                console.log('📦 BATCH UPDATES:', updates);
+                
+                // Apply all updates synchronously
+                updates.forEach(({ id, boardOrder }) => {
+                  onUpdateTodo(id, { boardOrder });
+                });
+              }}
+            />
+            {editingTask && (() => {
+              const todo = todos.find(t => t.id === editingTask);
+              if (!todo) return null;
+              return (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setEditingTask(null)}>
+                  <div className="bg-white dark:bg-[#1a1a1a] rounded-xl p-6 max-w-2xl w-full mx-4" onClick={(e) => e.stopPropagation()}>
+                    <h3 className="text-lg font-semibold text-[#1a1a1a] dark:text-white mb-4">Edit Task</h3>
+                    <div className="grid grid-cols-2 gap-3">
+                      <input type="text" value={editFormData.title} onChange={(e) => setEditFormData({...editFormData, title: e.target.value})} placeholder="Task title..." className="col-span-2 px-4 py-3 text-sm bg-[#f5f5f5] dark:bg-[#2a2a2a] rounded-lg border border-[rgba(0,0,0,0.08)] dark:border-[rgba(255,255,255,0.08)] focus:outline-none focus:border-[#4485d1]" />
+                      <select value={editFormData.priority} onChange={(e) => setEditFormData({...editFormData, priority: e.target.value})} className="px-4 py-3 text-sm bg-[#f5f5f5] dark:bg-[#2a2a2a] rounded-lg border border-[rgba(0,0,0,0.08)] dark:border-[rgba(255,255,255,0.08)] focus:outline-none">
+                        <option value="high">High Priority</option>
+                        <option value="medium">Medium Priority</option>
+                        <option value="low">Low Priority</option>
+                      </select>
+                      <input type="text" value={editFormData.category} onChange={(e) => setEditFormData({...editFormData, category: e.target.value})} placeholder="Category" className="px-4 py-3 text-sm bg-[#f5f5f5] dark:bg-[#2a2a2a] rounded-lg border border-[rgba(0,0,0,0.08)] dark:border-[rgba(255,255,255,0.08)] focus:outline-none" />
+                      <input type="datetime-local" value={editFormData.dueDate} onChange={(e) => setEditFormData({...editFormData, dueDate: e.target.value})} className="px-4 py-3 text-sm bg-[#f5f5f5] dark:bg-[#2a2a2a] rounded-lg border border-[rgba(0,0,0,0.08)] dark:border-[rgba(255,255,255,0.08)] focus:outline-none" />
+                      <input type="number" value={editFormData.estimatedTime} onChange={(e) => setEditFormData({...editFormData, estimatedTime: e.target.value})} placeholder="Est. mins" className="px-4 py-3 text-sm bg-[#f5f5f5] dark:bg-[#2a2a2a] rounded-lg border border-[rgba(0,0,0,0.08)] dark:border-[rgba(255,255,255,0.08)] focus:outline-none" />
+                      <select value={editFormData.groupId} onChange={(e) => setEditFormData({...editFormData, groupId: e.target.value})} className="px-4 py-3 text-sm bg-[#f5f5f5] dark:bg-[#2a2a2a] rounded-lg border border-[rgba(0,0,0,0.08)] dark:border-[rgba(255,255,255,0.08)] focus:outline-none">
+                        <option value="">Select Group</option>
+                        {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                      </select>
+                      <input type="text" value={editFormData.tags} onChange={(e) => setEditFormData({...editFormData, tags: e.target.value})} placeholder="Tags (comma separated)" className="px-4 py-3 text-sm bg-[#f5f5f5] dark:bg-[#2a2a2a] rounded-lg border border-[rgba(0,0,0,0.08)] dark:border-[rgba(255,255,255,0.08)] focus:outline-none" />
+                      <textarea value={editFormData.notes} onChange={(e) => setEditFormData({...editFormData, notes: e.target.value})} placeholder="Notes..." rows={2} className="col-span-2 px-4 py-3 text-sm bg-[#f5f5f5] dark:bg-[#2a2a2a] rounded-lg border border-[rgba(0,0,0,0.08)] dark:border-[rgba(255,255,255,0.08)] focus:outline-none resize-none" />
+                      <div className="col-span-2 flex items-center gap-3 px-4 py-3 bg-[#f5f5f5] dark:bg-[#2a2a2a] rounded-lg border border-[rgba(0,0,0,0.08)] dark:border-[rgba(255,255,255,0.08)]">
+                        <input type="checkbox" id="board-edit-recurring" checked={editFormData.recurring} onChange={(e) => setEditFormData({...editFormData, recurring: e.target.checked})} className="w-4 h-4" />
+                        <label htmlFor="board-edit-recurring" className="text-sm text-[#1a1a1a] dark:text-white flex items-center gap-2"><Repeat size={14} /> Recurring Task</label>
+                        {editFormData.recurring && (
+                          <>
+                            <select value={editFormData.recurringFrequency} onChange={(e) => setEditFormData({...editFormData, recurringFrequency: e.target.value})} className="px-3 py-1.5 text-sm bg-white dark:bg-[#333333] rounded border-0 focus:outline-none">
+                              <option value="daily">Daily</option>
+                              <option value="weekly">Weekly</option>
+                              <option value="monthly">Monthly</option>
+                              <option value="custom">Custom</option>
+                            </select>
+                            <input type="number" min="1" value={editFormData.recurringInterval} onChange={(e) => setEditFormData({...editFormData, recurringInterval: e.target.value})} placeholder="Interval" className="w-20 px-3 py-1.5 text-sm bg-white dark:bg-[#333333] rounded border-0 focus:outline-none" />
+                            <span className="text-xs text-[#666666] dark:text-[#a0a0a0]">day(s)</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex gap-2 justify-end mt-4">
+                      <button onClick={() => setEditingTask(null)} className="px-4 py-2 text-sm text-[#666666] dark:text-[#a0a0a0] hover:bg-[#f5f5f5] dark:hover:bg-[#2a2a2a] rounded-lg transition-colors">Cancel</button>
+                      <button onClick={handleSaveEdit} className="px-4 py-2 text-sm bg-[#4485d1] text-white rounded-lg hover:bg-[#3674c1] transition-colors">Save</button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+          </>
         ) : (
           <div className="space-y-2">
             {filteredTodos.map(todo => {
@@ -339,7 +397,13 @@ const TodoList: React.FC<TodoListProps> = ({ todos, groups, onAddTodo, onToggleT
               const isOverdue = todo.dueDate && todo.dueDate < Date.now() && !todo.completed;
               
               return (
-                <div key={todo.id} className="group bg-[#f5f5f5] dark:bg-[#252525] rounded-xl border border-[rgba(0,0,0,0.08)] dark:border-[rgba(255,255,255,0.08)] hover:border-[rgba(0,0,0,0.12)] dark:hover:border-[rgba(255,255,255,0.12)] transition-all">
+                <div key={todo.id} className={`group bg-[#f5f5f5] dark:bg-[#252525] rounded-xl border border-[rgba(0,0,0,0.08)] dark:border-[rgba(255,255,255,0.08)] hover:border-[rgba(0,0,0,0.12)] dark:hover:border-[rgba(255,255,255,0.12)] transition-all ${
+                  highlightFilter === 'active' && !todo.completed && !todo.archived ? 'ring-2 ring-[#4485d1]' :
+                  highlightFilter === 'archived' && todo.archived ? 'ring-2 ring-[#a8d5e2]' :
+                  highlightFilter === 'high' && todo.priority === 'high' ? 'ring-2 ring-red-500' :
+                  highlightFilter === 'medium' && todo.priority === 'medium' ? 'ring-2 ring-[#FBF719]' :
+                  highlightFilter === 'low' && (!todo.priority || todo.priority === 'low') ? 'ring-2 ring-green-500' : ''
+                }`}>
                   <div className="p-4">
                     <div className="flex items-start gap-4">
                       <button onClick={() => handleToggleTodo(todo.id)} className="flex-shrink-0 mt-0.5">
@@ -397,6 +461,11 @@ const TodoList: React.FC<TodoListProps> = ({ todos, groups, onAddTodo, onToggleT
                               {todo.priority}
                             </span>
                           )}
+                          {todo.recurring?.enabled && (
+                            <span className="text-xs px-3 py-1 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 font-medium flex items-center gap-1.5">
+                              <Repeat size={10} /> {todo.recurring.frequency === 'custom' ? `Every ${todo.recurring.interval}d` : todo.recurring.frequency}
+                            </span>
+                          )}
                           {todo.category && <span className="text-xs px-3 py-1 rounded-full bg-[#e9f7fa] dark:bg-[#1a4d5c] text-[#1a1a1a] dark:text-white font-medium">{todo.category}</span>}
                           {todo.tags?.map(tag => (
                             <span key={tag} className="text-xs px-3 py-1 rounded-full bg-[#f8f8f8] dark:bg-[#333333] text-[#666666] dark:text-[#a0a0a0] flex items-center gap-1.5">
@@ -423,6 +492,22 @@ const TodoList: React.FC<TodoListProps> = ({ todos, groups, onAddTodo, onToggleT
                               </select>
                               <input type="text" value={editFormData.tags} onChange={(e) => setEditFormData({...editFormData, tags: e.target.value})} placeholder="Tags (comma separated)" className="px-4 py-3 text-sm bg-white dark:bg-[#2a2a2a] rounded-lg border border-[rgba(0,0,0,0.08)] dark:border-[rgba(255,255,255,0.08)] focus:outline-none" />
                               <textarea value={editFormData.notes} onChange={(e) => setEditFormData({...editFormData, notes: e.target.value})} placeholder="Notes..." rows={2} className="col-span-2 px-4 py-3 text-sm bg-white dark:bg-[#2a2a2a] rounded-lg border border-[rgba(0,0,0,0.08)] dark:border-[rgba(255,255,255,0.08)] focus:outline-none resize-none" />
+                              <div className="col-span-2 flex items-center gap-3 px-4 py-3 bg-white dark:bg-[#2a2a2a] rounded-lg border border-[rgba(0,0,0,0.08)] dark:border-[rgba(255,255,255,0.08)]">
+                                <input type="checkbox" id="edit-recurring" checked={editFormData.recurring} onChange={(e) => setEditFormData({...editFormData, recurring: e.target.checked})} className="w-4 h-4" />
+                                <label htmlFor="edit-recurring" className="text-sm text-[#1a1a1a] dark:text-white flex items-center gap-2"><Repeat size={14} /> Recurring Task</label>
+                                {editFormData.recurring && (
+                                  <>
+                                    <select value={editFormData.recurringFrequency} onChange={(e) => setEditFormData({...editFormData, recurringFrequency: e.target.value})} className="px-3 py-1.5 text-sm bg-[#f5f5f5] dark:bg-[#333333] rounded border-0 focus:outline-none">
+                                      <option value="daily">Daily</option>
+                                      <option value="weekly">Weekly</option>
+                                      <option value="monthly">Monthly</option>
+                                      <option value="custom">Custom</option>
+                                    </select>
+                                    <input type="number" min="1" value={editFormData.recurringInterval} onChange={(e) => setEditFormData({...editFormData, recurringInterval: e.target.value})} placeholder="Interval" className="w-20 px-3 py-1.5 text-sm bg-[#f5f5f5] dark:bg-[#333333] rounded border-0 focus:outline-none" />
+                                    <span className="text-xs text-[#666666] dark:text-[#a0a0a0]">day(s)</span>
+                                  </>
+                                )}
+                              </div>
                             </div>
                             <div className="flex gap-2 justify-end">
                               <button onClick={() => setEditingTask(null)} className="px-4 py-2 text-sm text-[#666666] dark:text-[#a0a0a0] hover:bg-white dark:hover:bg-[#2a2a2a] rounded-lg transition-colors">Cancel</button>

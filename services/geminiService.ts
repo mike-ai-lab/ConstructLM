@@ -38,8 +38,22 @@ export async function sendMessageToGemini(
   console.log('🔵 [GEMINI] Files attached:', activeFiles.length);
   console.log('🔵 [GEMINI] History messages:', history?.length || 0);
 
-  const fileContext = activeFiles.length > 0
-    ? '\n\nFILE CONTEXT:\n' + activeFiles.map(f => `=== FILE: "${f.name}" ===\n${f.content}\n=== END FILE ===`).join('\n\n')
+  // Extract image data from files and prepare parts
+  const extractImageData = (content: string): { base64: string; mimeType: string } | null => {
+    const match = content.match(/\[IMAGE_DATA:([^\]]+)\]/);
+    if (!match) return null;
+    return { base64: match[1], mimeType: 'image/jpeg' };
+  };
+
+  // Separate text and image files
+  const imageFiles = activeFiles.filter(f => f.type === 'image');
+  const textFiles = activeFiles.filter(f => f.type !== 'image');
+
+  console.log('🔵 [GEMINI] Image files:', imageFiles.length);
+  console.log('🔵 [GEMINI] Text files:', textFiles.length);
+
+  const fileContext = textFiles.length > 0
+    ? '\n\nFILE CONTEXT:\n' + textFiles.map(f => `=== FILE: "${f.name}" ===\n${f.content}\n=== END FILE ===`).join('\n\n')
     : '';
 
   const contents = [];
@@ -62,7 +76,25 @@ export async function sendMessageToGemini(
   
   const isFirstMessage = !history || history.length === 0;
   const currentMessage = (isFirstMessage && fileContext) ? message + fileContext : message;
-  contents.push({ role: "user", parts: [{ text: currentMessage }] });
+  
+  // Build parts for current message - include text and images
+  const currentParts: any[] = [{ text: currentMessage }];
+  
+  // Add image data as inline data parts
+  for (const imgFile of imageFiles) {
+    const imageData = extractImageData(imgFile.content);
+    if (imageData) {
+      console.log('🔵 [GEMINI] Adding image:', imgFile.name, 'size:', imageData.base64.length);
+      currentParts.push({
+        inlineData: {
+          mimeType: imgFile.fileHandle?.type || 'image/jpeg',
+          data: imageData.base64
+        }
+      });
+    }
+  }
+  
+  contents.push({ role: "user", parts: currentParts });
   
   const requestBody: any = { 
     contents,
@@ -80,6 +112,7 @@ export async function sendMessageToGemini(
 
   console.log('🔵 [GEMINI] Request body size:', JSON.stringify(requestBody).length, 'bytes');
   console.log('🔵 [GEMINI] Total content messages:', contents.length);
+  console.log('🔵 [GEMINI] Current message parts:', currentParts.length);
   console.log('🔵 [GEMINI] Sending request to API...');
   
   const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:streamGenerateContent?key=${apiKey}&alt=sse`;

@@ -1,11 +1,16 @@
 import React, { useRef, useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom'; 
-import { ProcessedFile } from '../types';
-import { ChatMetadata } from '../services/chatRegistry';
-import { FileText, FileSpreadsheet, File as FileIcon, X, Loader2, FolderOpen, Plus, ChevronRight, ChevronDown, Folder, Image, MessageCircle, Files, BookOpen, Minus, Network, List, GitBranch, History, Download, Edit2, FolderPlus, Scissors, Trash2 } from 'lucide-react';
-import ChatHistory from './ChatHistory';
-import DocumentViewer from './DocumentViewer';
-import LogsModal from './LogsModal';
+import { ProcessedFile } from '../../types';
+import { ChatMetadata } from '../../services/chatRegistry';
+import { FileText, FileSpreadsheet, File as FileIcon, X, Loader2, FolderOpen, Plus, ChevronRight, ChevronDown, Folder, Image, MessageCircle, Files, BookOpen, Minus, Network, List, Download, Edit2, FolderPlus, Scissors, Trash2 } from 'lucide-react';
+import ChatHistory from '../ChatHistory';
+import DocumentViewer from '../DocumentViewer';
+import LogsModal from '../LogsModal';
+import { UserFolder, ContextMenuState, TreeNode, ExtendedHTMLInputElement } from './types';
+import { buildFileTree, getIcon, sanitizeHtml } from './utils';
+import FileContextMenu from './FileContextMenu';
+import FilePreviewViewer from './FilePreviewViewer';
+import PdfPageRenderer from './PdfPageRenderer';
 
 interface FileSidebarProps {
   files: ProcessedFile[];
@@ -25,35 +30,7 @@ interface FileSidebarProps {
   onUpdateFile?: (fileId: string, updates: Partial<ProcessedFile>) => void;
 }
 
-interface UserFolder {
-  path: string;
-  name: string;
-  parentPath: string | null;
-}
 
-interface ContextMenu {
-  x: number;
-  y: number;
-  fileIds: string[];
-  folderPath?: string;
-}
-
-const removeFolder = (folderPath: string, files: ProcessedFile[], onRemove: (id: string) => void) => {
-  files.forEach(file => {
-    const path = file.path || file.name;
-    if (path.startsWith(folderPath + '/')) {
-      onRemove(file.id);
-    }
-  });
-};
-
-interface TreeNode {
-  name: string;
-  type: 'folder' | 'file';
-  path: string;
-  file?: ProcessedFile;
-  children: Record<string, TreeNode>;
-}
 
 const FileSidebar: React.FC<FileSidebarProps> = ({ 
   files, onUpload, onRemove, isProcessing, onGenerateMindMap,
@@ -68,7 +45,7 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
   const [fileViewTab, setFileViewTab] = useState<'all' | 'folders'>('all');
   const [isLogsModalOpen, setIsLogsModalOpen] = useState(false);
   const [userFolders, setUserFolders] = useState<UserFolder[]>([]);
-  const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const [cutFiles, setCutFiles] = useState<Set<string>>(new Set());
   const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -314,11 +291,7 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
     }
   };
 
-  interface ExtendedHTMLInputElement extends HTMLInputElement {
-    forceReupload?: boolean;
-  }
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const forceReupload = (e.target as ExtendedHTMLInputElement).forceReupload || false;
       onUpload(e.target.files, forceReupload);
@@ -350,39 +323,7 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
       setExpandedFolders(next);
   };
 
-  const fileTree = useMemo(() => {
-      const root: Record<string, TreeNode> = {};
-
-      files.forEach(file => {
-          const path = file.path || file.name;
-          const parts = path.split('/');
-          
-          if (parts.length === 1) return;
-          
-          let currentLevel = root;
-          let currentPath = "";
-
-          parts.forEach((part, index) => {
-              const isLast = index === parts.length - 1;
-              currentPath = currentPath ? `${currentPath}/${part}` : part;
-
-              if (!currentLevel[part]) {
-                  currentLevel[part] = {
-                      name: part,
-                      type: isLast ? 'file' : 'folder',
-                      path: currentPath,
-                      file: isLast ? file : undefined,
-                      children: {}
-                  };
-              }
-              
-              if (!isLast) {
-                  currentLevel = currentLevel[part].children;
-              }
-          });
-      });
-      return root;
-  }, [files]);
+  const fileTree = useMemo(() => buildFileTree(files), [files]);
 
   const standaloneFiles = useMemo(() => {
       return files.filter(file => {
@@ -402,15 +343,6 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
   
   const totalTokens = files.reduce((acc, f) => acc + (f.tokenCount || 0), 0);
 
-  const getIcon = (file: ProcessedFile) => {
-    switch (file.type) {
-      case 'pdf': return <FileText size={14} className="text-rose-500" />;
-      case 'excel': return <FileSpreadsheet size={14} className="text-emerald-600" />;
-      case 'image': return <Image size={14} className="text-purple-500" />;
-      case 'document': return <FileText size={14} className="text-blue-500" />;
-      default: return <FileIcon size={14} className="text-slate-500" />;
-    }
-  };
 
   const handleDownload = (file: ProcessedFile) => {
     if (!file.fileHandle) return;
@@ -1135,222 +1067,6 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
   );
 };
 
-const FilePreviewViewer: React.FC<{ file: ProcessedFile; onClose: () => void }> = ({ file, onClose }) => {
-  const [pdfDoc, setPdfDoc] = useState<any>(null);
-  const [numPages, setNumPages] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [excelHtml, setExcelHtml] = useState('');
-  const [pdfScale, setPdfScale] = useState(1.5);
-  const [imageUrl, setImageUrl] = useState<string>('');
 
-  useEffect(() => {
-    if (file.type === 'pdf' && file.fileHandle) {
-      const loadPdf = async () => {
-        try {
-          const arrayBuffer = await file.fileHandle.arrayBuffer();
-          const pdf = await window.pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
-          setPdfDoc(pdf);
-          setNumPages(pdf.numPages);
-          setLoading(false);
-        } catch (err) {
-          console.error('PDF load error:', err);
-          setLoading(false);
-        }
-      };
-      loadPdf();
-    } else if ((file.type === 'excel' || file.type === 'csv') && file.fileHandle && file.fileHandle instanceof File) {
-      const loadExcel = async () => {
-        try {
-          const arrayBuffer = await file.fileHandle.arrayBuffer();
-          const workbook = (window as any).XLSX.read(arrayBuffer, { type: 'array' });
-          let html = '';
-          workbook.SheetNames.forEach((sheetName: string) => {
-            const sheet = workbook.Sheets[sheetName];
-            const sheetHtml = (window as any).XLSX.utils.sheet_to_html(sheet);
-            const sanitizedName = sheetName.replace(/[<>"'&]/g, (c) => ({'<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','&':'&amp;'}[c] || c));
-            html += `<div class="mb-6"><h3 class="text-lg font-bold mb-2 text-gray-800 dark:text-gray-200">${sanitizedName}</h3>${sheetHtml}</div>`;
-          });
-          setExcelHtml(html);
-          setLoading(false);
-        } catch (err) {
-          console.error('Excel load error:', err);
-          setLoading(false);
-        }
-      };
-      loadExcel();
-    } else {
-      setLoading(false);
-    }
-    
-    if (file.type === 'image' && file.fileHandle && file.fileHandle instanceof File) {
-      const url = URL.createObjectURL(file.fileHandle);
-      setImageUrl(url);
-      return () => URL.revokeObjectURL(url);
-    }
-  }, [file]);
-
-  if (loading) return <div className="flex items-center justify-center p-8"><Loader2 className="animate-spin" /></div>;
-
-  return (
-    <>
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1a1a1a]">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-white truncate">{file.name}</h3>
-        <div className="flex items-center gap-2">
-          {file.type === 'pdf' && (
-            <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
-              <button onClick={() => setPdfScale(s => Math.max(0.5, s - 0.2))} className="p-1 hover:bg-white dark:hover:bg-gray-700 rounded transition-colors">
-                <Minus size={14} className="text-gray-600 dark:text-gray-400" />
-              </button>
-              <span className="text-xs font-medium text-gray-700 dark:text-gray-300 min-w-[45px] text-center">{Math.round(pdfScale * 100)}%</span>
-              <button onClick={() => setPdfScale(s => Math.min(3, s + 0.2))} className="p-1 hover:bg-white dark:hover:bg-gray-700 rounded transition-colors">
-                <Plus size={14} className="text-gray-600 dark:text-gray-400" />
-              </button>
-            </div>
-          )}
-          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
-            <X size={18} className="text-gray-500 dark:text-gray-400" />
-          </button>
-        </div>
-      </div>
-      {file.type === 'pdf' && pdfDoc && (
-        <div className="flex-1 overflow-y-auto bg-gray-100 dark:bg-[#1a1a1a] scroll-smooth">
-          <div className="space-y-4 py-4">
-            {Array.from({ length: numPages }, (_, i) => (
-              <PdfPageRenderer key={i + 1} pdf={pdfDoc} pageNum={i + 1} scale={pdfScale} />
-            ))}
-          </div>
-        </div>
-      )}
-      {(file.type === 'excel' || file.type === 'csv') && (
-        <div className="flex-1 overflow-y-auto bg-white dark:bg-[#1a1a1a] p-6 scroll-smooth">
-          <style>{`
-            table { border-collapse: collapse; width: 100%; margin-bottom: 1rem; }
-            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-            th { background-color: #f3f4f6; font-weight: 600; }
-            tr:nth-child(even) { background-color: #f9fafb; }
-          `}</style>
-          <div dangerouslySetInnerHTML={{ __html: excelHtml }} />
-        </div>
-      )}
-      {file.type === 'markdown' && <DocumentViewer file={file} onClose={onClose} />}
-      {(file.type === 'document' || file.type === 'other') && (
-        <div className="flex-1 overflow-y-auto bg-white dark:bg-[#1a1a1a] p-6 scroll-smooth">
-          <pre className="whitespace-pre-wrap text-sm">{file.content}</pre>
-        </div>
-      )}
-      {file.type === 'image' && imageUrl && (
-        <div className="flex-1 overflow-y-auto bg-gray-100 dark:bg-[#1a1a1a] flex items-center justify-center scroll-smooth">
-          <img src={imageUrl} alt={file.name} className="max-w-full max-h-full object-contain" />
-        </div>
-      )}
-      {!['pdf', 'excel', 'csv', 'markdown', 'document', 'other', 'image'].includes(file.type) && (
-        <div className="p-8 text-center">Preview not available for this file type</div>
-      )}
-    </>
-  );
-};
-
-const PdfPageRenderer: React.FC<{ pdf: any; pageNum: number; scale: number }> = ({ pdf, pageNum, scale }) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [pageWidth, setPageWidth] = useState(0);
-  const renderTaskRef = useRef<any>(null);
-
-  useEffect(() => {
-    let isMounted = true;
-    const render = async () => {
-      try {
-        if (renderTaskRef.current) {
-          await renderTaskRef.current.cancel();
-        }
-        const page = await pdf.getPage(pageNum);
-        const viewport = page.getViewport({ scale });
-        const canvas = canvasRef.current;
-        if (!canvas || !isMounted) return;
-        const context = canvas.getContext('2d');
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        setPageWidth(viewport.width);
-        const renderTask = page.render({ canvasContext: context, viewport });
-        renderTaskRef.current = renderTask;
-        await renderTask.promise;
-      } catch (err: any) {
-        if (err?.name !== 'RenderingCancelledException') {
-          console.error('Render error:', err);
-        }
-      }
-    };
-    render();
-    return () => {
-      isMounted = false;
-      if (renderTaskRef.current) {
-        renderTaskRef.current.cancel();
-      }
-    };
-  }, [pdf, pageNum, scale]);
-
-  return (
-    <div className="bg-white shadow-lg mx-auto" style={{ width: pageWidth || 'auto' }}>
-      <canvas ref={canvasRef} className="block" />
-      <div className="text-center text-xs text-gray-400 py-2">Page {pageNum}</div>
-    </div>
-  );
-};
-
-const ExcelPreview: React.FC<{ file: File }> = ({ file }) => {
-  const [html, setHtml] = useState<string>('');
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const loadExcel = async () => {
-      try {
-        let attempts = 0;
-        while (!(window as any).XLSX && attempts < 50) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-          attempts++;
-        }
-        
-        if (!(window as any).XLSX) {
-          setHtml('<p>Excel library failed to load</p>');
-          setLoading(false);
-          return;
-        }
-
-        const arrayBuffer = await file.arrayBuffer();
-        const workbook = (window as any).XLSX.read(arrayBuffer, { type: 'array' });
-        let fullHtml = '';
-
-        workbook.SheetNames.forEach((sheetName: string) => {
-          const sheet = workbook.Sheets[sheetName];
-          const sheetHtml = (window as any).XLSX.utils.sheet_to_html(sheet);
-          fullHtml += `<div class="mb-6"><h3 class="text-lg font-bold mb-2 text-gray-800">${sheetName}</h3>${sheetHtml}</div>`;
-        });
-
-        setHtml(fullHtml);
-        setLoading(false);
-      } catch (err) {
-        console.error('Excel preview error:', err);
-        setHtml('<p>Failed to load Excel file</p>');
-        setLoading(false);
-      }
-    };
-    loadExcel();
-  }, [file]);
-
-  if (loading) {
-    return <div className="flex items-center justify-center h-full"><Loader2 className="animate-spin" /></div>;
-  }
-
-  return (
-    <div className="bg-white p-8 rounded max-w-full mx-auto">
-      <style>{`
-        table { border-collapse: collapse; width: 100%; margin-bottom: 1rem; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f3f4f6; font-weight: 600; }
-        tr:nth-child(even) { background-color: #f9fafb; }
-      `}</style>
-      <div dangerouslySetInnerHTML={{ __html: html }} />
-    </div>
-  );
-};
 
 export default FileSidebar;

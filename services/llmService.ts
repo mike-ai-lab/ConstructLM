@@ -199,8 +199,23 @@ export const sendMessageToLLM = async (
     console.log('🔶 [LLM] History length:', history.length);
     
     const model = getModel(modelId);
+    
+    // Check for images with non-vision models
+    const hasImages = activeFiles.some(f => f.type === 'image');
+    const isVisionModel = model.provider === 'google' || (model.provider === 'openai' && model.id.includes('gpt-4'));
+    
+    if (hasImages && !isVisionModel) {
+        throw new Error(
+            `**Vision Not Supported:** ${model.name} cannot analyze images.\n\n` +
+            `**Switch to a vision-enabled model:**\n` +
+            `• Google Gemini (any model)\n` +
+            `• OpenAI GPT-4o or GPT-4o Mini`
+        );
+    }
 
-    // Try to get relevant context from RAG if available
+    // RAG is DISABLED by default to save API quota
+    // Uncomment to enable semantic search (uses Gemini embeddings API)
+    /*
     let ragContext = '';
     try {
         const ragResults = await ragService.searchRelevantChunks(newMessage, 5);
@@ -213,6 +228,8 @@ export const sendMessageToLLM = async (
     } catch (error) {
         console.log('[RAG] Search failed, continuing without RAG context:', error);
     }
+    */
+    const ragContext = ''; // RAG disabled
 
     const systemPrompt = constructBaseSystemPrompt(activeFiles.length > 0, activeSources.length > 0, activeSources) + ragContext;
 
@@ -279,8 +296,19 @@ export const sendMessageToLLM = async (
                 throw new Error(`API Key for ${model.name} is missing. Please open Settings (Gear Icon) to add it.`);
             }
             
-            const fileContext = activeFiles.length > 0
-                ? '\n\nFILE CONTEXT:\n' + activeFiles.map(f => `=== FILE: "${f.name}" ===\n${f.content}\n=== END FILE ===`).join('\n\n')
+            // Helper to extract image data
+            const extractImageData = (content: string): { base64: string; mimeType: string } | null => {
+                const match = content.match(/\[IMAGE_DATA:([^\]]+)\]/);
+                if (!match) return null;
+                return { base64: match[1], mimeType: 'image/jpeg' };
+            };
+            
+            // Separate image and text files
+            const imageFiles = activeFiles.filter(f => f.type === 'image');
+            const textFiles = activeFiles.filter(f => f.type !== 'image');
+            
+            const fileContext = textFiles.length > 0
+                ? '\n\nFILE CONTEXT:\n' + textFiles.map(f => `=== FILE: "${f.name}" ===\n${f.content}\n=== END FILE ===`).join('\n\n')
                 : '';
             
             const fullContext = fileContext + sourceContext;
@@ -298,7 +326,28 @@ export const sendMessageToLLM = async (
             
             const isFirstMessage = recentHistory.length === 0;
             const currentContent = (isFirstMessage && fullContext) ? newMessage + fullContext : newMessage;
-            messages.push({ role: 'user', content: currentContent });
+            
+            // For OpenAI with vision support, format message with images
+            if (imageFiles.length > 0 && model.provider === 'openai') {
+                const contentParts: any[] = [{ type: 'text', text: currentContent }];
+                
+                for (const imgFile of imageFiles) {
+                    const imageData = extractImageData(imgFile.content);
+                    if (imageData) {
+                        contentParts.push({
+                            type: 'image_url',
+                            image_url: {
+                                url: `data:${imgFile.fileHandle?.type || 'image/jpeg'};base64,${imageData.base64}`
+                            }
+                        });
+                    }
+                }
+                
+                messages.push({ role: 'user', content: contentParts });
+            } else {
+                // Standard text-only message
+                messages.push({ role: 'user', content: currentContent });
+            }
             
             // DIAGNOSTIC: 5. LLM CONTEXT ASSEMBLY (Full Prompt)
             diagnosticLogger.log('5. LLM_CONTEXT_FULL_PROMPT', {
@@ -307,13 +356,16 @@ export const sendMessageToLLM = async (
                 system_prompt: systemPrompt,
                 user_prompt: currentContent,
                 total_messages: messages.length,
-                total_characters: messages.reduce((sum, m) => sum + m.content.length, 0),
-                estimated_tokens: Math.ceil(messages.reduce((sum, m) => sum + m.content.length, 0) / 4),
+                has_images: imageFiles.length > 0,
+                image_count: imageFiles.length,
+                total_characters: messages.reduce((sum, m) => sum + (typeof m.content === 'string' ? m.content.length : 0), 0),
+                estimated_tokens: Math.ceil(messages.reduce((sum, m) => sum + (typeof m.content === 'string' ? m.content.length : 0), 0) / 4),
                 messages_structure: messages.map((m, idx) => ({
                     index: idx,
                     role: m.role,
-                    content_length: m.content.length,
-                    content_preview: m.content.substring(0, 200)
+                    content_type: typeof m.content,
+                    content_length: typeof m.content === 'string' ? m.content.length : JSON.stringify(m.content).length,
+                    content_preview: typeof m.content === 'string' ? m.content.substring(0, 200) : '[multipart content]'
                 }))
             });
             
@@ -443,7 +495,7 @@ const constructStatelessPrompt = (files: ProcessedFile[], baseSystemPrompt: stri
 const streamOpenAICompatible = async (
     model: ModelConfig,
     apiKey: string,
-    messages: Array<{ role: string; content: string }>,
+    messages: Array<{ role: string; content: string | any }>,
     onStream: (chunk: string, thinking?: string) => void
 ): Promise<{ inputTokens?: number; outputTokens?: number; totalTokens?: number }> => {
 

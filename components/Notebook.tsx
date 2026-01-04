@@ -1,10 +1,11 @@
 // Notebook.tsx
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, BookMarked, Trash2, Star, Search, Tag, Download, Copy, Edit2, Check, ExternalLink, FileText, Grid, List, CheckSquare, Square, Save, ArrowUpDown, Folder, ChevronRight, Maximize2, Minimize2, Bold, Italic, Type, Menu } from 'lucide-react';
 import { Note } from '../types';
 import CitationRenderer from './CitationRenderer';
 import { ProcessedFile } from '../types';
+import ConfirmDialog from './Notebook/ConfirmDialog';
 
 interface NotebookProps {
   notes: Note[];
@@ -23,18 +24,21 @@ const Notebook: React.FC<NotebookProps> = ({ notes, onDeleteNote, onUpdateNote, 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editTitle, setEditTitle] = useState('');
+  const [inlineEditTitle, setInlineEditTitle] = useState('');
   const [viewMode, setViewMode] = useState<'list' | 'grid' | 'details'>('grid');
   const [selectedNotes, setSelectedNotes] = useState<Set<string>>(new Set());
   const [openNoteId, setOpenNoteId] = useState<string | null>(null);
+  const [modalEditTitle, setModalEditTitle] = useState('');
   const [editContent, setEditContent] = useState('');
   const [sortBy, setSortBy] = useState<'date' | 'modified' | 'model'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [showSaveConfirm, setShowSaveConfirm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const categories = ['all', ...Array.from(new Set(notes.map(n => n.category).filter(Boolean)))];
   
-  const filteredNotes = notes
+  const filteredNotes = useMemo(() => notes
     .filter(n => filterCategory === 'all' || n.category === filterCategory)
     .filter(n => 
       searchQuery === '' || 
@@ -56,7 +60,7 @@ const Notebook: React.FC<NotebookProps> = ({ notes, onDeleteNote, onUpdateNote, 
       }
       
       return sortOrder === 'asc' ? -comparison : comparison;
-    });
+    }), [notes, filterCategory, searchQuery, sortBy, sortOrder]);
 
   const exportNotes = () => {
     const text = filteredNotes.map(n => 
@@ -122,7 +126,7 @@ const Notebook: React.FC<NotebookProps> = ({ notes, onDeleteNote, onUpdateNote, 
       for (const file of files) {
         const content = await file.text();
         const newNote: Note = {
-          id: Date.now().toString() + Math.random(),
+          id: crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`,
           noteNumber: notes.length + importedNotes.length + 1,
           content,
           timestamp: Date.now(),
@@ -164,12 +168,27 @@ const Notebook: React.FC<NotebookProps> = ({ notes, onDeleteNote, onUpdateNote, 
   const openNote = (note: Note) => {
     setOpenNoteId(note.id);
     setEditContent(note.content);
-    setEditTitle(note.title || '');
+    setModalEditTitle(note.title || '');
   };
 
   const saveNote = () => {
     if (openNoteId) {
-      onUpdateNote(openNoteId, { content: editContent, title: editTitle, lastModified: Date.now() });
+      onUpdateNote(openNoteId, { content: editContent, title: modalEditTitle, lastModified: Date.now() });
+      setOpenNoteId(null);
+    }
+  };
+
+  const closeNote = () => {
+    if (!openNoteId) return;
+    const openedNote = notes.find(n => n.id === openNoteId);
+    if (!openedNote) {
+      setOpenNoteId(null);
+      return;
+    }
+    const isDirty = editContent !== openedNote.content || modalEditTitle !== (openedNote.title || '');
+    if (isDirty) {
+      setShowSaveConfirm(true);
+    } else {
       setOpenNoteId(null);
     }
   };
@@ -196,6 +215,16 @@ const Notebook: React.FC<NotebookProps> = ({ notes, onDeleteNote, onUpdateNote, 
 
   const openedNote = openNoteId ? notes.find(n => n.id === openNoteId) : null;
   const wordCount = editContent.split(/\s+/).filter(w => w.length > 0).length;
+
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && openNoteId) {
+        closeNote();
+      }
+    };
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [openNoteId, editContent, modalEditTitle]);
 
   // Render header controls
   React.useEffect(() => {
@@ -273,17 +302,19 @@ const Notebook: React.FC<NotebookProps> = ({ notes, onDeleteNote, onUpdateNote, 
 
   if (openedNote) {
     return createPortal(
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[100000] p-4">
-        <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)]">
+      <>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[100000] p-4" role="dialog" aria-modal="true" aria-labelledby="note-title" onClick={closeNote}>
+          <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-2xl w-full max-w-4xl h-[90vh] flex flex-col border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)]" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-center justify-between p-4 border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)]">
             <div className="flex items-center gap-3 flex-1">
               <span className="text-xs px-2 py-1 bg-[#25b5cd]/20 dark:bg-[#25b5cd]/10 text-[#25b5cd] dark:text-[#5bd8bb] rounded font-mono font-semibold">
                 Note #{openedNote.noteNumber}
               </span>
               <input
+                id="note-title"
                 type="text"
-                value={editTitle}
-                onChange={(e) => setEditTitle(e.target.value)}
+                value={modalEditTitle}
+                onChange={(e) => setModalEditTitle(e.target.value)}
                 placeholder="Untitled Note"
                 className="flex-1 text-2xl font-bold text-[#1a1a1a] dark:text-white bg-transparent border-none focus:outline-none placeholder-slate-300"
               />
@@ -296,7 +327,7 @@ const Notebook: React.FC<NotebookProps> = ({ notes, onDeleteNote, onUpdateNote, 
                 <Save size={16} />
                 Save
               </button>
-              <button onClick={() => setOpenNoteId(null)} className="p-2 hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[#2a2a2a] rounded-lg transition-colors">
+              <button onClick={closeNote} className="p-2 hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[#2a2a2a] rounded-lg transition-colors" aria-label="Close note">
                 <X size={20} className="text-[#666666] dark:text-[#a0a0a0]" />
               </button>
             </div>
@@ -320,22 +351,20 @@ const Notebook: React.FC<NotebookProps> = ({ notes, onDeleteNote, onUpdateNote, 
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-6">
-            <div className="max-w-3xl mx-auto">
-              <div className="mb-6 flex items-center gap-4 text-xs text-[#666666] dark:text-[#a0a0a0] font-medium tracking-wide uppercase">
-                <span>{new Date(openedNote.timestamp).toLocaleString(undefined, { weekday: 'long', hour: 'numeric', minute: 'numeric' })}</span>
-                <span>•</span>
-                <span>{openedNote.category || 'Uncategorized'}</span>
-              </div>
-              <textarea
-                ref={textareaRef}
-                value={editContent}
-                onChange={(e) => setEditContent(e.target.value)}
-                className="w-full min-h-[400px] bg-transparent text-[#1a1a1a] dark:text-white resize-none focus:outline-none text-lg leading-relaxed font-serif"
-                placeholder="Start typing your story..."
-                spellCheck="false"
-              />
+          <div className="flex-1 p-6 flex flex-col">
+            <div className="mb-6 flex items-center gap-4 text-xs text-[#666666] dark:text-[#a0a0a0] font-medium tracking-wide uppercase">
+              <span>{new Date(openedNote.timestamp).toLocaleString(undefined, { weekday: 'long', hour: 'numeric', minute: 'numeric' })}</span>
+              <span>•</span>
+              <span>{openedNote.category || 'Uncategorized'}</span>
             </div>
+            <textarea
+              ref={textareaRef}
+              value={editContent}
+              onChange={(e) => setEditContent(e.target.value)}
+              className="flex-1 w-full overflow-y-auto bg-transparent text-[#1a1a1a] dark:text-white resize-none focus:outline-none text-lg leading-relaxed font-serif"
+              placeholder="Start typing your story..."
+              spellCheck="false"
+            />
           </div>
 
           <div className="p-4 border-t border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] text-xs text-[#666666] dark:text-[#a0a0a0] flex items-center justify-between">
@@ -344,8 +373,25 @@ const Notebook: React.FC<NotebookProps> = ({ notes, onDeleteNote, onUpdateNote, 
               <span>Last modified: {new Date(openedNote.lastModified).toLocaleString()}</span>
             )}
           </div>
+          </div>
         </div>
-      </div>,
+        <ConfirmDialog
+          isOpen={showSaveConfirm}
+          title="Unsaved Changes"
+          message="You have unsaved changes. Do you want to save before closing?"
+          confirmText="Save"
+          cancelText="Discard"
+          variant="warning"
+          onConfirm={() => {
+            saveNote();
+            setShowSaveConfirm(false);
+          }}
+          onCancel={() => {
+            setOpenNoteId(null);
+            setShowSaveConfirm(false);
+          }}
+        />
+      </>,
       document.body
     );
   }
@@ -431,7 +477,10 @@ const Notebook: React.FC<NotebookProps> = ({ notes, onDeleteNote, onUpdateNote, 
                       </div>
 
                       <button 
-                        onClick={(e) => { e.stopPropagation(); onDeleteNote(note.id); }}
+                        onClick={(e) => { 
+                          e.stopPropagation(); 
+                          setShowDeleteConfirm(note.id);
+                        }}
                         className="absolute top-2 right-2 p-1 rounded text-slate-400 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100"
                       >
                         <Trash2 size={12} />
@@ -446,15 +495,21 @@ const Notebook: React.FC<NotebookProps> = ({ notes, onDeleteNote, onUpdateNote, 
       </div>
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col h-full bg-white dark:bg-[#1a1a1a] relative min-w-0">
+      <main className="flex-1 flex flex-col h-full bg-white dark:bg-[#1a1a1a] relative min-w-0 overflow-y-auto">
           <div className="p-6">
             {filteredNotes.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center py-12">
                 <div className="w-20 h-20 bg-white dark:bg-[#2a2a2a] rounded-2xl flex items-center justify-center mb-6 shadow-sm border border-slate-100 dark:border-[rgba(255,255,255,0.05)]">
                   <BookMarked size={40} className="text-blue-200 dark:text-blue-800" />
                 </div>
-                <p className="text-xl font-medium text-slate-500 dark:text-[#a0a0a0]">Notebook</p>
-                <p className="text-sm mt-2 text-[#666666] dark:text-[#a0a0a0]">Select a note from the sidebar to begin.</p>
+                <p className="text-xl font-medium text-slate-500 dark:text-[#a0a0a0]">
+                  {searchQuery || filterCategory !== 'all' ? 'No notes found' : 'Notebook'}
+                </p>
+                <p className="text-sm mt-2 text-[#666666] dark:text-[#a0a0a0]">
+                  {searchQuery || filterCategory !== 'all' ? (
+                    <button onClick={() => { setSearchQuery(''); setFilterCategory('all'); }} className="text-blue-600 hover:underline">Clear filters</button>
+                  ) : 'Select a note from the sidebar to begin.'}
+                </p>
               </div>
             ) : viewMode === 'grid' ? (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
@@ -468,7 +523,7 @@ const Notebook: React.FC<NotebookProps> = ({ notes, onDeleteNote, onUpdateNote, 
                   }`}
                 >
                   <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center gap-1 cursor-pointer" onClick={(e) => toggleSelectNote(note.id, e)}>
+                    <div className="flex items-center gap-1 cursor-pointer p-2 -m-2" onClick={(e) => toggleSelectNote(note.id, e)}>
                       {selectedNotes.has(note.id) ? <CheckSquare size={14} className="text-blue-600" /> : <Square size={14} className="text-[#666666] dark:text-[#a0a0a0]" />}
                       <span className="text-xs px-1.5 py-0.5 bg-[#25b5cd]/20 dark:bg-[#25b5cd]/10 text-[#25b5cd] dark:text-[#5bd8bb] rounded font-mono font-semibold">
                         #{note.noteNumber}
@@ -507,7 +562,7 @@ const Notebook: React.FC<NotebookProps> = ({ notes, onDeleteNote, onUpdateNote, 
                     className="bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] rounded-lg p-3 border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] hover:border-blue-500 transition-colors cursor-pointer grid grid-cols-6 gap-3 items-center text-xs"
                   >
                     <div className="flex items-center gap-2">
-                      <div onClick={(e) => { e.stopPropagation(); toggleSelectNote(note.id, e); }} className="cursor-pointer">
+                      <div onClick={(e) => { e.stopPropagation(); toggleSelectNote(note.id, e); }} className="cursor-pointer p-2 -m-2">
                         {selectedNotes.has(note.id) ? <CheckSquare size={14} className="text-blue-600" /> : <Square size={14} className="text-[#666666] dark:text-[#a0a0a0]" />}
                       </div>
                       <span className="px-1.5 py-0.5 bg-[#25b5cd]/20 dark:bg-[#25b5cd]/10 text-[#25b5cd] dark:text-[#5bd8bb] rounded font-mono font-semibold">
@@ -540,8 +595,8 @@ const Notebook: React.FC<NotebookProps> = ({ notes, onDeleteNote, onUpdateNote, 
                         <div className="flex gap-2">
                           <input
                             type="text"
-                            value={editTitle}
-                            onChange={(e) => setEditTitle(e.target.value)}
+                            value={inlineEditTitle}
+                            onChange={(e) => setInlineEditTitle(e.target.value)}
                             className="flex-1 px-2 py-1 bg-white dark:bg-[#1a1a1a] rounded text-sm border border-blue-500"
                             placeholder="Add title..."
                             autoFocus
@@ -550,7 +605,7 @@ const Notebook: React.FC<NotebookProps> = ({ notes, onDeleteNote, onUpdateNote, 
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              onUpdateNote(note.id, { title: editTitle });
+                              onUpdateNote(note.id, { title: inlineEditTitle });
                               setEditingId(null);
                             }}
                             className="p-1 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded"
@@ -565,7 +620,7 @@ const Notebook: React.FC<NotebookProps> = ({ notes, onDeleteNote, onUpdateNote, 
                             onClick={(e) => {
                               e.stopPropagation();
                               setEditingId(note.id);
-                              setEditTitle(note.title || '');
+                              setInlineEditTitle(note.title || '');
                             }}
                             className="p-1 text-[#666666] dark:text-[#a0a0a0] hover:text-blue-600 opacity-0 group-hover:opacity-100"
                           >
@@ -650,7 +705,7 @@ const Notebook: React.FC<NotebookProps> = ({ notes, onDeleteNote, onUpdateNote, 
                         </div>
                       </div>
                       <button
-                        onClick={() => onDeleteNote(note.id)}
+                        onClick={() => setShowDeleteConfirm(note.id)}
                         className="p-1.5 hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[#222222] rounded text-[#1a1a1a] dark:text-white transition-colors"
                         title="Delete"
                       >
@@ -667,6 +722,19 @@ const Notebook: React.FC<NotebookProps> = ({ notes, onDeleteNote, onUpdateNote, 
             )}
           </div>
       </main>
+      <ConfirmDialog
+        isOpen={showDeleteConfirm !== null}
+        title="Delete Note"
+        message="Are you sure you want to delete this note? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+        onConfirm={() => {
+          if (showDeleteConfirm) onDeleteNote(showDeleteConfirm);
+          setShowDeleteConfirm(null);
+        }}
+        onCancel={() => setShowDeleteConfirm(null)}
+      />
     </div>
   );
 };

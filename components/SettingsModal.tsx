@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Save, Key, ShieldCheck, CheckCircle, Loader2, Play, AlertCircle, Cpu, ExternalLink, Download, Upload, Database, Trash2, User, CheckSquare, Square } from 'lucide-react';
+import { X, Save, Key, ShieldCheck, CheckCircle, Loader2, Play, AlertCircle, Cpu, ExternalLink, Download, Upload, Database, Trash2, User, CheckSquare, Square, RefreshCw } from 'lucide-react';
 import { saveApiKey, getStoredApiKey } from '../services/modelRegistry';
 import { checkOllamaConnection, getAvailableOllamaModels, getLocalModelSetupInstructions } from '../services/localModelService';
 import { dataExportService, ExportOptions } from '../services/dataExportService';
@@ -156,10 +156,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
 
             try {
                 if (provider === 'google') {
-                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ contents: [{ parts: [{ text: 'test' }] }] }),
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`, {
+                        method: 'GET',
                         signal: controller.signal
                     });
                     if (!response.ok) {
@@ -748,6 +746,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                         </div>
                         <LocalModelsStatus />
                     </div>
+
+                    {/* App Updates Section */}
+                    {(window as any).electron && (
+                        <div className="border-t border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] pt-4">
+                            <UpdateChecker />
+                        </div>
+                    )}
                 </div>
 
                 {/* Footer */}
@@ -886,6 +891,154 @@ const LocalModelsStatus: React.FC = () => {
                         <li>Click "Test Connection" above</li>
                     </ol>
                     <p className="italic mt-1.5">See LOCAL_MODELS_SETUP.md for detailed instructions</p>
+                </div>
+            )}
+        </div>
+    );
+};
+
+// Update Checker Component
+const UpdateChecker: React.FC = () => {
+    const [checking, setChecking] = useState(false);
+    const [updateAvailable, setUpdateAvailable] = useState(false);
+    const [updateInfo, setUpdateInfo] = useState<any>(null);
+    const [downloading, setDownloading] = useState(false);
+    const [downloadProgress, setDownloadProgress] = useState(0);
+    const [readyToInstall, setReadyToInstall] = useState(false);
+
+    useEffect(() => {
+        const electron = (window as any).electron;
+        if (!electron) return;
+
+        electron.onUpdateAvailable((info: any) => {
+            setUpdateAvailable(true);
+            setUpdateInfo(info);
+            setChecking(false);
+        });
+
+        electron.onUpdateNotAvailable(() => {
+            setChecking(false);
+        });
+
+        electron.onDownloadProgress((progress: any) => {
+            setDownloadProgress(Math.round(progress.percent));
+        });
+
+        electron.onUpdateDownloaded(() => {
+            setDownloading(false);
+            setReadyToInstall(true);
+        });
+
+        electron.onUpdateError((error: string) => {
+            setChecking(false);
+            setDownloading(false);
+            alert('Update error: ' + error);
+        });
+    }, []);
+
+    const handleCheckForUpdates = async () => {
+        setChecking(true);
+        setUpdateAvailable(false);
+        setUpdateInfo(null);
+        
+        // Disable update checking - requires GitHub repo setup
+        setChecking(false);
+        alert('Update checking is disabled.\n\nTo enable:\n1. Create a GitHub repository\n2. Update package.json with your repo URL\n3. Create releases on GitHub\n\nSee AUTO_UPDATE_SETUP.md for details.');
+        return;
+        
+        const result = await (window as any).electron.checkForUpdates();
+        if (!result.available) {
+            setChecking(false);
+            alert('You are using the latest version!');
+        }
+    };
+
+    const handleDownload = async () => {
+        setDownloading(true);
+        await (window as any).electron.downloadUpdate();
+    };
+
+    const handleInstall = () => {
+        (window as any).electron.installUpdate();
+    };
+
+    return (
+        <div className="space-y-2">
+            <div className="flex items-center gap-1.5 mb-2">
+                <RefreshCw size={12} className="text-[#666666] dark:text-[#a0a0a0]" />
+                <h3 className="text-xs font-bold text-[#666666] dark:text-[#a0a0a0] uppercase tracking-wider">App Updates</h3>
+            </div>
+
+            {!updateAvailable && !readyToInstall && (
+                <button
+                    onClick={handleCheckForUpdates}
+                    disabled={checking}
+                    className="w-full px-2.5 py-1.5 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] hover:bg-[rgba(0,0,0,0.06)] dark:hover:bg-[#222222] text-[#666666] dark:text-[#a0a0a0] rounded-lg text-xs font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+                >
+                    {checking ? (
+                        <>
+                            <Loader2 size={10} className="animate-spin" />
+                            Checking...
+                        </>
+                    ) : (
+                        <>
+                            <RefreshCw size={10} />
+                            Check for Updates
+                        </>
+                    )}
+                </button>
+            )}
+
+            {updateAvailable && !readyToInstall && (
+                <div className="bg-[rgba(68,133,209,0.1)] border border-[rgba(68,133,209,0.2)] dark:border-[rgba(68,133,209,0.3)] rounded-lg p-2 space-y-2">
+                    <div className="flex items-center gap-1.5">
+                        <Download size={12} className="text-[#4485d1]" />
+                        <span className="text-xs font-bold text-[#1a1a1a] dark:text-white">Update Available</span>
+                    </div>
+                    <p className="text-xs text-[#666666] dark:text-[#a0a0a0]">
+                        Version {updateInfo?.version} is available
+                    </p>
+                    {downloading ? (
+                        <div className="space-y-1">
+                            <div className="flex justify-between text-[10px] text-[#666666] dark:text-[#a0a0a0]">
+                                <span>Downloading...</span>
+                                <span>{downloadProgress}%</span>
+                            </div>
+                            <div className="w-full bg-[rgba(0,0,0,0.1)] dark:bg-[rgba(255,255,255,0.1)] rounded-full h-1.5">
+                                <div 
+                                    className="bg-[#4485d1] h-1.5 rounded-full transition-all duration-300"
+                                    style={{ width: `${downloadProgress}%` }}
+                                />
+                            </div>
+                        </div>
+                    ) : (
+                        <button
+                            onClick={handleDownload}
+                            className="w-full px-2.5 py-1.5 bg-[#4485d1] hover:bg-[#3674c1] text-white rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5"
+                        >
+                            <Download size={10} />
+                            Download Update
+                        </button>
+                    )}
+                </div>
+            )}
+
+            {readyToInstall && (
+                <div className="bg-[rgba(0,200,0,0.1)] border border-[rgba(0,200,0,0.2)] dark:border-[rgba(0,200,0,0.3)] rounded-lg p-2 space-y-2">
+                    <div className="flex items-center gap-1.5">
+                        <CheckCircle size={12} className="text-green-600" />
+                        <span className="text-xs font-bold text-[#1a1a1a] dark:text-white">Update Ready</span>
+                    </div>
+                    <p className="text-xs text-[#666666] dark:text-[#a0a0a0]">
+                        Update downloaded. Restart to install.
+                    </p>
+                    <button
+                        onClick={handleInstall}
+                        className="w-full px-2.5 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5"
+                    >
+                        <RefreshCw size={10} />
+                        Restart & Install
+                    </button>
                 </div>
             )}
         </div>

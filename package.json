@@ -9,7 +9,7 @@
     "proxy": "node server/proxy.js",
     "build": "vite build",
     "preview": "vite preview",
-    "electron:start": "npm run electron:dev",
+    "electron:start": "concurrently \"vite --port 5173 --strictPort\" \"vite build --config electron.vite.config.ts --watch\" \"wait-on http://localhost:5173 && electron .\"",
     "electron:dev": "concurrently \"vite --port 5173 --strictPort\" \"vite build --config electron.vite.config.ts --watch\" \"wait-on http://localhost:5173 && set NODE_ENV=development&& electron .\"",
     "electron:build": "vite build && vite build --config electron.vite.config.ts && electron-builder",
     "electron:pack": "vite build && vite build --config electron.vite.config.ts && electron-builder --dir"
@@ -20,7 +20,9 @@
     "@react-three/fiber": "^9.4.2",
     "@xenova/transformers": "^2.17.2",
     "cors": "^2.8.5",
+    "electron-updater": "^6.6.2",
     "express": "^4.18.2",
+    "framer-motion": "^12.23.26",
     "idb-keyval": "6",
     "jszip": "^3.10.1",
     "lucide-react": "^0.556.0",
@@ -51,6 +53,13 @@
     "appId": "com.constructlm.app",
     "productName": "ConstructLM",
     "copyright": "Copyright © 2025 Int. Arch. M.Shkeir",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "yourusername",
+        "repo": "ConstructLM"
+      }
+    ],
     "directories": {
       "output": "release"
     },
