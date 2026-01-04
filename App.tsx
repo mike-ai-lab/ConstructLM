@@ -40,7 +40,7 @@ import { FloatingInput } from './App/components/FloatingInput';
 import ContextWarningModal from './components/ContextWarningModal';
 import DrawingToolbar from './components/DrawingToolbar';
 import GitHubBrowser from './components/GitHubBrowser';
-import { PipelineTracker } from './components/PipelineTracker';
+import { RAGProcessViewer } from './components/RAGProcessViewer';
 import { Note, Todo, TodoGroup, Reminder, Source } from './types';
 
 const App: React.FC = () => {
@@ -73,6 +73,7 @@ const App: React.FC = () => {
   const [githubRepoUrl, setGithubRepoUrl] = React.useState('');
   const [notebookControls, setNotebookControls] = React.useState<React.ReactNode>(null);
   const [notebookSidebarOpen, setNotebookSidebarOpen] = React.useState(true);
+  const [isRAGViewerOpen, setIsRAGViewerOpen] = React.useState(false);
 
   // REMOVED: Pipeline tracker moved to Help Documentation
   // const [pipelineSteps, setPipelineSteps] = React.useState<any[]>([]);
@@ -87,7 +88,7 @@ const App: React.FC = () => {
     
     // Flush logs on page unload
     const handleBeforeUnload = () => {
-      activityLogger.shutdown();
+      // Activity logger auto-saves, no shutdown needed
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
     
@@ -941,6 +942,7 @@ const App: React.FC = () => {
           }}
           onOpenLogs={() => setIsLogsOpen(true)}
           onOpenGitHub={() => handleOpenGitHubTab()}
+          onOpenRAGViewer={() => setIsLogsOpen(true)}
           notebookControls={notebookControls}
         />
         )}

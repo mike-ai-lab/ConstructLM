@@ -34,8 +34,13 @@ const MODEL_LIMITS: Record<string, number> = {
   'gemini-1.5-pro': 2000000,
   'gemini-1.5-flash': 1000000,
   'gemini-flash-latest': 1000000,
-  'llama-3.3-70b-versatile': 6000,  // 50% of 12k limit
-  'llama-3.1-8b-instant': 750,      // 50% of 1.5k limit
+  'llama-3.3-70b-versatile': 1500,  // Very conservative for Groq
+  'llama-3.1-8b-instant': 300,      // Very conservative for Groq
+  'llama-3.1-70b-versatile': 1500,
+  'llama-3.2-90b-text-preview': 1500,
+  'mixtral-8x7b-32768': 4000,
+  'gemma-7b-it': 1000,
+  'gemma2-9b-it': 1000,
 };
 
 export async function selectHybridContext(
@@ -109,16 +114,20 @@ export async function selectHybridContext(
   // Add semantic scores if available
   if (useSemanticSearch && allSections.length > 0) {
     try {
-      const queryEmbedding = await embeddingService.generateEmbedding(query);
+      // Use RAG service for efficient semantic search instead of generating new embeddings
+      const ragResults = await embeddingService.searchSimilar(query, fileIds, 50);
       
-      for (const sectionData of allSections) {
-        // Create embedding input: title + content preview
-        const embeddingInput = `${sectionData.section.title}\n${sectionData.section.content.slice(0, 500)}`;
-        const sectionEmbedding = await embeddingService.generateEmbedding(embeddingInput);
-        
-        sectionData.embedding = sectionEmbedding;
-        sectionData.semanticScore = cosineSimilarity(queryEmbedding, sectionEmbedding);
-      }
+      // Map RAG results back to sections
+      const ragScoreMap = new Map<string, number>();
+      ragResults.forEach((chunk, index) => {
+        const score = 1 - (index / ragResults.length); // Higher rank = higher score
+        ragScoreMap.set(chunk.fileId, Math.max(ragScoreMap.get(chunk.fileId) || 0, score));
+      });
+      
+      // Apply semantic scores from RAG results
+      allSections.forEach(section => {
+        section.semanticScore = ragScoreMap.get(section.fileId) || 0;
+      });
       
       // Calculate hybrid scores (weighted combination)
       const maxKeywordScore = Math.max(...allSections.map(s => s.keywordScore));
@@ -134,9 +143,10 @@ export async function selectHybridContext(
       
       diagnosticLogger.log('SEMANTIC_SCORING_COMPLETE', {
         sectionsProcessed: allSections.length,
+        ragResultsUsed: ragResults.length,
         maxKeywordScore,
         maxSemanticScore,
-        hybridWeights: { semantic: 0.6, keyword: 0.4 }
+        hybridWeights: { semantic: 0.8, keyword: 0.2 }
       });
       
     } catch (error) {

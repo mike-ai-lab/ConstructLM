@@ -9,6 +9,7 @@ import { vectorStore, ChunkRecord } from './vectorStore';
 import { generateFileHash, estimateTokens, chunkText } from './embeddingUtils';
 import { ProcessedFile } from '../types';
 import { diagnosticLogger } from './diagnosticLogger';
+import { activityLogger } from './activityLogger';
 
 // Configure Transformers.js for browser use
 env.allowLocalModels = false;
@@ -32,6 +33,15 @@ interface EmbeddingProgress {
 class EmbeddingService {
   private pipeline: any = null;
   private isLoading: boolean = false;
+  private processingFiles: Set<string> = new Set();
+
+  isProcessing(fileId: string): boolean {
+    return this.processingFiles.has(fileId);
+  }
+
+  getProcessingFiles(): string[] {
+    return Array.from(this.processingFiles);
+  }
 
   async loadModel(): Promise<void> {
     if (this.pipeline) return;
@@ -92,11 +102,17 @@ class EmbeddingService {
     file: ProcessedFile,
     onProgress?: (progress: EmbeddingProgress) => void
   ): Promise<void> {
-    const fileHash = await generateFileHash(file.content);
+    this.processingFiles.add(file.id);
     
+    try {
+      const fileHash = await generateFileHash(file.content);
+    
+    // Check if embeddings already exist for this file content
     const existing = await vectorStore.getEmbeddingByHash(fileHash);
     if (existing && existing.version === EMBEDDING_VERSION) {
-      console.log(`Reusing embeddings for ${file.name}`);
+      console.log(`✅ Reusing embeddings for ${file.name} (content hash match)`);
+      
+      // Update file ID mapping but reuse existing embeddings
       await vectorStore.saveEmbedding({
         fileId: file.id,
         fileHash,
@@ -105,17 +121,24 @@ class EmbeddingService {
         timestamp: Date.now()
       });
       
+      // Reuse existing chunks with new file ID
       const existingChunks = await vectorStore.getChunks(existing.fileId);
-      const newChunks = existingChunks.map(chunk => ({
-        ...chunk,
-        id: `${file.id}_chunk_${chunk.chunkIndex}`,
-        fileId: file.id
-      }));
-      await vectorStore.saveChunks(newChunks);
+      if (existingChunks.length > 0) {
+        const newChunks = existingChunks.map(chunk => ({
+          ...chunk,
+          id: `${file.id}_chunk_${chunk.chunkIndex}`,
+          fileId: file.id
+        }));
+        await vectorStore.saveChunks(newChunks);
+        activityLogger.logRAGVectorStorage(file.name, newChunks.length);
+      }
       return;
     }
 
+    // Only process if no cached embeddings exist
+    console.log(`🔄 Processing new embeddings for ${file.name}`);
     const chunks = chunkText(file.content, CHUNK_SIZE, OVERLAP_PERCENT);
+    activityLogger.logRAGChunking(file.name, chunks.length, Math.round(chunks.reduce((sum, c) => sum + c.length, 0) / chunks.length));
     
     diagnosticLogger.log('2. CHUNK CREATION START', {
       source_file: file.name,
@@ -124,6 +147,7 @@ class EmbeddingService {
     });
     
     const chunkRecords: ChunkRecord[] = [];
+    const startTime = Date.now();
 
     for (let i = 0; i < chunks.length; i++) {
       if (onProgress) {
@@ -146,10 +170,16 @@ class EmbeddingService {
       };
       chunkRecords.push(chunkRecord);
       
-      // No delay needed - local processing is fast!
+      // Yield to UI every 5 chunks to prevent freezing
+      if (i % 5 === 0) {
+        await new Promise(resolve => setTimeout(resolve, 0));
+      }
     }
 
     const avgEmbedding = this.averageEmbeddings(chunkRecords.map(c => c.embedding));
+    const timeTaken = Date.now() - startTime;
+    activityLogger.logRAGEmbedding(file.name, chunks.length, timeTaken);
+    
     await vectorStore.saveEmbedding({
       fileId: file.id,
       fileHash,
@@ -159,6 +189,7 @@ class EmbeddingService {
     });
 
     await vectorStore.saveChunks(chunkRecords);
+    activityLogger.logRAGVectorStorage(file.name, chunkRecords.length);
     
     diagnosticLogger.log('3. EMBEDDING & INDEXING COMPLETE', {
       embedding_model_name: MODEL_NAME,
@@ -167,6 +198,9 @@ class EmbeddingService {
       file_id: file.id,
       privacy: 'LOCAL - no data sent to external APIs'
     });
+    } finally {
+      this.processingFiles.delete(file.id);
+    }
   }
 
   async searchSimilar(query: string, fileIds: string[], topK: number = 5): Promise<ChunkRecord[]> {

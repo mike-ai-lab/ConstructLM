@@ -1,5 +1,5 @@
 import React from 'react';
-import { PanelLeft, PanelLeftOpen, Cpu, ChevronDown, Phone, Plus, Edit3, Trash2, Check, Minus, Camera, Image, Moon, Sun, HelpCircle, Settings, BookMarked, CheckSquare, Bell, MessageSquare, FileText, Github, Terminal } from 'lucide-react';
+import { PanelLeft, PanelLeftOpen, Cpu, ChevronDown, Phone, Plus, Edit3, Trash2, Check, Minus, Camera, Image, Moon, Sun, HelpCircle, Settings, BookMarked, CheckSquare, Bell, MessageSquare, FileText, Github, Terminal, Activity } from 'lucide-react';
 import { MODEL_REGISTRY } from '../../services/modelRegistry';
 import { DRAWING_COLORS } from '../../services/drawingService';
 import GraphicsLibrary from '../../components/GraphicsLibrary';
@@ -55,6 +55,7 @@ interface AppHeaderProps {
   onCloseViewer?: () => void;
   onOpenLogs?: () => void;
   onOpenGitHub?: () => void;
+  onOpenRAGViewer?: () => void;
   notebookControls?: React.ReactNode;
 }
 
@@ -258,6 +259,9 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
         </button>
         <button onClick={props.onOpenLogs} className="p-1.5 md:p-2 text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] hover:text-[#1a1a1a] dark:hover:text-white rounded-full transition-colors flex-shrink-0" title="Activity Logs">
           <FileText size={16} />
+        </button>
+        <button onClick={props.onOpenRAGViewer} className="p-1.5 md:p-2 text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] hover:text-[#1a1a1a] dark:hover:text-white rounded-full transition-colors flex-shrink-0" title="RAG Process Viewer">
+          <Activity size={16} />
         </button>
         <button onClick={() => props.setIsHelpOpen(true)} className="p-1.5 md:p-2 text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] hover:text-[#1a1a1a] dark:hover:text-white rounded-full transition-colors flex-shrink-0">
           <HelpCircle size={16} />

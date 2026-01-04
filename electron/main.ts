@@ -109,6 +109,8 @@ function proxyRequest(url: string, apiKey: string, requestBody: any, event: Elec
     const data = JSON.stringify(requestBody);
     const urlObj = new URL(url);
     
+    console.log(`[Electron Proxy] Request size: ${Buffer.byteLength(data, 'utf8')} bytes`);
+    
     const options = {
       hostname: urlObj.hostname,
       path: urlObj.pathname,
@@ -121,8 +123,12 @@ function proxyRequest(url: string, apiKey: string, requestBody: any, event: Elec
     };
     
     const req = https.request(options, (res) => {
+      console.log(`[Electron Proxy] Response status: ${res.statusCode}`);
+      
       if (requestBody.stream) {
         let buffer = '';
+        let chunkCount = 0;
+        
         res.on('data', (chunk) => {
           buffer += chunk.toString();
           const lines = buffer.split('\n');
@@ -133,6 +139,7 @@ function proxyRequest(url: string, apiKey: string, requestBody: any, event: Elec
             if (trimmed.startsWith('data: ')) {
               const dataStr = trimmed.slice(6);
               if (dataStr !== '[DONE]') {
+                chunkCount++;
                 event.sender.send('stream-chunk', dataStr);
               }
             }
@@ -140,10 +147,16 @@ function proxyRequest(url: string, apiKey: string, requestBody: any, event: Elec
         });
         
         res.on('end', () => {
-          resolve({ ok: res.statusCode === 200, status: res.statusCode, streaming: true });
+          console.log(`[Electron Proxy] Stream ended. Chunks received: ${chunkCount}`);
+          if (chunkCount === 0) {
+            resolve({ ok: false, status: res.statusCode, error: 'Empty response from API' });
+          } else {
+            resolve({ ok: res.statusCode === 200, status: res.statusCode, streaming: true });
+          }
         });
         
         res.on('error', (error) => {
+          console.error(`[Electron Proxy] Stream error:`, error);
           resolve({ ok: false, status: res.statusCode, error: error.message });
         });
       } else {
@@ -161,6 +174,7 @@ function proxyRequest(url: string, apiKey: string, requestBody: any, event: Elec
     });
     
     req.on('error', (error) => {
+      console.error(`[Electron Proxy] Request error:`, error);
       resolve({ ok: false, error: error.message });
     });
     

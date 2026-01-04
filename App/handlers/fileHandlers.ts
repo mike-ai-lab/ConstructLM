@@ -84,29 +84,37 @@ export const createFileHandlers = (
         }
         
         try {
+          activityLogger.logRAGFileUpload(file.name, file.size, file.type);
+          
           const processed = await parseFile(file, forceReupload);
+          
+          activityLogger.logRAGFileParsing(file.name, processed.content?.length || 0, 0);
+          
           newFiles.push(processed);
           setFiles(prev => [...prev, processed]);
           activityLogger.logFileUploaded(file.name, file.type, file.size);
           
           // ✅ AUTO-EMBED: Process file for RAG if enabled and not an image
           if (ragService.isEnabled() && processed.type !== 'image' && processed.status === 'ready') {
-            try {
-              console.log(`[RAG] 📦 Auto-processing ${file.name} for semantic search...`);
-              
-              // Process in background - don't block UI
-              embeddingService.processFile(processed, (progress) => {
-                console.log(`[RAG] Embedding ${progress.fileName}: ${progress.current}/${progress.total} chunks`);
-              }).then(() => {
+            // Process in background with proper async handling
+            (async () => {
+              try {
+                console.log(`[RAG] 📦 Auto-processing ${file.name} for semantic search...`);
+                
+                await embeddingService.processFile(processed, (progress) => {
+                  // Use requestAnimationFrame to avoid blocking UI
+                  requestAnimationFrame(() => {
+                    console.log(`[RAG] Embedding ${progress.fileName}: ${progress.current}/${progress.total} chunks`);
+                  });
+                });
+                
                 console.log(`[RAG] ✅ ${file.name} indexed for semantic search`);
                 activityLogger.logInfo('RAG', `File indexed: ${file.name}`);
-              }).catch((error) => {
+              } catch (error) {
                 console.warn(`[RAG] ⚠️ Failed to embed ${file.name}:`, error);
                 activityLogger.logWarning('RAG', `Embedding failed for ${file.name}`, { error: String(error) });
-              });
-            } catch (error) {
-              console.warn(`[RAG] ⚠️ Failed to start embedding for ${file.name}:`, error);
-            }
+              }
+            })();
           }
         } catch (err) {
           console.error(`Failed to process ${file.name}:`, err);

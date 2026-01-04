@@ -50,6 +50,11 @@ class ActivityLogger {
         (window as any).electron.writeLogs(logContent).catch((err: any) => {
           console.error('Failed to write logs:', err);
         });
+      } else {
+        // Store in localStorage for browser
+        const existingLogs = localStorage.getItem('activityLogs') || '';
+        const newLogs = existingLogs + (existingLogs ? '\n' : '') + logContent;
+        localStorage.setItem('activityLogs', newLogs);
       }
       
       this.logBuffer = [];
@@ -310,6 +315,43 @@ class ActivityLogger {
     this.logAction('MODEL', 'Model switched', { fromModel, toModel });
   }
 
+  // RAG Process Logging
+  public logRAGFileUpload(fileName: string, fileSize: number, fileType: string): void {
+    this.logAction('📁 RAG_FILE_UPLOAD', `File uploaded: ${fileName}`, { fileName, fileSize, fileType });
+  }
+
+  public logRAGFileParsing(fileName: string, contentLength: number, sections: number): void {
+    this.logAction('📖 RAG_FILE_PARSING', `Document processed: ${fileName}`, { fileName, contentLength, sections });
+  }
+
+  public logRAGChunking(fileName: string, chunksCount: number, avgChunkSize: number): void {
+    this.logAction('✂️ RAG_CHUNKING', `Text chunked: ${fileName}`, { fileName, chunksCount, avgChunkSize });
+  }
+
+  public logRAGEmbedding(fileName: string, chunksCount: number, timeTaken: number): void {
+    this.logAction('🧠 RAG_EMBEDDING', `AI understanding generated: ${fileName}`, { fileName, chunksCount, timeTaken, model: 'Xenova/all-MiniLM-L6-v2' });
+  }
+
+  public logRAGVectorStorage(fileName: string, chunksCount: number): void {
+    this.logAction('💾 RAG_STORAGE', `Knowledge stored: ${fileName}`, { fileName, chunksCount });
+  }
+
+  public logRAGUserQuery(query: string, filesCount: number): void {
+    this.logAction('❓ RAG_QUERY', `User question: "${query.substring(0, 50)}..."`, { queryLength: query.length, filesCount });
+  }
+
+  public logRAGSemanticSearch(query: string, method: string, chunksFound: number): void {
+    this.logAction('🔍 RAG_SEARCH', `Smart search completed`, { method, chunksFound, queryPreview: query.substring(0, 30) });
+  }
+
+  public logRAGContextSelection(selectedChunks: number, totalTokens: number, efficiency: number): void {
+    this.logAction('🎯 RAG_CONTEXT', `Context selected`, { selectedChunks, totalTokens, efficiency });
+  }
+
+  public logRAGAIResponse(modelId: string, responseLength: number, citationsCount: number, processingTime: number): void {
+    this.logAction('🤖 RAG_RESPONSE', `AI response generated`, { modelId, responseLength, citationsCount, processingTime });
+  }
+
   public logDrawingAction(action: string, details?: Record<string, any>): void {
     this.logAction('DRAWING', action, details);
   }
@@ -337,20 +379,23 @@ class ActivityLogger {
     this.addToBuffer(entry);
   }
 
-  // Get log files from Electron main process
+  // Get log files from Electron main process or return empty for browser
   public async getLogFiles(): Promise<string[]> {
     if (this.isElectron && (window as any).electron?.getLogFiles) {
       return (window as any).electron.getLogFiles();
     }
-    return [];
+    return ['browser-session.log'];
   }
 
-  // Read log file content from Electron main process
+  // Read log file content from Electron main process or return buffer for browser
   public async readLogFile(fileName: string): Promise<string> {
     if (this.isElectron && (window as any).electron?.readLogFile) {
       return (window as any).electron.readLogFile(fileName);
     }
-    return '';
+    // Return current session logs for browser - include both buffer and localStorage
+    const currentBuffer = this.logBuffer.map(entry => this.formatLogEntry(entry)).join('\n');
+    const storedLogs = localStorage.getItem('activityLogs') || '';
+    return storedLogs + (storedLogs && currentBuffer ? '\n' : '') + currentBuffer;
   }
 
   // Get logs directory from Electron main process
@@ -359,15 +404,6 @@ class ActivityLogger {
       return (window as any).electron.getLogsDirectory();
     }
     return '';
-  }
-
-  // Cleanup on shutdown
-  public shutdown(): void {
-    if (this.bufferFlushInterval) {
-      clearInterval(this.bufferFlushInterval);
-    }
-    this.flushBuffer();
-    this.logSessionEnd();
   }
 }
 

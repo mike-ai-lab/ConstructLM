@@ -225,10 +225,15 @@ export const sendMessageToLLM = async (
             
             if (ragResults.length > 0) {
                 console.log(`[RAG] ✅ Found ${ragResults.length} relevant chunks`);
+                
+                // Map file IDs to actual filenames
+                const fileIdToName = new Map(activeFiles.map(f => [f.id, f.name]));
+                
                 ragContext = '\n\nRELEVANT CONTEXT FROM SEMANTIC SEARCH:\n' + 
                     ragResults.map((result, i) => {
+                        const fileName = fileIdToName.get(result.chunk.fileName) || result.chunk.fileName;
                         const score = result.score ? ` (relevance: ${(result.score * 100).toFixed(0)}%)` : '';
-                        return `[${i + 1}] From ${result.chunk.fileName}${score}:\n${result.chunk.content}`;
+                        return `[${i + 1}] From ${fileName}${score}:\n${result.chunk.content}`;
                     }).join('\n\n');
             } else {
                 console.log('[RAG] No relevant chunks found');
@@ -314,9 +319,8 @@ export const sendMessageToLLM = async (
             const imageFiles = activeFiles.filter(f => f.type === 'image');
             const textFiles = activeFiles.filter(f => f.type !== 'image');
             
-            const fileContext = textFiles.length > 0
-                ? '\n\nFILE CONTEXT:\n' + textFiles.map(f => `=== FILE: "${f.name}" ===\n${f.content}\n=== END FILE ===`).join('\n\n')
-                : '';
+            // DON'T send full file content - RAG chunks are already in ragContext
+            const fileContext = '';
             
             const fullContext = fileContext + sourceContext;
             
@@ -553,7 +557,17 @@ const streamOpenAICompatible = async (
             }
             
             if (result && !result.ok) {
-                throw new Error(`API Error ${result.status}: ${result.error || 'Unknown error'}`);
+                const errorMsg = result.error || 'Unknown error';
+                if (errorMsg.includes('Empty response')) {
+                    throw new Error(
+                        `**Request Too Large:** The context exceeds ${model.name}'s limits.\n\n` +
+                        `**Solutions:**\n` +
+                        `1. Use @mentions to select specific sections only\n` +
+                        `2. Switch to Gemini 2.5 Flash (1M+ token context)\n` +
+                        `3. Reduce file size or split into smaller parts`
+                    );
+                }
+                throw new Error(`API Error ${result.status}: ${errorMsg}`);
             }
             
             if (result && result.streaming) {

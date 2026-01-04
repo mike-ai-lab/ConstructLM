@@ -3,6 +3,7 @@ import { sendMessageToLLM } from '../../services/llmService';
 import { contextManager } from '../../services/contextManager';
 import { activityLogger } from '../../services/activityLogger';
 import { diagnosticLogger } from '../../services/diagnosticLogger';
+import { embeddingService } from '../../services/embeddingService';
 
 export const createMessageHandlers = (
   input: string,
@@ -59,6 +60,9 @@ Extract the KEY TOPIC and create a proper title. Output ONLY 3 words, no punctua
     const textToSend = typeof messageText === 'string' ? messageText : input;
     if (!textToSend || typeof textToSend !== 'string' || !textToSend.trim() || isGenerating) return null;
 
+    // Track user query
+    activityLogger.logRAGUserQuery(textToSend, files.length);
+
     // Priority: @mentioned files override sources panel selection
     const mentionedFiles = files.filter(f => textToSend.includes(`@${f.name}`));
     const selectedFiles = mentionedFiles.length > 0 ? mentionedFiles : files.filter(f => selectedSourceIds.includes(f.id));
@@ -71,8 +75,12 @@ Extract the KEY TOPIC and create a proper title. Output ONLY 3 words, no punctua
     });
 
     const contextResult = await contextManager.selectContext(textToSend, selectedFiles, activeModelId);
+    activityLogger.logRAGSemanticSearch(textToSend, 'hybrid', contextResult.chunks.length);
     
     activityLogger.logContextProcessing(contextResult.totalTokens, contextResult.filesUsed.length, contextResult.chunks.length);
+    
+    const efficiency = contextResult.totalTokens > 0 ? Math.round((1 - contextResult.totalTokens / 10000) * 100) : 0;
+    activityLogger.logRAGContextSelection(contextResult.chunks.length, contextResult.totalTokens, efficiency);
     
     if (contextResult.totalTokens > 50000 && onShowContextWarning) {
       const fileNames = contextManager.getFileNames(contextResult.filesUsed, files);
@@ -154,6 +162,8 @@ Extract the KEY TOPIC and create a proper title. Output ONLY 3 words, no punctua
       
       activityLogger.logRequestSent(activeModelId, textToSend.length, excerptedFiles.length, fetchedSources.length);
       
+      const responseStartTime = Date.now();
+      
       const usage = await sendMessageToLLM(
         activeModelId,
         messages,
@@ -179,6 +189,10 @@ Extract the KEY TOPIC and create a proper title. Output ONLY 3 words, no punctua
       
       console.log('[MessageHandler] LLM response complete. Usage:', usage);
       console.log('[MessageHandler] Final content length:', accumText.length);
+      
+      const citationsCount = (accumText.match(/\{\{citation:/g) || []).length;
+      const responseTime = Date.now() - responseStartTime;
+      activityLogger.logRAGAIResponse(activeModelId, accumText.length, citationsCount, responseTime);
       
       activityLogger.logResponseReceived(activeModelId, accumText.length, usage?.inputTokens, usage?.outputTokens, usage?.totalTokens);
       activityLogger.logMessageReceived('current', accumText.length, activeModelId, usage);
