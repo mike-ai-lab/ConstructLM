@@ -41,7 +41,7 @@ notes-export-*.zip
 *.zip
 metadata.json
 
-# Documentation/Dev files (keep only README.md)
+# Documentation/Dev files (keep only README.md and essential docs)
 *.md.backup
 *_IMPLEMENTATION*.md
 *_FIX*.md
@@ -66,6 +66,13 @@ temp_*.tsx
 TOFIX.txt
 REFERENCE.txt
 todolistcomponent.txt
+
+# Keep these documentation files
+!README.md
+!CONTRIBUTING.md
+!PRE_PUSH_CHECKLIST.md
+!GITHUB_READY.md
+!LICENSE
 
 # Test/Example files
 *.html
