@@ -280,17 +280,36 @@ const PreviewContent: React.FC<{ source: Source; onClose: () => void; onLoaded: 
       let content = source.content || '';
       
       console.log('📄 URL:', url);
-      console.log('📝 Content preview:', content.substring(0, 200));
+      console.log('📝 Content length:', content.length);
+      console.log('📝 Content preview (first 500 chars):', content.substring(0, 500));
+      console.log('📝 Content has newlines:', content.includes('\n'));
+      console.log('📝 Number of lines:', content.split('\n').length);
       
-      // Detect markdown first
-      if (url.endsWith('.md') || url.endsWith('.markdown') || 
-          content.match(/^#{1,6}\s/m) || 
-          content.includes('```') || 
-          content.match(/\[.+?\]\(.+?\)/) ||
-          content.match(/^[-*+]\s/m) ||
-          content.match(/^>\s/m)) {
+      // Detect markdown first - check URL extension or content patterns
+      if (url.endsWith('.md') || url.endsWith('.markdown')) {
         type = 'markdown';
-        console.log('✅ DETECTED AS MARKDOWN');
+        console.log('✅ DETECTED AS MARKDOWN (by extension)');
+      }
+      // Check content for markdown patterns
+      else if (
+        content.match(/^#{1,6}\s/m) ||           // Headers
+        content.includes('```') ||                // Code blocks
+        content.match(/\[.+?\]\(.+?\)/) ||       // Links
+        content.match(/^[-*+]\s/m) ||            // Lists
+        content.match(/^>\s/m) ||                // Blockquotes
+        content.match(/\*\*.+?\*\*/) ||          // Bold
+        content.match(/__.+?__/) ||              // Bold alt
+        content.match(/\*.+?\*/) ||              // Italic
+        content.match(/_.+?_/)                   // Italic alt
+      ) {
+        type = 'markdown';
+        console.log('✅ DETECTED AS MARKDOWN (by content patterns)');
+        console.log('  - Has headers:', !!content.match(/^#{1,6}\s/m));
+        console.log('  - Has code blocks:', content.includes('```'));
+        console.log('  - Has links:', !!content.match(/\[.+?\]\(.+?\)/));
+        console.log('  - Has lists:', !!content.match(/^[-*+]\s/m));
+        console.log('  - Has blockquotes:', !!content.match(/^>\s/m));
+        console.log('  - Has bold:', !!content.match(/\*\*.+?\*\*/));
       }
       // Detect Excel
       else if (url.endsWith('.xlsx') || url.endsWith('.xls')) {
@@ -322,7 +341,7 @@ const PreviewContent: React.FC<{ source: Source; onClose: () => void; onLoaded: 
         tokenCount: Math.ceil(content.length / 4)
       };
       
-      console.log('📦 Setting file:', fileObj.name, fileObj.type);
+      console.log('📦 Setting file:', fileObj.name, 'type:', fileObj.type);
       setFile(fileObj);
       
       if (!cancelRef.current) {
@@ -345,7 +364,7 @@ const PreviewContent: React.FC<{ source: Source; onClose: () => void; onLoaded: 
     );
   }
 
-  console.log('🎬 Rendering DocumentViewer with file:', file.name, file.type);
+  console.log('🎬 Rendering DocumentViewer with file:', file.name, 'type:', file.type);
   return <DocumentViewer file={file} onClose={onClose} />;
 };
 

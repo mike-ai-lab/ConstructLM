@@ -38,10 +38,11 @@
     <link rel="stylesheet" href="https://unpkg.com/pdfjs-dist@3.11.174/web/pdf_viewer.css">
     
     <script>
-      // Suppress PDF.js font warnings
+      // Suppress PDF.js font warnings - must run before PDF.js loads
       const originalWarn = console.warn;
       console.warn = function(...args) {
-        if (args[0]?.includes?.('TT: undefined function')) return;
+        const msg = String(args[0] || '');
+        if (msg.includes('TT: undefined function') || msg.includes('Warning: TT:')) return;
         originalWarn.apply(console, args);
       };
       

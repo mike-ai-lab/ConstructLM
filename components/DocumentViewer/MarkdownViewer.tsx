@@ -8,8 +8,34 @@ interface MarkdownViewerProps {
 }
 
 const parseMarkdown = (md: string, highlightQuote?: string): string => {
-  const normalized = md.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  console.log('🔍 parseMarkdown called');
+  console.log('  - Input length:', md.length);
+  console.log('  - Input preview:', md.substring(0, 200));
+  
+  // Normalize line breaks and handle content that's all on one line
+  let normalized = md.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  
+  console.log('  - After normalization, has newlines:', normalized.includes('\n'));
+  console.log('  - Line count:', normalized.split('\n').length);
+  
+  // If content appears to be on one line, try to split by common markdown patterns
+  if (!normalized.includes('\n') || normalized.split('\n').length < 3) {
+    console.log('  ⚠️ Content is on one line, attempting to split...');
+    normalized = normalized
+      .replace(/([.!?])\s+(#{1,6}\s)/g, '$1\n\n$2')  // Split before headers
+      .replace(/(#{1,6}\s[^#]+?)\s+(#{1,6}\s)/g, '$1\n\n$2')  // Split between headers
+      .replace(/([^\n])(\*\*\*|---|___)/g, '$1\n$2')  // Split before horizontal rules
+      .replace(/(\*\*\*|---|___)([^\n])/g, '$1\n$2')  // Split after horizontal rules
+      .replace(/([.!?])\s+([-*+]\s)/g, '$1\n$2')  // Split before lists
+      .replace(/([^\n])(```)/g, '$1\n$2')  // Split before code blocks
+      .replace(/(```[^`]*```)/g, '\n$1\n')  // Wrap code blocks
+      .replace(/([.!?])\s+([A-Z])/g, '$1\n\n$2');  // Split sentences into paragraphs
+    console.log('  ✅ After splitting, line count:', normalized.split('\n').length);
+  }
+  
   const lines = normalized.split('\n');
+  console.log('  - Processing', lines.length, 'lines');
+  
   
   const result: string[] = [];
   let inCodeBlock = false;
@@ -193,7 +219,20 @@ const parseMarkdown = (md: string, highlightQuote?: string): string => {
 
 const MarkdownViewer: React.FC<MarkdownViewerProps> = ({ file, textScale, highlightQuote }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const htmlContent = useMemo(() => parseMarkdown(file.content, highlightQuote), [file.content, highlightQuote]);
+  
+  console.log('🎨 MarkdownViewer RENDERING');
+  console.log('  - File name:', file.name);
+  console.log('  - File type:', file.type);
+  console.log('  - Content length:', file.content.length);
+  console.log('  - Content preview:', file.content.substring(0, 200));
+  
+  const htmlContent = useMemo(() => {
+    console.log('🔄 Parsing markdown...');
+    const result = parseMarkdown(file.content, highlightQuote);
+    console.log('✅ Parsed HTML length:', result.length);
+    console.log('✅ Parsed HTML preview:', result.substring(0, 500));
+    return result;
+  }, [file.content, highlightQuote]);
   
   useEffect(() => {
     if (highlightQuote && containerRef.current) {

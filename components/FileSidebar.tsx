@@ -1130,15 +1130,9 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
       document.body
     )}
     {previewFile && createPortal(
-      <div className="fixed inset-0 z-[100000] flex items-center justify-center" onClick={() => setPreviewFileId(null)}>
-        <div className="flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
-          <div className="flex items-center gap-3 px-4 py-2 bg-black/70 backdrop-blur-sm rounded-full mb-3 text-white">
-            <span className="text-sm font-medium">{previewFile.name}</span>
-            <button onClick={() => setPreviewFileId(null)} className="p-1 hover:bg-white/20 rounded-full transition-colors">
-              <X size={16} />
-            </button>
-          </div>
-          <div className="shadow-2xl rounded-lg overflow-hidden max-w-[90vw] max-h-[90vh]">
+      <div className="fixed inset-0 z-[100000] bg-black/50 backdrop-blur-sm flex items-center justify-center" onClick={() => setPreviewFileId(null)}>
+        <div className="w-full h-full max-w-[95vw] max-h-[95vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white dark:bg-[#1a1a1a] rounded-lg shadow-2xl overflow-hidden flex flex-col h-full">
             <FilePreviewViewer file={previewFile} onClose={() => setPreviewFileId(null)} />
           </div>
         </div>
@@ -1155,6 +1149,7 @@ const FilePreviewViewer: React.FC<{ file: ProcessedFile; onClose: () => void }> 
   const [numPages, setNumPages] = useState(0);
   const [loading, setLoading] = useState(true);
   const [excelHtml, setExcelHtml] = useState('');
+  const [pdfScale, setPdfScale] = useState(1.5);
 
   useEffect(() => {
     if (file.type === 'pdf' && file.fileHandle) {
@@ -1197,58 +1192,63 @@ const FilePreviewViewer: React.FC<{ file: ProcessedFile; onClose: () => void }> 
 
   if (loading) return <div className="flex items-center justify-center p-8"><Loader2 className="animate-spin" /></div>;
 
-  if (file.type === 'pdf') {
-    if (!pdfDoc) return <div className="p-8 text-center">Failed to load PDF</div>;
-    return (
-      <div className="bg-gray-100 dark:bg-[#1a1a1a] p-4 overflow-auto" style={{ maxHeight: '85vh', maxWidth: '90vw' }}>
-        <div className="space-y-4">
-          {Array.from({ length: numPages }, (_, i) => (
-            <PdfPageRenderer key={i + 1} pdf={pdfDoc} pageNum={i + 1} scale={1.5} />
-          ))}
+  return (
+    <>
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1a1a1a]">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white truncate">{file.name}</h3>
+        <div className="flex items-center gap-2">
+          {file.type === 'pdf' && (
+            <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+              <button onClick={() => setPdfScale(s => Math.max(0.5, s - 0.2))} className="p-1 hover:bg-white dark:hover:bg-gray-700 rounded transition-colors">
+                <Minus size={14} className="text-gray-600 dark:text-gray-400" />
+              </button>
+              <span className="text-xs font-medium text-gray-700 dark:text-gray-300 min-w-[45px] text-center">{Math.round(pdfScale * 100)}%</span>
+              <button onClick={() => setPdfScale(s => Math.min(3, s + 0.2))} className="p-1 hover:bg-white dark:hover:bg-gray-700 rounded transition-colors">
+                <Plus size={14} className="text-gray-600 dark:text-gray-400" />
+              </button>
+            </div>
+          )}
+          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
+            <X size={18} className="text-gray-500 dark:text-gray-400" />
+          </button>
         </div>
       </div>
-    );
-  }
-
-  if (file.type === 'excel' || file.type === 'csv') {
-    return (
-      <div className="bg-white dark:bg-[#1a1a1a] p-6 overflow-auto" style={{ maxHeight: '85vh', maxWidth: '90vw' }}>
-        <style>{`
-          table { border-collapse: collapse; width: 100%; margin-bottom: 1rem; }
-          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-          th { background-color: #f3f4f6; font-weight: 600; }
-          tr:nth-child(even) { background-color: #f9fafb; }
-        `}</style>
-        <div dangerouslySetInnerHTML={{ __html: excelHtml }} />
-      </div>
-    );
-  }
-
-  if (file.type === 'markdown') {
-    return (
-      <div className="bg-white dark:bg-[#1a1a1a] p-6 overflow-auto prose dark:prose-invert max-w-none" style={{ maxHeight: '85vh', maxWidth: '90vw' }}>
-        <div dangerouslySetInnerHTML={{ __html: file.content || '' }} />
-      </div>
-    );
-  }
-
-  if (file.type === 'text' || file.type === 'document') {
-    return (
-      <div className="bg-white dark:bg-[#1a1a1a] p-6 overflow-auto" style={{ maxHeight: '85vh', maxWidth: '90vw' }}>
-        <pre className="whitespace-pre-wrap text-sm">{file.content}</pre>
-      </div>
-    );
-  }
-
-  if (file.type === 'image') {
-    return (
-      <div className="bg-gray-100 dark:bg-[#1a1a1a] p-4 overflow-auto flex items-center justify-center" style={{ maxHeight: '85vh', maxWidth: '90vw' }}>
-        <img src={URL.createObjectURL(file.fileHandle as File)} alt={file.name} className="max-w-full max-h-full" />
-      </div>
-    );
-  }
-
-  return <div className="p-8 text-center">Preview not available for this file type</div>;
+      {file.type === 'pdf' && pdfDoc && (
+        <div className="flex-1 overflow-y-auto bg-gray-100 dark:bg-[#1a1a1a] scroll-smooth">
+          <div className="space-y-4 py-4">
+            {Array.from({ length: numPages }, (_, i) => (
+              <PdfPageRenderer key={i + 1} pdf={pdfDoc} pageNum={i + 1} scale={pdfScale} />
+            ))}
+          </div>
+        </div>
+      )}
+      {(file.type === 'excel' || file.type === 'csv') && (
+        <div className="flex-1 overflow-y-auto bg-white dark:bg-[#1a1a1a] p-6 scroll-smooth">
+          <style>{`
+            table { border-collapse: collapse; width: 100%; margin-bottom: 1rem; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f3f4f6; font-weight: 600; }
+            tr:nth-child(even) { background-color: #f9fafb; }
+          `}</style>
+          <div dangerouslySetInnerHTML={{ __html: excelHtml }} />
+        </div>
+      )}
+      {file.type === 'markdown' && <DocumentViewer file={file} onClose={onClose} />}
+      {(file.type === 'document' || file.type === 'other') && (
+        <div className="flex-1 overflow-y-auto bg-white dark:bg-[#1a1a1a] p-6 scroll-smooth">
+          <pre className="whitespace-pre-wrap text-sm">{file.content}</pre>
+        </div>
+      )}
+      {file.type === 'image' && (
+        <div className="flex-1 overflow-y-auto bg-gray-100 dark:bg-[#1a1a1a] flex items-center justify-center scroll-smooth">
+          <img src={URL.createObjectURL(file.fileHandle as File)} alt={file.name} className="max-w-full max-h-full object-contain" />
+        </div>
+      )}
+      {!['pdf', 'excel', 'csv', 'markdown', 'document', 'other', 'image'].includes(file.type) && (
+        <div className="p-8 text-center">Preview not available for this file type</div>
+      )}
+    </>
+  );
 };
 
 const PdfPageRenderer: React.FC<{ pdf: any; pageNum: number; scale: number }> = ({ pdf, pageNum, scale }) => {
