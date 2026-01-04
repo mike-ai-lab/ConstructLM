@@ -1,0 +1,10 @@
+Components needing structure update:
+- WebIntegration
+- WebSources (partially done)
+- RemindersFeature
+- LiveMode
+- GraphicsLibrary
+- DataManagement
+- KeyboardShortcuts
+- Configuration
+- SupportFeedback

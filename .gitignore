@@ -1,10 +1,10 @@
 # Dependencies
-node_modules
+node_modules/
 
 # Build outputs
-dist
-dist-electron
-release
+dist/
+dist-electron/
+release/
 
 # Environment variables (CRITICAL: Never commit API keys)
 .env
@@ -14,31 +14,73 @@ release
 
 # Logs
 *.log
-logs
+logs/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+diagnostic-logs-*.txt
 
 # OS files
 .DS_Store
 Thumbs.db
 
 # IDE
-.vscode
-.idea
+.vscode/
+.idea/
 *.swp
 *.swo
+*.code-workspace
 
 # Temp/Test files
 BLOB/
 OLD_blob_*/
 phone_call/
-notes-export-*/
+refactored-project*/
+docccs/
+notes-export-*.zip
 *.zip
-*.html
-*.xlsx
-*.txt
-*.md.backup
-diagnostic-logs-*.txt
-temp_*.tsx
 metadata.json
+
+# Documentation/Dev files (keep only README.md)
+*.md.backup
+*_IMPLEMENTATION*.md
+*_FIX*.md
+*_GUIDE*.md
+*_SUMMARY*.md
+*_DIAGNOSIS*.md
+*_DOCUMENTATION*.md
+*_INSTRUCTIONS*.md
+*_QUICKSTART*.md
+*_REVIEW*.md
+*_ANALYSIS*.md
+*_COMPLETE*.md
+*_ENHANCED*.md
+*_APPLIED*.md
+*_SYSTEM*.md
+q-dev-chat-*.md
+chatgptconv.md
+devtools_*.md
+extracted_contents_from_url.txt
+temp_*.txt
+temp_*.tsx
+TOFIX.txt
+REFERENCE.txt
+todolistcomponent.txt
+
+# Test/Example files
+*.html
+!index.html
+*.xlsx
+markdownexamplefile*.md
+test-*.ps1
+test-*.html
+get-*.ps1
+security-check.*
+clear*.html
+fix-*.html
+update-key.html
+*.bat
+!build-electron.bat
+
+# Qodo/Amazon Q
+.qodo/

@@ -63,8 +63,8 @@ A powerful AI-powered document analysis and chat application with multi-model su
 
 ### Prerequisites
 
-- **Node.js** (v16 or higher)
-- **npm** or **yarn**
+- **Node.js** (v16 or higher recommended)
+- **npm** (comes with Node.js)
 - API keys for your preferred AI providers (at least one required)
 
 ### Installation
@@ -72,7 +72,7 @@ A powerful AI-powered document analysis and chat application with multi-model su
 1. **Clone the repository**
    ```bash
    git clone https://github.com/yourusername/ConstructLM.git
-   cd ConstructLM
+   cd ConstructLM-1
    ```
 
 2. **Install dependencies**
@@ -82,7 +82,12 @@ A powerful AI-powered document analysis and chat application with multi-model su
 
 3. **Set up environment variables**
    
-   Create a `.env.local` file in the root directory:
+   Copy `.env.example` to `.env.local` and add your API keys:
+   ```bash
+   cp .env.example .env.local
+   ```
+   
+   Then edit `.env.local` with your actual API keys:
    ```env
    # Required: At least one API key
    VITE_GEMINI_API_KEY=your_gemini_api_key_here
@@ -96,6 +101,8 @@ A powerful AI-powered document analysis and chat application with multi-model su
    AWS_SECRET_ACCESS_KEY=your_aws_secret_key
    AWS_REGION=us-east-1
    ```
+   
+   **⚠️ IMPORTANT:** Never commit `.env.local` to version control!
 
 4. **Run the development server**
    ```bash
@@ -199,13 +206,18 @@ The installer will be created in the `release/` directory.
 ### Settings Modal
 Access via the gear icon in the header:
 - Configure API keys for all providers
+- Test API key validity
 - Adjust model preferences
 - Manage storage and cache
 - View activity logs
 - Export/import data
+- Clear application data
 
-### Custom Rules
-Create custom behavior rules in `.amazonq/rules/` directory to control AI responses and feature behavior.
+### User Profile
+Set up your profile for personalized greetings:
+- Name and role
+- Greeting style (casual/professional/friendly)
+- Usage patterns tracking
 
 ## 📁 Project Structure
 
@@ -242,6 +254,19 @@ ConstructLM-1/
 - **Storage**: IndexedDB (idb-keyval), LocalStorage
 - **Markdown**: React Markdown, Mark.js
 
+## 🔒 Security
+
+### API Key Safety
+- **Never commit** `.env.local` or any file containing API keys
+- Store API keys only in `.env.local` (already in .gitignore)
+- The app stores keys in browser localStorage (client-side only)
+- Use the Settings modal to manage keys securely
+
+### Data Privacy
+- All data stored locally in browser (IndexedDB)
+- No data sent to external servers except AI providers
+- Export/import features for data portability
+
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
@@ -252,6 +277,11 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
+**Before submitting:**
+- Ensure no API keys are exposed
+- Test with at least one AI provider
+- Update documentation if needed
+
 ## 📝 License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
@@ -260,7 +290,8 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 - Large PDF files (>50MB) may take time to process
 - Some websites may not load in the web viewer due to CORS restrictions
-- Local model support requires Ollama to be running
+- Local model support requires Ollama to be running separately
+- Groq API key testing may show CORS errors (keys still work in actual usage)
 
 ## 🔮 Roadmap
 
@@ -284,15 +315,24 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 For issues, questions, or suggestions:
 - Open an issue on GitHub
 - Check the Help Documentation (? icon in app)
-- Review activity logs for debugging
+- Review activity logs for debugging (Settings → View Logs)
+- Export diagnostic data for troubleshooting
 
 ## 🙏 Acknowledgments
 
 - Google Gemini for powerful AI capabilities
 - Groq for ultra-fast inference
 - OpenAI for industry-leading models
+- AWS Bedrock for enterprise AI services
 - The open-source community for amazing tools and libraries
+
+## 📄 License
+
+MIT License - see LICENSE file for details
 
 ---
 
 **Built with ❤️ for researchers, developers, and knowledge workers**
+
+**Version:** 1.0.0  
+**Author:** Int. Arch. M.Shkeir
