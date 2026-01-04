@@ -1,0 +1,118 @@
+23:11:56.120 Navigated to http://localhost:5173/
+23:11:57.417 installHook.js:1 cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation
+overrideMethod @ installHook.js:1
+(anonymous) @ ?plugins=typography:66
+(anonymous) @ ?plugins=typography:66
+23:11:58.102 (index):93 Fetch finished loading: GET "https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js".
+initWorker @ (index):93
+(anonymous) @ (index):121
+setInterval
+(anonymous) @ (index):118
+(anonymous) @ (index):82
+23:11:58.115 (index):103 PDF Worker initialized via Blob
+23:12:00.792 ragService.ts:23 [RAG] Status: ✅ ENABLED (local embeddings)
+23:12:01.417 App.tsx:529 [App] Current chat ID changed: null
+23:12:01.981 permanentStorage.ts:22 ✅ Permanent storage initialized
+23:12:01.982 useAppEffects.ts:52 ✅ Permanent storage initialized
+23:12:02.203 useAppEffects.ts:57 ✅ Restored 15 files from permanent storage
+23:12:02.802 App.tsx:529 [App] Current chat ID changed: chat_1767556949576_s7602ir64
+23:12:03.569 favicon.ico:1  GET http://localhost:5173/favicon.ico 404 (Not Found)
+23:12:04.496 (index):74 ✅ PDF.js loaded successfully: 3.11.174
+23:12:33.429 App.tsx:529 [App] Current chat ID changed: chat_1767557553306_qf5abzdqr
+23:12:54.050 hybridContextManager.ts:65 [EMBEDDING] Using local Transformers.js for hybrid search
+23:12:54.078 embeddingService.ts:48 [EMBEDDING] 🚀 Loading local Transformers.js model...
+23:12:54.078 embeddingService.ts:49 [EMBEDDING] Model: Xenova/all-MiniLM-L6-v2
+23:12:54.078 embeddingService.ts:50 [EMBEDDING] First load: ~5-10s (downloads ~25MB to browser cache)
+23:12:54.079 embeddingService.ts:51 [EMBEDDING] Subsequent loads: instant from cache
+23:12:57.752 embeddingService.ts:55 [EMBEDDING] ✅ Local model ready! 100% privacy-first, zero API costs.
+23:12:58.556 messageHandlers.ts:93 [MessageHandler] Context result: {totalTokens: 1873, filesUsed: 1, chunksCount: 1, selectedFilesCount: 1}
+23:12:58.557 messageHandlers.ts:101 [MessageHandler] Sources: []
+23:12:58.558 messageHandlers.ts:105 [MessageHandler] Excerpted files: [{…}]
+23:12:58.559 messageHandlers.ts:124 [MessageHandler] Sending to LLM, model: llama-3.3-70b-versatile
+23:12:58.559 messageHandlers.ts:149 [MessageHandler] Fetched sources: 0
+23:12:58.561 llmService.ts:194 🔶 [LLM] === SEND MESSAGE START ===
+23:12:58.561 llmService.ts:195 🔶 [LLM] Model: llama-3.3-70b-versatile
+23:12:58.561 llmService.ts:196 🔶 [LLM] Message: how do i enable or disable the Semantic Search...
+23:12:58.562 llmService.ts:197 🔶 [LLM] Active files: 1
+23:12:58.562 llmService.ts:198 🔶 [LLM] Active sources: 0
+23:12:58.562 llmService.ts:199 🔶 [LLM] History length: 1
+23:12:58.563 llmService.ts:222 [RAG] 🔍 Searching relevant chunks...
+23:12:58.898 ragService.ts:111 [RAG] Found 2 indexed files
+23:12:58.898 ragService.ts:54 [RAG] Searching across 2 indexed files
+23:12:59.021 llmService.ts:226 [RAG] ✅ Found 5 relevant chunks
+23:12:59.062 llmService.ts:588 Fetch failed loading: HEAD "http://localhost:3002/api/proxy/groq".
+streamOpenAICompatible @ llmService.ts:588
+sendMessageToLLM @ llmService.ts:378
+await in sendMessageToLLM
+sendMessageWithContext @ messageHandlers.ts:157
+handleSendMessage @ messageHandlers.ts:89
+await in handleSendMessage
+onSendMessage @ App.tsx:1069
+executeDispatch @ react-dom-client.development.js:19116
+runWithFiberInDEV @ react-dom-client.development.js:871
+processDispatchQueue @ react-dom-client.development.js:19166
+(anonymous) @ react-dom-client.development.js:19767
+batchedUpdates$1 @ react-dom-client.development.js:3255
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:19320
+dispatchEvent @ react-dom-client.development.js:23585
+dispatchDiscreteEvent @ react-dom-client.development.js:23553
+23:13:01.841 messageHandlers.ts:180 [MessageHandler] LLM response complete. Usage: {inputTokens: 3938, outputTokens: 577, totalTokens: 4515}
+23:13:01.841 messageHandlers.ts:181 [MessageHandler] Final content length: 2313
+23:13:01.842 llmService.ts:616 Fetch finished loading: POST "http://localhost:3002/api/proxy/groq".
+streamOpenAICompatible @ llmService.ts:616
+await in streamOpenAICompatible
+sendMessageToLLM @ llmService.ts:378
+await in sendMessageToLLM
+sendMessageWithContext @ messageHandlers.ts:157
+handleSendMessage @ messageHandlers.ts:89
+await in handleSendMessage
+onSendMessage @ App.tsx:1069
+executeDispatch @ react-dom-client.development.js:19116
+runWithFiberInDEV @ react-dom-client.development.js:871
+processDispatchQueue @ react-dom-client.development.js:19166
+(anonymous) @ react-dom-client.development.js:19767
+batchedUpdates$1 @ react-dom-client.development.js:3255
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:19320
+dispatchEvent @ react-dom-client.development.js:23585
+dispatchDiscreteEvent @ react-dom-client.development.js:23553
+23:13:01.843 llmService.ts:194 🔶 [LLM] === SEND MESSAGE START ===
+23:13:01.843 llmService.ts:195 🔶 [LLM] Model: llama-3.3-70b-versatile
+23:13:01.843 llmService.ts:196 🔶 [LLM] Message: You must create a descriptive 3-word title that summarizes the TOPIC of this user request. DO NOT ju...
+23:13:01.843 llmService.ts:197 🔶 [LLM] Active files: 0
+23:13:01.844 llmService.ts:198 🔶 [LLM] Active sources: 0
+23:13:01.844 llmService.ts:199 🔶 [LLM] History length: 0
+23:13:02.047 llmService.ts:588 Fetch failed loading: HEAD "http://localhost:3002/api/proxy/groq".
+streamOpenAICompatible @ llmService.ts:588
+sendMessageToLLM @ llmService.ts:378
+generateChatTitle @ messageHandlers.ts:42
+sendMessageWithContext @ messageHandlers.ts:208
+await in sendMessageWithContext
+handleSendMessage @ messageHandlers.ts:89
+await in handleSendMessage
+onSendMessage @ App.tsx:1069
+executeDispatch @ react-dom-client.development.js:19116
+runWithFiberInDEV @ react-dom-client.development.js:871
+processDispatchQueue @ react-dom-client.development.js:19166
+(anonymous) @ react-dom-client.development.js:19767
+batchedUpdates$1 @ react-dom-client.development.js:3255
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:19320
+dispatchEvent @ react-dom-client.development.js:23585
+dispatchDiscreteEvent @ react-dom-client.development.js:23553
+23:13:02.378 llmService.ts:616 Fetch finished loading: POST "http://localhost:3002/api/proxy/groq".
+streamOpenAICompatible @ llmService.ts:616
+await in streamOpenAICompatible
+sendMessageToLLM @ llmService.ts:378
+generateChatTitle @ messageHandlers.ts:42
+sendMessageWithContext @ messageHandlers.ts:208
+await in sendMessageWithContext
+handleSendMessage @ messageHandlers.ts:89
+await in handleSendMessage
+onSendMessage @ App.tsx:1069
+executeDispatch @ react-dom-client.development.js:19116
+runWithFiberInDEV @ react-dom-client.development.js:871
+processDispatchQueue @ react-dom-client.development.js:19166
+(anonymous) @ react-dom-client.development.js:19767
+batchedUpdates$1 @ react-dom-client.development.js:3255
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:19320
+dispatchEvent @ react-dom-client.development.js:23585
+dispatchDiscreteEvent @ react-dom-client.development.js:23553

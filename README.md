@@ -1,24 +1,51 @@
 # ConstructLM
 
-A powerful AI-powered document analysis and chat application with multi-model support, advanced document processing, and intelligent conversation management.
+A **production-grade RAG (Retrieval-Augmented Generation)** application with multi-model AI support, advanced document processing, and intelligent conversation management.
+
+> **Built for researchers, developers, and knowledge workers who need powerful document analysis with privacy and cost-efficiency.**
 
 ![ConstructLM](logo.png)
 
+## 🎯 What Makes ConstructLM Different
+
+- **🔒 Privacy-First RAG**: TRUE local embeddings with Transformers.js (Xenova/all-MiniLM-L6-v2) - your documents never leave your machine
+- **💰 Zero Embedding Cost**: Local browser-based embeddings, no API calls for RAG
+- **🚀 Multi-Model Support**: Switch between Gemini, Groq, OpenAI, and AWS Bedrock seamlessly (22 models total)
+- **📱 Desktop & Web**: Full Electron app or browser-based deployment
+- **⚡ Production-Ready**: Used in real applications with robust error handling and rate limiting
+
+**[📖 Read the Architecture Documentation](ARCHITECTURE.md)** to understand the RAG system design.
+
 ## 🌟 Features
 
+### 🧠 Advanced RAG (Retrieval-Augmented Generation)
+- **TRUE Local Embeddings**: Transformers.js (Xenova/all-MiniLM-L6-v2, 384-dim) runs in browser via WebAssembly
+- **Zero API Costs**: No embedding API fees - 100% local processing
+- **Privacy-First**: Your documents never leave your machine - all embeddings generated locally
+- **Vector Storage**: IndexedDB-based vector store with semantic search
+- **Smart Retrieval**: Cosine similarity with relevance scoring
+- **Auto-Indexing**: Files automatically processed on upload (when RAG enabled)
+- **Context Management**: Token-aware context building for optimal responses
+- **Citation System**: Inline citations with direct links to source documents
+- **Chunk Optimization**: Intelligent text splitting (500 tokens, 10% overlap)
+- **First-Time Setup**: ~5-10 seconds to download 25MB model (one-time, cached in browser)
+- **Performance**: 50-100ms per embedding after initial load
+
 ### 🤖 Multi-Model AI Support
-- **Google Gemini Models**: Flash, Pro, and latest versions with 1M+ token context windows
-- **Groq Models**: Llama 3.3 70B, Llama 3.1 8B, Qwen 3 32B, and more ultra-fast models
+- **Google Gemini Models**: 5 models including Flash, Pro, and latest versions with 1M+ token context windows
+- **Groq Models**: 11 models including Llama 3.3 70B, Llama 3.1 8B, Qwen 3 32B, and more ultra-fast models
 - **OpenAI Models**: GPT-4o and GPT-4o Mini (paid)
 - **AWS Bedrock**: Claude 3.5 Sonnet, Claude 3 Haiku, Llama 3, Mistral Large
 - **Local Models**: Support for running models locally via Ollama
+- **Total**: 22+ models across 4 providers
 
 ### 📄 Advanced Document Processing
-- **Multi-format Support**: PDF, DOCX, TXT, CSV, Excel, Markdown, and more
+- **Multi-format Support**: PDF, TXT, CSV, Excel, Markdown, JSON, XML, HTML, and code files
 - **Intelligent Parsing**: Extract text, tables, and structure from complex documents
+- **Structured PDF Extraction**: Advanced section-based parsing with page numbers
 - **Document Viewer**: Built-in viewer with page navigation, search, and highlighting
 - **Citation System**: Inline citations with direct links to source documents
-- **RAG (Retrieval-Augmented Generation)**: Semantic search across uploaded documents
+- **RAG Integration**: Automatic semantic indexing on upload (when enabled)
 
 ### 💬 Smart Chat Features
 - **Multi-Chat Management**: Create, switch, and manage multiple conversation threads
@@ -53,11 +80,13 @@ A powerful AI-powered document analysis and chat application with multi-model su
 - **Live Sessions**: Real-time collaborative features (Electron only)
 
 ### 🎯 Advanced Capabilities
-- **Smart Context Management**: Automatic file selection based on relevance
+- **Smart Context Management**: Automatic file selection based on relevance (keyword + semantic)
+- **Hybrid Search**: Combines keyword matching (30%) with semantic similarity (70%)
 - **Compression Service**: Optimize large documents for API limits
 - **Rate Limit Handling**: Intelligent cooldown and retry mechanisms
-- **Embedding Service**: Vector-based semantic search (optional)
+- **Embedding Service**: TRUE local vector-based semantic search (Transformers.js)
 - **User Profiles**: Personalized greetings based on usage patterns
+- **RAG Toggle**: Enable/disable semantic search in Settings
 
 ## 🚀 Getting Started
 
@@ -205,6 +234,7 @@ The installer will be created in the `release/` directory.
 
 ### Settings Modal
 Access via the gear icon in the header:
+- **RAG Settings**: Enable/disable semantic search (enabled by default)
 - Configure API keys for all providers
 - Test API key validity
 - Adjust model preferences
@@ -243,15 +273,25 @@ ConstructLM-1/
 └── styles/                 # CSS styles
 ```
 
-## 🔧 Technologies Used
+## 💻 Technologies Used
 
-- **Frontend**: React 19, TypeScript, Vite
+### RAG & AI
+- **Transformers.js** (@xenova/transformers v2.17.2) - TRUE local embeddings
+  - Model: Xenova/all-MiniLM-L6-v2 (384 dimensions)
+  - Technology: WebAssembly-based inference in browser
+  - Performance: 50-100ms per embedding
+  - Privacy: 100% local, zero API calls
+- **Vector Storage** - IndexedDB (raw API) with semantic search
+- **Multi-Model LLM** - Google Gemini, Groq, OpenAI, AWS Bedrock (22 models)
+- **Context Management** - Smart token-aware context building with hybrid search
+
+### Frontend: React 19, TypeScript, Vite
 - **UI**: Tailwind CSS, Lucide Icons
 - **3D Graphics**: Three.js, React Three Fiber
-- **Document Processing**: PDF.js, XLSX, Mammoth
+- **Document Processing**: PDF.js (structured extraction), XLSX
 - **AI Integration**: Google Generative AI, OpenAI SDK, AWS SDK
 - **Desktop**: Electron, Electron Builder
-- **Storage**: IndexedDB (idb-keyval), LocalStorage
+- **Storage**: IndexedDB (raw API), LocalStorage
 - **Markdown**: React Markdown, Mark.js
 
 ## 🔒 Security
@@ -263,9 +303,11 @@ ConstructLM-1/
 - Use the Settings modal to manage keys securely
 
 ### Data Privacy
-- All data stored locally in browser (IndexedDB)
-- No data sent to external servers except AI providers
-- Export/import features for data portability
+- **100% Local RAG**: All embeddings generated in your browser - no data sent to external APIs
+- **Local Storage**: All data stored locally in browser (IndexedDB)
+- **No Tracking**: No analytics or telemetry
+- **API Calls**: Only for LLM inference (Gemini/Groq/OpenAI/Bedrock) - not for embeddings
+- **Export/Import**: Full data portability
 
 ## 🤝 Contributing
 
@@ -292,6 +334,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - Some websites may not load in the web viewer due to CORS restrictions
 - Local model support requires Ollama to be running separately
 - Groq API key testing may show CORS errors (keys still work in actual usage)
+- First-time RAG setup downloads ~25MB model (one-time, 5-10 seconds)
 
 ## 🔮 Roadmap
 

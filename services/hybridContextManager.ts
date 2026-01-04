@@ -62,9 +62,9 @@ export async function selectHybridContext(
 
   // Try to load embedding model
   try {
-    console.log('[EMBEDDING] Using Gemini Embeddings API');
+    console.log('[EMBEDDING] Using local Transformers.js for hybrid search');
     useSemanticSearch = true;
-    activityLogger.logRetrievalMethodUsed('hybrid_semantic', 'gemini_api', 'ready');
+    activityLogger.logRetrievalMethodUsed('hybrid_semantic', 'transformers_local', 'ready');
   } catch (error) {
     console.log('[EMBEDDING] Failed to initialize, using keyword fallback:', error);
     useSemanticSearch = false;

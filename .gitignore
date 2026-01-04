@@ -70,8 +70,7 @@ todolistcomponent.txt
 # Keep these documentation files
 !README.md
 !CONTRIBUTING.md
-!PRE_PUSH_CHECKLIST.md
-!GITHUB_READY.md
+!ARCHITECTURE.md
 !LICENSE
 
 # Test/Example files

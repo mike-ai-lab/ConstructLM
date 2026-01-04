@@ -1,15 +1,24 @@
 /**
  * embeddingService.ts
- * Uses Gemini API for embeddings - reliable and free
+ * TRUE LOCAL EMBEDDINGS using Transformers.js
+ * 100% privacy-first, zero API costs, runs in browser
  */
 
+import { pipeline, env } from '@xenova/transformers';
 import { vectorStore, ChunkRecord } from './vectorStore';
 import { generateFileHash, estimateTokens, chunkText } from './embeddingUtils';
 import { ProcessedFile } from '../types';
 import { diagnosticLogger } from './diagnosticLogger';
-import { getStoredApiKey } from './modelRegistry';
 
-const EMBEDDING_VERSION = 'gemini-embedding-004';
+// Configure Transformers.js for browser use
+env.allowLocalModels = false;
+env.allowRemoteModels = true;
+env.useBrowserCache = true;
+env.remoteHost = 'https://huggingface.co';
+env.remotePathTemplate = '{model}/resolve/{revision}/';
+
+const EMBEDDING_VERSION = 'transformers-minilm-v2';
+const MODEL_NAME = 'Xenova/all-MiniLM-L6-v2';
 const CHUNK_SIZE = 500;
 const OVERLAP_PERCENT = 10;
 
@@ -22,39 +31,61 @@ interface EmbeddingProgress {
 
 class EmbeddingService {
   private pipeline: any = null;
+  private isLoading: boolean = false;
 
   async loadModel(): Promise<void> {
-    // No model to load - using API
-    console.log('[EMBEDDING] Using Gemini Embeddings API');
+    if (this.pipeline) return;
+    if (this.isLoading) {
+      // Wait for existing load to complete
+      while (this.isLoading) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      return;
+    }
+
+    this.isLoading = true;
+    try {
+      console.log('[EMBEDDING] 🚀 Loading local Transformers.js model...');
+      console.log('[EMBEDDING] Model:', MODEL_NAME);
+      console.log('[EMBEDDING] First load: ~5-10s (downloads ~25MB to browser cache)');
+      console.log('[EMBEDDING] Subsequent loads: instant from cache');
+      
+      this.pipeline = await pipeline('feature-extraction', MODEL_NAME);
+      
+      console.log('[EMBEDDING] ✅ Local model ready! 100% privacy-first, zero API costs.');
+    } catch (error) {
+      console.error('[EMBEDDING] ❌ Failed to load model:', error);
+      throw error;
+    } finally {
+      this.isLoading = false;
+    }
   }
 
   isReady(): boolean {
-    return true;
+    return this.pipeline !== null;
   }
 
   async generateEmbedding(text: string): Promise<number[]> {
-    const apiKey = getStoredApiKey('GEMINI_API_KEY');
-    if (!apiKey) {
-      throw new Error('Gemini API key not found');
+    if (!this.pipeline) {
+      await this.loadModel();
     }
 
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${apiKey}`;
-    const response = await fetch(apiUrl,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          content: { parts: [{ text: text.slice(0, 2048) }] } // Limit to 2048 chars
-        })
-      }
-    );
+    // Truncate to reasonable length (model handles ~512 tokens)
+    const truncated = text.slice(0, 2000);
 
-    if (!response.ok) {
-      throw new Error(`Embedding API error: ${response.status}`);
+    try {
+      // Generate embedding locally in browser
+      const output = await this.pipeline(truncated, {
+        pooling: 'mean',
+        normalize: true
+      });
+
+      // Extract embedding array (384 dimensions for MiniLM)
+      return Array.from(output.data);
+    } catch (error) {
+      console.error('[EMBEDDING] Generation failed:', error);
+      throw new Error('Failed to generate embedding locally');
     }
-
-    const data = await response.json();
-    return data.embedding.values;
   }
 
   async processFile(
@@ -115,8 +146,7 @@ class EmbeddingService {
       };
       chunkRecords.push(chunkRecord);
       
-      // Small delay to avoid rate limits
-      await new Promise(r => setTimeout(r, 100));
+      // No delay needed - local processing is fast!
     }
 
     const avgEmbedding = this.averageEmbeddings(chunkRecords.map(c => c.embedding));
@@ -131,9 +161,11 @@ class EmbeddingService {
     await vectorStore.saveChunks(chunkRecords);
     
     diagnosticLogger.log('3. EMBEDDING & INDEXING COMPLETE', {
-      embedding_model_name: 'Gemini text-embedding-004',
+      embedding_model_name: MODEL_NAME,
+      embedding_dimensions: chunkRecords[0]?.embedding.length || 384,
       total_units_embedded: chunkRecords.length,
-      file_id: file.id
+      file_id: file.id,
+      privacy: 'LOCAL - no data sent to external APIs'
     });
   }
 
@@ -143,10 +175,11 @@ class EmbeddingService {
     // DIAGNOSTIC: 4. QUERY & RETRIEVAL LOG
     diagnosticLogger.log('4. QUERY START', {
       raw_user_query: query,
-      embedding_model_used: 'Xenova/all-MiniLM-L6-v2',
+      embedding_model_used: MODEL_NAME,
       top_k_requested: topK,
       file_ids_searched: fileIds,
-      query_length: query.length
+      query_length: query.length,
+      privacy: 'LOCAL - query processed in browser'
     });
 
     const queryEmbedding = await this.generateEmbedding(query);

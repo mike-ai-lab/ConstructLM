@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Save, Key, ShieldCheck, CheckCircle, Loader2, Play, AlertCircle, Cpu, ExternalLink, Download, Upload, Database, Trash2, User, CheckSquare, Square, RefreshCw } from 'lucide-react';
+import { X, Save, Key, ShieldCheck, CheckCircle, Loader2, Play, AlertCircle, Cpu, ExternalLink, Download, Upload, Database, Trash2, User, CheckSquare, Square, RefreshCw, Sparkles } from 'lucide-react';
 import { saveApiKey, getStoredApiKey } from '../services/modelRegistry';
 import { checkOllamaConnection, getAvailableOllamaModels, getLocalModelSetupInstructions } from '../services/localModelService';
 import { dataExportService, ExportOptions } from '../services/dataExportService';
 import { userProfileService, UserProfile } from '../services/userProfileService';
+import { ragService } from '../services/ragService';
 
 interface SettingsModalProps {
     onClose: () => void;
@@ -20,6 +21,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
         role: '',
         greetingStyle: 'casual'
     });
+    
+    // RAG State
+    const [ragEnabled, setRagEnabled] = useState(true);
     
     // Export/Import Options State
     const [showExportOptions, setShowExportOptions] = useState(false);
@@ -86,6 +90,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
         if (profile) {
             setUserProfile(profile);
         }
+        
+        // Load RAG status
+        setRagEnabled(ragService.isEnabled());
         
         // Load API keys
         setKeys({
@@ -541,6 +548,41 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                                 </p>
                             </div>
                         </div>
+                    </div>
+
+                    {/* RAG Settings Section */}
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-1.5">
+                            <Sparkles size={12} className="text-[#666666] dark:text-[#a0a0a0]" />
+                            <h3 className="text-xs font-bold text-[#666666] dark:text-[#a0a0a0] uppercase tracking-wider">Semantic Search (RAG)</h3>
+                        </div>
+                        <div className="bg-[rgba(68,133,209,0.1)] border border-[rgba(68,133,209,0.2)] dark:border-[rgba(68,133,209,0.3)] rounded-lg p-2">
+                            <p className="text-xs text-[#1a1a1a] dark:text-white leading-relaxed">
+                                <strong>✅ 100% Local & Private:</strong> Uses Transformers.js in your browser. No API calls, no costs, your documents never leave your machine.
+                            </p>
+                        </div>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={ragEnabled}
+                                onChange={(e) => {
+                                    setRagEnabled(e.target.checked);
+                                    ragService.setEnabled(e.target.checked);
+                                }}
+                                className="w-4 h-4 text-[#4485d1] bg-[rgba(0,0,0,0.03)] dark:bg-[#1a1a1a] border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] rounded focus:ring-2 focus:ring-[rgba(68,133,209,0.2)]"
+                            />
+                            <span className="text-sm text-[#1a1a1a] dark:text-white font-medium">Enable Semantic Search</span>
+                        </label>
+                        <p className="text-[11px] text-[#666666] dark:text-[#a0a0a0] leading-relaxed">
+                            When enabled, uploaded files are automatically indexed for intelligent semantic search. First-time setup downloads a ~25MB model to browser cache (one-time, takes 5-10 seconds).
+                        </p>
+                        {ragEnabled && (
+                            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-2">
+                                <p className="text-xs text-green-800 dark:text-green-300">
+                                    ✅ <strong>Active:</strong> Files will be automatically indexed for semantic search on upload.
+                                </p>
+                            </div>
+                        )}
                     </div>
 
                     <div className="border-t border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] pt-4">

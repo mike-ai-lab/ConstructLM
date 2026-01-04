@@ -213,23 +213,29 @@ export const sendMessageToLLM = async (
         );
     }
 
-    // RAG is DISABLED by default to save API quota
-    // Uncomment to enable semantic search (uses Gemini embeddings API)
-    /*
+    // ✅ RAG ENABLED - True local embeddings, zero API costs
     let ragContext = '';
-    try {
-        const ragResults = await ragService.searchRelevantChunks(newMessage, 5);
-        if (ragResults.length > 0) {
-            ragContext = '\n\nRELEVANT CONTEXT FROM DOCUMENTS:\n' + 
-                ragResults.map((result, i) => 
-                    `[${i + 1}] From ${result.chunk.fileName}: ${result.chunk.content}`
-                ).join('\n\n');
+    
+    // Use RAG for text files (not images) when enabled
+    if (activeFiles.some(f => f.type !== 'image') && ragService.isEnabled()) {
+        try {
+            console.log('[RAG] 🔍 Searching relevant chunks...');
+            const ragResults = await ragService.searchRelevantChunks(newMessage, 5);
+            
+            if (ragResults.length > 0) {
+                console.log(`[RAG] ✅ Found ${ragResults.length} relevant chunks`);
+                ragContext = '\n\nRELEVANT CONTEXT FROM SEMANTIC SEARCH:\n' + 
+                    ragResults.map((result, i) => {
+                        const score = result.score ? ` (relevance: ${(result.score * 100).toFixed(0)}%)` : '';
+                        return `[${i + 1}] From ${result.chunk.fileName}${score}:\n${result.chunk.content}`;
+                    }).join('\n\n');
+            } else {
+                console.log('[RAG] No relevant chunks found');
+            }
+        } catch (error) {
+            console.warn('[RAG] Search failed, continuing without RAG context:', error);
         }
-    } catch (error) {
-        console.log('[RAG] Search failed, continuing without RAG context:', error);
     }
-    */
-    const ragContext = ''; // RAG disabled
 
     const systemPrompt = constructBaseSystemPrompt(activeFiles.length > 0, activeSources.length > 0, activeSources) + ragContext;
 
