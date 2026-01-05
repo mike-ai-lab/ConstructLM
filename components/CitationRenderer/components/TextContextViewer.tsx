@@ -11,6 +11,12 @@ interface TextContextViewerProps {
 const TextContextViewer: React.FC<TextContextViewerProps> = ({ file, quote, location }) => {
   const tableRef = useRef<HTMLDivElement | null>(null);
   
+  console.log('📝 TEXT VIEWER DEBUG:');
+  console.log('  File:', file?.name, 'Type:', file?.type);
+  console.log('  Quote:', quote);
+  console.log('  Location:', location);
+  console.log('  Has content:', !!file?.content);
+  
   useEffect(() => {
     const scrollToRow = () => {
       if (tableRef.current) {
@@ -26,9 +32,9 @@ const TextContextViewer: React.FC<TextContextViewerProps> = ({ file, quote, loca
     requestAnimationFrame(() => scrollToRow());
   }, [file, location, quote]);
   
-  if (file?.type === 'excel' && location) {
+  if ((file?.type === 'excel' || file?.type === 'csv') && location) {
     const rowMatch = location.match(/Row\s*(\d+)/i);
-    const sheetMatch = location.match(/Sheet:\s*[']?([^,'";\|]+)[']?/i);
+    const sheetMatch = location.match(/Sheet:\s*[']?([^,'";|]+)[']?/i);
     
     if (file.content) {
       const targetRowNum = rowMatch ? parseInt(rowMatch[1], 10) : -1;
@@ -58,6 +64,15 @@ const TextContextViewer: React.FC<TextContextViewerProps> = ({ file, quote, loca
       const lines = sheetContent.trim().split('\n').filter(l => l.trim());
       const delimiter = lines[0]?.includes('\t') ? '\t' : ',';
       
+      const decodeHtmlEntities = (text: string) => {
+        return text
+          .replace(/&quot;/g, '"')
+          .replace(/&#39;/g, "'")
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&amp;/g, '&');
+      };
+      
       const parseRow = (row: string) => {
         const cells: string[] = [];
         let current = '';
@@ -67,31 +82,61 @@ const TextContextViewer: React.FC<TextContextViewerProps> = ({ file, quote, loca
           if (char === '"') {
             inQuotes = !inQuotes;
           } else if (char === delimiter && !inQuotes) {
-            cells.push(current.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&amp;/g, '&'));
+            cells.push(decodeHtmlEntities(current));
             current = '';
           } else {
             current += char;
           }
         }
-        cells.push(current.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&amp;/g, '&'));
+        cells.push(decodeHtmlEntities(current));
         return cells;
       };
       
       const headers = parseRow(lines[0] || '');
       const rows = lines.slice(1).map(line => parseRow(line));
       
+      console.log('  📋 Excel/CSV parsing:');
+      console.log('    Headers:', headers);
+      console.log('    Total rows:', rows.length);
+      console.log('    Target row:', targetRowNum);
+      console.log('    Quote (encoded):', quote);
+      console.log('    Quote (decoded):', decodeHtmlEntities(quote));
+      
+      // Log first 10 rows to see the data
+      console.log('    First 10 rows:');
+      rows.slice(0, 10).forEach((row, idx) => {
+        console.log(`      Row ${idx + 2}:`, row.join(' | '));
+      });
+      
       // If no row number, try to find by quote
       let finalTargetRow = targetRowNum;
       if (finalTargetRow === -1 && quote) {
-        const quoteNorm = quote.toLowerCase();
+        const quoteNorm = decodeHtmlEntities(quote).toLowerCase().trim();
+        console.log('    Searching for quote in rows...');
         for (let i = 0; i < rows.length; i++) {
-          const rowText = rows[i].join(' ').toLowerCase();
+          const rowText = decodeHtmlEntities(rows[i].join(' ')).toLowerCase().trim();
           if (rowText.includes(quoteNorm)) {
             finalTargetRow = i + 2;
+            console.log('    ✅ Found at row:', finalTargetRow);
             break;
           }
         }
+        if (finalTargetRow === -1) {
+          console.log('    ❌ Quote not found in any row');
+        }
       }
+      
+      // Search for rows containing the quote to show where it actually is
+      console.log('    Searching ALL rows for quote...');
+      const quoteSearch = decodeHtmlEntities(quote).toLowerCase();
+      rows.forEach((row, idx) => {
+        const rowText = decodeHtmlEntities(row.join(' ')).toLowerCase();
+        if (rowText.includes(quoteSearch) || rowText.includes('g.6') || rowText.includes('336.19')) {
+          console.log(`      ⭐ Row ${idx + 2} contains match:`, row.join(' | '));
+        }
+      });
+      
+      console.log('    Final target row:', finalTargetRow);
       
       return (
         <table ref={tableRef} className="w-full text-[9px] border-collapse">
@@ -221,9 +266,6 @@ const TextContextViewer: React.FC<TextContextViewerProps> = ({ file, quote, loca
         highlightLineIndex = i - contextStart;
         break;
       }
-    }
-    
-    if (contextStart === -1) {
     }
     
     if (contextStart !== -1) {

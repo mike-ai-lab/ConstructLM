@@ -582,6 +582,14 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
                         </div>
                       </details>
                     )}
+                    {(() => {
+                      console.log('📦 MessageBubble - Passing files to CitationRenderer:');
+                      console.log('  message.sourcesUsed:', message.sourcesUsed);
+                      console.log('  All files:', files.map(f => f.name));
+                      const filteredFiles = message.sourcesUsed ? files.filter(f => message.sourcesUsed?.includes(f.name)) : files;
+                      console.log('  Filtered files:', filteredFiles.map(f => f.name));
+                      return null;
+                    })()}
                     <CitationRenderer 
                       text={message.content} 
                       files={files} 

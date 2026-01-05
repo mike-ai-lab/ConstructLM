@@ -56,6 +56,11 @@ const CitationPopup: React.FC<CitationPopupProps> = ({
   const isPdfMode = file?.type === 'pdf' && pdfPageNumber !== null;
 
   useEffect(() => {
+    console.log('🔍 CITATION DEBUG - Looking for file:', fileName);
+    console.log('📁 Available files:', files.map(f => f.name));
+    console.log('📍 Location:', location);
+    console.log('💬 Quote:', quote);
+    
     const found = files.find(f => {
       const normalizedFileName = fileName.toLowerCase().trim();
       const normalizedFilename = f.name.toLowerCase().trim();
@@ -74,6 +79,8 @@ const CitationPopup: React.FC<CitationPopupProps> = ({
       
       return false;
     });
+    
+    console.log('✅ File found:', found ? found.name : '❌ NOT FOUND');
     setFile(found);
 
     if (found?.type === 'pdf' && location) {

@@ -15,6 +15,7 @@ interface EmbeddingRecord {
 interface ChunkRecord {
   id: string;
   fileId: string;
+  fileName: string;
   chunkIndex: number;
   content: string;
   embedding: number[];

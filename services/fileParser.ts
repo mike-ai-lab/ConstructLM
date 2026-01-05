@@ -251,11 +251,41 @@ const extractExcelText = async (file: File): Promise<string> => {
 
     workbook.SheetNames.forEach((sheetName: string) => {
       const sheet = workbook.Sheets[sheetName];
-      const csv = (window as any).XLSX.utils.sheet_to_csv(sheet);
       
-      if (csv && csv.trim().length > 0) {
-        fullText += `--- [Sheet: ${sheetName}] ---\n${csv}\n`;
+      // Get the range of the sheet
+      const range = (window as any).XLSX.utils.decode_range(sheet['!ref'] || 'A1:A1');
+      
+      fullText += `--- [Sheet: ${sheetName}] ---\n`;
+      
+      // Process each row with explicit row numbers
+      for (let rowNum = range.s.r; rowNum <= range.e.r; rowNum++) {
+        const rowData: string[] = [];
+        
+        // Get all cells in this row
+        for (let colNum = range.s.c; colNum <= range.e.c; colNum++) {
+          const cellAddress = (window as any).XLSX.utils.encode_cell({ r: rowNum, c: colNum });
+          const cell = sheet[cellAddress];
+          const cellValue = cell ? (cell.v !== undefined ? String(cell.v) : '') : '';
+          rowData.push(cellValue);
+        }
+        
+        // Only add non-empty rows
+        if (rowData.some(cell => cell.trim() !== '')) {
+          // Excel rows are 1-indexed, so add 1 to the 0-indexed rowNum
+          const excelRowNumber = rowNum + 1;
+          const csvRow = rowData.map(cell => {
+            // Escape commas and quotes in CSV format
+            if (cell.includes(',') || cell.includes('"') || cell.includes('\n')) {
+              return `"${cell.replace(/"/g, '""')}"`;
+            }
+            return cell;
+          }).join(',');
+          
+          fullText += `${csvRow}\n`;
+        }
       }
+      
+      fullText += '\n';
     });
 
     return fullText;

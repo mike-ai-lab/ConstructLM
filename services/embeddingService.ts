@@ -6,7 +6,7 @@
 
 import { pipeline, env } from '@xenova/transformers';
 import { vectorStore, ChunkRecord } from './vectorStore';
-import { generateFileHash, estimateTokens, chunkText } from './embeddingUtils';
+import { generateFileHash, estimateTokens, chunkText, chunkExcelText } from './embeddingUtils';
 import { ProcessedFile } from '../types';
 import { diagnosticLogger } from './diagnosticLogger';
 import { activityLogger } from './activityLogger';
@@ -127,7 +127,8 @@ class EmbeddingService {
         const newChunks = existingChunks.map(chunk => ({
           ...chunk,
           id: `${file.id}_chunk_${chunk.chunkIndex}`,
-          fileId: file.id
+          fileId: file.id,
+          fileName: file.name
         }));
         await vectorStore.saveChunks(newChunks);
         activityLogger.logRAGVectorStorage(file.name, newChunks.length);
@@ -137,7 +138,12 @@ class EmbeddingService {
 
     // Only process if no cached embeddings exist
     console.log(`🔄 Processing new embeddings for ${file.name}`);
-    const chunks = chunkText(file.content, CHUNK_SIZE, OVERLAP_PERCENT);
+    
+    // Use specialized chunking for Excel files
+    const chunks = file.type === 'excel' || file.type === 'csv' 
+      ? chunkExcelText(file.content, CHUNK_SIZE)
+      : chunkText(file.content, CHUNK_SIZE, OVERLAP_PERCENT);
+      
     activityLogger.logRAGChunking(file.name, chunks.length, Math.round(chunks.reduce((sum, c) => sum + c.length, 0) / chunks.length));
     
     diagnosticLogger.log('2. CHUNK CREATION START', {
@@ -163,6 +169,7 @@ class EmbeddingService {
       const chunkRecord = {
         id: `${file.id}_chunk_${i}`,
         fileId: file.id,
+        fileName: file.name,
         chunkIndex: i,
         content: chunks[i],
         embedding,

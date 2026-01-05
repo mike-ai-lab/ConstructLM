@@ -41,3 +41,61 @@ export function chunkText(text: string, chunkSize: number = 500, overlapPercent:
   
   return chunks.filter(c => c.length > 0);
 }
+
+// Specialized chunking for Excel files that preserves row context
+export function chunkExcelText(text: string, chunkSize: number = 500): string[] {
+  const chunks: string[] = [];
+  
+  // Split by sheets first
+  const sheetRegex = /--- \[Sheet: (.*?)\] ---([\s\S]*?)(?=--- \[Sheet:|$)/g;
+  let match;
+  
+  while ((match = sheetRegex.exec(text)) !== null) {
+    const sheetName = match[1].trim();
+    const sheetContent = match[2].trim();
+    
+    if (!sheetContent) continue;
+    
+    const lines = sheetContent.split('\n').filter(l => l.trim());
+    if (lines.length === 0) continue;
+    
+    // First line is headers
+    const headers = lines[0];
+    const dataRows = lines.slice(1);
+    
+    // Create chunks with row context
+    let currentChunk = `Sheet: ${sheetName}\nHeaders: ${headers}\n`;
+    let rowsInChunk = 0;
+    const maxRowsPerChunk = 10; // Reasonable number of rows per chunk
+    
+    for (let i = 0; i < dataRows.length; i++) {
+      const excelRowNumber = i + 2; // Excel rows start from 1, headers are row 1, data starts from row 2
+      const rowWithContext = `Row ${excelRowNumber}: ${dataRows[i]}`;
+      
+      // Check if adding this row would exceed chunk size or max rows
+      if ((currentChunk + rowWithContext).length > chunkSize || rowsInChunk >= maxRowsPerChunk) {
+        if (rowsInChunk > 0) {
+          chunks.push(currentChunk.trim());
+        }
+        // Start new chunk with sheet context
+        currentChunk = `Sheet: ${sheetName}\nHeaders: ${headers}\n${rowWithContext}\n`;
+        rowsInChunk = 1;
+      } else {
+        currentChunk += rowWithContext + '\n';
+        rowsInChunk++;
+      }
+    }
+    
+    // Add final chunk if it has content
+    if (rowsInChunk > 0) {
+      chunks.push(currentChunk.trim());
+    }
+  }
+  
+  // Fallback for non-sheet content
+  if (chunks.length === 0) {
+    return chunkText(text, chunkSize, 10);
+  }
+  
+  return chunks.filter(c => c.length > 0);
+}

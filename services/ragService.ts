@@ -36,7 +36,7 @@ class RAGService {
     return this.enabled;
   }
 
-  async searchRelevantChunks(query: string, limit: number = 5): Promise<RAGResult[]> {
+  async searchRelevantChunks(query: string, limit: number = 5, fileIds?: string[]): Promise<RAGResult[]> {
     // Check if RAG is enabled
     if (!this.isEnabled()) {
       console.log('[RAG] Disabled - skipping semantic search');
@@ -45,32 +45,47 @@ class RAGService {
     
     try {
       const { embeddingService } = await import('./embeddingService');
+      const { permanentStorage } = await import('./permanentStorage');
       
       if (!embeddingService.isReady()) {
         await embeddingService.loadModel();
       }
       
-      const allFiles = await this.getAllFileIds();
-      console.log(`[RAG] Searching across ${allFiles.length} indexed files`);
+      // Use provided fileIds or get all indexed files
+      const targetFiles = fileIds && fileIds.length > 0 ? fileIds : await this.getAllFileIds();
+      console.log(`[RAG] Searching across ${targetFiles.length} ${fileIds ? 'selected' : 'indexed'} files`);
       
-      if (allFiles.length === 0) {
-        console.log('[RAG] No indexed files found');
+      if (targetFiles.length === 0) {
+        console.log('[RAG] No files to search');
         activityLogger.logRAGSearch(query, 0);
         return [];
       }
       
-      const chunks = await embeddingService.searchSimilar(query, allFiles, limit);
+      const chunks = await embeddingService.searchSimilar(query, targetFiles, limit);
       activityLogger.logRAGSearch(query, chunks.length);
       
-      // Map chunks to RAG results with proper scores
+      // Map file IDs to actual filenames
+      const fileMap = new Map<string, string>();
+      for (const fileId of targetFiles) {
+        const file = await permanentStorage.getFile(fileId);
+        if (file) {
+          fileMap.set(fileId, file.name);
+        }
+      }
+      
+      // Map chunks to RAG results with proper scores and filenames
       return chunks.map((chunk, index) => {
         // Calculate similarity score from the search results
         // searchSimilar returns chunks sorted by similarity
         const similarityScore = 1.0 - (index * 0.1); // Approximate score based on rank
         
+        // Use actual filename from map, fallback to chunk.fileName, then fileId
+        const actualFileName = fileMap.get(chunk.fileId) || chunk.fileName || chunk.fileId;
+        
         return {
           chunk: {
-            fileName: chunk.fileId,
+            fileName: actualFileName,
+            fileId: chunk.fileId,
             content: chunk.content
           },
           score: similarityScore

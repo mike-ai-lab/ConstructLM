@@ -33,20 +33,16 @@ const CitationChip: React.FC<CitationChipProps> = ({ index, fileName, location, 
     const normalizedFileName = fileName.toLowerCase().trim();
     const normalizedFilename = f.name.toLowerCase().trim();
     
-    // Exact match
     if (normalizedFilename === normalizedFileName) return true;
     
-    // Match without extension
     const fileNameWithoutExt = normalizedFileName.replace(/\.[^.]+$/, '');
     const fNameWithoutExt = normalizedFilename.replace(/\.[^.]+$/, '');
     if (fileNameWithoutExt === fNameWithoutExt) return true;
     
-    // Handle duplicate suffixes like " (1)", " (2)", etc.
     const fileNameBase = fileNameWithoutExt.replace(/\s*\(\d+\)$/, '');
     const fNameBase = fNameWithoutExt.replace(/\s*\(\d+\)$/, '');
     if (fileNameBase === fNameBase) return true;
     
-    // Partial match (citation might have truncated name)
     if (normalizedFilename.includes(normalizedFileName) || normalizedFileName.includes(normalizedFilename)) return true;
     
     return false;
@@ -54,7 +50,7 @@ const CitationChip: React.FC<CitationChipProps> = ({ index, fileName, location, 
   
   // Debug logging
   if (!isUrl && !fileExists) {
-    console.warn(`Citation file not found: "${fileName}". Available files:`, files.map(f => f.name));
+    // console.warn(`Citation file not found: "${fileName}". Available files:`, files.map(f => f.name));
   }
 
   // Register close function when opened

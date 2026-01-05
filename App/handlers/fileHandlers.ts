@@ -99,19 +99,16 @@ export const createFileHandlers = (
             // Process in background with proper async handling
             (async () => {
               try {
-                console.log(`[RAG] 📦 Auto-processing ${file.name} for semantic search...`);
+                // console.log(`[RAG] 📦 Auto-processing ${file.name} for semantic search...`);
                 
                 await embeddingService.processFile(processed, (progress) => {
-                  // Use requestAnimationFrame to avoid blocking UI
-                  requestAnimationFrame(() => {
-                    console.log(`[RAG] Embedding ${progress.fileName}: ${progress.current}/${progress.total} chunks`);
-                  });
+                  // Silent processing - no console logs
                 });
                 
-                console.log(`[RAG] ✅ ${file.name} indexed for semantic search`);
+                // console.log(`[RAG] ✅ ${file.name} indexed for semantic search`);
                 activityLogger.logInfo('RAG', `File indexed: ${file.name}`);
               } catch (error) {
-                console.warn(`[RAG] ⚠️ Failed to embed ${file.name}:`, error);
+                // console.warn(`[RAG] ⚠️ Failed to embed ${file.name}:`, error);
                 activityLogger.logWarning('RAG', `Embedding failed for ${file.name}`, { error: String(error) });
               }
             })();
@@ -124,7 +121,7 @@ export const createFileHandlers = (
       }
     }
     
-    console.log(`[FILE HANDLER] Scheduling clear in 2 seconds`);
+    // console.log(`[FILE HANDLER] Scheduling clear in 2 seconds`);
     
     if (setUploadProgress) setUploadProgress(null);
     setIsProcessingFiles(false);

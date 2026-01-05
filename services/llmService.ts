@@ -48,30 +48,40 @@ NO EXCEPTIONS. EVERY STATEMENT ABOUT THE DOCUMENT CONTENT MUST HAVE A CITATION.
 
 CITATION FORMAT (ABSOLUTELY MANDATORY):
 - Use EXACTLY this format: {{citation:FileName|Location|Quote}}
-- FileName: Exact file name (e.g., cutlist2.csv, spec.pdf)
+- FileName: Exact file name (e.g., cutlist2.csv, BWB-BOQ.xlsx)
 - Location: 
-  * For CSV/Excel: "Sheet: SheetName, Row X" (e.g., "Sheet: Parts List, Row 5")
+  * For CSV/Excel: "Sheet: SheetName, Row X" where X is the ACTUAL Excel row number (header = row 1, first data = row 2, etc.)
   * For PDF: "Page X" (e.g., "Page 12")
   * For Markdown/Text: "Section X" or "Line X"
 - Quote: 3-10 words COPIED EXACTLY from the document (NEVER leave this empty)
 
+🔴 CRITICAL EXCEL ROW NUMBERING:
+- Excel files: Row 1 = headers, Row 2 = first data row, Row 3 = second data row, etc.
+- When citing Excel data, use the ACTUAL Excel row number, not array index
+- Example: If data is in the 5th row of Excel (after header), cite as "Row 5", not "Row 4"
+
 🔴 CRITICAL: DO NOT use HTML tags like <sup> or <cite>. ONLY use {{citation:...}} format.
 
 CITATION PLACEMENT - INLINE AFTER EVERY FACT:
-✓ CORRECT: "The total number of parts is 27 {{citation:cutlist2.csv|Sheet: Summary, Row 1|Total Parts: 27}} and they use 3 boards {{citation:cutlist2.csv|Sheet: Summary, Row 2|Total Boards: 3}}."
-✓ CORRECT: "Part #1 is the Back board {{citation:cutlist2.csv|Sheet: Parts, Row 2|Back board}} with dimensions 500mm {{citation:cutlist2.csv|Sheet: Parts, Row 2|Width: 500mm}} x 800mm {{citation:cutlist2.csv|Sheet: Parts, Row 2|Height: 800mm}}."
-✓ CORRECT: "This specification section details the requirements {{citation:preview.md|Section 1|details the requirements for various types}} for wood doors."
+✓ CORRECT: "Item G.6 has a quantity of 336.19 m2 {{citation:BWB-BOQ.xlsx|Sheet: Thermal & Moisture, Row 7|336.19 , m2}} and relates to type EW-06 {{citation:BWB-BOQ.xlsx|Sheet: Thermal & Moisture, Row 7|to type EW-06}}."
+✓ CORRECT: "The thermal and moisture section includes item G.6 {{citation:BWB-BOQ.xlsx|Sheet: Thermal & Moisture, Row 7|THERMAL & MOISTURE,G.6}} with specific requirements."
 ✗ WRONG: "The total number of parts is 27." (NO CITATION)
 ✗ WRONG: "Total Parts: 27 <sup>1</sup>" (WRONG FORMAT - NO HTML)
 ✗ WRONG: "Total Parts: 27 {{citation:cutlist2.csv|Sheet: Summary, Row 1|}}" (EMPTY QUOTE)
-✗ WRONG: Listing facts without inline citations
+✗ WRONG: "Item G.6 {{citation:BWB-BOQ.xlsx|Sheet: Thermal & Moisture, Row 6|...}}" (WRONG ROW NUMBER)
 
 EXAMPLES OF REQUIRED CITATIONS:
-- Numbers: "The waste percentage is 20% {{citation:file.csv|Sheet: Boards, Row 3|Waste %: 20%}}"
-- Names: "The material is Plywood_19mm {{citation:file.csv|Sheet: Parts, Row 5|Material: Plywood_19mm}}"
-- Measurements: "Width is 500mm {{citation:file.csv|Sheet: Parts, Row 2|Width (mm): 500}}"
-- Any data point: "Board #1 {{citation:file.csv|Sheet: Boards, Row 2|Board#: 1}} contains 12 parts {{citation:file.csv|Sheet: Boards, Row 2|Parts Count: 12}}"
-- Standards: "Must comply with NFPA 80 {{citation:spec.pdf|Page 5|comply with NFPA 80}}"
+- Excel Numbers: "The quantity is 336.19 m2 {{citation:BWB-BOQ.xlsx|Sheet: Thermal & Moisture, Row 7|336.19 , m2}}"
+- Excel Items: "Item G.6 relates to type EW-06 {{citation:BWB-BOQ.xlsx|Sheet: Thermal & Moisture, Row 7|to type EW-06}}"
+- Excel Descriptions: "The item description is THERMAL & MOISTURE,G.6 {{citation:BWB-BOQ.xlsx|Sheet: Thermal & Moisture, Row 7|THERMAL & MOISTURE,G.6}}"
+- PDF Standards: "Must comply with NFPA 80 {{citation:spec.pdf|Page 5|comply with NFPA 80}}"
+
+🔴 EXCEL CITATION ACCURACY:
+- RAG chunks now include "Row X:" prefixes for Excel data
+- When you see "Row 7: data,here,values" in context, cite as "Row 7"
+- Always verify the row number matches the "Row X:" prefix in the chunk
+- Quote must be EXACTLY as it appears after the "Row X:" prefix
+- Include sheet name exactly as shown in the chunk ("Sheet: SheetName")
 
 RESPONSE FORMATTING:
 - Use clear markdown formatting
@@ -218,25 +228,22 @@ export const sendMessageToLLM = async (
     let ragContext = '';
     
     // Use RAG for text files (not images) when enabled
+    // CRITICAL: Only search within explicitly selected files
     if (activeFiles.some(f => f.type !== 'image') && ragService.isEnabled()) {
         try {
-            console.log('[RAG] 🔍 Searching relevant chunks...');
-            const ragResults = await ragService.searchRelevantChunks(newMessage, 5);
+            console.log('[RAG] 🔍 Searching relevant chunks in selected files only...');
+            const selectedFileIds = activeFiles.map(f => f.id);
+            const ragResults = await ragService.searchRelevantChunks(newMessage, 5, selectedFileIds);
             
             if (ragResults.length > 0) {
-                console.log(`[RAG] ✅ Found ${ragResults.length} relevant chunks`);
-                
-                // Map file IDs to actual filenames
-                const fileIdToName = new Map(activeFiles.map(f => [f.id, f.name]));
-                
+                console.log(`[RAG] ✅ Found ${ragResults.length} relevant chunks from selected files`);
                 ragContext = '\n\nRELEVANT CONTEXT FROM SEMANTIC SEARCH:\n' + 
                     ragResults.map((result, i) => {
-                        const fileName = fileIdToName.get(result.chunk.fileName) || result.chunk.fileName;
                         const score = result.score ? ` (relevance: ${(result.score * 100).toFixed(0)}%)` : '';
-                        return `[${i + 1}] From ${fileName}${score}:\n${result.chunk.content}`;
+                        return `[${i + 1}] From ${result.chunk.fileName}${score}:\n${result.chunk.content}`;
                     }).join('\n\n');
             } else {
-                console.log('[RAG] No relevant chunks found');
+                console.log('[RAG] No relevant chunks found in selected files');
             }
         } catch (error) {
             console.warn('[RAG] Search failed, continuing without RAG context:', error);
