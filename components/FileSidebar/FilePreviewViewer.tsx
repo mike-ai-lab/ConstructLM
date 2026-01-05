@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Loader2, Minus, Plus, X } from 'lucide-react';
 import { ProcessedFile } from '../../types';
 import DocumentViewer from '../DocumentViewer';
@@ -10,39 +10,88 @@ interface FilePreviewViewerProps {
   onClose: () => void;
 }
 
+// Cache for processed file previews
+const previewCache = new Map<string, { pdfDoc?: any; numPages?: number; excelHtml?: string; imageUrl?: string }>();
+
+// Clear cache when it gets too large (keep last 10 files)
+const MAX_CACHE_SIZE = 10;
+const clearOldCache = () => {
+  if (previewCache.size > MAX_CACHE_SIZE) {
+    const entries = Array.from(previewCache.entries());
+    const toRemove = entries.slice(0, entries.length - MAX_CACHE_SIZE);
+    toRemove.forEach(([key, value]) => {
+      if (value.imageUrl) URL.revokeObjectURL(value.imageUrl);
+      previewCache.delete(key);
+    });
+  }
+};
+
 const FilePreviewViewer: React.FC<FilePreviewViewerProps> = ({ file, onClose }) => {
   const [pdfDoc, setPdfDoc] = useState<any>(null);
   const [numPages, setNumPages] = useState(0);
   const [loading, setLoading] = useState(true);
   const [excelHtml, setExcelHtml] = useState('');
   const [pdfScale, setPdfScale] = useState(1.5);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const imageUrl = useMemo(() => {
+    const cached = previewCache.get(file.id);
+    if (cached?.imageUrl) return cached.imageUrl;
+    
     if (file.type === 'image' && file.fileHandle && file.fileHandle instanceof File) {
-      return URL.createObjectURL(file.fileHandle);
+      const url = URL.createObjectURL(file.fileHandle);
+      previewCache.set(file.id, { ...previewCache.get(file.id), imageUrl: url });
+      return url;
     }
     return null;
   }, [file]);
 
   useEffect(() => {
     return () => {
-      if (imageUrl) URL.revokeObjectURL(imageUrl);
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
     };
-  }, [imageUrl]);
+  }, []);
 
   useEffect(() => {
+    const cached = previewCache.get(file.id);
+    if (cached) {
+      if (cached.pdfDoc) {
+        setPdfDoc(cached.pdfDoc);
+        setNumPages(cached.numPages || 0);
+      }
+      if (cached.excelHtml) {
+        setExcelHtml(cached.excelHtml);
+      }
+      setLoading(false);
+      return;
+    }
+
+    abortControllerRef.current = new AbortController();
+    const signal = abortControllerRef.current.signal;
+    
     setLoading(true);
+    
     if (file.type === 'pdf' && file.fileHandle && file.fileHandle instanceof File) {
       const loadPdf = async () => {
         try {
           const arrayBuffer = await file.fileHandle.arrayBuffer();
+          if (signal.aborted) return;
+          
           const pdf = await (window as any).pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
+          if (signal.aborted) return;
+          
           setPdfDoc(pdf);
           setNumPages(pdf.numPages);
+          previewCache.set(file.id, { pdfDoc: pdf, numPages: pdf.numPages });
+          clearOldCache();
           setLoading(false);
         } catch (err) {
-          console.error('PDF load error:', err);
-          setLoading(false);
+          if (!signal.aborted) {
+            console.error('PDF load error:', err);
+            setLoading(false);
+          }
         }
       };
       loadPdf();
@@ -50,10 +99,14 @@ const FilePreviewViewer: React.FC<FilePreviewViewerProps> = ({ file, onClose }) 
       const loadExcel = async () => {
         try {
           const arrayBuffer = await file.fileHandle.arrayBuffer();
+          if (signal.aborted) return;
+          
           const XLSX = (window as any).XLSX;
           if (!XLSX) throw new Error('XLSX library not loaded');
 
           const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+          if (signal.aborted) return;
+          
           let html = '';
           workbook.SheetNames.forEach((sheetName: string) => {
             const sheet = workbook.Sheets[sheetName];
@@ -61,11 +114,17 @@ const FilePreviewViewer: React.FC<FilePreviewViewerProps> = ({ file, onClose }) 
             const sanitizedName = sanitizeHtml(sheetName);
             html += `<div class="mb-6"><h3 class="text-lg font-bold mb-2 text-gray-800 dark:text-gray-200">${sanitizedName}</h3>${sheetHtml}</div>`;
           });
+          
+          if (signal.aborted) return;
           setExcelHtml(html);
+          previewCache.set(file.id, { excelHtml: html });
+          clearOldCache();
           setLoading(false);
         } catch (err) {
-          console.error('Excel load error:', err);
-          setLoading(false);
+          if (!signal.aborted) {
+            console.error('Excel load error:', err);
+            setLoading(false);
+          }
         }
       };
       loadExcel();
@@ -74,7 +133,20 @@ const FilePreviewViewer: React.FC<FilePreviewViewerProps> = ({ file, onClose }) 
     }
   }, [file]);
 
-  if (loading) return <div className="flex items-center justify-center p-8"><Loader2 className="animate-spin" /></div>;
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center p-8 gap-3">
+        <Loader2 className="animate-spin text-blue-500" size={32} />
+        <p className="text-sm text-gray-600 dark:text-gray-400">Loading preview...</p>
+        <button
+          onClick={onClose}
+          className="px-4 py-2 text-sm bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-lg transition-colors"
+        >
+          Cancel
+        </button>
+      </div>
+    );
+  }
 
   return (
     <>

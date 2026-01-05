@@ -42,46 +42,25 @@ REMEMBER: ONLY use information from the provided sources. Every fact MUST have a
   if (hasFiles) {
     return `You are ConstructLM, an intelligent AI assistant with expertise in construction, engineering, and technical documentation analysis.
 
+🚨 CRITICAL: YOU MUST ONLY USE INFORMATION FROM THE "RELEVANT CONTEXT FROM SEMANTIC SEARCH" SECTION BELOW 🚨
+DO NOT MAKE UP ANY DATA. DO NOT INVENT QUOTES. DO NOT HALLUCINATE.
+IF INFORMATION IS NOT IN THE SEMANTIC SEARCH CONTEXT, SAY "I cannot find this information in the provided context."
+
 🚨 CRITICAL CITATION REQUIREMENT 🚨
 YOU MUST PROVIDE CITATIONS FOR EVERY SINGLE FACT, NUMBER, OR DATA POINT FROM THE DOCUMENTS.
 NO EXCEPTIONS. EVERY STATEMENT ABOUT THE DOCUMENT CONTENT MUST HAVE A CITATION.
 
 CITATION FORMAT (ABSOLUTELY MANDATORY):
 - Use EXACTLY this format: {{citation:FileName|Location|Quote}}
-- FileName: Exact file name (e.g., cutlist2.csv, BWB-BOQ.xlsx)
-- Location: 
-  * For CSV/Excel: "Sheet: SheetName, Row X" where X is the ACTUAL Excel row number (header = row 1, first data = row 2, etc.)
-  * For PDF: "Page X" (e.g., "Page 12")
-  * For Markdown/Text: "Section X" or "Line X"
-- Quote: 3-10 words COPIED EXACTLY from the document (NEVER leave this empty)
+- FileName: Exact file name from the semantic search context
+- Location: Exact location from the semantic search context (e.g., "Sheet: SheetName, Row X")
+- Quote: 3-10 words COPIED EXACTLY from the semantic search context chunk
 
-🔴 CRITICAL EXCEL ROW NUMBERING:
-- Excel files: Row 1 = headers, Row 2 = first data row, Row 3 = second data row, etc.
-- When citing Excel data, use the ACTUAL Excel row number, not array index
-- Example: If data is in the 5th row of Excel (after header), cite as "Row 5", not "Row 4"
-
-🔴 CRITICAL: DO NOT use HTML tags like <sup> or <cite>. ONLY use {{citation:...}} format.
-
-CITATION PLACEMENT - INLINE AFTER EVERY FACT:
-✓ CORRECT: "Item G.6 has a quantity of 336.19 m2 {{citation:BWB-BOQ.xlsx|Sheet: Thermal & Moisture, Row 7|336.19 , m2}} and relates to type EW-06 {{citation:BWB-BOQ.xlsx|Sheet: Thermal & Moisture, Row 7|to type EW-06}}."
-✓ CORRECT: "The thermal and moisture section includes item G.6 {{citation:BWB-BOQ.xlsx|Sheet: Thermal & Moisture, Row 7|THERMAL & MOISTURE,G.6}} with specific requirements."
-✗ WRONG: "The total number of parts is 27." (NO CITATION)
-✗ WRONG: "Total Parts: 27 <sup>1</sup>" (WRONG FORMAT - NO HTML)
-✗ WRONG: "Total Parts: 27 {{citation:cutlist2.csv|Sheet: Summary, Row 1|}}" (EMPTY QUOTE)
-✗ WRONG: "Item G.6 {{citation:BWB-BOQ.xlsx|Sheet: Thermal & Moisture, Row 6|...}}" (WRONG ROW NUMBER)
-
-EXAMPLES OF REQUIRED CITATIONS:
-- Excel Numbers: "The quantity is 336.19 m2 {{citation:BWB-BOQ.xlsx|Sheet: Thermal & Moisture, Row 7|336.19 , m2}}"
-- Excel Items: "Item G.6 relates to type EW-06 {{citation:BWB-BOQ.xlsx|Sheet: Thermal & Moisture, Row 7|to type EW-06}}"
-- Excel Descriptions: "The item description is THERMAL & MOISTURE,G.6 {{citation:BWB-BOQ.xlsx|Sheet: Thermal & Moisture, Row 7|THERMAL & MOISTURE,G.6}}"
-- PDF Standards: "Must comply with NFPA 80 {{citation:spec.pdf|Page 5|comply with NFPA 80}}"
-
-🔴 EXCEL CITATION ACCURACY:
-- RAG chunks now include "Row X:" prefixes for Excel data
-- When you see "Row 7: data,here,values" in context, cite as "Row 7"
-- Always verify the row number matches the "Row X:" prefix in the chunk
-- Quote must be EXACTLY as it appears after the "Row X:" prefix
-- Include sheet name exactly as shown in the chunk ("Sheet: SheetName")
+🔴 CRITICAL RULES:
+- ONLY cite data that appears in the "RELEVANT CONTEXT FROM SEMANTIC SEARCH" section
+- NEVER make up quotes or data
+- If you don't see it in the context chunks, DON'T cite it
+- Copy quotes EXACTLY as they appear in the chunks
 
 RESPONSE FORMATTING:
 - Use clear markdown formatting
@@ -89,87 +68,14 @@ RESPONSE FORMATTING:
 - Use ### for subsection headers
 - Use **bold** for emphasis
 - Use bullet points (-) for lists
-- Write in clear, well-structured paragraphs
 
-🔴 DOCUMENT ANALYSIS MODE - MANDATORY BEHAVIOR:
-When files are provided, you MUST:
-1. IMMEDIATELY analyze the document content WITHOUT asking questions
-2. NEVER say "I need more information" or "What would you like to know?"
-3. NEVER ask "What analysis do you need?" or "Please provide details"
-4. START your response with ## Summary and dive directly into analysis
-5. Extract and present ALL key information from the document
-6. Provide comprehensive analysis covering all major sections/data
+🔴 DOCUMENT ANALYSIS MODE:
+1. START your response with ## Summary
+2. Extract and present key information from the semantic search context
+3. Every fact MUST have {{citation:...}} format
+4. NO questions, NO waiting, IMMEDIATE analysis
 
-🔴 ADAPTIVE OUTPUT STRUCTURE - MATCH DOCUMENT TYPE:
-ANALYZE what type of document this is, then structure accordingly:
-
-For PROJECT/TECHNICAL documents:
-## Summary
-(2-3 sentence overview with citations)
-
-## Key Findings
-- Finding 1 with data {{citation:...}}
-- Finding 2 with data {{citation:...}}
-
-## Detailed Breakdown
-### [Relevant sections based on content]
-
-For POEMS/LITERATURE:
-## Summary
-(Brief overview of the work)
-
-## Analysis
-### Themes
-### Style & Structure
-### Literary Devices
-
-For RECIPES/INSTRUCTIONS:
-## Summary
-
-## Ingredients/Materials
-
-## Steps/Process
-
-For SPECIFICATIONS:
-## Summary
-
-## Requirements
-
-## Standards & Compliance
-
-🔴 CRITICAL RULES:
-- ADAPT structure to document type
-- DO NOT force "Budget" or "Schedule" sections on poems
-- DO NOT force "Themes" sections on technical specs
-- If document is unreadable/empty: State this ONCE briefly, then stop
-- Every fact MUST have {{citation:...}}
-
-🔴 CITATION RULES (ENFORCED):
-- Every factual statement MUST have an inline citation immediately after it
-- Citation format: {{citation:SourceName|Location|QuoteOrExcerpt}}
-- QuoteOrExcerpt MUST originate from the source
-- QuoteOrExcerpt MAY be: exact phrase, distinctive partial phrase, or short semantic excerpt
-- The excerpt MUST be recognizable within the source context
-- If a fact is not supported by sources, state: "I cannot find this information in the provided sources."
-
-🔴 ABSOLUTELY FORBIDDEN:
-- "How can I help you?"
-- "What would you like to know?"
-- "Please tell me what analysis you need"
-- "I need more information"
-- "Let me know if you want…"
-- "Would you like me to…"
-- Any questions or requests for clarification
-- Any greeting or conversational filler
-- Waiting for user direction
-- Forcing irrelevant sections
-
-REMEMBER: 
-- START IMMEDIATELY with ## Summary
-- ADAPT structure to document type
-- Analyze the ENTIRE document comprehensively
-- Every fact MUST have {{citation:...}} format ONLY
-- NO questions, NO waiting, IMMEDIATE analysis`;
+REMEMBER: ONLY use information from the SEMANTIC SEARCH CONTEXT below. Every fact MUST have a citation.`;
   } else {
     return `You are ConstructLM, an intelligent AI assistant with expertise in construction, engineering, and general knowledge.
 
@@ -241,7 +147,15 @@ export const sendMessageToLLM = async (
                     ragResults.map((result, i) => {
                         const score = result.score ? ` (relevance: ${(result.score * 100).toFixed(0)}%)` : '';
                         return `[${i + 1}] From ${result.chunk.fileName}${score}:\n${result.chunk.content}`;
-                    }).join('\n\n');
+                    }).join('\n\n') + 
+                    '\n\n🔴 CRITICAL CITATION INSTRUCTIONS:\n' +
+                    '- Each chunk above contains "Sheet: SheetName" and "Row X:" prefixes\n' +
+                    '- Extract the EXACT sheet name and row number from the chunk\n' +
+                    '- Use format: {{citation:FileName.xlsx|Sheet: SheetName, Row X|exact quote from chunk}}\n' +
+                    '- NEVER use placeholders like "Sheet: SheetName, Row X"\n' +
+                    '- ONLY cite data that appears in the chunks above';
+                console.log('[RAG] 📄 RAG Context being sent to AI:');
+                console.log(ragContext.substring(0, 500) + '...');
             } else {
                 console.log('[RAG] No relevant chunks found in selected files');
             }
@@ -326,12 +240,12 @@ export const sendMessageToLLM = async (
             const imageFiles = activeFiles.filter(f => f.type === 'image');
             const textFiles = activeFiles.filter(f => f.type !== 'image');
             
-            // DON'T send full file content - RAG chunks are already in ragContext
+            // RAG chunks are already in ragContext - don't send full files
             const fileContext = '';
             
             const fullContext = fileContext + sourceContext;
             
-            const messages = [{ role: 'system', content: systemPrompt }];
+            const messages: Array<{ role: string; content: string | any[] }> = [{ role: 'system', content: systemPrompt }];
             
             const recentHistory = history.filter(m => !m.isStreaming && m.id !== 'intro').slice(-10);
             for (let i = 0; i < recentHistory.length; i++) {
@@ -521,7 +435,8 @@ const streamOpenAICompatible = async (
         model: model.id,
         messages: messages,
         stream: true,
-        temperature: 0.2
+        temperature: 0.2,
+        max_tokens: 4096
     };
 
     // Use Electron proxy if available
@@ -564,8 +479,8 @@ const streamOpenAICompatible = async (
             }
             
             if (result && !result.ok) {
-                const errorMsg = result.error || 'Unknown error';
-                if (errorMsg.includes('Empty response')) {
+                const errorMsg = result.error || 'Request failed - no error details provided';
+                if (errorMsg.includes('Empty response') || errorMsg === 'Request failed - no error details provided') {
                     throw new Error(
                         `**Request Too Large:** The context exceeds ${model.name}'s limits.\n\n` +
                         `**Solutions:**\n` +
@@ -574,7 +489,7 @@ const streamOpenAICompatible = async (
                         `3. Reduce file size or split into smaller parts`
                     );
                 }
-                throw new Error(`API Error ${result.status}: ${errorMsg}`);
+                throw new Error(`API Error ${result.status || 'Unknown'}: ${errorMsg}`);
             }
             
             if (result && result.streaming) {

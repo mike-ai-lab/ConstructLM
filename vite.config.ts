@@ -28,9 +28,14 @@ export default defineConfig(({ mode }) => {
         rollupOptions: {
           output: {
             manualChunks: undefined,
-            inlineDynamicImports: true
+            inlineDynamicImports: true,
+            entryFileNames: `assets/[name]-[hash]-${Date.now()}.js`,
+            chunkFileNames: `assets/[name]-[hash]-${Date.now()}.js`,
+            assetFileNames: `assets/[name]-[hash]-${Date.now()}.[ext]`
           }
-        }
+        },
+        copyPublicDir: true,
+        assetsInlineLimit: 0
       },
       define: {
         '__DEFINES__': {},

@@ -52,9 +52,8 @@ export async function sendMessageToGemini(
   console.log('🔵 [GEMINI] Image files:', imageFiles.length);
   console.log('🔵 [GEMINI] Text files:', textFiles.length);
 
-  const fileContext = textFiles.length > 0
-    ? '\n\nFILE CONTEXT:\n' + textFiles.map(f => `=== FILE: "${f.name}" ===\n${f.content}\n=== END FILE ===`).join('\n\n')
-    : '';
+  // RAG chunks are already in systemPrompt - don't send full files
+  const fileContext = '';
 
   const contents = [];
   

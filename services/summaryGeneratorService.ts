@@ -56,15 +56,14 @@ class SummaryGeneratorService {
     let summary = '';
     
     await sendMessageToLLM(
+      modelId,
+      [],
       prompt,
       [],
-      [],
-      modelId,
       (chunk) => {
         summary += chunk;
       },
-      () => {},
-      false
+      []
     );
     
     // Add metadata header if requested

@@ -46,6 +46,8 @@ import { Note, Todo, TodoGroup, Reminder, Source } from './types';
 const App: React.FC = () => {
   useUIHelpersInit();
   
+  const [versionInfo, setVersionInfo] = React.useState({ version: '1.0.0', buildId: 'loading', buildDate: '' });
+  
   const chatState = useChatState();
   const fileState = useFileState();
   const layoutState = useLayoutState();
@@ -80,6 +82,15 @@ const App: React.FC = () => {
   // const [isPipelineEnabled, setIsPipelineEnabled] = React.useState(false);
 
   React.useEffect(() => {
+    // Load version info
+    fetch('/version.json')
+      .then(r => r.json())
+      .then(v => {
+        setVersionInfo(v);
+        console.log(`🚀 ConstructLM v${v.version} | Build: ${v.buildId} | ${new Date(v.buildDate).toLocaleString()}`);
+      })
+      .catch(() => console.warn('Version info not available'));
+    
     // Initialize activity logger
     activityLogger.logSessionStart();
     
@@ -1079,7 +1090,7 @@ const App: React.FC = () => {
               onDeleteSource={handleDeleteSource}
               onToggleSource={handleToggleSourceLink}
             />
-            <p className="text-[#666666] dark:text-[#a0a0a0] text-xs text-center mt-2">AI can make mistakes. Please verify citations.</p>
+            <p className="text-[#666666] dark:text-[#a0a0a0] text-xs text-center mt-2">AI can make mistakes. Please verify citations. <span className="opacity-50">v{versionInfo.version}-{versionInfo.buildId.slice(-6)}</span></p>
           </div>
         </div>
         )}

@@ -108,9 +108,10 @@ Extract the KEY TOPIC and create a proper title. Output ONLY 3 words, no punctua
     const fileNames = contextManager.getFileNames(contextResult.filesUsed, files);
     console.log('[MessageHandler] Sources:', fileNames);
     
-    // Always use selected files - chunks are optional optimization
+    // Pass selected files to trigger RAG, but they won't be sent as full content
+    // RAG will extract chunks and add them to system prompt
     const excerptedFiles: ProcessedFile[] = selectedFiles;
-    console.log('[MessageHandler] Excerpted files:', excerptedFiles.map(f => ({ name: f.name, contentLength: f.content?.length || 0 })));
+    console.log('[MessageHandler] Triggering RAG with', selectedFiles.length, 'files');
     
     const userMsg: Message = {
       id: `user-${Date.now()}`,
