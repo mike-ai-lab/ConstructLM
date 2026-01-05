@@ -102,7 +102,9 @@ class EmbeddingService {
     file: ProcessedFile,
     onProgress?: (progress: EmbeddingProgress) => void
   ): Promise<void> {
-    this.processingFiles.add(file.id);
+    // Run in background without blocking
+    setTimeout(async () => {
+      this.processingFiles.add(file.id);
     
     try {
       const fileHash = await generateFileHash(file.content);
@@ -177,8 +179,8 @@ class EmbeddingService {
       };
       chunkRecords.push(chunkRecord);
       
-      // Yield to UI every 5 chunks to prevent freezing
-      if (i % 5 === 0) {
+      // Yield to UI every 2 chunks to prevent freezing
+      if (i % 2 === 0) {
         await new Promise(resolve => setTimeout(resolve, 0));
       }
     }
@@ -208,6 +210,7 @@ class EmbeddingService {
     } finally {
       this.processingFiles.delete(file.id);
     }
+    }, 0); // Run async
   }
 
   async searchSimilar(query: string, fileIds: string[], topK: number = 5): Promise<ChunkRecord[]> {
