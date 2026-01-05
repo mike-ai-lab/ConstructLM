@@ -61,8 +61,30 @@ class RAGService {
         return [];
       }
       
-      const chunks = await embeddingService.searchSimilar(query, targetFiles, limit);
-      activityLogger.logRAGSearch(query, chunks.length);
+      // Multi-topic query expansion: split by AND/OR and search separately
+      const queries = this.expandQuery(query);
+      const allChunks = new Map<string, { chunk: any; score: number }>();
+      
+      // Get more chunks per query to ensure coverage
+      const chunksPerQuery = queries.length > 1 ? Math.ceil(limit * 0.8) : limit;
+      
+      for (const subQuery of queries) {
+        console.log(`[RAG] Sub-query: "${subQuery}"`);
+        const chunks = await embeddingService.searchSimilar(subQuery, targetFiles, chunksPerQuery);
+        chunks.forEach(chunk => {
+          const key = `${chunk.fileId}_${chunk.chunkIndex}`;
+          if (!allChunks.has(key)) {
+            allChunks.set(key, { chunk, score: 1.0 });
+          }
+        });
+      }
+      
+      // Convert to array and sort by score
+      const results = Array.from(allChunks.values())
+        .sort((a, b) => b.score - a.score)
+        .slice(0, limit);
+      
+      activityLogger.logRAGSearch(query, results.length);
       
       // Map file IDs to actual filenames
       const fileMap = new Map<string, string>();
@@ -74,12 +96,7 @@ class RAGService {
       }
       
       // Map chunks to RAG results with proper scores and filenames
-      return chunks.map((chunk, index) => {
-        // Calculate similarity score from the search results
-        // searchSimilar returns chunks sorted by similarity
-        const similarityScore = 1.0 - (index * 0.1); // Approximate score based on rank
-        
-        // Use actual filename from map, fallback to chunk.fileName, then fileId
+      return results.map(({ chunk, score }, index) => {
         const actualFileName = fileMap.get(chunk.fileId) || chunk.fileName || chunk.fileId;
         
         return {
@@ -88,7 +105,7 @@ class RAGService {
             fileId: chunk.fileId,
             content: chunk.content
           },
-          score: similarityScore
+          score: score - (index * 0.05)
         };
       });
     } catch (error) {
@@ -96,6 +113,12 @@ class RAGService {
       activityLogger.logRAGSearch(query, 0);
       return [];
     }
+  }
+  
+  private expandQuery(query: string): string[] {
+    // Split by AND/OR to handle multi-topic queries
+    const parts = query.split(/\s+(?:AND|OR|\+|,)\s+/i).map(p => p.trim()).filter(p => p.length > 3);
+    return parts.length > 1 ? parts : [query];
   }
   
   private async getAllFileIds(): Promise<string[]> {

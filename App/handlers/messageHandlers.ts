@@ -188,6 +188,17 @@ Extract the KEY TOPIC and create a proper title. Output ONLY 3 words, no punctua
         msg.id === modelMsgId ? { ...msg, content: accumText, thinking: thinkingText || undefined } : msg
       ));
       
+      // ✅ REQUIREMENT 7: Post-generation enforcement
+      const strictMode = excerptedFiles.length > 0 || fetchedSources.length > 0;
+      if (strictMode && accumText && !accumText.includes('{{citation:')) {
+        const errorMsg = '**Model violated citation rules:** The model failed to provide required citations. This response has been blocked for quality assurance.';
+        activityLogger.logErrorMsg('CITATION_VIOLATION', 'Model did not include citations in strict mode', { modelId: activeModelId });
+        setMessages(prev => prev.map(msg => 
+          msg.id === modelMsgId ? { ...msg, content: errorMsg } : msg
+        ));
+        throw new Error('Model violated citation rules');
+      }
+      
       console.log('[MessageHandler] LLM response complete. Usage:', usage);
       console.log('[MessageHandler] Final content length:', accumText.length);
       

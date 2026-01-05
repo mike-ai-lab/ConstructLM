@@ -40,42 +40,32 @@ REMEMBER: ONLY use information from the provided sources. Every fact MUST have a
   }
   
   if (hasFiles) {
-    return `You are ConstructLM, an intelligent AI assistant with expertise in construction, engineering, and technical documentation analysis.
+    return `You are ConstructLM, a document analysis assistant.
 
-🚨 CRITICAL: YOU MUST ONLY USE INFORMATION FROM THE "RELEVANT CONTEXT FROM SEMANTIC SEARCH" SECTION BELOW 🚨
-DO NOT MAKE UP ANY DATA. DO NOT INVENT QUOTES. DO NOT HALLUCINATE.
-IF INFORMATION IS NOT IN THE SEMANTIC SEARCH CONTEXT, SAY "I cannot find this information in the provided context."
+**YOUR ONLY JOB**: Extract information from the SEMANTIC SEARCH CONTEXT below and cite it.
 
-🚨 CRITICAL CITATION REQUIREMENT 🚨
-YOU MUST PROVIDE CITATIONS FOR EVERY SINGLE FACT, NUMBER, OR DATA POINT FROM THE DOCUMENTS.
-NO EXCEPTIONS. EVERY STATEMENT ABOUT THE DOCUMENT CONTENT MUST HAVE A CITATION.
+**STRICT RULES**:
+1. If information is in the context → cite it with {{citation:FileName|Page X|quote}}
+2. If information is NOT in the context → say "I cannot find information about [topic] in the provided context."
+3. NEVER use general knowledge, NEVER make assumptions, NEVER provide information not in the context
 
-CITATION FORMAT (ABSOLUTELY MANDATORY):
-- Use EXACTLY this format: {{citation:FileName|Location|Quote}}
-- FileName: Exact file name from the semantic search context
-- Location: Exact location from the semantic search context (e.g., "Sheet: SheetName, Row X")
-- Quote: 3-10 words COPIED EXACTLY from the semantic search context chunk
+**FORBIDDEN**: Any response that doesn't come directly from the context chunks below.
 
-🔴 CRITICAL RULES:
-- ONLY cite data that appears in the "RELEVANT CONTEXT FROM SEMANTIC SEARCH" section
-- NEVER make up quotes or data
-- If you don't see it in the context chunks, DON'T cite it
-- Copy quotes EXACTLY as they appear in the chunks
+**CITATION FORMAT**: {{citation:FileName|Page X|exact quote from chunk}}
+- Extract page number from [Page N] prefix in chunks
+- For Excel: use "Sheet: Name, Row X" from chunk
 
-RESPONSE FORMATTING:
-- Use clear markdown formatting
-- Use ## for main section headers
-- Use ### for subsection headers
-- Use **bold** for emphasis
-- Use bullet points (-) for lists
+**RESPONSE FORMAT**:
+## Summary
+[Extract key facts from context with citations]
 
-🔴 DOCUMENT ANALYSIS MODE:
-1. START your response with ## Summary
-2. Extract and present key information from the semantic search context
-3. Every fact MUST have {{citation:...}} format
-4. NO questions, NO waiting, IMMEDIATE analysis
+### [Topic 1]
+[Facts from context with citations]
 
-REMEMBER: ONLY use information from the SEMANTIC SEARCH CONTEXT below. Every fact MUST have a citation.`;
+### [Topic 2 - if not in context]
+I cannot find information about [topic] in the provided context.
+
+REMEMBER: ONLY information from the SEMANTIC SEARCH CONTEXT below. Nothing else.`;
   } else {
     return `You are ConstructLM, an intelligent AI assistant with expertise in construction, engineering, and general knowledge.
 
@@ -139,32 +129,68 @@ export const sendMessageToLLM = async (
         try {
             console.log('[RAG] 🔍 Searching relevant chunks in selected files only...');
             const selectedFileIds = activeFiles.map(f => f.id);
-            const ragResults = await ragService.searchRelevantChunks(newMessage, 5, selectedFileIds);
+            const ragResults = await ragService.searchRelevantChunks(newMessage, 15, selectedFileIds);
             
             if (ragResults.length > 0) {
                 console.log(`[RAG] ✅ Found ${ragResults.length} relevant chunks from selected files`);
+                
+                // DEBUG: Log first chunk to verify page numbers
+                if (ragResults.length > 0) {
+                    console.log('[RAG] 🔍 First chunk preview:', ragResults[0].chunk.content.substring(0, 200));
+                }
+                
                 ragContext = '\n\nRELEVANT CONTEXT FROM SEMANTIC SEARCH:\n' + 
                     ragResults.map((result, i) => {
                         const score = result.score ? ` (relevance: ${(result.score * 100).toFixed(0)}%)` : '';
                         return `[${i + 1}] From ${result.chunk.fileName}${score}:\n${result.chunk.content}`;
                     }).join('\n\n') + 
-                    '\n\n🔴 CRITICAL CITATION INSTRUCTIONS:\n' +
-                    '- Each chunk above contains "Sheet: SheetName" and "Row X:" prefixes\n' +
-                    '- Extract the EXACT sheet name and row number from the chunk\n' +
-                    '- Use format: {{citation:FileName.xlsx|Sheet: SheetName, Row X|exact quote from chunk}}\n' +
-                    '- NEVER use placeholders like "Sheet: SheetName, Row X"\n' +
-                    '- ONLY cite data that appears in the chunks above';
-                console.log('[RAG] 📄 RAG Context being sent to AI:');
-                console.log(ragContext.substring(0, 500) + '...');
+                    '\n\n🔴 CITATION INSTRUCTIONS:\n' +
+                    '- PDF chunks start with [Page N] - extract page number for citations\n' +
+                    '- Excel chunks have "Sheet: SheetName" and "Row X:" - extract these for citations\n' +
+                    '- Use format: {{citation:FileName|Page X|exact quote}} for PDFs\n' +
+                    '- Use format: {{citation:FileName|Sheet: Name, Row X|exact quote}} for Excel\n' +
+                    '- ONLY cite data from the chunks above';
             } else {
                 console.log('[RAG] No relevant chunks found in selected files');
             }
+            
+            // Construct system prompt
+            const baseSystemPrompt = constructBaseSystemPrompt(activeFiles.length > 0, activeSources.length > 0, activeSources);
+            const systemPrompt = baseSystemPrompt + ragContext;
+            
+            // FULL REQUEST LOGGING (always show, even if no RAG results)
+            const systemPromptTokens = Math.ceil(systemPrompt.length / 4);
+            const ragContextTokens = Math.ceil(ragContext.length / 4);
+            const userMessageTokens = Math.ceil(newMessage.length / 4);
+            const totalRequestTokens = systemPromptTokens + ragContextTokens + userMessageTokens;
+            
+            console.log('\n🔶 [RAG] === FULL REQUEST BREAKDOWN ===');
+            console.log(`📊 System Prompt: ${systemPromptTokens} tokens`);
+            console.log(`📊 RAG Context: ${ragContextTokens} tokens (${ragResults.length} chunks)`);
+            console.log(`📊 User Message: ${userMessageTokens} tokens`);
+            console.log(`📊 TOTAL REQUEST: ${totalRequestTokens} tokens`);
+            console.log(`📊 Model Limits: Groq ~8K, Gemini ~1M, GPT-4o ~128K`);
+            console.log('\n📄 FULL SYSTEM PROMPT:');
+            console.log(systemPrompt);
+            console.log('\n📄 FULL RAG CONTEXT:');
+            console.log(ragContext);
+            console.log('\n📄 USER MESSAGE:');
+            console.log(newMessage);
+            console.log('\n🔶 === END FULL REQUEST ===\n');
         } catch (error) {
             console.warn('[RAG] Search failed, continuing without RAG context:', error);
         }
     }
 
-    const systemPrompt = constructBaseSystemPrompt(activeFiles.length > 0, activeSources.length > 0, activeSources) + ragContext;
+    // ✅ REQUIREMENT 1: System prompt MUST ALWAYS include base + RAG context
+    const baseSystemPrompt = constructBaseSystemPrompt(activeFiles.length > 0, activeSources.length > 0, activeSources);
+    const systemPrompt = baseSystemPrompt + ragContext;
+    
+    // ✅ REQUIREMENT 4: Strict mode isolation
+    const strictMode = activeFiles.length > 0 || activeSources.length > 0;
+    
+    // ✅ REQUIREMENT 5: Hard refusal clause in strict mode
+    const strictSystemPrompt = strictMode ? systemPrompt + '\n\nIF THE USER ASKS FOR INFORMATION NOT PRESENT IN THE PROVIDED CONTEXT:\n- You MUST refuse\n- You MUST NOT explain, guess, infer, or use general knowledge\n- The ONLY allowed response is:\n"I cannot find this information in the provided context."' : systemPrompt;
 
     // Add source context if available
     let sourceContext = '';
@@ -209,18 +235,19 @@ export const sendMessageToLLM = async (
             if (!apiKey) {
                 throw new Error(`API Key for ${model.name} is missing. Please open Settings (Gear Icon) to add it.`);
             }
-            const conversationHistory = history.filter(m => !m.isStreaming && m.id !== 'intro');
             
-            // Add source context to the message for Gemini
-            let geminiMessage = newMessage;
-            if (activeSources.length > 0) {
-                geminiMessage += '\n\nSOURCE CONTENT:\n' + 
-                    activeSources.filter(s => s.content).map((s, i) => 
-                        `=== SOURCE [${i + 1}]: "${s.title || s.url}" (${s.url}) ===\n${s.content}\n=== END SOURCE ===`
-                    ).join('\n\n');
-            }
+            // ✅ REQUIREMENT 4: Strict mode history isolation
+            const conversationHistory = strictMode ? [] : history.filter(m => !m.isStreaming && m.id !== 'intro');
             
-            await sendMessageToGemini(modelId, apiKey, geminiMessage, activeFiles, onStream, systemPrompt, conversationHistory);
+            // ✅ REQUIREMENT 2: Gemini-specific rule reinforcement
+            const geminiMessage = strictMode 
+                ? `SYSTEM RULES (MANDATORY – NO EXCEPTIONS):\n${strictSystemPrompt}\n\nUSER QUESTION:\n${newMessage}`
+                : newMessage;
+            
+            // ✅ REQUIREMENT 3: Source context in SYSTEM, not USER
+            const finalSystemPrompt = strictSystemPrompt + sourceContext;
+            
+            await sendMessageToGemini(modelId, apiKey, geminiMessage, activeFiles, onStream, finalSystemPrompt, conversationHistory);
             return {};
         } else if (model.provider === 'openai' || model.provider === 'groq') {
             // OpenAI or Groq
@@ -245,19 +272,21 @@ export const sendMessageToLLM = async (
             
             const fullContext = fileContext + sourceContext;
             
-            const messages: Array<{ role: string; content: string | any[] }> = [{ role: 'system', content: systemPrompt }];
+            // ✅ REQUIREMENT 3: File context in SYSTEM role only
+            // ✅ REQUIREMENT 1: System prompt construction
+            const finalSystemPrompt = strictSystemPrompt + sourceContext;
             
-            const recentHistory = history.filter(m => !m.isStreaming && m.id !== 'intro').slice(-10);
-            for (let i = 0; i < recentHistory.length; i++) {
-                const msg = recentHistory[i];
-                const isFirstUserMsg = i === 0 && msg.role === 'user';
+            const messages: Array<{ role: string; content: string | any[] }> = [{ role: 'system', content: finalSystemPrompt }];
+            
+            // ✅ REQUIREMENT 4: Strict mode history isolation (ALL providers)
+            const recentHistory = strictMode ? [] : history.filter(m => !m.isStreaming && m.id !== 'intro').slice(-10);
+            for (const msg of recentHistory) {
                 const role = msg.role === 'model' ? 'assistant' : msg.role;
-                const content = isFirstUserMsg && fullContext ? msg.content + fullContext : msg.content;
-                messages.push({ role, content });
+                messages.push({ role, content: msg.content });
             }
             
-            const isFirstMessage = recentHistory.length === 0;
-            const currentContent = (isFirstMessage && fullContext) ? newMessage + fullContext : newMessage;
+            // ✅ REQUIREMENT 3: User message contains ONLY user intent
+            const currentContent = newMessage;
             
             // For OpenAI with vision support, format message with images
             if (imageFiles.length > 0 && model.provider === 'openai') {
@@ -311,29 +340,24 @@ export const sendMessageToLLM = async (
                 throw new Error(`AWS credentials missing. Please add AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY in Settings.`);
             }
             
-            const fileContext = activeFiles.length > 0
-                ? '\n\nFILE CONTEXT:\n' + activeFiles.map(f => `=== FILE: "${f.name}" ===\n${f.content}\n=== END FILE ===`).join('\n\n')
-                : '';
+            // ✅ REQUIREMENT 3: File context in SYSTEM role only
+            // ✅ REQUIREMENT 1: System prompt construction
+            const finalSystemPrompt = strictSystemPrompt + sourceContext;
             
-            const fullContext = fileContext + sourceContext;
+            const messages = [{ role: 'system', content: finalSystemPrompt }];
             
-            const messages = [{ role: 'system', content: systemPrompt }];
-            
-            const recentHistory = history.filter(m => !m.isStreaming && m.id !== 'intro').slice(-10);
-            for (let i = 0; i < recentHistory.length; i++) {
-                const msg = recentHistory[i];
-                const isFirstUserMsg = i === 0 && msg.role === 'user';
+            // ✅ REQUIREMENT 4: Strict mode history isolation (ALL providers)
+            const recentHistory = strictMode ? [] : history.filter(m => !m.isStreaming && m.id !== 'intro').slice(-10);
+            for (const msg of recentHistory) {
                 const role = msg.role === 'model' ? 'assistant' : msg.role;
-                const content = isFirstUserMsg && fullContext ? msg.content + fullContext : msg.content;
-                messages.push({ role, content });
+                messages.push({ role, content: msg.content });
             }
             
-            const isFirstMessage = recentHistory.length === 0;
-            const currentContent = (isFirstMessage && fullContext) ? newMessage + fullContext : newMessage;
-            messages.push({ role: 'user', content: currentContent });
+            // ✅ REQUIREMENT 3: User message contains ONLY user intent
+            messages.push({ role: 'user', content: newMessage });
             
             const awsMessages = messages;
-            const awsUserMessage = currentContent;
+            const awsUserMessage = newMessage;
             const awsFiles = activeFiles;
             const awsCallback = onStream;
             
@@ -431,12 +455,18 @@ const streamOpenAICompatible = async (
     onStream: (chunk: string, thinking?: string) => void
 ): Promise<{ inputTokens?: number; outputTokens?: number; totalTokens?: number }> => {
 
+    // ✅ REQUIREMENT 6: Generation parameters for strict mode
+    const hasStrictPrompt = messages[0]?.content?.includes('MANDATORY – NO EXCEPTIONS') || 
+                           messages[0]?.content?.includes('STRICT RULES') ||
+                           messages[0]?.content?.includes('CRITICAL SOURCE RESTRICTION');
+    
     const requestBody = {
         model: model.id,
         messages: messages,
         stream: true,
-        temperature: 0.2,
-        max_tokens: 4096
+        temperature: hasStrictPrompt ? 0.3 : 0.7,
+        top_p: hasStrictPrompt ? 0.8 : 0.95,
+        max_tokens: 8192
     };
 
     // Use Electron proxy if available

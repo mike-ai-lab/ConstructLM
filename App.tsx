@@ -122,6 +122,19 @@ const App: React.FC = () => {
     
     if (savedTodos) {
       setTodos(JSON.parse(savedTodos));
+    } else {
+      const demoTodos: Todo[] = [
+        { id: '1', title: 'Complete project documentation', completed: false, priority: 'high', category: 'Development', tags: ['urgent', 'docs'], notes: 'Include API references and usage examples for all modules', estimatedTime: 120, dueDate: Date.now() + 2 * 24 * 60 * 60 * 1000, groupId: 'work', timestamp: Date.now(), subtasks: [{ id: 's1', title: 'Write API docs', completed: true }, { id: 's2', title: 'Add code examples', completed: false }, { id: 's3', title: 'Review and publish', completed: false }], progress: 33, archived: false },
+        { id: '2', title: 'Review pull requests', completed: false, priority: 'medium', category: 'Code Review', tags: ['github', 'team'], estimatedTime: 45, dueDate: Date.now() + 1 * 24 * 60 * 60 * 1000, groupId: 'work', timestamp: Date.now() - 1000, archived: false },
+        { id: '3', title: 'Fix critical bug in authentication', completed: true, priority: 'high', category: 'Bug Fix', tags: ['security', 'backend'], notes: 'Users unable to login with OAuth providers', estimatedTime: 90, groupId: 'work', timestamp: Date.now() - 2000, archived: false },
+        { id: '4', title: 'Update dependencies', completed: false, priority: 'low', category: 'Maintenance', tags: ['npm', 'security'], estimatedTime: 30, dueDate: Date.now() + 7 * 24 * 60 * 60 * 1000, groupId: 'work', timestamp: Date.now() - 3000, archived: false },
+        { id: '5', title: 'Plan weekend hiking trip', completed: false, priority: 'medium', category: 'Recreation', tags: ['outdoor', 'fitness'], notes: 'Research trails in the national park, check weather forecast', estimatedTime: 60, dueDate: Date.now() + 5 * 24 * 60 * 60 * 1000, groupId: 'personal', timestamp: Date.now() - 4000, subtasks: [{ id: 's4', title: 'Book campsite', completed: true }, { id: 's5', title: 'Pack gear', completed: false }], progress: 50, archived: false },
+        { id: '6', title: 'Prepare presentation for client meeting', completed: false, priority: 'high', category: 'Business', tags: ['presentation', 'client'], notes: 'Focus on Q4 results and 2024 roadmap', estimatedTime: 180, dueDate: Date.now() - 1 * 24 * 60 * 60 * 1000, groupId: 'urgent', timestamp: Date.now() - 5000, archived: false },
+        { id: '7', title: 'Grocery shopping', completed: true, priority: 'low', category: 'Errands', tags: ['shopping'], estimatedTime: 45, groupId: 'personal', timestamp: Date.now() - 6000, archived: false },
+        { id: '8', title: 'Schedule team retrospective', completed: false, priority: 'medium', category: 'Management', tags: ['team', 'agile'], notes: 'Discuss sprint outcomes and process improvements', estimatedTime: 60, dueDate: Date.now() + 3 * 24 * 60 * 60 * 1000, groupId: 'work', timestamp: Date.now() - 7000, archived: false }
+      ];
+      setTodos(demoTodos);
+      localStorage.setItem('todos', JSON.stringify(demoTodos));
     }
     
     if (savedReminders) setReminders(JSON.parse(savedReminders));
@@ -976,26 +989,31 @@ const App: React.FC = () => {
                     chatState.setMessages(chatState.messages.filter(m => m.id !== messageId));
                   }}
                   onRetryMessage={msg.role === 'model' ? async (messageId) => {
+                    // Find the previous user message to regenerate from
                     const msgIndex = chatState.messages.findIndex(m => m.id === messageId);
                     if (msgIndex === -1) return;
                     const prevUserMsg = chatState.messages.slice(0, msgIndex).reverse().find(m => m.role === 'user');
                     if (!prevUserMsg) return;
-                    const currentMsg = chatState.messages[msgIndex];
+                    
                     const newOutput = await messageHandlers.handleSendMessage(prevUserMsg.content, messageId);
                     if (newOutput) {
-                      chatState.setMessages(chatState.messages.map(m => {
-                        if (m.id === messageId) {
-                          const alternatives = m.alternativeOutputs || [m.content];
-                          return { ...m, alternativeOutputs: [...alternatives, newOutput], currentOutputIndex: alternatives.length, content: newOutput };
-                        }
-                        return m;
-                      }));
+                      chatState.setMessages((prevMessages) => {
+                        return prevMessages.map(m => {
+                          if (m.id === messageId) {
+                            const alternatives = m.alternativeOutputs || [m.content];
+                            const newAlternatives = [...alternatives, newOutput];
+                            console.log('Regenerate - messageId:', messageId, 'newAlternatives:', newAlternatives, 'length:', newAlternatives.length);
+                            return { ...m, alternativeOutputs: newAlternatives, currentOutputIndex: newAlternatives.length - 1, content: newOutput };
+                          }
+                          return m;
+                        });
+                      });
                     }
                   } : undefined}
                   alternativeOutputs={msg.alternativeOutputs}
                   currentOutputIndex={msg.currentOutputIndex}
                   onSwitchOutput={(messageId, index) => {
-                    chatState.setMessages(chatState.messages.map(m => {
+                    chatState.setMessages((prevMessages) => prevMessages.map(m => {
                       if (m.id === messageId && m.alternativeOutputs) {
                         return { ...m, content: m.alternativeOutputs[index], currentOutputIndex: index };
                       }

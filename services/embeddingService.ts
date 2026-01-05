@@ -18,7 +18,7 @@ env.useBrowserCache = true;
 env.remoteHost = 'https://huggingface.co';
 env.remotePathTemplate = '{model}/resolve/{revision}/';
 
-const EMBEDDING_VERSION = 'transformers-minilm-v2';
+const EMBEDDING_VERSION = 'transformers-minilm-v3-pagemarkers';
 const MODEL_NAME = 'Xenova/all-MiniLM-L6-v2';
 const CHUNK_SIZE = 500;
 const OVERLAP_PERCENT = 10;
@@ -102,9 +102,7 @@ class EmbeddingService {
     file: ProcessedFile,
     onProgress?: (progress: EmbeddingProgress) => void
   ): Promise<void> {
-    // Run in background without blocking
-    setTimeout(async () => {
-      this.processingFiles.add(file.id);
+    this.processingFiles.add(file.id);
     
     try {
       const fileHash = await generateFileHash(file.content);
@@ -136,6 +134,11 @@ class EmbeddingService {
         activityLogger.logRAGVectorStorage(file.name, newChunks.length);
       }
       return;
+    }
+    
+    if (existing && existing.version !== EMBEDDING_VERSION) {
+      console.log(`🔄 Version mismatch for ${file.name} - re-indexing with new chunking logic`);
+      await vectorStore.deleteFile(existing.fileId);
     }
 
     // Only process if no cached embeddings exist
@@ -210,7 +213,6 @@ class EmbeddingService {
     } finally {
       this.processingFiles.delete(file.id);
     }
-    }, 0); // Run async
   }
 
   async searchSimilar(query: string, fileIds: string[], topK: number = 5): Promise<ChunkRecord[]> {

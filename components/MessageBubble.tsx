@@ -114,8 +114,8 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   noteNumber,
   onDeleteMessage,
   onRetryMessage,
-  alternativeOutputs = [],
-  currentOutputIndex = 0,
+  alternativeOutputs,
+  currentOutputIndex,
   onSwitchOutput,
   onOpenWebViewer,
   onOpenWebViewerNewTab,
@@ -460,7 +460,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
           {isUser ? (
             <User size={14} />
           ) : (
-            <InteractiveBlob size={40} color="#a6aed9" />
+            <InteractiveBlob size={40} color="#4485d1" />
           )}
         </div>
 
@@ -469,6 +469,9 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
           <div className="flex items-center gap-2 mb-1.5 px-1">
              <span className="text-[12px] font-bold text-[#666666] dark:text-[#a0a0a0] uppercase tracking-widest">
                  {isUser ? 'You' : (message.modelId || 'AI')}
+             </span>
+             <span className="text-[10px] text-[#999999] dark:text-[#666666]">
+               {new Date(message.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
              </span>
              {noteNumber && (
                <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#25b5cd]/20 dark:bg-[#25b5cd]/10 text-[#25b5cd] dark:text-[#5bd8bb] font-semibold">
@@ -485,15 +488,6 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
                    >
                      {isLoadingAudio ? <Loader2 size={12} className="animate-spin" /> : (isPlaying ? <StopCircle size={12} /> : <Volume2 size={12} />)}
                    </button>
-                   {onRetryMessage && (
-                     <button
-                       onClick={() => onRetryMessage(message.id)}
-                       className="opacity-0 group-hover:opacity-100 p-1 hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] rounded text-[#a0a0a0] hover:text-[#4485d1] transition-all"
-                       title="Regenerate"
-                     >
-                       <RotateCcw size={12} />
-                     </button>
-                   )}
                    {onCreateSummaryDoc && (
                      <button
                        onClick={() => onCreateSummaryDoc(message.content, message.modelId || 'gemini-2.0-flash-exp')}
@@ -630,20 +624,22 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
                   )}
                   
                   {/* Alternative Outputs */}
-                  {alternativeOutputs.length > 1 && onSwitchOutput && (
+                  {alternativeOutputs && alternativeOutputs.length > 1 && onSwitchOutput && (
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => onSwitchOutput(message.id, currentOutputIndex - 1)}
-                        disabled={currentOutputIndex === 0}
+                        onClick={() => onSwitchOutput(message.id, (currentOutputIndex || 0) - 1)}
+                        disabled={(currentOutputIndex || 0) === 0}
                         className="p-1 text-[#a0a0a0] hover:text-[#4485d1] disabled:opacity-30 disabled:cursor-not-allowed"
+                        title="Previous version"
                       >
                         <ChevronLeft size={14} />
                       </button>
-                      <span>{currentOutputIndex + 1} of {alternativeOutputs.length}</span>
+                      <span className="text-[#666666] dark:text-[#a0a0a0]">{(currentOutputIndex || 0) + 1} of {alternativeOutputs.length}</span>
                       <button
-                        onClick={() => onSwitchOutput(message.id, currentOutputIndex + 1)}
-                        disabled={currentOutputIndex === alternativeOutputs.length - 1}
+                        onClick={() => onSwitchOutput(message.id, (currentOutputIndex || 0) + 1)}
+                        disabled={(currentOutputIndex || 0) === alternativeOutputs.length - 1}
                         className="p-1 text-[#a0a0a0] hover:text-[#4485d1] disabled:opacity-30 disabled:cursor-not-allowed"
+                        title="Next version"
                       >
                         <ChevronRight size={14} />
                       </button>
@@ -656,22 +652,34 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
                   )}
                 </div>
                 
-                {/* Save Button */}
-                {!message.isStreaming && onSaveNote && (
-                  <button
-                    onClick={() => {
-                      if (noteNumber && onUnsaveNote) {
-                        onUnsaveNote(message.id);
-                      } else {
-                        onSaveNote(message.content, message.modelId);
-                      }
-                    }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[#a0a0a0] hover:text-[#25b5cd] hover:bg-[rgba(37,181,205,0.1)] rounded transition-colors"
-                  >
-                    <BookmarkPlus size={14} />
-                    <span>{noteNumber ? "Unsave" : "Save"}</span>
-                  </button>
-                )}
+                {/* Action Buttons */}
+                <div className="flex items-center gap-2">
+                  {!message.isStreaming && onRetryMessage && (
+                    <button
+                      onClick={() => onRetryMessage(message.id)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[#a0a0a0] hover:text-[#f59e0b] hover:bg-[rgba(245,158,11,0.1)] rounded transition-colors"
+                      title="Regenerate response"
+                    >
+                      <RotateCcw size={14} />
+                      <span>Regenerate</span>
+                    </button>
+                  )}
+                  {!message.isStreaming && onSaveNote && (
+                    <button
+                      onClick={() => {
+                        if (noteNumber && onUnsaveNote) {
+                          onUnsaveNote(message.id);
+                        } else {
+                          onSaveNote(message.content, message.modelId);
+                        }
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[#a0a0a0] hover:text-[#25b5cd] hover:bg-[rgba(37,181,205,0.1)] rounded transition-colors"
+                    >
+                      <BookmarkPlus size={14} />
+                      <span>{noteNumber ? "Unsave" : "Save"}</span>
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           )}

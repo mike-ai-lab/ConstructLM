@@ -96,22 +96,25 @@ export const createFileHandlers = (
           
           // ✅ AUTO-EMBED: Process file for RAG if enabled and not an image
           if (ragService.isEnabled() && processed.type !== 'image' && processed.status === 'ready') {
-            // Process in background with proper async handling
-            (async () => {
-              try {
-                // console.log(`[RAG] 📦 Auto-processing ${file.name} for semantic search...`);
-                
-                await embeddingService.processFile(processed, (progress) => {
-                  // Silent processing - no console logs
-                });
-                
-                // console.log(`[RAG] ✅ ${file.name} indexed for semantic search`);
-                activityLogger.logInfo('RAG', `File indexed: ${file.name}`);
-              } catch (error) {
-                // console.warn(`[RAG] ⚠️ Failed to embed ${file.name}:`, error);
-                activityLogger.logWarning('RAG', `Embedding failed for ${file.name}`, { error: String(error) });
-              }
-            })();
+            try {
+              console.log(`[RAG] 📦 Indexing ${file.name} for semantic search...`);
+              
+              await embeddingService.processFile(processed, (progress) => {
+                if (setUploadProgress) {
+                  setUploadProgress({
+                    current: processedCount,
+                    total: totalFiles,
+                    currentFile: `Indexing ${file.name} (${progress.current}/${progress.total} chunks)`
+                  });
+                }
+              });
+              
+              console.log(`[RAG] ✅ ${file.name} indexed for semantic search`);
+              activityLogger.logInfo('RAG', `File indexed: ${file.name}`);
+            } catch (error) {
+              console.warn(`[RAG] ⚠️ Failed to embed ${file.name}:`, error);
+              activityLogger.logWarning('RAG', `Embedding failed for ${file.name}`, { error: String(error) });
+            }
           }
         } catch (err) {
           console.error(`Failed to process ${file.name}:`, err);

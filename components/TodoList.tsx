@@ -22,7 +22,7 @@ interface TodoListProps {
 
 const TodoList: React.FC<TodoListProps> = ({ todos, groups, onAddTodo, onToggleTodo, onDeleteTodo, onUpdateTodo, onDeleteSubtask, onAddGroup, onDeleteGroup, onUpdateGroup }) => {
   const [filter, setFilter] = useState<'all' | 'active' | 'archived'>('all');
-  const [viewMode, setViewMode] = useState<'list' | 'board'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'board'>('board');
   const [sortBy, setSortBy] = useState<'created' | 'modified' | 'priority-high' | 'priority-low' | 'duedate'>('created');
   const [showAddForm, setShowAddForm] = useState(false);
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());

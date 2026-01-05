@@ -52,7 +52,7 @@ export async function sendMessageToGemini(
   console.log('🔵 [GEMINI] Image files:', imageFiles.length);
   console.log('🔵 [GEMINI] Text files:', textFiles.length);
 
-  // RAG chunks are already in systemPrompt - don't send full files
+  // ✅ REQUIREMENT 3: File context in SYSTEM role only (RAG chunks already in systemPrompt)
   const fileContext = '';
 
   const contents = [];
@@ -60,21 +60,17 @@ export async function sendMessageToGemini(
   if (history && history.length > 0) {
     const recentHistory = history.filter(m => !m.isStreaming && m.id !== 'intro').slice(-10);
     
-    for (let i = 0; i < recentHistory.length; i++) {
-      const msg = recentHistory[i];
-      const isFirstUserMsg = i === 0 && msg.role === 'user';
-      
+    for (const msg of recentHistory) {
       if (msg.role === 'user') {
-        const userContent = isFirstUserMsg && fileContext ? msg.content + fileContext : msg.content;
-        contents.push({ role: 'user', parts: [{ text: userContent }] });
+        contents.push({ role: 'user', parts: [{ text: msg.content }] });
       } else if (msg.role === 'model') {
         contents.push({ role: 'model', parts: [{ text: msg.content }] });
       }
     }
   }
   
-  const isFirstMessage = !history || history.length === 0;
-  const currentMessage = (isFirstMessage && fileContext) ? message + fileContext : message;
+  // ✅ REQUIREMENT 3: User message contains ONLY user intent
+  const currentMessage = message;
   
   // Build parts for current message - include text and images
   const currentParts: any[] = [{ text: currentMessage }];
@@ -98,13 +94,14 @@ export async function sendMessageToGemini(
   const requestBody: any = { 
     contents,
     generationConfig: {
-      temperature: 0.7,
+      temperature: systemPrompt?.includes('STRICT RULES') || systemPrompt?.includes('CRITICAL SOURCE RESTRICTION') ? 0.3 : 0.7,
       topK: 40,
-      topP: 0.95,
+      topP: systemPrompt?.includes('STRICT RULES') || systemPrompt?.includes('CRITICAL SOURCE RESTRICTION') ? 0.8 : 0.95,
       maxOutputTokens: 8192
     }
   };
   
+  // ✅ REQUIREMENT 1: System prompt MUST ALWAYS be sent
   if (systemPrompt) {
     requestBody.systemInstruction = { parts: [{ text: systemPrompt }] };
   }

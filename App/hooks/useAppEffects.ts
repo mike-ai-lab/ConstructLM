@@ -164,6 +164,17 @@ export const useAppEffects = (
     }
   }, [messages.length, userHasScrolled]);
 
+  // Smooth scroll to bottom when chat changes
+  useEffect(() => {
+    if (currentChatId && messages.length > 0) {
+      // Use setTimeout to ensure DOM has updated
+      const timeoutId = setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [currentChatId]);
+
   // Scroll detection
   useEffect(() => {
     const container = messagesContainerRef.current;
