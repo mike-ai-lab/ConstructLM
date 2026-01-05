@@ -13,25 +13,40 @@ const LogsModal: React.FC<LogsModalProps> = ({ isOpen, onClose }) => {
   const [selectedLog, setSelectedLog] = useState<string | null>(null);
   const [logContent, setLogContent] = useState<string>('');
   const [loading, setLoading] = useState(false);
+  const [loadingFiles, setLoadingFiles] = useState(false);
   const [expandedLogs, setExpandedLogs] = useState<Set<string>>(new Set());
+  const [cachedFiles, setCachedFiles] = useState<string[] | null>(null);
 
   useEffect(() => {
     if (isOpen) {
-      loadLogFiles();
+      // Use cached files if available, otherwise load
+      if (cachedFiles) {
+        setLogFiles(cachedFiles);
+        if (cachedFiles.length > 0 && !selectedLog) {
+          setSelectedLog(cachedFiles[0]);
+          loadLogContent(cachedFiles[0]);
+        }
+      } else {
+        loadLogFiles();
+      }
     }
   }, [isOpen]);
 
   const loadLogFiles = async () => {
+    setLoadingFiles(true);
     try {
       const files = await activityLogger.getLogFiles();
-      const sortedFiles = files.sort((a, b) => b.localeCompare(a)); // Most recent first
+      const sortedFiles = files.sort((a, b) => b.localeCompare(a));
       setLogFiles(sortedFiles);
+      setCachedFiles(sortedFiles); // Cache for next open
       if (sortedFiles.length > 0 && !selectedLog) {
         setSelectedLog(sortedFiles[0]);
         loadLogContent(sortedFiles[0]);
       }
     } catch (error) {
       console.error('Failed to load log files:', error);
+    } finally {
+      setLoadingFiles(false);
     }
   };
 
@@ -176,8 +191,8 @@ const LogsModal: React.FC<LogsModalProps> = ({ isOpen, onClose }) => {
   const logLines = parseLogLines(logContent);
 
   return (
-    <div className="fixed inset-0 z-[250] flex items-center justify-center p-4 pointer-events-none animate-in fade-in duration-200">
-      <div className="w-full max-w-5xl h-[85vh] bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-2xl flex flex-col overflow-hidden pointer-events-auto">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="w-full max-w-6xl h-[90vh] bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-2xl flex flex-col overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] bg-[rgba(0,0,0,0.02)] dark:bg-[#2a2a2a]">
           <div className="flex items-center gap-3">
@@ -213,7 +228,11 @@ const LogsModal: React.FC<LogsModalProps> = ({ isOpen, onClose }) => {
           {/* Left Sidebar - Log Files List */}
           <div className="w-64 border-r border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] overflow-y-auto bg-[rgba(0,0,0,0.02)] dark:bg-[#2a2a2a]">
             <div className="p-3 space-y-1">
-              {logFiles.length === 0 ? (
+              {loadingFiles ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="animate-spin text-[#4485d1]" size={24} />
+                </div>
+              ) : logFiles.length === 0 ? (
                 <div className="text-center py-8 text-[#666666] dark:text-[#a0a0a0]">
                   <p className="text-sm">No logs yet</p>
                 </div>

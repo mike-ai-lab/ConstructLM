@@ -77,7 +77,7 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
   }, []);
   
   return (
-    <header ref={headerRef} className="h-[65px] flex-none border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] flex items-center justify-between px-3 md:px-6 bg-white dark:bg-[#1a1a1a] min-w-0 gap-2 relative z-[300]">
+    <header ref={headerRef} className="h-[65px] flex-none border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] flex items-center justify-between px-3 md:px-6 bg-white dark:bg-[#1a1a1a] min-w-0 gap-2 relative z-[50]">
       <div className="flex items-center gap-2 min-w-0 flex-shrink">
         {!props.isMobile && (props.activeTab === 'chat' || props.activeTab === 'notebook') && (
           <button onClick={() => props.setIsSidebarOpen(!props.isSidebarOpen)} className="p-1.5 text-gray-400 hover:bg-gray-100 rounded-md transition-colors flex-shrink-0">
@@ -258,9 +258,6 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
           <Sun size={16} className="!hidden dark:!block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" style={{ color: '#ffffff' }} />
         </button>
         <button onClick={props.onOpenLogs} className="p-1.5 md:p-2 text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] hover:text-[#1a1a1a] dark:hover:text-white rounded-full transition-colors flex-shrink-0" title="Activity Logs">
-          <FileText size={16} />
-        </button>
-        <button onClick={props.onOpenRAGViewer} className="p-1.5 md:p-2 text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] hover:text-[#1a1a1a] dark:hover:text-white rounded-full transition-colors flex-shrink-0" title="RAG Process Viewer">
           <Activity size={16} />
         </button>
         <button onClick={() => props.setIsHelpOpen(true)} className="p-1.5 md:p-2 text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] hover:text-[#1a1a1a] dark:hover:text-white rounded-full transition-colors flex-shrink-0">
