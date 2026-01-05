@@ -13,22 +13,25 @@ const LogsModal: React.FC<LogsModalProps> = ({ isOpen, onClose }) => {
   const [selectedLog, setSelectedLog] = useState<string | null>(null);
   const [logContent, setLogContent] = useState<string>('');
   const [loading, setLoading] = useState(false);
-  const [loadingFiles, setLoadingFiles] = useState(false);
+  const [loadingFiles, setLoadingFiles] = useState(true); // Start with true
   const [expandedLogs, setExpandedLogs] = useState<Set<string>>(new Set());
   const [cachedFiles, setCachedFiles] = useState<string[] | null>(null);
 
   useEffect(() => {
     if (isOpen) {
-      // Use cached files if available, otherwise load
+      // Use cached files if available
       if (cachedFiles) {
         setLogFiles(cachedFiles);
+        setLoadingFiles(false);
         if (cachedFiles.length > 0 && !selectedLog) {
           setSelectedLog(cachedFiles[0]);
           loadLogContent(cachedFiles[0]);
         }
       } else {
-        loadLogFiles();
+        setLoadingFiles(true);
       }
+      // Load files async without blocking
+      setTimeout(() => loadLogFiles(), 0);
     }
   }, [isOpen]);
 
