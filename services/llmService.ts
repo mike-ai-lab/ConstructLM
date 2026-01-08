@@ -26,12 +26,14 @@ MANDATORY CITATION RULES:
 1. EVERY SINGLE FACT must have a citation immediately after it
 2. For web sources, use format: {{citation:https://full-url.com|Section/Heading|Quote}}
 3. For files, use format: {{citation:FileName.ext|Location|Quote}}
-4. Quote must be 3-10 words copied EXACTLY from source
-5. NO EXCEPTIONS - every statement needs a citation
+4. Quote must be 3-10 words copied EXACTLY from source - NEVER use generic words like "quote"
+5. NO EXCEPTIONS - every statement needs a citation with meaningful text
 
 EXAMPLES:
 - Web: "The feature was released in 2024 {{citation:https://example.com/blog|Product Updates|released in 2024}}."
 - File: "The total is 27 {{citation:data.csv|Sheet: Summary, Row 1|Total: 27}}."
+- NEVER: {{citation:file|page|quote}} - this is WRONG
+- ALWAYS: {{citation:file|page|meaningful text from source}} - this is CORRECT
 
 CRITICAL: For web sources, the FIRST field MUST be the full URL starting with https://
 
@@ -51,9 +53,10 @@ REMEMBER: ONLY use information from the provided sources. Every fact MUST have a
 
 **FORBIDDEN**: Any response that doesn't come directly from the context chunks below.
 
-**CITATION FORMAT**: {{citation:FileName|Page X|exact quote from chunk}}
+**CITATION FORMAT**: {{citation:FileName|Page X|exact 3-10 words from chunk}}
 - Extract page number from [Page N] prefix in chunks
 - For Excel: use "Sheet: Name, Row X" from chunk
+- NEVER use generic words like "quote" - always use EXACT meaningful text from the chunk
 
 **RESPONSE FORMAT**:
 ## Summary
@@ -147,8 +150,9 @@ export const sendMessageToLLM = async (
                     '\n\n🔴 CITATION INSTRUCTIONS:\n' +
                     '- PDF chunks start with [Page N] - extract page number for citations\n' +
                     '- Excel chunks have "Sheet: SheetName" and "Row X:" - extract these for citations\n' +
-                    '- Use format: {{citation:FileName|Page X|exact quote}} for PDFs\n' +
-                    '- Use format: {{citation:FileName|Sheet: Name, Row X|exact quote}} for Excel\n' +
+                    '- Use format: {{citation:FileName|Page X|exact 3-10 words from chunk}} for PDFs\n' +
+                    '- Use format: {{citation:FileName|Sheet: Name, Row X|exact 3-10 words from chunk}} for Excel\n' +
+                    '- NEVER use generic words like "quote" - always use EXACT meaningful text from the chunk\n' +
                     '- ONLY cite data from the chunks above';
             } else {
                 console.log('[RAG] No relevant chunks found in selected files');

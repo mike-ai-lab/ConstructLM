@@ -64,14 +64,16 @@ const CitationChip: React.FC<CitationChipProps> = ({ index, fileName, location, 
 
   // Prevent nested citation popups beyond depth 1
   if (depth > 0) {
+    const cleanQuote = quote.replace(/^['"`]+|['"`]+$/g, '').trim();
+    const displayText = cleanQuote || `Citation ${index + 1}`;
     return (
-      <sup
-        className="citation-marker cursor-not-allowed opacity-50"
+      <span
+        className="citation-text cursor-not-allowed opacity-50 underline decoration-dotted underline-offset-2"
         data-citation-index={index}
         title="Citation preview disabled in nested view"
       >
-        {index + 1}
-      </sup>
+        {displayText}
+      </span>
     );
   }
 
@@ -211,20 +213,24 @@ const CitationChip: React.FC<CitationChipProps> = ({ index, fileName, location, 
     setTimeout(() => document.addEventListener('click', closeMenu), 0);
   };
 
+  // Clean the quote text by removing quotes and extra whitespace
+  const cleanQuote = quote.replace(/^['"`]+|['"`]+$/g, '').trim();
+  const displayText = cleanQuote || `Citation ${index + 1}`;
+
   return (
     <span className="inline-block relative">
-      <sup
+      <span
         ref={triggerRef}
         onClick={handleToggle}
         onContextMenu={handleContextMenu}
-        className={`citation-marker ${isUrl ? 'citation-url' : ''}`}
+        className={`citation-text cursor-pointer underline decoration-dotted underline-offset-2 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors ${isUrl ? 'citation-url' : ''}`}
         data-citation-index={index}
         title={isUrl ? `${fileName} - ${location}` : `${fileName} - ${location}`}
         aria-expanded={isOpen}
         role="button"
       >
-        {index + 1}
-      </sup>
+        {displayText}
+      </span>
       {isOpen && (
         <CitationDepthContext.Provider value={depth + 1}>
           <CitationPopup
