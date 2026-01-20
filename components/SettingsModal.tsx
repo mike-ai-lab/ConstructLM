@@ -10,7 +10,7 @@ interface SettingsModalProps {
     onClose: () => void;
 }
 
-type Provider = 'google' | 'openai' | 'groq' | 'aws';
+type Provider = 'google' | 'openai' | 'groq' | 'aws' | 'cerebras';
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
     const modalRef = useRef<HTMLDivElement>(null);
@@ -63,6 +63,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
         google: '',
         openai: '',
         groq: '',
+        cerebras: '',
         aws: '',
         awsSecret: ''
     });
@@ -73,6 +74,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
         google: null,
         openai: null,
         groq: null,
+        cerebras: null,
         aws: null
     });
 
@@ -81,6 +83,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
         google: 0,
         openai: 0,
         groq: 0,
+        cerebras: 0,
         aws: 0
     });
 
@@ -99,6 +102,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
             google: getStoredApiKey('GEMINI_API_KEY'),
             openai: getStoredApiKey('OPENAI_API_KEY'),
             groq: getStoredApiKey('GROQ_API_KEY'),
+            cerebras: getStoredApiKey('CEREBRAS_API_KEY'),
             aws: getStoredApiKey('AWS_ACCESS_KEY_ID'),
             awsSecret: getStoredApiKey('AWS_SECRET_ACCESS_KEY')
         });
@@ -148,6 +152,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
             setTestResults(prev => ({ ...prev, [provider]: { success: false, message: "Invalid Groq API key format (should start with gsk_)" } }));
             return;
         }
+        if (provider === 'cerebras' && !key.startsWith('csk-')) {
+            setTestResults(prev => ({ ...prev, [provider]: { success: false, message: "Invalid Cerebras API key format (should start with csk-)" } }));
+            return;
+        }
         if (provider === 'openai' && !key.startsWith('sk-')) {
             setTestResults(prev => ({ ...prev, [provider]: { success: false, message: "Invalid OpenAI API key format (should start with sk-)" } }));
             return;
@@ -176,6 +184,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                 } 
                 else if (provider === 'groq') {
                     // Groq API has CORS restrictions - skip browser validation
+                    setTestResults(prev => ({ ...prev, [provider]: { success: true, message: "Format valid (CORS prevents test)" } }));
+                    clearTimeout(timeoutId);
+                    setTestingProvider(null);
+                    return;
+                }
+                else if (provider === 'cerebras') {
+                    // Cerebras API has CORS restrictions - skip browser validation
                     setTestResults(prev => ({ ...prev, [provider]: { success: true, message: "Format valid (CORS prevents test)" } }));
                     clearTimeout(timeoutId);
                     setTestingProvider(null);
@@ -231,6 +246,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
         saveApiKey('GEMINI_API_KEY', keys.google);
         saveApiKey('OPENAI_API_KEY', keys.openai);
         saveApiKey('GROQ_API_KEY', keys.groq);
+        saveApiKey('CEREBRAS_API_KEY', keys.cerebras);
         saveApiKey('AWS_ACCESS_KEY_ID', keys.aws);
         saveApiKey('AWS_SECRET_ACCESS_KEY', keys.awsSecret);
         
@@ -594,6 +610,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                         <div className="space-y-3">
                         {renderApiInput('Google Gemini', 'google', 'AIzaSy...', 'Required for Gemini models & TTS.')}
                         {renderApiInput('Groq', 'groq', 'gsk_...', 'Required for Llama 3 models.')}
+                        {renderApiInput('Cerebras', 'cerebras', 'csk-...', 'Required for Cerebras models. Free unlimited.')}
                         {renderApiInput('OpenAI', 'openai', 'sk-...', 'Required for GPT-4o models.')}
                         
                         {/* AWS Credentials */}

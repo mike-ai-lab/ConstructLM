@@ -74,7 +74,7 @@ export const MODEL_REGISTRY: ModelConfig[] = [
   // --- Groq Models (Verified Working) ---
   {
     id: 'llama-3.3-70b-versatile',
-    name: 'Llama 3.3 70B Versatile',
+    name: 'Llama 3.3 70B • Groq',
     provider: 'groq',
     contextWindow: 131072,
     apiKeyEnv: 'GROQ_API_KEY',
@@ -86,7 +86,7 @@ export const MODEL_REGISTRY: ModelConfig[] = [
   },
   {
     id: 'llama-3.1-8b-instant',
-    name: 'Llama 3.1 8B Instant',
+    name: 'Llama 3.1 8B • Groq',
     provider: 'groq',
     contextWindow: 131072,
     apiKeyEnv: 'GROQ_API_KEY',
@@ -204,6 +204,56 @@ export const MODEL_REGISTRY: ModelConfig[] = [
     maxOutputWords: 384,
     description: "Meta's compact prompt guard.",
     capacityTag: 'Low'
+  },
+
+  // --- Cerebras Models (Free Unlimited) ---
+  {
+    id: 'llama-3.3-70b',
+    name: 'Llama 3.3 70B • Cerebras',
+    provider: 'cerebras',
+    contextWindow: 8192,
+    apiKeyEnv: 'CEREBRAS_API_KEY',
+    supportsImages: false,
+    maxInputWords: 6144,
+    maxOutputWords: 2048,
+    description: "Ultra-fast inference. Free unlimited.",
+    capacityTag: 'High'
+  },
+  {
+    id: 'gpt-oss-120b',
+    name: 'GPT OSS 120B • Cerebras',
+    provider: 'cerebras',
+    contextWindow: 32768,
+    apiKeyEnv: 'CEREBRAS_API_KEY',
+    supportsImages: false,
+    maxInputWords: 24576,
+    maxOutputWords: 8192,
+    description: "Largest model. Reasoning support.",
+    capacityTag: 'High'
+  },
+  {
+    id: 'qwen-3-235b-a22b-instruct-2507',
+    name: 'Qwen 3 235B • Cerebras',
+    provider: 'cerebras',
+    contextWindow: 20000,
+    apiKeyEnv: 'CEREBRAS_API_KEY',
+    supportsImages: false,
+    maxInputWords: 15000,
+    maxOutputWords: 5000,
+    description: "Alibaba's powerful model.",
+    capacityTag: 'High'
+  },
+  {
+    id: 'zai-glm-4.7',
+    name: 'ZAI GLM 4.7 • Cerebras',
+    provider: 'cerebras',
+    contextWindow: 65000,
+    apiKeyEnv: 'CEREBRAS_API_KEY',
+    supportsImages: false,
+    maxInputWords: 48750,
+    maxOutputWords: 16250,
+    description: "Large context window.",
+    capacityTag: 'High'
   },
 
   // --- OpenAI Models (Paid) ---

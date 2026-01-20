@@ -264,8 +264,8 @@ export const sendMessageToLLM = async (
             
             await sendMessageToGemini(modelId, apiKey, geminiMessage, activeFiles, onStream, finalSystemPrompt, conversationHistory);
             return {};
-        } else if (model.provider === 'openai' || model.provider === 'groq') {
-            // OpenAI or Groq
+        } else if (model.provider === 'openai' || model.provider === 'groq' || model.provider === 'cerebras') {
+            // OpenAI, Groq, or Cerebras
             const apiKey = getApiKeyForModel(model);
             if (!apiKey) {
                 throw new Error(`API Key for ${model.name} is missing. Please open Settings (Gear Icon) to add it.`);
@@ -569,6 +569,9 @@ const streamOpenAICompatible = async (
     } else if (model.provider === 'openai') {
         const proxy = getNextProxy();
         baseUrl = proxy + encodeURIComponent('https://api.openai.com/v1/chat/completions');
+    } else if (model.provider === 'cerebras') {
+        // Cerebras doesn't use proxy - direct API call
+        baseUrl = 'https://api.cerebras.ai/v1/chat/completions';
     }
 
     try {
