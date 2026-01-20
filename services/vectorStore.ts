@@ -133,6 +133,27 @@ class VectorStore {
       tx.onerror = () => reject(tx.error);
     });
   }
+  
+  async deleteEmbeddingByHash(fileHash: string): Promise<void> {
+    if (!this.db) await this.init();
+    return new Promise((resolve, reject) => {
+      const tx = this.db!.transaction(EMBEDDINGS_STORE, 'readwrite');
+      const store = tx.objectStore(EMBEDDINGS_STORE);
+      const index = store.index('fileHash');
+      const request = index.openCursor(IDBKeyRange.only(fileHash));
+      
+      request.onsuccess = (event) => {
+        const cursor = (event.target as IDBRequest).result;
+        if (cursor) {
+          cursor.delete();
+          cursor.continue();
+        }
+      };
+      
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
 }
 
 export const vectorStore = new VectorStore();

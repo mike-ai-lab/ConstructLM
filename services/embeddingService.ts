@@ -299,6 +299,10 @@ class EmbeddingService {
   async deleteFile(fileId: string): Promise<void> {
     await vectorStore.deleteFile(fileId);
   }
+  
+  async deleteFileByHash(contentHash: string): Promise<void> {
+    await vectorStore.deleteEmbeddingByHash(contentHash);
+  }
 }
 
 export const embeddingService = new EmbeddingService();

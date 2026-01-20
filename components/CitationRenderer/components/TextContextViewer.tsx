@@ -102,41 +102,25 @@ const TextContextViewer: React.FC<TextContextViewerProps> = ({ file, quote, loca
       console.log('    Quote (encoded):', quote);
       console.log('    Quote (decoded):', decodeHtmlEntities(quote));
       
-      // Log first 10 rows to see the data
-      console.log('    First 10 rows:');
-      rows.slice(0, 10).forEach((row, idx) => {
-        console.log(`      Row ${idx + 2}:`, row.join(' | '));
-      });
-      
       // If no row number, try to find by quote
       let finalTargetRow = targetRowNum;
       if (finalTargetRow === -1 && quote) {
         const quoteNorm = decodeHtmlEntities(quote).toLowerCase().trim();
-        console.log('    Searching for quote in rows...');
         for (let i = 0; i < rows.length; i++) {
           const rowText = decodeHtmlEntities(rows[i].join(' ')).toLowerCase().trim();
           if (rowText.includes(quoteNorm)) {
             finalTargetRow = i + 2;
-            console.log('    ✅ Found at row:', finalTargetRow);
             break;
           }
         }
-        if (finalTargetRow === -1) {
-          console.log('    ❌ Quote not found in any row');
-        }
       }
       
-      // Search for rows containing the quote to show where it actually is
-      console.log('    Searching ALL rows for quote...');
-      const quoteSearch = decodeHtmlEntities(quote).toLowerCase();
-      rows.forEach((row, idx) => {
-        const rowText = decodeHtmlEntities(row.join(' ')).toLowerCase();
-        if (rowText.includes(quoteSearch) || rowText.includes('g.6') || rowText.includes('336.19')) {
-          console.log(`      ⭐ Row ${idx + 2} contains match:`, row.join(' | '));
-        }
-      });
-      
-      console.log('    Final target row:', finalTargetRow);
+      // Show only context rows (target ±5 rows)
+      const contextRange = 5;
+      const targetIdx = finalTargetRow > 0 ? finalTargetRow - 2 : 0;
+      const startIdx = Math.max(0, targetIdx - contextRange);
+      const endIdx = Math.min(rows.length, targetIdx + contextRange + 1);
+      const contextRows = rows.slice(startIdx, endIdx);
       
       return (
         <table ref={tableRef} className="w-full text-[9px] border-collapse">
@@ -148,8 +132,8 @@ const TextContextViewer: React.FC<TextContextViewerProps> = ({ file, quote, loca
               </tr>
             </thead>
             <tbody>
-              {rows.map((row, rowIdx) => {
-                const visualRowNum = rowIdx + 2;
+              {contextRows.map((row, rowIdx) => {
+                const visualRowNum = startIdx + rowIdx + 2;
                 const isHighlight = visualRowNum === finalTargetRow;
                 return (
                   <tr key={rowIdx} className={`${isHighlight ? 'highlighted-row bg-yellow-300 dark:bg-yellow-700 ring-2 ring-yellow-500' : 'hover:bg-gray-50 dark:hover:bg-[#222222]'}`}>

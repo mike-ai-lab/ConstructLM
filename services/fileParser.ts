@@ -33,7 +33,7 @@ export const parseFile = async (file: File, forceUpload: boolean = false): Promi
   // Check if file already processed
   const existing = await permanentStorage.getFileByHash(contentHash);
   if (existing && !forceUpload) {
-    console.log(`✅ File "${file.name}" already processed (hash match) - reusing`);
+    console.log(`✅ File "${file.name}" already processed (hash match) - reusing. To reprocess, delete the file first and re-upload.`);
     return { ...existing, fileHandle: file, status: 'ready' };
   }
   
@@ -252,40 +252,16 @@ const extractExcelText = async (file: File): Promise<string> => {
     workbook.SheetNames.forEach((sheetName: string) => {
       const sheet = workbook.Sheets[sheetName];
       
-      // Get the range of the sheet
-      const range = (window as any).XLSX.utils.decode_range(sheet['!ref'] || 'A1:A1');
-      
       fullText += `--- [Sheet: ${sheetName}] ---\n`;
       
-      // Process each row with explicit row numbers
-      for (let rowNum = range.s.r; rowNum <= range.e.r; rowNum++) {
-        const rowData: string[] = [];
-        
-        // Get all cells in this row
-        for (let colNum = range.s.c; colNum <= range.e.c; colNum++) {
-          const cellAddress = (window as any).XLSX.utils.encode_cell({ r: rowNum, c: colNum });
-          const cell = sheet[cellAddress];
-          const cellValue = cell ? (cell.v !== undefined ? String(cell.v) : '') : '';
-          rowData.push(cellValue);
-        }
-        
-        // Only add non-empty rows
-        if (rowData.some(cell => cell.trim() !== '')) {
-          // Excel rows are 1-indexed, so add 1 to the 0-indexed rowNum
-          const excelRowNumber = rowNum + 1;
-          const csvRow = rowData.map(cell => {
-            // Escape commas and quotes in CSV format
-            if (cell.includes(',') || cell.includes('"') || cell.includes('\n')) {
-              return `"${cell.replace(/"/g, '""')}"`;
-            }
-            return cell;
-          }).join(',');
-          
-          fullText += `${csvRow}\n`;
-        }
-      }
+      // Use sheet_to_csv for proper CSV conversion
+      const csv = (window as any).XLSX.utils.sheet_to_csv(sheet, { 
+        FS: ',',
+        RS: '\n',
+        blankrows: false
+      });
       
-      fullText += '\n';
+      fullText += csv + '\n\n';
     });
 
     return fullText;

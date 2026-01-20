@@ -108,7 +108,7 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({ file, location, textScale }) 
             {sheetName}
           </h4>
           <div className={`overflow-auto border rounded-lg shadow-sm ${isTargetSheet ? 'border-blue-200 dark:border-blue-800' : 'border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)]'}`} style={{ maxHeight: '600px' }}>
-            <table className="w-full table-auto divide-y divide-[rgba(0,0,0,0.15)] dark:divide-[rgba(255,255,255,0.05)] text-xs">
+            <table className="w-full border-collapse divide-y divide-[rgba(0,0,0,0.15)] dark:divide-[rgba(255,255,255,0.05)] text-xs">
               <tbody className="bg-white dark:bg-[#2a2a2a] divide-y divide-[rgba(0,0,0,0.15)] dark:divide-[rgba(255,255,255,0.05)]">
                 {rows.map((row, rIdx) => {
                   const visualRowNumber = rIdx + 1;
@@ -124,7 +124,7 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({ file, location, textScale }) 
                         {visualRowNumber}
                       </td>
                       {row.map((cell, cIdx) => (
-                        <td key={cIdx} className="px-1.5 py-1 border-r border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] last:border-none" title={cell}>
+                        <td key={cIdx} className="px-1.5 py-1 border-r border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] last:border-none whitespace-nowrap" title={cell}>
                           {cell}
                         </td>
                       ))}

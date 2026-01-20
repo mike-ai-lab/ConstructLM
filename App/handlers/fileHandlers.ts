@@ -45,7 +45,8 @@ export const createFileHandlers = (
     const totalFiles = fileArray.length;
     let processedCount = 0;
     
-    activityLogger.logInfo('FILE', `Starting batch upload of ${totalFiles} files`);
+    activityLogger.logInfo('FILE', `Starting batch upload of ${totalFiles} files${forceReupload ? ' (force reprocess)' : ''}`);
+    console.log(`🔄 Force reupload: ${forceReupload}`);
     
     for (let i = 0; i < fileArray.length; i += BATCH_SIZE) {
       const batch = fileArray.slice(i, i + BATCH_SIZE);
@@ -77,16 +78,23 @@ export const createFileHandlers = (
         }
         
         const filePath = (file as any).webkitRelativePath || file.name;
-        if (files.some(f => (f.path || f.name) === filePath)) {
+        const existingFile = files.find(f => (f.path || f.name) === filePath);
+        if (existingFile && !forceReupload) {
           skippedFiles.push(file.name);
           activityLogger.logWarning('FILE', `Skipped duplicate file: ${file.name}`);
           continue;
         }
         
+        // If force reupload, remove existing file first
+        if (existingFile && forceReupload) {
+          console.log(`🔄 Removing old version of ${file.name}`);
+          setFiles(prev => prev.filter(f => f.id !== existingFile.id));
+        }
+        
         try {
           activityLogger.logRAGFileUpload(file.name, file.size, file.type);
           
-          const processed = await parseFile(file, forceReupload);
+          const processed = await parseFile(file, forceReupload || forceUpload);
           
           activityLogger.logRAGFileParsing(file.name, processed.content?.length || 0, 0);
           
@@ -141,10 +149,26 @@ export const createFileHandlers = (
     }
   };
 
-  const handleRemoveFile = (id: string) => {
+  const handleRemoveFile = async (id: string) => {
     const file = files.find(f => f.id === id);
     if (file) {
       activityLogger.logFileRemoved(file.name);
+      // Clear from permanent storage AND embeddings (by ID and hash) to allow reprocessing
+      const { permanentStorage } = await import('../../services/permanentStorage');
+      const { embeddingService } = await import('../../services/embeddingService');
+      const { generateFileHash } = await import('../../services/embeddingUtils');
+      
+      // Delete by file ID
+      await permanentStorage.deleteFile(id);
+      await embeddingService.deleteFile(id);
+      
+      // Also delete by content hash to clear cache
+      if (file.content) {
+        const contentHash = await generateFileHash(file.content);
+        await embeddingService.deleteFileByHash(contentHash);
+      }
+      
+      console.log(`🗑️ Deleted ${file.name} from storage and embeddings - can now be reprocessed`);
     }
     setFiles(prev => prev.filter(f => f.id !== id));
     if (viewState?.fileId === id) setViewState(null);

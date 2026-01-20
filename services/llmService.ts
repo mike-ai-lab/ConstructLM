@@ -142,7 +142,23 @@ export const sendMessageToLLM = async (
         try {
             console.log('[RAG] 🔍 Searching relevant chunks in selected files only...');
             const selectedFileIds = activeFiles.map(f => f.id);
-            const ragResults = await ragService.searchRelevantChunks(newMessage, 15, selectedFileIds);
+            
+            // Adaptive chunk count based on file types
+            const hasStructuredFiles = activeFiles.some(f => f.type === 'excel' || f.type === 'csv');
+            const hasPdfFiles = activeFiles.some(f => f.type === 'pdf');
+            
+            let chunkLimit = 10; // Default
+            if (hasStructuredFiles && !hasPdfFiles) {
+                chunkLimit = 6; // Excel/CSV only: fewer chunks needed (row-based data)
+            } else if (hasPdfFiles && !hasStructuredFiles) {
+                chunkLimit = 12; // PDF only: more chunks for paragraph context
+            } else if (hasStructuredFiles && hasPdfFiles) {
+                chunkLimit = 10; // Mixed: balanced approach
+            }
+            
+            console.log(`[RAG] Using ${chunkLimit} chunks (Excel/CSV: ${hasStructuredFiles}, PDF: ${hasPdfFiles})`);
+            
+            const ragResults = await ragService.searchRelevantChunks(newMessage, chunkLimit, selectedFileIds);
             
             if (ragResults.length > 0) {
                 console.log(`[RAG] ✅ Found ${ragResults.length} relevant chunks from selected files`);

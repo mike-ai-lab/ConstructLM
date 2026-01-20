@@ -1,7 +1,7 @@
 export const MIN_SIDEBAR_WIDTH = 200;
 export const MAX_SIDEBAR_WIDTH = 600;
 export const MIN_VIEWER_WIDTH = 300;
-export const MAX_VIEWER_WIDTH = 550;
+export const MAX_VIEWER_WIDTH = 1200;
 export const MIN_CHAT_WIDTH = 600;
 
 export const inputFieldSpecs = {

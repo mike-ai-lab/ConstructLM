@@ -10,7 +10,7 @@ A **production-grade RAG (Retrieval-Augmented Generation)** application with mul
 
 - **🔒 Privacy-First RAG**: TRUE local embeddings with Transformers.js (Xenova/all-MiniLM-L6-v2) - your documents never leave your machine
 - **💰 Zero Embedding Cost**: Local browser-based embeddings, no API calls for RAG
-- **🚀 Multi-Model Support**: Switch between Gemini, Groq, OpenAI, and AWS Bedrock seamlessly (22 models total)
+- **🚀 Multi-Model Support**: Switch between Gemini, Groq, Cerebras, OpenAI, and AWS Bedrock seamlessly (26 models total)
 - **📱 Desktop & Web**: Full Electron app or browser-based deployment
 - **⚡ Production-Ready**: Used in real applications with robust error handling and rate limiting
 
@@ -34,10 +34,11 @@ A **production-grade RAG (Retrieval-Augmented Generation)** application with mul
 ### 🤖 Multi-Model AI Support
 - **Google Gemini Models**: 5 models including Flash, Pro, and latest versions with 1M+ token context windows
 - **Groq Models**: 11 models including Llama 3.3 70B, Llama 3.1 8B, Qwen 3 32B, and more ultra-fast models
+- **Cerebras Models**: 4 models including Llama 3.3 70B, GPT OSS 120B, Qwen 3 235B - ultra-fast inference (900+ tok/s), free unlimited
 - **OpenAI Models**: GPT-4o and GPT-4o Mini (paid)
 - **AWS Bedrock**: Claude 3.5 Sonnet, Claude 3 Haiku, Llama 3, Mistral Large
 - **Local Models**: Support for running models locally via Ollama
-- **Total**: 22+ models across 4 providers
+- **Total**: 26+ models across 5 providers
 
 ### 📄 Advanced Document Processing
 - **Multi-format Support**: PDF, TXT, CSV, Excel, Markdown, JSON, XML, HTML, and code files
@@ -155,6 +156,19 @@ A **production-grade RAG (Retrieval-Augmented Generation)** application with mul
 2. Sign up for a free account
 3. Navigate to API Keys section
 4. Generate a new API key
+
+### Cerebras (Free Unlimited)
+1. Visit [Cerebras Cloud](https://cloud.cerebras.ai/)
+2. Sign up for a free account (no credit card required)
+3. Click "API Keys" in the left sidebar
+4. Create a new API key (starts with `csk-`)
+5. Copy the key to Settings in the app
+
+**Why Cerebras?**
+- ✅ **Free unlimited** requests (rate-limited but generous)
+- ✅ **Ultra-fast inference**: 900+ tokens/second
+- ✅ **4 powerful models**: Llama 3.3 70B, GPT OSS 120B, Qwen 3 235B, ZAI GLM 4.7
+- ✅ **No credit card** required
 
 ### OpenAI (Paid)
 1. Visit [OpenAI Platform](https://platform.openai.com/)
@@ -282,7 +296,7 @@ ConstructLM-1/
   - Performance: 50-100ms per embedding
   - Privacy: 100% local, zero API calls
 - **Vector Storage** - IndexedDB (raw API) with semantic search
-- **Multi-Model LLM** - Google Gemini, Groq, OpenAI, AWS Bedrock (22 models)
+- **Multi-Model LLM** - Google Gemini, Groq, Cerebras, OpenAI, AWS Bedrock (26 models)
 - **Context Management** - Smart token-aware context building with hybrid search
 
 ### Frontend: React 19, TypeScript, Vite
@@ -365,6 +379,7 @@ For issues, questions, or suggestions:
 
 - Google Gemini for powerful AI capabilities
 - Groq for ultra-fast inference
+- Cerebras for free unlimited ultra-fast models
 - OpenAI for industry-leading models
 - AWS Bedrock for enterprise AI services
 - The open-source community for amazing tools and libraries

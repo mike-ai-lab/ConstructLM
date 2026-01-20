@@ -24,6 +24,16 @@ const TableCellWithCitations: React.FC<TableCellWithCitationsProps> = ({ text, f
           const fileName = match[1].trim();
           const location = match[2].trim();
           const quote = match[3].trim();
+          
+          // Remove duplicate text before citation
+          const prevPart = parts[index - 1];
+          if (prevPart && typeof prevPart === 'string') {
+            const quoteFirstValue = quote.includes(',') ? quote.split(',')[0].trim() : quote;
+            if (prevPart.trim().endsWith(quoteFirstValue)) {
+              parts[index - 1] = prevPart.replace(new RegExp(quoteFirstValue + '\\s*$'), '');
+            }
+          }
+          
           return (
             <CitationChip
               key={`cell-cit-${index}-${citIndex}`}

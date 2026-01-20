@@ -119,8 +119,8 @@ const CitationChip: React.FC<CitationChipProps> = ({ index, fileName, location, 
     
     window.addEventListener('scroll', handleScroll, true);
     return () => {
-      window.removeEventListener('scroll', handleScroll, true);
       if (rafId) cancelAnimationFrame(rafId);
+      window.removeEventListener('scroll', handleScroll, true);
     };
   }, [isOpen, updateCoords]);
 
@@ -215,7 +215,8 @@ const CitationChip: React.FC<CitationChipProps> = ({ index, fileName, location, 
 
   // Clean the quote text by removing quotes and extra whitespace
   const cleanQuote = quote.replace(/^['"`]+|['"`]+$/g, '').trim();
-  const displayText = cleanQuote || `Citation ${index + 1}`;
+  // For comma-separated values, only show the first value
+  const displayText = cleanQuote.includes(',') ? cleanQuote.split(',')[0].trim() : (cleanQuote || `Citation ${index + 1}`);
 
   return (
     <span className="inline-block relative">

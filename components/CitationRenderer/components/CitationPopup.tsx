@@ -92,7 +92,7 @@ const CitationPopup: React.FC<CitationPopupProps> = ({
     const chatArea = trigger.closest('.max-w-3xl');
     const chatRect = chatArea?.getBoundingClientRect();
     const triggerRect = trigger.getBoundingClientRect();
-    const popupHeight = popoverRef.current?.offsetHeight || 400;
+    const popupHeight = 400;
     const calculatedWidth = Math.min(POPUP_WIDTH, (chatRect?.width || window.innerWidth) - VIEWPORT_PADDING * 2);
     setPopupWidth(calculatedWidth);
 
@@ -112,12 +112,27 @@ const CitationPopup: React.FC<CitationPopupProps> = ({
     setPosition({ top, left });
   }, [coords, isInTable, triggerRef]);
 
-  useLayoutEffect(() => calculatePosition(), [coords, isInTable, file, pdfPageNumber, calculatePosition]);
+  useLayoutEffect(() => {
+    if (position === null) calculatePosition();
+  }, [coords, isInTable, file, pdfPageNumber, calculatePosition, position]);
 
   useEffect(() => {
-    const handleResize = () => calculatePosition();
+    let rafId: number;
+    const handleResize = () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(calculatePosition);
+    };
+    const handleScroll = () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(calculatePosition);
+    };
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener('scroll', handleScroll, true);
+    return () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('scroll', handleScroll, true);
+    };
   }, [calculatePosition]);
 
   useEffect(() => {
