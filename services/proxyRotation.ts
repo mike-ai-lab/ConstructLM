@@ -1,17 +1,13 @@
 // Add this to your Electron main process or use a CORS proxy
 
 const CORS_PROXIES = [
-  'https://corsproxy.io/?',
-  'https://api.allorigins.win/raw?url=',
-  'https://api.codetabs.com/v1/proxy?quest='
+  'https://corsproxy.io/?'
 ];
 
 let proxyIndex = 0;
 
 export function getNextProxy(): string {
-  const proxy = CORS_PROXIES[proxyIndex];
-  proxyIndex = (proxyIndex + 1) % CORS_PROXIES.length;
-  return proxy;
+  return CORS_PROXIES[0]; // Always use the working proxy
 }
 
 // Use this in geminiService.ts

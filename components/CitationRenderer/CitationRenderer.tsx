@@ -3,6 +3,7 @@ import { ProcessedFile } from '../../types';
 import { resetCitationCounter, extractSourceFiles } from './utils/citationUtils';
 import SimpleMarkdown from './markdown/SimpleMarkdown';
 import ThinkingBlock from './components/ThinkingBlock';
+import { getTextDirection } from '../../utils/textDirection';
 
 interface CitationRendererProps {
   text: string;
@@ -16,8 +17,14 @@ const CitationRenderer: React.FC<CitationRendererProps> = ({ text, files, onView
   if (!text) return null;
   resetCitationCounter();
 
-  // Decode HTML entities
-  let decodedText = text.replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+  // Decode ALL HTML entities properly
+  const decodeHtml = (html: string): string => {
+    const txt = document.createElement('textarea');
+    txt.innerHTML = html;
+    return txt.value;
+  };
+  
+  let decodedText = decodeHtml(text);
   
   // Extract thinking blocks
   const thinkRegex = /<think>([\s\S]*?)<\/think>/g;
@@ -32,14 +39,16 @@ const CitationRenderer: React.FC<CitationRendererProps> = ({ text, files, onView
   // Remove thinking blocks from text
   textWithoutThinking = decodedText.replace(thinkRegex, '');
   
-  // Remove newlines around citations to keep them inline
-  const cleanedText = textWithoutThinking.replace(/\n*((?:\{\{|【)citation:[^}】]+(?:\}\}|】))\n*/g, '$1');
+  // Keep newlines for proper markdown formatting (lists, paragraphs)
+  const cleanedText = textWithoutThinking;
 
   // Extract unique source files from citations
   const sourceFiles = extractSourceFiles(cleanedText);
 
+  const textDirection = getTextDirection(cleanedText);
+
   return (
-    <div className="text-sm leading-relaxed">
+    <div className="text-sm leading-relaxed" dir={textDirection} style={{ textAlign: textDirection === 'rtl' ? 'right' : 'left' }}>
       {thinkingBlocks.map((block, idx) => (
         <ThinkingBlock key={`think-${idx}`} content={block.content} />
       ))}

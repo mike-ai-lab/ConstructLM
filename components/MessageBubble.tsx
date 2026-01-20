@@ -7,6 +7,7 @@ import { decodeAudioData } from '../services/audioUtils';
 import { contextMenuManager, createMessageContextMenu } from '../utils/uiHelpers';
 import { InteractiveBlob } from './InteractiveBlob';
 import { highlightService } from '../services/highlightService';
+import { getTextDirection } from '../utils/textDirection';
 
 // --- ROBUST TEXT MAPPING UTILITIES ---
 
@@ -136,6 +137,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   const [toolbarPosition, setToolbarPosition] = useState({ x: 0, y: 0 });
   const [isDraggingToolbar, setIsDraggingToolbar] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const textDirection = getTextDirection(message.content);
 
   // Refs
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -535,6 +537,8 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
               ref={contentRef}
               className="whitespace-pre-wrap font-normal message-content" 
               data-highlightable="true"
+              dir={textDirection}
+              style={{ textAlign: textDirection === 'rtl' ? 'right' : 'left' }}
               onMouseUp={handleTextSelection}
               // suppressHydrationWarning is crucial here because we manually edit the DOM
               suppressHydrationWarning

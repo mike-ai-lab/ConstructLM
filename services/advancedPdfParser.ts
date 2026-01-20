@@ -38,6 +38,8 @@ export async function extractStructuredPDF(file: File): Promise<{
       data: new Uint8Array(arrayBuffer),
       cMapUrl: 'https://unpkg.com/pdfjs-dist@3.11.174/cmaps/',
       cMapPacked: true,
+      useSystemFonts: true,
+      standardFontDataUrl: 'https://unpkg.com/pdfjs-dist@3.11.174/standard_fonts/',
     }).promise;
 
     const totalPages = pdf.numPages;

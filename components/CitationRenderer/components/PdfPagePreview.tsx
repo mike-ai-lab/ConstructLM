@@ -67,7 +67,9 @@ const PdfPagePreview: React.FC<PdfPagePreviewProps> = ({ file, pageNumber, quote
         }
 
       } catch (err: any) {
-        if (err?.name !== 'RenderingCancelledException') console.error("[CitationPreview] Error:", err);
+        if (err?.name !== 'RenderingCancelledException') {
+          console.error("[CitationPreview] Render error:", err?.message || 'Unknown error');
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }

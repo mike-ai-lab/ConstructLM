@@ -190,7 +190,8 @@ Extract the KEY TOPIC and create a proper title. Output ONLY 3 words, no punctua
       
       // ✅ REQUIREMENT 7: Post-generation enforcement
       const strictMode = excerptedFiles.length > 0 || fetchedSources.length > 0;
-      if (strictMode && accumText && !accumText.includes('{{citation:')) {
+      const hasValidRefusal = accumText && (accumText.includes('cannot find') || accumText.includes('not in the') || accumText.includes('not present in'));
+      if (strictMode && accumText && !accumText.includes('{{citation:') && !hasValidRefusal) {
         const errorMsg = '**Model violated citation rules:** The model failed to provide required citations. This response has been blocked for quality assurance.';
         activityLogger.logErrorMsg('CITATION_VIOLATION', 'Model did not include citations in strict mode', { modelId: activeModelId });
         setMessages(prev => prev.map(msg => 

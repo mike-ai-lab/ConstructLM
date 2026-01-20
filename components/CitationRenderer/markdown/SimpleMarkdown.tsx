@@ -42,7 +42,7 @@ const SimpleMarkdown: React.FC<SimpleMarkdownProps> = ({ text, block = true, fil
             <thead className="bg-[#eaeaea] dark:bg-[#2a2a2a] sticky top-0 z-10">
               <tr>
                 {headers.map((cell, idx) => (
-                  <th key={idx} className="border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.2)] px-2 py-1 text-left font-semibold text-[#1a1a1a] dark:text-white bg-[#eaeaea] dark:bg-[#2a2a2a]">
+                  <th key={idx} className="border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.2)] px-2 py-1 text-left font-bold text-[#0a0a0a] dark:text-[#f0f0f0] bg-[#eaeaea] dark:bg-[#2a2a2a]">
                     {files && onViewDocument ? <TableCellWithCitations text={cell} files={files} onViewDocument={onViewDocument} onOpenWebViewer={onOpenWebViewer} onOpenWebViewerNewTab={onOpenWebViewerNewTab} /> : cell}
                   </th>
                 ))}
@@ -83,25 +83,25 @@ const SimpleMarkdown: React.FC<SimpleMarkdownProps> = ({ text, block = true, fil
     }
 
     if (trimmed.startsWith('#### ')) {
-      elements.push(<h4 key={`h4-${i}`} className="text-sm font-semibold text-[#1a1a1a] dark:text-white mt-2 mb-1">{parseInline(trimmed.slice(5))}</h4>);
+      elements.push(<h4 key={`h4-${i}`} className="text-sm font-bold text-[#0a0a0a] dark:text-[#f0f0f0] mt-2 mb-1">{parseInline(trimmed.slice(5))}</h4>);
       i++;
       continue;
     }
 
     if (trimmed.startsWith('### ')) {
-      elements.push(<h3 key={`h3-${i}`} className="text-[15px] font-semibold text-[#1a1a1a] dark:text-white mt-3 mb-1.5">{parseInline(trimmed.slice(4))}</h3>);
+      elements.push(<h3 key={`h3-${i}`} className="text-[15px] font-bold text-[#0a0a0a] dark:text-[#f0f0f0] mt-3 mb-1.5">{parseInline(trimmed.slice(4))}</h3>);
       i++;
       continue;
     }
 
     if (trimmed.startsWith('## ')) {
-      elements.push(<h2 key={`h2-${i}`} className="text-base font-bold text-[#1a1a1a] dark:text-white mt-4 mb-2">{parseInline(trimmed.slice(3))}</h2>);
+      elements.push(<h2 key={`h2-${i}`} className="text-base font-black text-[#0a0a0a] dark:text-[#f0f0f0] mt-4 mb-2">{parseInline(trimmed.slice(3))}</h2>);
       i++;
       continue;
     }
 
     if (trimmed.startsWith('# ')) {
-      elements.push(<h1 key={`h1-${i}`} className="text-lg font-bold text-[#1a1a1a] dark:text-white mt-5 mb-2.5">{parseInline(trimmed.slice(2))}</h1>);
+      elements.push(<h1 key={`h1-${i}`} className="text-lg font-black text-[#0a0a0a] dark:text-[#f0f0f0] mt-5 mb-2.5">{parseInline(trimmed.slice(2))}</h1>);
       i++;
       continue;
     }
@@ -131,8 +131,8 @@ const SimpleMarkdown: React.FC<SimpleMarkdownProps> = ({ text, block = true, fil
       });
       elements.push(
         <div key={`li-${i}`} className="flex gap-2.5 ml-0 my-1">
-          <span className="text-[#666666] dark:text-[#a0a0a0] mt-1.5 flex-shrink-0">•</span>
-          <span className="leading-7 flex-1">{contentElements}</span>
+          <span className="text-[#333333] dark:text-[#cccccc] mt-1.5 flex-shrink-0 font-medium">•</span>
+          <span className="leading-7 flex-1 font-medium">{contentElements}</span>
         </div>
       );
       i++;
@@ -166,8 +166,8 @@ const SimpleMarkdown: React.FC<SimpleMarkdownProps> = ({ text, block = true, fil
       });
       elements.push(
         <div key={`ol-${i}`} className="flex gap-2.5 ml-0 my-1">
-          <span className="font-medium text-[#666666] dark:text-[#a0a0a0] mt-0.5 min-w-[1.5em] flex-shrink-0">{num}.</span>
-          <span className="leading-7 flex-1">{contentElements}</span>
+          <span className="font-bold text-[#333333] dark:text-[#cccccc] mt-0.5 min-w-[1.5em] flex-shrink-0">{num}.</span>
+          <span className="leading-7 flex-1 font-medium">{contentElements}</span>
         </div>
       );
       i++;
@@ -187,7 +187,7 @@ const SimpleMarkdown: React.FC<SimpleMarkdownProps> = ({ text, block = true, fil
       const codeContent = codeLines.join('\n').trim();
       elements.push(
         <pre key={`code-${i}`} className="bg-[#eaeaea] dark:bg-[#2a2a2a] rounded-lg p-3 my-2 overflow-x-auto">
-          <code className="text-[13px] font-mono text-[#1a1a1a] dark:text-white">{codeContent}</code>
+          <code className="text-[13px] font-mono text-[#0a0a0a] dark:text-[#f0f0f0] font-medium">{codeContent}</code>
         </pre>
       );
       i = j;
@@ -222,17 +222,17 @@ const SimpleMarkdown: React.FC<SimpleMarkdownProps> = ({ text, block = true, fil
     });
     
     if (block) {
-      elements.push(<div key={`p-${i}`} className="leading-7 my-1">{lineElements}</div>);
+      elements.push(<div key={`p-${i}`} className="leading-7 my-1 font-medium">{lineElements}</div>);
     } else {
-      elements.push(<span key={`span-${i}`} className="leading-7">{lineElements}</span>);
+      elements.push(<span key={`span-${i}`} className="leading-7 font-medium">{lineElements}</span>);
     }
     i++;
   }
 
   if (block) {
-    return <div className="space-y-2 text-[#1a1a1a] dark:text-white">{elements}</div>;
+    return <div className="space-y-2 text-[#0a0a0a] dark:text-[#f0f0f0] font-medium">{elements}</div>;
   } else {
-    return <span className="text-[#1a1a1a] dark:text-white leading-7">{elements}</span>;
+    return <span className="text-[#0a0a0a] dark:text-[#f0f0f0] leading-7 font-medium">{elements}</span>;
   }
 };
 

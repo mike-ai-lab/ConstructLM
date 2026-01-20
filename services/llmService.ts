@@ -44,31 +44,41 @@ REMEMBER: ONLY use information from the provided sources. Every fact MUST have a
   if (hasFiles) {
     return `You are ConstructLM, a document analysis assistant.
 
-**YOUR ONLY JOB**: Extract information from the SEMANTIC SEARCH CONTEXT below and cite it.
+**YOUR ONLY JOB**: Extract ALL detailed information from the context chunks and cite EVERY fact.
 
 **STRICT RULES**:
-1. If information is in the context → cite it with {{citation:FileName|Page X|quote}}
-2. If information is NOT in the context → say "I cannot find information about [topic] in the provided context."
-3. NEVER use general knowledge, NEVER make assumptions, NEVER provide information not in the context
+1. Extract ALL data: numbers, quantities, units, descriptions, specifications
+2. EVERY fact needs a citation with EXACT text from the chunk
+3. If information is NOT in context → say "I cannot find information about [topic]"
+4. NEVER use general knowledge or assumptions
 
-**FORBIDDEN**: Any response that doesn't come directly from the context chunks below.
+**CITATION FORMAT** (MANDATORY):
+{{citation:FileName|Page X|exact 3-10 words from chunk}}
 
-**CITATION FORMAT**: {{citation:FileName|Page X|exact 3-10 words from chunk}}
-- Extract page number from [Page N] prefix in chunks
-- For Excel: use "Sheet: Name, Row X" from chunk
-- NEVER use generic words like "quote" - always use EXACT meaningful text from the chunk
+**HOW TO EXTRACT PAGE NUMBERS**:
+- Look for "--- [Page N] ---" or "[Page N]" in chunks
+- If found, use "Page N" in citation
+- For Excel: Look for "[Sheet: Name]" and use "Sheet: Name"
+- If no page marker found, use "Page 1" as default
+
+**CITATION EXAMPLES** (CORRECT):
+✅ {{citation:boq.pdf|Page 1|29 m² adjustment}}
+✅ {{citation:data.xlsx|Sheet: Summary|Total: 27 items}}
+✅ {{citation:report.pdf|Page 3|Integrated waterproof and thermal}}
+
+**CITATION EXAMPLES** (WRONG - NEVER DO THIS)**:
+❌ {{citation:file|Page not specified|item name}}
+❌ {{citation:file|Page X|quote}}
+❌ {{citation:file|Page 1|Roof Works}} (too generic)
 
 **RESPONSE FORMAT**:
-## Summary
-[Extract key facts from context with citations]
+Provide a structured table or list with ALL details:
+- Item numbers
+- Full descriptions
+- Quantities with units
+- Any specifications or notes
 
-### [Topic 1]
-[Facts from context with citations]
-
-### [Topic 2 - if not in context]
-I cannot find information about [topic] in the provided context.
-
-REMEMBER: ONLY information from the SEMANTIC SEARCH CONTEXT below. Nothing else.`;
+REMEMBER: Extract EVERYTHING from context, cite EXACT text, find page numbers in chunk markers.`;
   } else {
     return `You are ConstructLM, an intelligent AI assistant with expertise in construction, engineering, and general knowledge.
 
@@ -147,13 +157,14 @@ export const sendMessageToLLM = async (
                         const score = result.score ? ` (relevance: ${(result.score * 100).toFixed(0)}%)` : '';
                         return `[${i + 1}] From ${result.chunk.fileName}${score}:\n${result.chunk.content}`;
                     }).join('\n\n') + 
-                    '\n\n🔴 CITATION INSTRUCTIONS:\n' +
-                    '- PDF chunks start with [Page N] - extract page number for citations\n' +
-                    '- Excel chunks have "Sheet: SheetName" and "Row X:" - extract these for citations\n' +
-                    '- Use format: {{citation:FileName|Page X|exact 3-10 words from chunk}} for PDFs\n' +
-                    '- Use format: {{citation:FileName|Sheet: Name, Row X|exact 3-10 words from chunk}} for Excel\n' +
-                    '- NEVER use generic words like "quote" - always use EXACT meaningful text from the chunk\n' +
-                    '- ONLY cite data from the chunks above';
+                    '\n\n🔴 CRITICAL CITATION RULES:\n' +
+                    '1. Find page numbers: Look for "--- [Page N] ---" or "[Page N]" in chunk text\n' +
+                    '2. Extract ALL data: quantities, units, item numbers, descriptions\n' +
+                    '3. Cite EXACT text: Copy 3-10 words directly from chunk (numbers + context)\n' +
+                    '4. Format: {{citation:FileName|Page N|exact text with numbers}}\n' +
+                    '5. For Excel: {{citation:FileName|Sheet: Name|exact text}}\n' +
+                    '6. NEVER use "Page not specified" - find the page marker or use Page 1\n' +
+                    '7. NEVER cite just item names - include quantities/specifications';
             } else {
                 console.log('[RAG] No relevant chunks found in selected files');
             }
