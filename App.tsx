@@ -384,42 +384,50 @@ const App: React.FC = () => {
       
       // Handle GitHub URLs specially
       if (url.includes('github.com')) {
-        // Convert GitHub URL to raw content URL if it's a file
-        let fetchUrl = url;
-        if (url.includes('/blob/')) {
-          fetchUrl = url.replace('github.com', 'raw.githubusercontent.com').replace('/blob/', '/');
+        const repoMatch = url.match(/github\.com\/([^\/]+\/[^\/]+)/);
+        if (!repoMatch) {
+          throw new Error('Invalid GitHub URL');
         }
         
-        try {
-          const response = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(fetchUrl)}`);
-          if (response.ok) {
-            content = await response.text();
-            // Extract repo name as title
-            const match = url.match(/github\.com\/([^\/]+\/[^\/]+)/);
-            title = match ? match[1] : url;
-          } else {
-            throw new Error('Failed to fetch');
+        // Remove .git extension if present
+        const repoPath = repoMatch[1].replace(/\.git$/, '');
+        
+        // If it's a specific file URL
+        if (url.includes('/blob/')) {
+          const fetchUrl = url.replace('github.com', 'raw.githubusercontent.com').replace('/blob/', '/');
+          try {
+            const response = await fetch(fetchUrl);
+            if (response.ok) {
+              content = await response.text();
+              title = repoPath;
+            } else {
+              throw new Error('Failed to fetch file');
+            }
+          } catch (error) {
+            throw new Error(`Failed to fetch GitHub file: ${error}`);
           }
-        } catch (error) {
-          // Fallback: try to get README or main page
-          const repoMatch = url.match(/github\.com\/([^\/]+\/[^\/]+)/);
-          if (repoMatch) {
-            const readmeUrl = `https://raw.githubusercontent.com/${repoMatch[1]}/main/README.md`;
+        } else {
+          // It's a repo URL - try to fetch README
+          const branches = ['main', 'master'];
+          let success = false;
+          
+          for (const branch of branches) {
             try {
-              const readmeResponse = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(readmeUrl)}`);
-              if (readmeResponse.ok) {
-                content = await readmeResponse.text();
-                title = repoMatch[1];
+              const readmeUrl = `https://raw.githubusercontent.com/${repoPath}/${branch}/README.md`;
+              const response = await fetch(readmeUrl);
+              if (response.ok) {
+                content = await response.text();
+                title = repoPath;
+                success = true;
+                break;
               }
             } catch (e) {
-              // Try master branch
-              const masterUrl = `https://raw.githubusercontent.com/${repoMatch[1]}/master/README.md`;
-              const masterResponse = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(masterUrl)}`);
-              if (masterResponse.ok) {
-                content = await masterResponse.text();
-                title = repoMatch[1];
-              }
+              continue;
             }
+          }
+          
+          if (!success) {
+            throw new Error(`No README found for ${repoPath}. Try using the GitHub tab to browse files instead.`);
           }
         }
       } else {

@@ -12,93 +12,33 @@ import { getNextProxy } from "./proxyRotation";
 export const constructBaseSystemPrompt = (hasFiles: boolean = false, hasSources: boolean = false, sources: any[] = []) => {
   if (hasSources && sources.length > 0) {
     const sourcesList = sources.map((s, i) => `[${i + 1}] ${s.title || s.url}: ${s.url}`).join('\n');
-    return `You are ConstructLM, an intelligent AI assistant.
+    return `You are ConstructLM, an AI assistant analyzing the following sources:
 
-CRITICAL SOURCE RESTRICTION
-YOU MUST ONLY USE INFORMATION FROM THE PROVIDED SOURCES BELOW.
-DO NOT USE ANY EXTERNAL KNOWLEDGE OR INFORMATION NOT IN THESE SOURCES.
-IF THE ANSWER IS NOT IN THE SOURCES, SAY "I cannot find this information in the provided sources."
-
-PROVIDED SOURCES:
 ${sourcesList}
 
-MANDATORY CITATION RULES:
-1. EVERY SINGLE FACT must have a citation immediately after it
-2. For web sources, use format: {{citation:https://full-url.com|Section/Heading|Quote}}
-3. For files, use format: {{citation:FileName.ext|Location|Quote}}
-4. Quote must be 3-10 words copied EXACTLY from source - NEVER use generic words like "quote"
-5. NO EXCEPTIONS - every statement needs a citation with meaningful text
+Answer questions based on these sources. Cite facts using this format:
+- Web: {{citation:https://url.com|Section|exact quote}}
+- Files: {{citation:FileName.ext|Location|exact quote}}
 
-EXAMPLES:
-- Web: "The feature was released in 2024 {{citation:https://example.com/blog|Product Updates|released in 2024}}."
-- File: "The total is 27 {{citation:data.csv|Sheet: Summary, Row 1|Total: 27}}."
-- NEVER: {{citation:file|page|quote}} - this is WRONG
-- ALWAYS: {{citation:file|page|meaningful text from source}} - this is CORRECT
-
-CRITICAL: For web sources, the FIRST field MUST be the full URL starting with https://
-
-IF YOU WRITE ANY FACT WITHOUT A CITATION, YOU HAVE FAILED.
-REMEMBER: ONLY use information from the provided sources. Every fact MUST have a citation.`;
+If the sources don't contain the answer, say something like "That's not covered in these sources" or "I don't see that information here" - keep it natural and brief.`;
   }
   
   if (hasFiles) {
-    return `You are ConstructLM, a document analysis assistant.
+    return `You are ConstructLM. Answer questions using the document chunks provided below.
 
-**YOUR ONLY JOB**: Extract ALL detailed information from the context chunks and cite EVERY fact.
+Cite information using: {{citation:FileName|Page X|exact quote}}
 
-**STRICT RULES**:
-1. Extract ALL data: numbers, quantities, units, descriptions, specifications
-2. EVERY fact needs a citation with EXACT text from the chunk
-3. If information is NOT in context → say "I cannot find information about [topic]"
-4. NEVER use general knowledge or assumptions
+Find page numbers from markers like "--- [Page N] ---" in the text. For Excel, use "Sheet: Name".
 
-**CITATION FORMAT** (MANDATORY):
-{{citation:FileName|Page X|exact 3-10 words from chunk}}
+If the documents don't contain the answer, just say "That's not in these documents" - no need to explain why or apologize.
 
-**HOW TO EXTRACT PAGE NUMBERS**:
-- Look for "--- [Page N] ---" or "[Page N]" in chunks
-- If found, use "Page N" in citation
-- For Excel: Look for "[Sheet: Name]" and use "Sheet: Name"
-- If no page marker found, use "Page 1" as default
-
-**CITATION EXAMPLES** (CORRECT):
-✅ {{citation:boq.pdf|Page 1|29 m² adjustment}}
-✅ {{citation:data.xlsx|Sheet: Summary|Total: 27 items}}
-✅ {{citation:report.pdf|Page 3|Integrated waterproof and thermal}}
-
-**CITATION EXAMPLES** (WRONG - NEVER DO THIS)**:
-❌ {{citation:file|Page not specified|item name}}
-❌ {{citation:file|Page X|quote}}
-❌ {{citation:file|Page 1|Roof Works}} (too generic)
-
-**RESPONSE FORMAT**:
-Provide a structured table or list with ALL details:
-- Item numbers
-- Full descriptions
-- Quantities with units
-- Any specifications or notes
-
-REMEMBER: Extract EVERYTHING from context, cite EXACT text, find page numbers in chunk markers.`;
+Be direct, confident, and helpful.`;
   } else {
-    return `You are ConstructLM, an intelligent AI assistant with expertise in construction, engineering, and general knowledge.
+    return `You are ConstructLM, an AI assistant.
 
-RESPONSE FORMATTING:
-- Use clear markdown formatting for better readability
-- Use ## for main section headers
-- Use ### for subsection headers  
-- Use **bold** for emphasis on important terms
-- Use bullet points (-) for lists
-- Use numbered lists (1. 2. 3.) for sequential steps
-- Write in clear, well-structured paragraphs
-- Use line breaks between sections for better visual separation
+Be direct, confident, and helpful. Use clear markdown formatting.
 
-TONE & STYLE:
-- Professional yet conversational and approachable
-- Clear and precise language
-- Helpful and informative
-- Provide actionable insights when applicable
-
-When users have documents to analyze, suggest using @mentions to reference specific files for detailed analysis with citations.`;
+When users ask about documents or code, suggest they upload files or use the GitHub tab to import code repositories.`;
   }
 };
 
@@ -196,15 +136,15 @@ export const sendMessageToLLM = async (
             const totalRequestTokens = systemPromptTokens + ragContextTokens + userMessageTokens;
             
             console.log('\n🔶 [RAG] === FULL REQUEST BREAKDOWN ===');
-            console.log(`📊 System Prompt: ${systemPromptTokens} tokens`);
+            console.log(`���� System Prompt: ${systemPromptTokens} tokens`);
             console.log(`📊 RAG Context: ${ragContextTokens} tokens (${ragResults.length} chunks)`);
             console.log(`📊 User Message: ${userMessageTokens} tokens`);
             console.log(`📊 TOTAL REQUEST: ${totalRequestTokens} tokens`);
             console.log(`📊 Model Limits: Groq ~8K, Gemini ~1M, GPT-4o ~128K`);
-            console.log('\n📄 FULL SYSTEM PROMPT:');
-            console.log(systemPrompt);
-            console.log('\n📄 FULL RAG CONTEXT:');
-            console.log(ragContext);
+            console.log('\n📄 FULL SYSTEM PROMPT (first 500 chars):');
+            console.log(systemPrompt.substring(0, 500));
+            console.log('\n📄 FULL RAG CONTEXT (first 500 chars):');
+            console.log(ragContext.substring(0, 500));
             console.log('\n📄 USER MESSAGE:');
             console.log(newMessage);
             console.log('\n🔶 === END FULL REQUEST ===\n');
@@ -280,7 +220,7 @@ export const sendMessageToLLM = async (
             
             await sendMessageToGemini(modelId, apiKey, geminiMessage, activeFiles, onStream, finalSystemPrompt, conversationHistory);
             return {};
-        } else if (model.provider === 'openai' || model.provider === 'groq' || model.provider === 'cerebras') {
+        } else if (model.provider === 'openai' || model.provider === 'groq' || (model.provider as string) === 'cerebras') {
             // OpenAI, Groq, or Cerebras
             const apiKey = getApiKeyForModel(model);
             if (!apiKey) {
@@ -342,6 +282,10 @@ export const sendMessageToLLM = async (
             }
             
             // DIAGNOSTIC: 5. LLM CONTEXT ASSEMBLY (Full Prompt)
+            console.log('[LLM] Final system prompt being sent (first 300 chars):', finalSystemPrompt.substring(0, 300));
+            console.log('[LLM] Final system prompt length:', finalSystemPrompt.length);
+            console.log('[LLM] Messages array:', messages.map((m, i) => ({ index: i, role: m.role, contentLength: typeof m.content === 'string' ? m.content.length : 'multipart' })));
+            
             diagnosticLogger.log('5. LLM_CONTEXT_FULL_PROMPT', {
                 model_id: modelId,
                 model_name: model.name,
@@ -503,8 +447,9 @@ const streamOpenAICompatible = async (
     // Use Electron proxy if available
     if ((window as any).electron) {
         try {
-            // Setup stream listener if available
+            // Setup stream listener BEFORE making the request
             let streamBuffer = '';
+            let allChunksReceived = false;
             
             if ((window as any).electron.onStreamChunk) {
                 const handleStreamChunk = (dataStr: string) => {
@@ -520,10 +465,11 @@ const streamOpenAICompatible = async (
                             onStream(content, streamBuffer || undefined);
                         }
                     } catch (e) {
-                        // ignore parse errors
+                        console.error('[Electron] Failed to parse stream chunk:', e, 'Raw:', dataStr);
                     }
                 };
                 
+                // Register listener BEFORE making the request
                 (window as any).electron.onStreamChunk(handleStreamChunk);
             }
             
@@ -534,10 +480,12 @@ const streamOpenAICompatible = async (
                 result = await (window as any).electron.proxyOpenai(apiKey, requestBody);
             }
             
-            // Cleanup listener if available
+            // Cleanup listener after request completes
             if ((window as any).electron.removeStreamListener) {
                 (window as any).electron.removeStreamListener();
             }
+            
+            console.log('[Electron] Proxy result:', { ok: result?.ok, status: result?.status, streaming: result?.streaming });
             
             if (result && !result.ok) {
                 const errorMsg = result.error || 'Request failed - no error details provided';
@@ -585,7 +533,7 @@ const streamOpenAICompatible = async (
     } else if (model.provider === 'openai') {
         const proxy = getNextProxy();
         baseUrl = proxy + encodeURIComponent('https://api.openai.com/v1/chat/completions');
-    } else if (model.provider === 'cerebras') {
+    } else if ((model.provider as string) === 'cerebras') {
         // Cerebras doesn't use proxy - direct API call
         baseUrl = 'https://api.cerebras.ai/v1/chat/completions';
     }

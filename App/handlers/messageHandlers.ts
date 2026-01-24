@@ -67,6 +67,10 @@ Extract the KEY TOPIC and create a proper title. Output ONLY 3 words, no punctua
     const mentionedFiles = files.filter(f => textToSend.includes(`@${f.name}`));
     const selectedFiles = mentionedFiles.length > 0 ? mentionedFiles : files.filter(f => selectedSourceIds.includes(f.id));
 
+    console.log('[MessageHandler] Selected files:', selectedFiles.map(f => ({ id: f.id, name: f.name, type: f.type })));
+    console.log('[MessageHandler] Selected source IDs:', selectedSourceIds);
+    console.log('[MessageHandler] All files available:', files.map(f => ({ id: f.id, name: f.name })));
+
     activityLogger.logInfo('MESSAGE', 'Processing user message', { 
       messageLength: textToSend.length, 
       filesSelected: selectedFiles.length,
@@ -75,6 +79,11 @@ Extract the KEY TOPIC and create a proper title. Output ONLY 3 words, no punctua
     });
 
     const contextResult = await contextManager.selectContext(textToSend, selectedFiles, activeModelId);
+    console.log('[MessageHandler] Context result:', { 
+      chunksCount: contextResult.chunks.length, 
+      totalTokens: contextResult.totalTokens,
+      filesUsed: contextResult.filesUsed
+    });
     activityLogger.logRAGSemanticSearch(textToSend, 'hybrid', contextResult.chunks.length);
     
     activityLogger.logContextProcessing(contextResult.totalTokens, contextResult.filesUsed.length, contextResult.chunks.length);

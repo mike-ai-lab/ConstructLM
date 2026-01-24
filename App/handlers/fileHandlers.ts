@@ -153,22 +153,26 @@ export const createFileHandlers = (
     const file = files.find(f => f.id === id);
     if (file) {
       activityLogger.logFileRemoved(file.name);
-      // Clear from permanent storage AND embeddings (by ID and hash) to allow reprocessing
-      const { permanentStorage } = await import('../../services/permanentStorage');
-      const { embeddingService } = await import('../../services/embeddingService');
-      const { generateFileHash } = await import('../../services/embeddingUtils');
-      
-      // Delete by file ID
-      await permanentStorage.deleteFile(id);
-      await embeddingService.deleteFile(id);
-      
-      // Also delete by content hash to clear cache
-      if (file.content) {
-        const contentHash = await generateFileHash(file.content);
-        await embeddingService.deleteFileByHash(contentHash);
+      try {
+        // Clear from permanent storage AND embeddings (by ID and hash) to allow reprocessing
+        const { permanentStorage } = await import('../../services/permanentStorage');
+        const { embeddingService } = await import('../../services/embeddingService');
+        const { generateFileHash } = await import('../../services/embeddingUtils');
+        
+        // Delete by file ID
+        await permanentStorage.deleteFile(id);
+        await embeddingService.deleteFile(id);
+        
+        // Also delete by content hash to clear cache
+        if (file.content) {
+          const contentHash = await generateFileHash(file.content);
+          await embeddingService.deleteFileByHash(contentHash);
+        }
+        
+        console.log(`🗑️ Deleted ${file.name} from storage and embeddings - can now be reprocessed`);
+      } catch (error) {
+        console.error('Error deleting file:', error);
       }
-      
-      console.log(`🗑️ Deleted ${file.name} from storage and embeddings - can now be reprocessed`);
     }
     setFiles(prev => prev.filter(f => f.id !== id));
     if (viewState?.fileId === id) setViewState(null);

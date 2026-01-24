@@ -92,33 +92,77 @@ const HelpDocumentation: React.FC<HelpDocumentationProps> = ({ onClose }) => {
       const enhancedMessage = `You are a helpful ConstructLM documentation assistant.\n\nRelevant Documentation:\n${context}\n\nUser Question: ${message}\n\nProvide a clear, direct answer based on the documentation. Be conversational and focus on the official methods. Present information factually without speculating on outcomes. Format your response in markdown.\n\nAt the very end of your response, on a new line, add: [SECTION:section-id] where section-id is the most relevant documentation section. Valid sections: getting-started, sources, chat, notebook, todos, mindmap, live, graphics, data, shortcuts, settings, support. Only include this if your answer references a specific section.`;
 
       let response = '';
+      let modelUsed = 'llama-3.3-70b'; // Cerebras default
       
-      await sendMessageToLLM(
-        'gemini-2.5-flash',
-        assistantMessages,
-        enhancedMessage,
-        [],
-        (chunk) => {
-          response += chunk;
-          setAssistantMessages(prev => {
-            const newMessages = [...prev];
-            const lastMsg = newMessages[newMessages.length - 1];
-            if (lastMsg?.role === 'model') {
-              const sectionMatch = response.match(/\[SECTION:([a-z-]+)\]/);
-              if (sectionMatch) {
-                setLastRelevantSection(sectionMatch[1]);
-                lastMsg.content = response.replace(/\[SECTION:[a-z-]+\]/, '').trim();
+      try {
+        // Try Cerebras first (free unlimited, ultra-fast)
+        await sendMessageToLLM(
+          'llama-3.3-70b',
+          assistantMessages,
+          enhancedMessage,
+          [],
+          (chunk) => {
+            response += chunk;
+            setAssistantMessages(prev => {
+              const newMessages = [...prev];
+              const lastMsg = newMessages[newMessages.length - 1];
+              if (lastMsg?.role === 'model') {
+                const sectionMatch = response.match(/\[SECTION:([a-z-]+)\]/);
+                if (sectionMatch) {
+                  setLastRelevantSection(sectionMatch[1]);
+                  lastMsg.content = response.replace(/\[SECTION:[a-z-]+\]/, '').trim();
+                } else {
+                  lastMsg.content = response;
+                }
               } else {
-                lastMsg.content = response;
+                newMessages.push({ id: `model-${Date.now()}`, role: 'model', content: response, timestamp: Date.now() });
               }
-            } else {
-              newMessages.push({ id: `model-${Date.now()}`, role: 'model', content: response, timestamp: Date.now() });
-            }
-            return newMessages;
-          });
-        },
-        []
-      );
+              return newMessages;
+            });
+          },
+          []
+        );
+      } catch (cerebasError) {
+        console.warn('[DOC-ASSISTANT] Cerebras failed, falling back to Groq:', cerebasError);
+        
+        // Fallback to Groq
+        try {
+          response = '';
+          modelUsed = 'llama-3.1-8b';
+          
+          await sendMessageToLLM(
+            'llama-3.1-8b',
+            assistantMessages,
+            enhancedMessage,
+            [],
+            (chunk) => {
+              response += chunk;
+              setAssistantMessages(prev => {
+                const newMessages = [...prev];
+                const lastMsg = newMessages[newMessages.length - 1];
+                if (lastMsg?.role === 'model') {
+                  const sectionMatch = response.match(/\[SECTION:([a-z-]+)\]/);
+                  if (sectionMatch) {
+                    setLastRelevantSection(sectionMatch[1]);
+                    lastMsg.content = response.replace(/\[SECTION:[a-z-]+\]/, '').trim();
+                  } else {
+                    lastMsg.content = response;
+                  }
+                } else {
+                  newMessages.push({ id: `model-${Date.now()}`, role: 'model', content: response, timestamp: Date.now() });
+                }
+                return newMessages;
+              });
+            },
+            []
+          );
+        } catch (groqError) {
+          console.error('[DOC-ASSISTANT] Both Cerebras and Groq failed:', groqError);
+          throw groqError;
+        }
+      }
+      
+      console.log(`[DOC-ASSISTANT] Response generated using ${modelUsed}`);
     } catch (error) {
       console.error('Assistant error:', error);
       setAssistantMessages(prev => [...prev, { id: `model-${Date.now()}`, role: 'model', content: 'Sorry, I encountered an error. Please try again.', timestamp: Date.now() }]);

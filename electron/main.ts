@@ -110,6 +110,7 @@ function proxyRequest(url: string, apiKey: string, requestBody: any, event: Elec
     const urlObj = new URL(url);
     
     console.log(`[Electron Proxy] Request size: ${Buffer.byteLength(data, 'utf8')} bytes`);
+    console.log(`[Electron Proxy] Streaming: ${requestBody.stream}`);
     
     const options = {
       hostname: urlObj.hostname,
@@ -128,8 +129,10 @@ function proxyRequest(url: string, apiKey: string, requestBody: any, event: Elec
       if (requestBody.stream) {
         let buffer = '';
         let chunkCount = 0;
+        let lastChunkTime = Date.now();
         
         res.on('data', (chunk) => {
+          lastChunkTime = Date.now();
           buffer += chunk.toString();
           const lines = buffer.split('\n');
           buffer = lines.pop() || '';
@@ -140,6 +143,8 @@ function proxyRequest(url: string, apiKey: string, requestBody: any, event: Elec
               const dataStr = trimmed.slice(6);
               if (dataStr !== '[DONE]') {
                 chunkCount++;
+                console.log(`[Electron Proxy] Sending chunk ${chunkCount}: ${dataStr.substring(0, 100)}...`);
+                // Send immediately to ensure no loss
                 event.sender.send('stream-chunk', dataStr);
               }
             }
@@ -147,8 +152,22 @@ function proxyRequest(url: string, apiKey: string, requestBody: any, event: Elec
         });
         
         res.on('end', () => {
-          console.log(`[Electron Proxy] Stream ended. Chunks received: ${chunkCount}`);
+          // Handle any remaining data in buffer
+          if (buffer.trim()) {
+            const trimmed = buffer.trim();
+            if (trimmed.startsWith('data: ')) {
+              const dataStr = trimmed.slice(6);
+              if (dataStr !== '[DONE]') {
+                chunkCount++;
+                console.log(`[Electron Proxy] Sending final chunk ${chunkCount}: ${dataStr.substring(0, 100)}...`);
+                event.sender.send('stream-chunk', dataStr);
+              }
+            }
+          }
+          
+          console.log(`[Electron Proxy] Stream ended. Total chunks sent: ${chunkCount}`);
           if (chunkCount === 0) {
+            console.error('[Electron Proxy] ERROR: No chunks received from API');
             resolve({ ok: false, status: res.statusCode, error: 'Empty response from API' });
           } else {
             resolve({ ok: res.statusCode === 200, status: res.statusCode, streaming: true });
@@ -164,9 +183,11 @@ function proxyRequest(url: string, apiKey: string, requestBody: any, event: Elec
         res.on('data', (chunk) => body += chunk);
         res.on('end', () => {
           try {
-            const data = JSON.parse(body);
-            resolve({ ok: res.statusCode === 200, status: res.statusCode, data });
+            const parsedData = JSON.parse(body);
+            console.log(`[Electron Proxy] Non-streaming response received: ${body.substring(0, 200)}...`);
+            resolve({ ok: res.statusCode === 200, status: res.statusCode, data: parsedData });
           } catch (e) {
+            console.error('[Electron Proxy] Failed to parse response:', e);
             resolve({ ok: false, status: res.statusCode, error: body });
           }
         });

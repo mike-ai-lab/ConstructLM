@@ -23,20 +23,67 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({ file, location, textScale }) 
     setTimeout(tryScroll, 600);
   }, [location, file]);
 
-  const parseExcelContent = (content: string, highlightLoc?: string) => {
-    console.log('🔍 EXCEL CONTENT:', content.substring(0, 500));
-    console.log('🔍 CONTENT LENGTH:', content.length);
+  // ✅ NEW: Robust CSV Parser that handles newlines inside quotes
+  const parseCSV = (text: string): string[][] => {
+    const rows: string[][] = [];
+    let currentRow: string[] = [];
+    let currentCell = "";
+    let inQuotes = false;
     
+    // Normalize line endings to avoid complexity with \r\n vs \n
+    const cleanText = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+    for (let i = 0; i < cleanText.length; i++) {
+      const char = cleanText[i];
+      const nextChar = cleanText[i + 1];
+
+      if (char === '"') {
+        // Handle escaped quotes ("") inside a quoted cell
+        if (inQuotes && nextChar === '"') {
+          currentCell += '"';
+          i++; // Skip the next quote since we just handled it
+        } else {
+          // Toggle quote state
+          inQuotes = !inQuotes;
+        }
+      } 
+      else if (char === ',' && !inQuotes) {
+        // Found delimiter outside of quotes -> End of Cell
+        currentRow.push(currentCell);
+        currentCell = "";
+      } 
+      else if (char === '\n' && !inQuotes) {
+        // Found newline outside of quotes -> End of Row
+        currentRow.push(currentCell);
+        rows.push(currentRow);
+        currentRow = [];
+        currentCell = "";
+      } 
+      else {
+        // Standard character
+        currentCell += char;
+      }
+    }
+
+    // Flush any remaining data
+    if (currentCell || currentRow.length > 0) {
+      currentRow.push(currentCell);
+      rows.push(currentRow);
+    }
+
+    return rows;
+  };
+
+  const parseExcelContent = (content: string, highlightLoc?: string) => {
     const sheetRegex = /--- \[Sheet: (.*?)\] ---/g;
     const parts = content.split(sheetRegex);
-    console.log('🔍 PARTS:', parts.length, parts.map((p, i) => `[${i}]: ${p.substring(0, 100)}`));
     
     const elements: React.ReactNode[] = [];
     let targetSheet = "";
     let targetRow = -1;
 
     if (highlightLoc) {
-      const sheetMatch = highlightLoc.match(/Sheet:\s*[']?([^,'";\|]+)[']?/i);
+      const sheetMatch = highlightLoc.match(/Sheet:\s*[']?([^,'";|]+)[']?/i);
       if (sheetMatch) targetSheet = sheetMatch[1].trim().toLowerCase();
       const rowMatch = highlightLoc.match(/(?:Row|Line)\s*[:#.]?\s*(\d+)/i);
       if (rowMatch) targetRow = parseInt(rowMatch[1], 10);
@@ -53,48 +100,21 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({ file, location, textScale }) 
     for (let i = 1; i < parts.length; i += 2) {
       const sheetName = parts[i];
       const csvContent = parts[i + 1] || "";
-      console.log(`📊 SHEET ${sheetName}:`, csvContent.substring(0, 200));
       
-      const lines = csvContent.trim().split('\n');
-      console.log(`📊 LINES COUNT:`, lines.length, 'First line:', lines[0]);
+      // ✅ USE THE NEW PARSER HERE
+      const rows = parseCSV(csvContent.trim());
       
-      const delimiter = lines[0]?.includes('\t') ? '\t' : ',';
-      console.log(`📊 DELIMITER:`, delimiter === '\t' ? 'TAB' : 'COMMA');
-      
-      const rows = lines.map(row => {
-        const cells: string[] = [];
-        let current = '';
-        let inQuotes = false;
-        for (let j = 0; j < row.length; j++) {
-          const char = row[j];
-          if (char === '"') {
-            inQuotes = !inQuotes;
-          } else if (char === delimiter && !inQuotes) {
-            cells.push(current.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&amp;/g, '&'));
-            current = '';
-          } else {
-            current += char;
-          }
-        }
-        cells.push(current.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&amp;/g, '&'));
-        return cells;
-      });
-      
-      console.log(`📊 ROWS:`, rows.length, 'First row:', rows[0]);
-      console.log(`📊 Sample cells:`, rows[1]?.slice(0, 3));
-
       const isTargetSheet = targetSheet && sheetName.toLowerCase().includes(targetSheet);
       
-      // If no row number, try to find by quote in location
+      // Logic to find row by content if line number missing
       if (targetRow === -1 && location) {
         const quoteMatch = location.match(/["']([^"']+)["']/);
         if (quoteMatch) {
           const searchText = quoteMatch[1].toLowerCase();
-          for (let i = 0; i < rows.length; i++) {
-            const rowText = rows[i].join(' ').toLowerCase();
+          for (let r = 0; r < rows.length; r++) {
+            const rowText = rows[r].join(' ').toLowerCase();
             if (rowText.includes(searchText)) {
-              targetRow = i + 1;
-              console.log('📊 Found quote match at row:', targetRow);
+              targetRow = r + 1;
               break;
             }
           }
@@ -124,7 +144,7 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({ file, location, textScale }) 
                         {visualRowNumber}
                       </td>
                       {row.map((cell, cIdx) => (
-                        <td key={cIdx} className="px-1.5 py-1 border-r border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] last:border-none whitespace-nowrap" title={cell}>
+                        <td key={cIdx} className="px-1.5 py-1 border-r border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] last:border-none whitespace-nowrap max-w-[300px] truncate" title={cell}>
                           {cell}
                         </td>
                       ))}

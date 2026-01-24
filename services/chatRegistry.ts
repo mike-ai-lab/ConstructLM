@@ -100,12 +100,22 @@ class ChatRegistryService {
   }
 
   getChat(chatId: string): ChatSession | null {
+    console.log(`🔍 Loading chat: ${chatId}`);
     try {
       const stored = localStorage.getItem(this.STORAGE_KEY);
-      if (!stored) return null;
+      if (!stored) {
+        console.log(`❌ No chats in localStorage`);
+        return null;
+      }
       const chats: ChatSession[] = JSON.parse(stored);
+      console.log(`📊 Found ${chats.length} chats in storage`);
       const chat = chats.find(chat => chat && chat.id === chatId);
-      if (!chat) return null;
+      if (!chat) {
+        console.log(`❌ Chat ${chatId} not found`);
+        return null;
+      }
+      
+      console.log(`✅ Chat ${chatId} loaded with ${chat.messages?.length || 0} messages`);
       
       // Ensure chat has required properties
       return {
@@ -119,7 +129,7 @@ class ChatRegistryService {
         updatedAt: chat.updatedAt || Date.now()
       };
     } catch (error) {
-      console.error('Error loading chat:', error);
+      console.error('❌ Error loading chat:', error);
       return null;
     }
   }

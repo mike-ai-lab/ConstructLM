@@ -1,13 +1,25 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
+let streamChunkCallback: ((data: string) => void) | null = null;
+
 contextBridge.exposeInMainWorld('electron', {
   isElectron: true,
   proxyGroq: (apiKey: string, requestBody: any) => ipcRenderer.invoke('proxy-groq', apiKey, requestBody),
   proxyOpenai: (apiKey: string, requestBody: any) => ipcRenderer.invoke('proxy-openai', apiKey, requestBody),
   onStreamChunk: (callback: (data: string) => void) => {
-    ipcRenderer.on('stream-chunk', (_, data) => callback(data));
+    // Remove any existing listener first
+    ipcRenderer.removeAllListeners('stream-chunk');
+    
+    // Store the callback and set up the listener
+    streamChunkCallback = callback;
+    ipcRenderer.on('stream-chunk', (_, data) => {
+      if (streamChunkCallback) {
+        streamChunkCallback(data);
+      }
+    });
   },
   removeStreamListener: () => {
+    streamChunkCallback = null;
     ipcRenderer.removeAllListeners('stream-chunk');
   },
   // Auto-update APIs

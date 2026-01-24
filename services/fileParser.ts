@@ -254,14 +254,20 @@ const extractExcelText = async (file: File): Promise<string> => {
       
       fullText += `--- [Sheet: ${sheetName}] ---\n`;
       
-      // Use sheet_to_csv for proper CSV conversion
+      // Use sheet_to_csv with proper options
       const csv = (window as any).XLSX.utils.sheet_to_csv(sheet, { 
         FS: ',',
         RS: '\n',
-        blankrows: false
+        blankrows: false,
+        skipHidden: true
       });
       
-      fullText += csv + '\n\n';
+      // Remove rows that are entirely empty or have only commas
+      const cleanedCsv = csv.split('\n')
+        .filter((line: string) => line.trim() && line.replace(/,/g, '').trim())
+        .join('\n');
+      
+      fullText += cleanedCsv + '\n\n';
     });
 
     return fullText;
