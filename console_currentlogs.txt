@@ -1,0 +1,934 @@
+23:03:10.755 messageHandlers.ts:70 [MessageHandler] Selected files: [{…}]
+23:03:10.756 messageHandlers.ts:71 [MessageHandler] Selected source IDs: ['jxr17eyo3']
+23:03:10.756 messageHandlers.ts:72 [MessageHandler] All files available: (2) [{…}, {…}]
+23:03:10.757 hybridContextManager.ts:70 [EMBEDDING] Using local Transformers.js for hybrid search
+23:03:10.928 messageHandlers.ts:82 [MessageHandler] Context result: {chunksCount: 1, totalTokens: 1500, filesUsed: Array(1)}
+23:03:10.930 messageHandlers.ts:110 [MessageHandler] Context result: {totalTokens: 1500, filesUsed: 1, chunksCount: 1, selectedFilesCount: 1}
+23:03:10.930 messageHandlers.ts:118 [MessageHandler] Sources: []
+23:03:10.931 messageHandlers.ts:123 [MessageHandler] Triggering RAG with 1 files
+23:03:10.931 messageHandlers.ts:142 [MessageHandler] Sending to LLM, model: llama-3.3-70b-versatile
+23:03:10.932 messageHandlers.ts:167 [MessageHandler] Fetched sources: 0
+23:03:10.932 llmService.ts:102 🔶 [LLM] === SEND MESSAGE START ===
+23:03:10.932 llmService.ts:103 🔶 [LLM] Model: llama-3.3-70b-versatile
+23:03:10.932 llmService.ts:104 🔶 [LLM] Message: Board 6: MetalCorrogatedShiny_59mm Waste...
+23:03:10.932 llmService.ts:105 🔶 [LLM] Active files: 1
+23:03:10.932 llmService.ts:106 🔶 [LLM] Active sources: 0
+23:03:10.933 llmService.ts:107 🔶 [LLM] History length: 7
+23:03:10.933 llmService.ts:131 [RAG] 🔍 Searching relevant chunks in selected files only...
+23:03:10.933 llmService.ts:147 [RAG] Using 10 chunks (Excel/CSV: false, PDF: false)
+23:03:11.124 ragService.ts:56 [RAG] Searching across 1 selected files
+23:03:11.124 ragService.ts:72 [RAG] Sub-query: "Board 6: MetalCorrogatedShiny_59mm Waste"
+23:03:11.205 llmService.ts:152 [RAG] ✅ Found 10 relevant chunks from selected files
+23:03:11.205 llmService.ts:156 [RAG] 🔍 First chunk preview: e:** 2440.0 × 1220.0 mm
+- **Parts:** 1
+- **Efficiency:** 6.4%
+- **Waste:** 93.6%
+
+**Parts on this board:**
+
+| Part ID | Name | Dimensions (mm) | Material | Grain | Edge Banding |
+|---------|--
+23:03:11.206 llmService.ts:186 
+🔶 [RAG] === FULL REQUEST BREAKDOWN ===
+23:03:11.206 llmService.ts:187 ���� System Prompt: 1726 tokens
+23:03:11.206 llmService.ts:188 📊 RAG Context: 1497 tokens (10 chunks)
+23:03:11.206 llmService.ts:189 📊 User Message: 10 tokens
+23:03:11.207 llmService.ts:190 📊 TOTAL REQUEST: 3233 tokens
+23:03:11.207 llmService.ts:191 📊 Model Limits: Groq ~8K, Gemini ~1M, GPT-4o ~128K
+23:03:11.207 llmService.ts:192 
+📄 FULL SYSTEM PROMPT (first 500 chars):
+23:03:11.207 llmService.ts:193 You are ConstructLM. Answer questions using the document chunks provided below.
+
+**CITATION RULES:**
+📝 **Markdown/Text Files:** Use {{citation:FileName.md|Section: Title|exact quote}}
+   - Use section headers as location (e.g., "Section: Cost Breakdown")
+   - If no clear section, use "Line X" or just the filename
+   - Example: {{citation:report.md|Section: Summary|Total cost: $1,500}}
+
+**IMPORTANT:**
+- Cite EXACT text from the documents (3-10 words with key information)
+- Include numbers, quant
+23:03:11.207 llmService.ts:194 
+📄 FULL RAG CONTEXT (first 500 chars):
+23:03:11.207 llmService.ts:195 
+
+RELEVANT CONTEXT FROM SEMANTIC SEARCH:
+[1] From reportdata.md (relevance: 100%):
+e:** 2440.0 × 1220.0 mm
+- **Parts:** 1
+- **Efficiency:** 6.4%
+- **Waste:** 93.6%
+
+**Parts on this board:**
+
+| Part ID | Name | Dimensions (mm) | Material | Grain | Edge Banding |
+|---------|------|-------------|----------|-------|-------------|
+| P10 |  | 255.4 × 743.4 | Metal_Corrogated_Shiny | Any | None |
+
+### Board 7: Metal_Aluminum_Anodized_18mm
+
+- **Size:** 2440.0 × 1220.0 mm
+- **Parts:** 5
+- 
+23:03:11.208 llmService.ts:196 
+📄 USER MESSAGE:
+23:03:11.208 llmService.ts:197 Board 6: MetalCorrogatedShiny_59mm Waste
+23:03:11.208 llmService.ts:198 
+🔶 === END FULL REQUEST ===
+
+23:03:11.208 llmService.ts:333 [LLM] Final system prompt being sent (first 300 chars): You are ConstructLM. Answer questions using the document chunks provided below.
+
+**CITATION RULES:**
+📝 **Markdown/Text Files:** Use {{citation:FileName.md|Section: Title|exact quote}}
+   - Use section headers as location (e.g., "Section: Cost Breakdown")
+   - If no clear section, use "Line X" or ju
+23:03:11.209 llmService.ts:334 [LLM] Final system prompt length: 7145
+23:03:11.209 llmService.ts:335 [LLM] Messages array: (2) [{…}, {…}]
+23:03:12.254 messageHandlers.ts:212 [MessageHandler] LLM response complete. Usage: {inputTokens: 2465, outputTokens: 19, totalTokens: 2484}
+23:03:12.254 messageHandlers.ts:213 [MessageHandler] Final content length: 49
+23:03:12.283 llmService.ts:590 Fetch finished loading: POST "https://corsproxy.io/?https%3A%2F%2Fapi.groq.com%2Fopenai%2Fv1%2Fchat%2Fcompletions".
+streamOpenAICompatible @ llmService.ts:590
+sendMessageToLLM @ llmService.ts:356
+await in sendMessageToLLM
+sendMessageWithContext @ messageHandlers.ts:177
+handleSendMessage @ messageHandlers.ts:106
+await in handleSendMessage
+onSendMessage @ App.tsx:1108
+executeDispatch @ react-dom-client.development.js:19116
+runWithFiberInDEV @ react-dom-client.development.js:871
+processDispatchQueue @ react-dom-client.development.js:19166
+(anonymous) @ react-dom-client.development.js:19767
+batchedUpdates$1 @ react-dom-client.development.js:3255
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:19320
+dispatchEvent @ react-dom-client.development.js:23585
+dispatchDiscreteEvent @ react-dom-client.development.js:23553
+23:03:22.805 DocumentViewer.tsx:19 📺 DocumentViewer RENDERING
+23:03:22.805 DocumentViewer.tsx:20   - File name: reportdata.md
+23:03:22.805 DocumentViewer.tsx:21   - File type: markdown
+23:03:22.805 DocumentViewer.tsx:22   - Content length: 12548
+23:03:35.178 DocumentViewer.tsx:19 📺 DocumentViewer RENDERING
+23:03:35.178 DocumentViewer.tsx:20   - File name: reportdata.md
+23:03:35.178 DocumentViewer.tsx:21   - File type: markdown
+23:03:35.178 DocumentViewer.tsx:22   - Content length: 12548
+23:03:42.090 messageHandlers.ts:70 [MessageHandler] Selected files: [{…}]
+23:03:42.091 messageHandlers.ts:71 [MessageHandler] Selected source IDs: ['jxr17eyo3']
+23:03:42.091 messageHandlers.ts:72 [MessageHandler] All files available: (2) [{…}, {…}]
+23:03:42.092 hybridContextManager.ts:70 [EMBEDDING] Using local Transformers.js for hybrid search
+23:03:42.175 messageHandlers.ts:82 [MessageHandler] Context result: {chunksCount: 1, totalTokens: 1500, filesUsed: Array(1)}
+23:03:42.176 messageHandlers.ts:110 [MessageHandler] Context result: {totalTokens: 1500, filesUsed: 1, chunksCount: 1, selectedFilesCount: 1}
+23:03:42.176 messageHandlers.ts:118 [MessageHandler] Sources: []
+23:03:42.177 messageHandlers.ts:123 [MessageHandler] Triggering RAG with 1 files
+23:03:42.177 messageHandlers.ts:142 [MessageHandler] Sending to LLM, model: llama-3.3-70b-versatile
+23:03:42.177 messageHandlers.ts:167 [MessageHandler] Fetched sources: 0
+23:03:42.178 llmService.ts:102 🔶 [LLM] === SEND MESSAGE START ===
+23:03:42.178 llmService.ts:103 🔶 [LLM] Model: llama-3.3-70b-versatile
+23:03:42.178 llmService.ts:104 🔶 [LLM] Message: Board 6: MetalCorrogatedShiny_59mm Waste...
+23:03:42.178 llmService.ts:105 🔶 [LLM] Active files: 1
+23:03:42.178 llmService.ts:106 🔶 [LLM] Active sources: 0
+23:03:42.178 llmService.ts:107 🔶 [LLM] History length: 9
+23:03:42.178 llmService.ts:131 [RAG] 🔍 Searching relevant chunks in selected files only...
+23:03:42.178 llmService.ts:147 [RAG] Using 10 chunks (Excel/CSV: false, PDF: false)
+23:03:42.344 ragService.ts:56 [RAG] Searching across 1 selected files
+23:03:42.344 ragService.ts:72 [RAG] Sub-query: "Board 6: MetalCorrogatedShiny_59mm Waste"
+23:03:42.429 llmService.ts:152 [RAG] ✅ Found 10 relevant chunks from selected files
+23:03:42.429 llmService.ts:156 [RAG] 🔍 First chunk preview: e:** 2440.0 × 1220.0 mm
+- **Parts:** 1
+- **Efficiency:** 6.4%
+- **Waste:** 93.6%
+
+**Parts on this board:**
+
+| Part ID | Name | Dimensions (mm) | Material | Grain | Edge Banding |
+|---------|--
+23:03:42.430 llmService.ts:186 
+🔶 [RAG] === FULL REQUEST BREAKDOWN ===
+23:03:42.430 llmService.ts:187 ���� System Prompt: 1726 tokens
+23:03:42.430 llmService.ts:188 📊 RAG Context: 1497 tokens (10 chunks)
+23:03:42.430 llmService.ts:189 📊 User Message: 10 tokens
+23:03:42.430 llmService.ts:190 📊 TOTAL REQUEST: 3233 tokens
+23:03:42.430 llmService.ts:191 📊 Model Limits: Groq ~8K, Gemini ~1M, GPT-4o ~128K
+23:03:42.430 llmService.ts:192 
+📄 FULL SYSTEM PROMPT (first 500 chars):
+23:03:42.431 llmService.ts:193 You are ConstructLM. Answer questions using the document chunks provided below.
+
+**CITATION RULES:**
+📝 **Markdown/Text Files:** Use {{citation:FileName.md|Section: Title|exact quote}}
+   - Use section headers as location (e.g., "Section: Cost Breakdown")
+   - If no clear section, use "Line X" or just the filename
+   - Example: {{citation:report.md|Section: Summary|Total cost: $1,500}}
+
+**IMPORTANT:**
+- Cite EXACT text from the documents (3-10 words with key information)
+- Include numbers, quant
+23:03:42.431 llmService.ts:194 
+📄 FULL RAG CONTEXT (first 500 chars):
+23:03:42.431 llmService.ts:195 
+
+RELEVANT CONTEXT FROM SEMANTIC SEARCH:
+[1] From reportdata.md (relevance: 100%):
+e:** 2440.0 × 1220.0 mm
+- **Parts:** 1
+- **Efficiency:** 6.4%
+- **Waste:** 93.6%
+
+**Parts on this board:**
+
+| Part ID | Name | Dimensions (mm) | Material | Grain | Edge Banding |
+|---------|------|-------------|----------|-------|-------------|
+| P10 |  | 255.4 × 743.4 | Metal_Corrogated_Shiny | Any | None |
+
+### Board 7: Metal_Aluminum_Anodized_18mm
+
+- **Size:** 2440.0 × 1220.0 mm
+- **Parts:** 5
+- 
+23:03:42.431 llmService.ts:196 
+📄 USER MESSAGE:
+23:03:42.431 llmService.ts:197 Board 6: MetalCorrogatedShiny_59mm Waste
+23:03:42.431 llmService.ts:198 
+🔶 === END FULL REQUEST ===
+
+23:03:42.432 llmService.ts:333 [LLM] Final system prompt being sent (first 300 chars): You are ConstructLM. Answer questions using the document chunks provided below.
+
+**CITATION RULES:**
+📝 **Markdown/Text Files:** Use {{citation:FileName.md|Section: Title|exact quote}}
+   - Use section headers as location (e.g., "Section: Cost Breakdown")
+   - If no clear section, use "Line X" or ju
+23:03:42.432 llmService.ts:334 [LLM] Final system prompt length: 7145
+23:03:42.432 llmService.ts:335 [LLM] Messages array: (2) [{…}, {…}]
+23:03:43.105 messageHandlers.ts:212 [MessageHandler] LLM response complete. Usage: {inputTokens: 2465, outputTokens: 19, totalTokens: 2484}
+23:03:43.105 messageHandlers.ts:213 [MessageHandler] Final content length: 49
+23:03:43.108 llmService.ts:590 Fetch failed loading: POST "https://corsproxy.io/?https%3A%2F%2Fapi.groq.com%2Fopenai%2Fv1%2Fchat%2Fcompletions".
+streamOpenAICompatible @ llmService.ts:590
+sendMessageToLLM @ llmService.ts:356
+await in sendMessageToLLM
+sendMessageWithContext @ messageHandlers.ts:177
+handleSendMessage @ messageHandlers.ts:106
+await in handleSendMessage
+jsxDEV.onRetryMessage @ App.tsx:1006
+onClick @ MessageBubble.tsx:663
+executeDispatch @ react-dom-client.development.js:19116
+runWithFiberInDEV @ react-dom-client.development.js:871
+processDispatchQueue @ react-dom-client.development.js:19166
+(anonymous) @ react-dom-client.development.js:19767
+batchedUpdates$1 @ react-dom-client.development.js:3255
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:19320
+dispatchEvent @ react-dom-client.development.js:23585
+dispatchDiscreteEvent @ react-dom-client.development.js:23553
+23:03:49.799 DocumentViewer.tsx:19 📺 DocumentViewer RENDERING
+23:03:49.799 DocumentViewer.tsx:20   - File name: reportdata.md
+23:03:49.800 DocumentViewer.tsx:21   - File type: markdown
+23:03:49.800 DocumentViewer.tsx:22   - Content length: 12548
+23:04:07.499 DocumentViewer.tsx:19 📺 DocumentViewer RENDERING
+23:04:07.499 DocumentViewer.tsx:20   - File name: reportdata.md
+23:04:07.499 DocumentViewer.tsx:21   - File type: markdown
+23:04:07.500 DocumentViewer.tsx:22   - Content length: 12548
+23:04:12.935 DocumentViewer.tsx:19 📺 DocumentViewer RENDERING
+23:04:12.936 DocumentViewer.tsx:20   - File name: reportdata.md
+23:04:12.936 DocumentViewer.tsx:21   - File type: markdown
+23:04:12.936 DocumentViewer.tsx:22   - Content length: 12548
+23:04:13.558 DocumentViewer.tsx:19 📺 DocumentViewer RENDERING
+23:04:13.559 DocumentViewer.tsx:20   - File name: reportdata.md
+23:04:13.559 DocumentViewer.tsx:21   - File type: markdown
+23:04:13.559 DocumentViewer.tsx:22   - Content length: 12548
+23:04:19.106 messageHandlers.ts:70 [MessageHandler] Selected files: [{…}]
+23:04:19.106 messageHandlers.ts:71 [MessageHandler] Selected source IDs: ['jxr17eyo3']
+23:04:19.107 messageHandlers.ts:72 [MessageHandler] All files available: (2) [{…}, {…}]
+23:04:19.107 hybridContextManager.ts:70 [EMBEDDING] Using local Transformers.js for hybrid search
+23:04:19.217 messageHandlers.ts:82 [MessageHandler] Context result: {chunksCount: 1, totalTokens: 1500, filesUsed: Array(1)}
+23:04:19.219 messageHandlers.ts:110 [MessageHandler] Context result: {totalTokens: 1500, filesUsed: 1, chunksCount: 1, selectedFilesCount: 1}
+23:04:19.219 messageHandlers.ts:118 [MessageHandler] Sources: []
+23:04:19.220 messageHandlers.ts:123 [MessageHandler] Triggering RAG with 1 files
+23:04:19.220 messageHandlers.ts:142 [MessageHandler] Sending to LLM, model: llama-3.3-70b-versatile
+23:04:19.220 messageHandlers.ts:167 [MessageHandler] Fetched sources: 0
+23:04:19.220 llmService.ts:102 🔶 [LLM] === SEND MESSAGE START ===
+23:04:19.221 llmService.ts:103 🔶 [LLM] Model: llama-3.3-70b-versatile
+23:04:19.221 llmService.ts:104 🔶 [LLM] Message: Board 7: MetalAluminumAnodized_18mm Efficiency...
+23:04:19.221 llmService.ts:105 🔶 [LLM] Active files: 1
+23:04:19.221 llmService.ts:106 🔶 [LLM] Active sources: 0
+23:04:19.221 llmService.ts:107 🔶 [LLM] History length: 9
+23:04:19.221 llmService.ts:131 [RAG] 🔍 Searching relevant chunks in selected files only...
+23:04:19.221 llmService.ts:147 [RAG] Using 10 chunks (Excel/CSV: false, PDF: false)
+23:04:19.455 ragService.ts:56 [RAG] Searching across 1 selected files
+23:04:19.456 ragService.ts:72 [RAG] Sub-query: "Board 7: MetalAluminumAnodized_18mm Efficiency"
+23:04:19.537 llmService.ts:152 [RAG] ✅ Found 10 relevant chunks from selected files
+23:04:19.537 llmService.ts:156 [RAG] 🔍 First chunk preview: e:** 2440.0 × 1220.0 mm
+- **Parts:** 1
+- **Efficiency:** 6.4%
+- **Waste:** 93.6%
+
+**Parts on this board:**
+
+| Part ID | Name | Dimensions (mm) | Material | Grain | Edge Banding |
+|---------|--
+23:04:19.537 llmService.ts:186 
+🔶 [RAG] === FULL REQUEST BREAKDOWN ===
+23:04:19.537 llmService.ts:187 ���� System Prompt: 1726 tokens
+23:04:19.537 llmService.ts:188 📊 RAG Context: 1497 tokens (10 chunks)
+23:04:19.537 llmService.ts:189 📊 User Message: 12 tokens
+23:04:19.537 llmService.ts:190 📊 TOTAL REQUEST: 3235 tokens
+23:04:19.538 llmService.ts:191 📊 Model Limits: Groq ~8K, Gemini ~1M, GPT-4o ~128K
+23:04:19.538 llmService.ts:192 
+📄 FULL SYSTEM PROMPT (first 500 chars):
+23:04:19.538 llmService.ts:193 You are ConstructLM. Answer questions using the document chunks provided below.
+
+**CITATION RULES:**
+📝 **Markdown/Text Files:** Use {{citation:FileName.md|Section: Title|exact quote}}
+   - Use section headers as location (e.g., "Section: Cost Breakdown")
+   - If no clear section, use "Line X" or just the filename
+   - Example: {{citation:report.md|Section: Summary|Total cost: $1,500}}
+
+**IMPORTANT:**
+- Cite EXACT text from the documents (3-10 words with key information)
+- Include numbers, quant
+23:04:19.538 llmService.ts:194 
+📄 FULL RAG CONTEXT (first 500 chars):
+23:04:19.538 llmService.ts:195 
+
+RELEVANT CONTEXT FROM SEMANTIC SEARCH:
+[1] From reportdata.md (relevance: 100%):
+e:** 2440.0 × 1220.0 mm
+- **Parts:** 1
+- **Efficiency:** 6.4%
+- **Waste:** 93.6%
+
+**Parts on this board:**
+
+| Part ID | Name | Dimensions (mm) | Material | Grain | Edge Banding |
+|---------|------|-------------|----------|-------|-------------|
+| P10 |  | 255.4 × 743.4 | Metal_Corrogated_Shiny | Any | None |
+
+### Board 7: Metal_Aluminum_Anodized_18mm
+
+- **Size:** 2440.0 × 1220.0 mm
+- **Parts:** 5
+- 
+23:04:19.538 llmService.ts:196 
+📄 USER MESSAGE:
+23:04:19.539 llmService.ts:197 Board 7: MetalAluminumAnodized_18mm Efficiency
+23:04:19.539 llmService.ts:198 
+🔶 === END FULL REQUEST ===
+
+23:04:19.539 llmService.ts:333 [LLM] Final system prompt being sent (first 300 chars): You are ConstructLM. Answer questions using the document chunks provided below.
+
+**CITATION RULES:**
+📝 **Markdown/Text Files:** Use {{citation:FileName.md|Section: Title|exact quote}}
+   - Use section headers as location (e.g., "Section: Cost Breakdown")
+   - If no clear section, use "Line X" or ju
+23:04:19.539 llmService.ts:334 [LLM] Final system prompt length: 7144
+23:04:19.539 llmService.ts:335 [LLM] Messages array: (2) [{…}, {…}]
+23:04:20.213 messageHandlers.ts:212 [MessageHandler] LLM response complete. Usage: {inputTokens: 2365, outputTokens: 29, totalTokens: 2394}
+23:04:20.213 messageHandlers.ts:213 [MessageHandler] Final content length: 79
+23:04:20.217 llmService.ts:590 Fetch failed loading: POST "https://corsproxy.io/?https%3A%2F%2Fapi.groq.com%2Fopenai%2Fv1%2Fchat%2Fcompletions".
+streamOpenAICompatible @ llmService.ts:590
+sendMessageToLLM @ llmService.ts:356
+await in sendMessageToLLM
+sendMessageWithContext @ messageHandlers.ts:177
+handleSendMessage @ messageHandlers.ts:106
+await in handleSendMessage
+onSendMessage @ App.tsx:1108
+executeDispatch @ react-dom-client.development.js:19116
+runWithFiberInDEV @ react-dom-client.development.js:871
+processDispatchQueue @ react-dom-client.development.js:19166
+(anonymous) @ react-dom-client.development.js:19767
+batchedUpdates$1 @ react-dom-client.development.js:3255
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:19320
+dispatchEvent @ react-dom-client.development.js:23585
+dispatchDiscreteEvent @ react-dom-client.development.js:23553
+23:04:25.670 DocumentViewer.tsx:19 📺 DocumentViewer RENDERING
+23:04:25.670 DocumentViewer.tsx:20   - File name: reportdata.md
+23:04:25.671 DocumentViewer.tsx:21   - File type: markdown
+23:04:25.671 DocumentViewer.tsx:22   - Content length: 12548
+23:04:34.697 DocumentViewer.tsx:19 📺 DocumentViewer RENDERING
+23:04:34.697 DocumentViewer.tsx:20   - File name: reportdata.md
+23:04:34.698 DocumentViewer.tsx:21   - File type: markdown
+23:04:34.698 DocumentViewer.tsx:22   - Content length: 12548
+23:05:01.301 DocumentViewer.tsx:19 📺 DocumentViewer RENDERING
+23:05:01.301 DocumentViewer.tsx:20   - File name: reportdata.md
+23:05:01.301 DocumentViewer.tsx:21   - File type: markdown
+23:05:01.302 DocumentViewer.tsx:22   - Content length: 12548
+23:05:11.754 DocumentViewer.tsx:19 📺 DocumentViewer RENDERING
+23:05:11.754 DocumentViewer.tsx:20   - File name: reportdata.md
+23:05:11.754 DocumentViewer.tsx:21   - File type: markdown
+23:05:11.755 DocumentViewer.tsx:22   - Content length: 12548
+23:05:14.059 DocumentViewer.tsx:19 📺 DocumentViewer RENDERING
+23:05:14.060 DocumentViewer.tsx:20   - File name: reportdata.md
+23:05:14.060 DocumentViewer.tsx:21   - File type: markdown
+23:05:14.060 DocumentViewer.tsx:22   - Content length: 12548
+23:05:15.037 DocumentViewer.tsx:19 📺 DocumentViewer RENDERING
+23:05:15.037 DocumentViewer.tsx:20   - File name: reportdata.md
+23:05:15.037 DocumentViewer.tsx:21   - File type: markdown
+23:05:15.038 DocumentViewer.tsx:22   - Content length: 12548
+23:05:15.330 DocumentViewer.tsx:19 📺 DocumentViewer RENDERING
+23:05:15.330 DocumentViewer.tsx:20   - File name: reportdata.md
+23:05:15.331 DocumentViewer.tsx:21   - File type: markdown
+23:05:15.331 DocumentViewer.tsx:22   - Content length: 12548
+23:05:16.334 DocumentViewer.tsx:19 📺 DocumentViewer RENDERING
+23:05:16.335 DocumentViewer.tsx:20   - File name: reportdata.md
+23:05:16.335 DocumentViewer.tsx:21   - File type: markdown
+23:05:16.335 DocumentViewer.tsx:22   - Content length: 12548
+23:05:16.605 DocumentViewer.tsx:19 📺 DocumentViewer RENDERING
+23:05:16.606 DocumentViewer.tsx:20   - File name: reportdata.md
+23:05:16.606 DocumentViewer.tsx:21   - File type: markdown
+23:05:16.606 DocumentViewer.tsx:22   - Content length: 12548
+23:05:16.870 DocumentViewer.tsx:19 📺 DocumentViewer RENDERING
+23:05:16.871 DocumentViewer.tsx:20   - File name: reportdata.md
+23:05:16.871 DocumentViewer.tsx:21   - File type: markdown
+23:05:16.871 DocumentViewer.tsx:22   - Content length: 12548
+23:05:18.137 DocumentViewer.tsx:19 📺 DocumentViewer RENDERING
+23:05:18.137 DocumentViewer.tsx:20   - File name: reportdata.md
+23:05:18.138 DocumentViewer.tsx:21   - File type: markdown
+23:05:18.138 DocumentViewer.tsx:22   - Content length: 12548
+23:05:18.482 DocumentViewer.tsx:19 📺 DocumentViewer RENDERING
+23:05:18.482 DocumentViewer.tsx:20   - File name: reportdata.md
+23:05:18.482 DocumentViewer.tsx:21   - File type: markdown
+23:05:18.482 DocumentViewer.tsx:22   - Content length: 12548
+23:05:18.754 DocumentViewer.tsx:19 📺 DocumentViewer RENDERING
+23:05:18.754 DocumentViewer.tsx:20   - File name: reportdata.md
+23:05:18.754 DocumentViewer.tsx:21   - File type: markdown
+23:05:18.755 DocumentViewer.tsx:22   - Content length: 12548
+23:05:19.079 DocumentViewer.tsx:19 📺 DocumentViewer RENDERING
+23:05:19.080 DocumentViewer.tsx:20   - File name: reportdata.md
+23:05:19.080 DocumentViewer.tsx:21   - File type: markdown
+23:05:19.080 DocumentViewer.tsx:22   - Content length: 12548
+23:05:19.393 DocumentViewer.tsx:19 📺 DocumentViewer RENDERING
+23:05:19.393 DocumentViewer.tsx:20   - File name: reportdata.md
+23:05:19.393 DocumentViewer.tsx:21   - File type: markdown
+23:05:19.394 DocumentViewer.tsx:22   - Content length: 12548
+23:05:19.637 DocumentViewer.tsx:19 📺 DocumentViewer RENDERING
+23:05:19.637 DocumentViewer.tsx:20   - File name: reportdata.md
+23:05:19.638    - File type: markdown
+23:05:19.638    - Content length: 12548
+23:05:19.846  📺 DocumentViewer RENDERING
+23:05:19.846    - File name: reportdata.md
+23:05:19.846    - File type: markdown
+23:05:19.847    - Content length: 12548
+23:05:20.100  📺 DocumentViewer RENDERING
+23:05:20.101    - File name: reportdata.md
+23:05:20.101    - File type: markdown
+23:05:20.102    - Content length: 12548
+23:05:20.369  📺 DocumentViewer RENDERING
+23:05:20.370    - File name: reportdata.md
+23:05:20.370    - File type: markdown
+23:05:20.370    - Content length: 12548
+23:05:20.676  📺 DocumentViewer RENDERING
+23:05:20.676    - File name: reportdata.md
+23:05:20.677    - File type: markdown
+23:05:20.677    - Content length: 12548
+23:05:20.955  📺 DocumentViewer RENDERING
+23:05:20.955    - File name: reportdata.md
+23:05:20.955    - File type: markdown
+23:05:20.956    - Content length: 12548
+23:05:21.232  📺 DocumentViewer RENDERING
+23:05:21.232    - File name: reportdata.md
+23:05:21.232    - File type: markdown
+23:05:21.233    - Content length: 12548
+23:05:21.488  📺 DocumentViewer RENDERING
+23:05:21.489    - File name: reportdata.md
+23:05:21.489    - File type: markdown
+23:05:21.489    - Content length: 12548
+23:05:21.725  📺 DocumentViewer RENDERING
+23:05:21.725    - File name: reportdata.md
+23:05:21.725    - File type: markdown
+23:05:21.726    - Content length: 12548
+23:05:22.016  📺 DocumentViewer RENDERING
+23:05:22.017    - File name: reportdata.md
+23:05:22.017    - File type: markdown
+23:05:22.017    - Content length: 12548
+23:05:22.270  📺 DocumentViewer RENDERING
+23:05:22.270    - File name: reportdata.md
+23:05:22.270    - File type: markdown
+23:05:22.271    - Content length: 12548
+23:05:22.514  📺 DocumentViewer RENDERING
+23:05:22.514    - File name: reportdata.md
+23:05:22.514    - File type: markdown
+23:05:22.515    - Content length: 12548
+23:05:22.739  📺 DocumentViewer RENDERING
+23:05:22.739    - File name: reportdata.md
+23:05:22.739    - File type: markdown
+23:05:22.740    - Content length: 12548
+23:05:22.970  📺 DocumentViewer RENDERING
+23:05:22.970    - File name: reportdata.md
+23:05:22.971    - File type: markdown
+23:05:22.971    - Content length: 12548
+23:05:23.263  📺 DocumentViewer RENDERING
+23:05:23.263    - File name: reportdata.md
+23:05:23.263    - File type: markdown
+23:05:23.264    - Content length: 12548
+23:05:23.502  📺 DocumentViewer RENDERING
+23:05:23.502    - File name: reportdata.md
+23:05:23.503    - File type: markdown
+23:05:23.503    - Content length: 12548
+23:05:23.731  📺 DocumentViewer RENDERING
+23:05:23.731    - File name: reportdata.md
+23:05:23.731    - File type: markdown
+23:05:23.732    - Content length: 12548
+23:05:23.971  📺 DocumentViewer RENDERING
+23:05:23.971    - File name: reportdata.md
+23:05:23.972    - File type: markdown
+23:05:23.972    - Content length: 12548
+23:05:24.241  📺 DocumentViewer RENDERING
+23:05:24.241    - File name: reportdata.md
+23:05:24.241    - File type: markdown
+23:05:24.242    - Content length: 12548
+23:05:24.390  [MessageHandler] Selected files: [{…}]
+23:05:24.391  [MessageHandler] Selected source IDs: ['jxr17eyo3']
+23:05:24.392  [MessageHandler] All files available: (2) [{…}, {…}]
+23:05:24.393  [EMBEDDING] Using local Transformers.js for hybrid search
+23:05:24.580  [MessageHandler] Context result: {chunksCount: 1, totalTokens: 1500, filesUsed: Array(1)}
+23:05:24.580  [MessageHandler] Context result: {totalTokens: 1500, filesUsed: 1, chunksCount: 1, selectedFilesCount: 1}
+23:05:24.581  [MessageHandler] Sources: []
+23:05:24.581  [MessageHandler] Triggering RAG with 1 files
+23:05:24.582  [MessageHandler] Sending to LLM, model: llama-3.3-70b-versatile
+23:05:24.582  [MessageHandler] Fetched sources: 0
+23:05:24.582  🔶 [LLM] === SEND MESSAGE START ===
+23:05:24.582  🔶 [LLM] Model: llama-3.3-70b-versatile
+23:05:24.583  🔶 [LLM] Message: Cost Breakdown
+ of all the materials used?...
+23:05:24.583  🔶 [LLM] Active files: 1
+23:05:24.583  🔶 [LLM] Active sources: 0
+23:05:24.584  🔶 [LLM] History length: 11
+23:05:24.584  [RAG] 🔍 Searching relevant chunks in selected files only...
+23:05:24.584  [RAG] Using 10 chunks (Excel/CSV: false, PDF: false)
+23:05:24.721  📺 DocumentViewer RENDERING
+23:05:24.721    - File name: reportdata.md
+23:05:24.721    - File type: markdown
+23:05:24.722    - Content length: 12548
+23:05:24.938  [RAG] Searching across 1 selected files
+23:05:24.939  [RAG] Sub-query: "Cost Breakdown
+ of all the materials used?"
+23:05:24.998  [RAG] ✅ Found 10 relevant chunks from selected files
+23:05:24.998  [RAG] 🔍 First chunk preview: |
+| P13 | Component#13 | 310.0 × 450.6 | Metal_Aluminum_Anodized | Any | None | 7 |
+| P14 | Component#15 | 310.0 × 450.6 | Metal_Aluminum_Anodized | Any | None | 7 |
+| P15 | Component#14 | 310.0 × 
+23:05:24.999  
+🔶 [RAG] === FULL REQUEST BREAKDOWN ===
+23:05:24.999  ���� System Prompt: 1726 tokens
+23:05:24.999  📊 RAG Context: 1497 tokens (10 chunks)
+23:05:24.999  📊 User Message: 11 tokens
+23:05:24.999  📊 TOTAL REQUEST: 3234 tokens
+23:05:24.999  📊 Model Limits: Groq ~8K, Gemini ~1M, GPT-4o ~128K
+23:05:24.999  
+📄 FULL SYSTEM PROMPT (first 500 chars):
+23:05:25.000  You are ConstructLM. Answer questions using the document chunks provided below.
+
+**CITATION RULES:**
+📝 **Markdown/Text Files:** Use {{citation:FileName.md|Section: Title|exact quote}}
+   - Use section headers as location (e.g., "Section: Cost Breakdown")
+   - If no clear section, use "Line X" or just the filename
+   - Example: {{citation:report.md|Section: Summary|Total cost: $1,500}}
+
+**IMPORTANT:**
+- Cite EXACT text from the documents (3-10 words with key information)
+- Include numbers, quant
+23:05:25.000  
+📄 FULL RAG CONTEXT (first 500 chars):
+23:05:25.000  
+
+RELEVANT CONTEXT FROM SEMANTIC SEARCH:
+[1] From reportdata.md (relevance: 100%):
+|
+| P13 | Component#13 | 310.0 × 450.6 | Metal_Aluminum_Anodized | Any | None | 7 |
+| P14 | Component#15 | 310.0 × 450.6 | Metal_Aluminum_Anodized | Any | None | 7 |
+| P15 | Component#14 | 310.0 × 450.6 | Metal_Aluminum_Anodized | Any | None | 7 |
+
+## Cost Breakdown
+
+| Material | Sheets Required | Unit Cost | Total Cost |
+|----------|----------------|-----------|------------|
+| Glass_Basic_01_18mm | 1 | S
+23:05:25.000  
+📄 USER MESSAGE:
+23:05:25.000  Cost Breakdown
+ of all the materials used?
+23:05:25.000  
+🔶 === END FULL REQUEST ===
+
+23:05:25.001  [LLM] Final system prompt being sent (first 300 chars): You are ConstructLM. Answer questions using the document chunks provided below.
+
+**CITATION RULES:**
+📝 **Markdown/Text Files:** Use {{citation:FileName.md|Section: Title|exact quote}}
+   - Use section headers as location (e.g., "Section: Cost Breakdown")
+   - If no clear section, use "Line X" or ju
+23:05:25.001  [LLM] Final system prompt length: 7145
+23:05:25.001  [LLM] Messages array: (2) [{…}, {…}]
+23:05:25.707  [MessageHandler] LLM response complete. Usage: {inputTokens: 2407, outputTokens: 24, totalTokens: 2431}
+23:05:25.708  Fetch failed loading: POST "https://corsproxy.io/?https%3A%2F%2Fapi.groq.com%2Fopenai%2Fv1%2Fchat%2Fcompletions".
+streamOpenAICompatible @ llmService.ts?t=1770493794478:439
+sendMessageToLLM @ llmService.ts?t=1770493794478:258
+await in sendMessageToLLM
+sendMessageWithContext @ messageHandlers.ts?t=1770493794478:129
+handleSendMessage @ messageHandlers.ts?t=1770493794478:75
+await in handleSendMessage
+handleKeyDown @ inputHandlers.ts:47
+executeDispatch @ react-dom_client.js?v=be37ebb8:13622
+runWithFiberInDEV @ react-dom_client.js?v=be37ebb8:997
+processDispatchQueue @ react-dom_client.js?v=be37ebb8:13658
+(anonymous) @ react-dom_client.js?v=be37ebb8:14071
+batchedUpdates$1 @ react-dom_client.js?v=be37ebb8:2626
+dispatchEventForPluginEventSystem @ react-dom_client.js?v=be37ebb8:13763
+dispatchEvent @ react-dom_client.js?v=be37ebb8:16784
+dispatchDiscreteEvent @ react-dom_client.js?v=be37ebb8:16765
+23:05:25.708  [MessageHandler] Final content length: 81
+23:05:33.813  📺 DocumentViewer RENDERING
+23:05:33.813    - File name: reportdata.md
+23:05:33.813    - File type: markdown
+23:05:33.813    - Content length: 12548
+23:05:34.153  ❌ Citation highlight not found
+overrideMethod @ installHook.js:1
+console.warn @ (index):70
+(anonymous) @ scrollUtils.ts?t=1770494446365:17
+setTimeout
+(anonymous) @ scrollUtils.ts?t=1770494446365:3
+scrollToHighlight @ scrollUtils.ts?t=1770494446365:2
+(anonymous) @ MarkdownViewer.tsx?t=1770494446365:177
+react_stack_bottom_frame @ react-dom_client.js?v=be37ebb8:18567
+runWithFiberInDEV @ react-dom_client.js?v=be37ebb8:997
+commitHookEffectListMount @ react-dom_client.js?v=be37ebb8:9411
+commitHookPassiveMountEffects @ react-dom_client.js?v=be37ebb8:9465
+commitPassiveMountOnFiber @ react-dom_client.js?v=be37ebb8:11040
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=be37ebb8:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=be37ebb8:11201
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=be37ebb8:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=be37ebb8:11033
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=be37ebb8:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=be37ebb8:11201
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=be37ebb8:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=be37ebb8:11201
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=be37ebb8:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=be37ebb8:11033
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=be37ebb8:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=be37ebb8:11066
+flushPassiveEffects @ react-dom_client.js?v=be37ebb8:13150
+flushPendingEffects @ react-dom_client.js?v=be37ebb8:13088
+flushSpawnedWork @ react-dom_client.js?v=be37ebb8:13062
+commitRoot @ react-dom_client.js?v=be37ebb8:12804
+commitRootWhenReady @ react-dom_client.js?v=be37ebb8:12016
+performWorkOnRoot @ react-dom_client.js?v=be37ebb8:11950
+performSyncWorkOnRoot @ react-dom_client.js?v=be37ebb8:13517
+flushSyncWorkAcrossRoots_impl @ react-dom_client.js?v=be37ebb8:13414
+processRootScheduleInMicrotask @ react-dom_client.js?v=be37ebb8:13437
+(anonymous) @ react-dom_client.js?v=be37ebb8:13531
+<MarkdownViewer>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=be37ebb8:247
+DocumentViewer @ DocumentViewer.tsx?t=1770492909171:205
+react_stack_bottom_frame @ react-dom_client.js?v=be37ebb8:18509
+renderWithHooks @ react-dom_client.js?v=be37ebb8:5654
+updateFunctionComponent @ react-dom_client.js?v=be37ebb8:7475
+beginWork @ react-dom_client.js?v=be37ebb8:8525
+runWithFiberInDEV @ react-dom_client.js?v=be37ebb8:997
+performUnitOfWork @ react-dom_client.js?v=be37ebb8:12561
+workLoopSync @ react-dom_client.js?v=be37ebb8:12424
+renderRootSync @ react-dom_client.js?v=be37ebb8:12408
+performWorkOnRoot @ react-dom_client.js?v=be37ebb8:11766
+performSyncWorkOnRoot @ react-dom_client.js?v=be37ebb8:13517
+flushSyncWorkAcrossRoots_impl @ react-dom_client.js?v=be37ebb8:13414
+processRootScheduleInMicrotask @ react-dom_client.js?v=be37ebb8:13437
+(anonymous) @ react-dom_client.js?v=be37ebb8:13531
+<DocumentViewer>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=be37ebb8:247
+App @ App.tsx?t=1770493794478:1341
+react_stack_bottom_frame @ react-dom_client.js?v=be37ebb8:18509
+renderWithHooks @ react-dom_client.js?v=be37ebb8:5654
+updateFunctionComponent @ react-dom_client.js?v=be37ebb8:7475
+beginWork @ react-dom_client.js?v=be37ebb8:8525
+runWithFiberInDEV @ react-dom_client.js?v=be37ebb8:997
+performUnitOfWork @ react-dom_client.js?v=be37ebb8:12561
+workLoopSync @ react-dom_client.js?v=be37ebb8:12424
+renderRootSync @ react-dom_client.js?v=be37ebb8:12408
+performWorkOnRoot @ react-dom_client.js?v=be37ebb8:11766
+performSyncWorkOnRoot @ react-dom_client.js?v=be37ebb8:13517
+flushSyncWorkAcrossRoots_impl @ react-dom_client.js?v=be37ebb8:13414
+processRootScheduleInMicrotask @ react-dom_client.js?v=be37ebb8:13437
+(anonymous) @ react-dom_client.js?v=be37ebb8:13531
+23:05:38.330  [MessageHandler] Selected files: [{…}]
+23:05:38.330  [MessageHandler] Selected source IDs: ['jxr17eyo3']
+23:05:38.331  [MessageHandler] All files available: (2) [{…}, {…}]
+23:05:38.331  [EMBEDDING] Using local Transformers.js for hybrid search
+23:05:38.399  [MessageHandler] Context result: {chunksCount: 1, totalTokens: 1500, filesUsed: Array(1)}
+23:05:38.400  [MessageHandler] Context result: {totalTokens: 1500, filesUsed: 1, chunksCount: 1, selectedFilesCount: 1}
+23:05:38.400  [MessageHandler] Sources: []
+23:05:38.401  [MessageHandler] Triggering RAG with 1 files
+23:05:38.401  [MessageHandler] Sending to LLM, model: llama-3.3-70b-versatile
+23:05:38.401  [MessageHandler] Fetched sources: 0
+23:05:38.401  🔶 [LLM] === SEND MESSAGE START ===
+23:05:38.401  🔶 [LLM] Model: llama-3.3-70b-versatile
+23:05:38.402  🔶 [LLM] Message: Cost Breakdown
+ of all the materials used?...
+23:05:38.402  🔶 [LLM] Active files: 1
+23:05:38.402  🔶 [LLM] Active sources: 0
+23:05:38.402  🔶 [LLM] History length: 13
+23:05:38.402  [RAG] 🔍 Searching relevant chunks in selected files only...
+23:05:38.402  [RAG] Using 10 chunks (Excel/CSV: false, PDF: false)
+23:05:38.589  [RAG] Searching across 1 selected files
+23:05:38.590  [RAG] Sub-query: "Cost Breakdown
+ of all the materials used?"
+23:05:38.661  [RAG] ✅ Found 10 relevant chunks from selected files
+23:05:38.661  [RAG] 🔍 First chunk preview: |
+| P13 | Component#13 | 310.0 × 450.6 | Metal_Aluminum_Anodized | Any | None | 7 |
+| P14 | Component#15 | 310.0 × 450.6 | Metal_Aluminum_Anodized | Any | None | 7 |
+| P15 | Component#14 | 310.0 × 
+23:05:38.661  
+🔶 [RAG] === FULL REQUEST BREAKDOWN ===
+23:05:38.662  ���� System Prompt: 1726 tokens
+23:05:38.662  📊 RAG Context: 1497 tokens (10 chunks)
+23:05:38.663  📊 User Message: 11 tokens
+23:05:38.663  📊 TOTAL REQUEST: 3234 tokens
+23:05:38.664  📊 Model Limits: Groq ~8K, Gemini ~1M, GPT-4o ~128K
+23:05:38.665  
+📄 FULL SYSTEM PROMPT (first 500 chars):
+23:05:38.665  You are ConstructLM. Answer questions using the document chunks provided below.
+
+**CITATION RULES:**
+📝 **Markdown/Text Files:** Use {{citation:FileName.md|Section: Title|exact quote}}
+   - Use section headers as location (e.g., "Section: Cost Breakdown")
+   - If no clear section, use "Line X" or just the filename
+   - Example: {{citation:report.md|Section: Summary|Total cost: $1,500}}
+
+**IMPORTANT:**
+- Cite EXACT text from the documents (3-10 words with key information)
+- Include numbers, quant
+23:05:38.665  
+📄 FULL RAG CONTEXT (first 500 chars):
+23:05:38.665  
+
+RELEVANT CONTEXT FROM SEMANTIC SEARCH:
+[1] From reportdata.md (relevance: 100%):
+|
+| P13 | Component#13 | 310.0 × 450.6 | Metal_Aluminum_Anodized | Any | None | 7 |
+| P14 | Component#15 | 310.0 × 450.6 | Metal_Aluminum_Anodized | Any | None | 7 |
+| P15 | Component#14 | 310.0 × 450.6 | Metal_Aluminum_Anodized | Any | None | 7 |
+
+## Cost Breakdown
+
+| Material | Sheets Required | Unit Cost | Total Cost |
+|----------|----------------|-----------|------------|
+| Glass_Basic_01_18mm | 1 | S
+23:05:38.665  
+📄 USER MESSAGE:
+23:05:38.666  Cost Breakdown
+ of all the materials used?
+23:05:38.666  
+🔶 === END FULL REQUEST ===
+
+23:05:38.666  [LLM] Final system prompt being sent (first 300 chars): You are ConstructLM. Answer questions using the document chunks provided below.
+
+**CITATION RULES:**
+📝 **Markdown/Text Files:** Use {{citation:FileName.md|Section: Title|exact quote}}
+   - Use section headers as location (e.g., "Section: Cost Breakdown")
+   - If no clear section, use "Line X" or ju
+23:05:38.666  [LLM] Final system prompt length: 7145
+23:05:38.667  [LLM] Messages array: (2) [{…}, {…}]
+23:05:39.284  [MessageHandler] LLM response complete. Usage: {inputTokens: 2407, outputTokens: 24, totalTokens: 2431}
+23:05:39.284  [MessageHandler] Final content length: 81
+23:05:39.291  Fetch finished loading: POST "https://corsproxy.io/?https%3A%2F%2Fapi.groq.com%2Fopenai%2Fv1%2Fchat%2Fcompletions".
+streamOpenAICompatible @ llmService.ts?t=1770493794478:439
+sendMessageToLLM @ llmService.ts?t=1770493794478:258
+await in sendMessageToLLM
+sendMessageWithContext @ messageHandlers.ts?t=1770493794478:129
+handleSendMessage @ messageHandlers.ts?t=1770493794478:75
+await in handleSendMessage
+jsxDEV.onRetryMessage @ App.tsx?t=1770493794478:1113
+onClick @ MessageBubble.tsx?t=1770492065242:812
+executeDispatch @ react-dom_client.js?v=be37ebb8:13622
+runWithFiberInDEV @ react-dom_client.js?v=be37ebb8:997
+processDispatchQueue @ react-dom_client.js?v=be37ebb8:13658
+(anonymous) @ react-dom_client.js?v=be37ebb8:14071
+batchedUpdates$1 @ react-dom_client.js?v=be37ebb8:2626
+dispatchEventForPluginEventSystem @ react-dom_client.js?v=be37ebb8:13763
+dispatchEvent @ react-dom_client.js?v=be37ebb8:16784
+dispatchDiscreteEvent @ react-dom_client.js?v=be37ebb8:16765
+23:05:44.996  📺 DocumentViewer RENDERING
+23:05:44.996    - File name: reportdata.md
+23:05:44.996    - File type: markdown
+23:05:44.997    - Content length: 12548
+23:05:45.366  ❌ Citation highlight not found
+overrideMethod @ installHook.js:1
+console.warn @ (index):70
+(anonymous) @ scrollUtils.ts?t=1770494446365:17
+setTimeout
+(anonymous) @ scrollUtils.ts?t=1770494446365:3
+scrollToHighlight @ scrollUtils.ts?t=1770494446365:2
+(anonymous) @ MarkdownViewer.tsx?t=1770494446365:177
+react_stack_bottom_frame @ react-dom_client.js?v=be37ebb8:18567
+runWithFiberInDEV @ react-dom_client.js?v=be37ebb8:997
+commitHookEffectListMount @ react-dom_client.js?v=be37ebb8:9411
+commitHookPassiveMountEffects @ react-dom_client.js?v=be37ebb8:9465
+commitPassiveMountOnFiber @ react-dom_client.js?v=be37ebb8:11040
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=be37ebb8:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=be37ebb8:11201
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=be37ebb8:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=be37ebb8:11033
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=be37ebb8:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=be37ebb8:11201
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=be37ebb8:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=be37ebb8:11201
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=be37ebb8:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=be37ebb8:11033
+recursivelyTraversePassiveMountEffects @ react-dom_client.js?v=be37ebb8:11010
+commitPassiveMountOnFiber @ react-dom_client.js?v=be37ebb8:11066
+flushPassiveEffects @ react-dom_client.js?v=be37ebb8:13150
+flushPendingEffects @ react-dom_client.js?v=be37ebb8:13088
+flushSpawnedWork @ react-dom_client.js?v=be37ebb8:13062
+commitRoot @ react-dom_client.js?v=be37ebb8:12804
+commitRootWhenReady @ react-dom_client.js?v=be37ebb8:12016
+performWorkOnRoot @ react-dom_client.js?v=be37ebb8:11950
+performSyncWorkOnRoot @ react-dom_client.js?v=be37ebb8:13517
+flushSyncWorkAcrossRoots_impl @ react-dom_client.js?v=be37ebb8:13414
+processRootScheduleInMicrotask @ react-dom_client.js?v=be37ebb8:13437
+(anonymous) @ react-dom_client.js?v=be37ebb8:13531
+<MarkdownViewer>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=be37ebb8:247
+DocumentViewer @ DocumentViewer.tsx?t=1770492909171:205
+react_stack_bottom_frame @ react-dom_client.js?v=be37ebb8:18509
+renderWithHooks @ react-dom_client.js?v=be37ebb8:5654
+updateFunctionComponent @ react-dom_client.js?v=be37ebb8:7475
+beginWork @ react-dom_client.js?v=be37ebb8:8525
+runWithFiberInDEV @ react-dom_client.js?v=be37ebb8:997
+performUnitOfWork @ react-dom_client.js?v=be37ebb8:12561
+workLoopSync @ react-dom_client.js?v=be37ebb8:12424
+renderRootSync @ react-dom_client.js?v=be37ebb8:12408
+performWorkOnRoot @ react-dom_client.js?v=be37ebb8:11766
+performSyncWorkOnRoot @ react-dom_client.js?v=be37ebb8:13517
+flushSyncWorkAcrossRoots_impl @ react-dom_client.js?v=be37ebb8:13414
+processRootScheduleInMicrotask @ react-dom_client.js?v=be37ebb8:13437
+(anonymous) @ react-dom_client.js?v=be37ebb8:13531
+<DocumentViewer>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=be37ebb8:247
+App @ App.tsx?t=1770493794478:1341
+react_stack_bottom_frame @ react-dom_client.js?v=be37ebb8:18509
+renderWithHooks @ react-dom_client.js?v=be37ebb8:5654
+updateFunctionComponent @ react-dom_client.js?v=be37ebb8:7475
+beginWork @ react-dom_client.js?v=be37ebb8:8525
+runWithFiberInDEV @ react-dom_client.js?v=be37ebb8:997
+performUnitOfWork @ react-dom_client.js?v=be37ebb8:12561
+workLoopSync @ react-dom_client.js?v=be37ebb8:12424
+renderRootSync @ react-dom_client.js?v=be37ebb8:12408
+performWorkOnRoot @ react-dom_client.js?v=be37ebb8:11766
+performSyncWorkOnRoot @ react-dom_client.js?v=be37ebb8:13517
+flushSyncWorkAcrossRoots_impl @ react-dom_client.js?v=be37ebb8:13414
+processRootScheduleInMicrotask @ react-dom_client.js?v=be37ebb8:13437
+(anonymous) @ react-dom_client.js?v=be37ebb8:13531
+23:05:55.502  📺 DocumentViewer RENDERING
+23:05:55.503    - File name: reportdata.md
+23:05:55.503    - File type: markdown
+23:05:55.503    - Content length: 12548
+23:06:01.100  📺 DocumentViewer RENDERING
+23:06:01.100    - File name: reportdata.md
+23:06:01.101    - File type: markdown
+23:06:01.101    - Content length: 12548
+23:06:01.524  📺 DocumentViewer RENDERING
+23:06:01.524    - File name: reportdata.md
+23:06:01.525    - File type: markdown
+23:06:01.525    - Content length: 12548
+23:06:02.261  📺 DocumentViewer RENDERING
+23:06:02.261    - File name: reportdata.md
+23:06:02.261    - File type: markdown
+23:06:02.262    - Content length: 12548
+23:06:02.534  📺 DocumentViewer RENDERING
+23:06:02.534    - File name: reportdata.md
+23:06:02.534    - File type: markdown
+23:06:02.535    - Content length: 12548
+23:06:03.676  📺 DocumentViewer RENDERING
+23:06:03.676    - File name: reportdata.md
+23:06:03.677    - File type: markdown
+23:06:03.677    - Content length: 12548
+23:06:25.248  [MessageHandler] Selected files: [{…}]
+23:06:25.249  [MessageHandler] Selected source IDs: ['jxr17eyo3']
+23:06:25.249  [MessageHandler] All files available: (2) [{…}, {…}]
+23:06:25.250  [EMBEDDING] Using local Transformers.js for hybrid search
+23:06:25.408  [MessageHandler] Context result: {chunksCount: 1, totalTokens: 1500, filesUsed: Array(1)}
+23:06:25.409  [MessageHandler] Context result: {totalTokens: 1500, filesUsed: 1, chunksCount: 1, selectedFilesCount: 1}
+23:06:25.410  [MessageHandler] Sources: []
+23:06:25.410  [MessageHandler] Triggering RAG with 1 files
+23:06:25.411  [MessageHandler] Sending to LLM, model: llama-3.3-70b-versatile
+23:06:25.411  [MessageHandler] Fetched sources: 0
+23:06:25.411  🔶 [LLM] === SEND MESSAGE START ===
+23:06:25.412  🔶 [LLM] Model: llama-3.3-70b-versatile
+23:06:25.412  🔶 [LLM] Message: Usable Offcuts of MetalCorrogatedShiny_36mm
+...
+23:06:25.412  🔶 [LLM] Active files: 1
+23:06:25.412  🔶 [LLM] Active sources: 0
+23:06:25.412  🔶 [LLM] History length: 13
+23:06:25.413  [RAG] 🔍 Searching relevant chunks in selected files only...
+23:06:25.413  [RAG] Using 10 chunks (Excel/CSV: false, PDF: false)
+23:06:25.621  [RAG] Searching across 1 selected files
+23:06:25.622  [RAG] Sub-query: "Usable Offcuts of MetalCorrogatedShiny_36mm
+"
+23:06:26.124  [RAG] ✅ Found 10 relevant chunks from selected files
+23:06:26.124  [RAG] 🔍 First chunk preview: 300.00 |
+| Metal_Aluminum_Anodized_18mm | SAR225.00 |
+| Metal_Corrogated_Shiny_20mm | SAR225.00 |
+| Metal_Corrogated_Shiny_26mm | SAR225.00 |
+| Metal_Corrogated_Shiny_30mm | SAR225.00 |
+| Metal_C
+23:06:26.125  
+🔶 [RAG] === FULL REQUEST BREAKDOWN ===
+23:06:26.125  ���� System Prompt: 1726 tokens
+23:06:26.125  📊 RAG Context: 1497 tokens (10 chunks)
+23:06:26.126  📊 User Message: 11 tokens
+23:06:26.126  📊 TOTAL REQUEST: 3234 tokens
+23:06:26.126  📊 Model Limits: Groq ~8K, Gemini ~1M, GPT-4o ~128K
+23:06:26.126  
+📄 FULL SYSTEM PROMPT (first 500 chars):
+23:06:26.127  You are ConstructLM. Answer questions using the document chunks provided below.
+
+**CITATION RULES:**
+📝 **Markdown/Text Files:** Use {{citation:FileName.md|Section: Title|exact quote}}
+   - Use section headers as location (e.g., "Section: Cost Breakdown")
+   - If no clear section, use "Line X" or just the filename
+   - Example: {{citation:report.md|Section: Summary|Total cost: $1,500}}
+
+**IMPORTANT:**
+- Cite EXACT text from the documents (3-10 words with key information)
+- Include numbers, quant
+23:06:26.127  
+📄 FULL RAG CONTEXT (first 500 chars):
+23:06:26.127  
+
+RELEVANT CONTEXT FROM SEMANTIC SEARCH:
+[1] From reportdata.md (relevance: 100%):
+300.00 |
+| Metal_Aluminum_Anodized_18mm | SAR225.00 |
+| Metal_Corrogated_Shiny_20mm | SAR225.00 |
+| Metal_Corrogated_Shiny_26mm | SAR225.00 |
+| Metal_Corrogated_Shiny_30mm | SAR225.00 |
+| Metal_Corrogated_Shiny_36mm | SAR225.00 |
+| Metal_Corrogated_Shiny_59mm | SAR0.00 |
+
+## Unique Part Types
+
+| Name | Width (mm) | Height (mm) | Thickness (mm) | Material | Grain | Edge Banding | Qty | Total Area (m²) | W
+23:06:26.127  
+📄 USER MESSAGE:
+23:06:26.127  Usable Offcuts of MetalCorrogatedShiny_36mm
+23:06:26.128  
+🔶 === END FULL REQUEST ===
+
+23:06:26.128  [LLM] Final system prompt being sent (first 300 chars): You are ConstructLM. Answer questions using the document chunks provided below.
+
+**CITATION RULES:**
+📝 **Markdown/Text Files:** Use {{citation:FileName.md|Section: Title|exact quote}}
+   - Use section headers as location (e.g., "Section: Cost Breakdown")
+   - If no clear section, use "Line X" or ju
+23:06:26.128  [LLM] Final system prompt length: 7145
+23:06:26.129  [LLM] Messages array: (2) [{…}, {…}]
+23:06:27.173  [MessageHandler] LLM response complete. Usage: {inputTokens: 2278, outputTokens: 106, totalTokens: 2384}
+23:06:27.173  [MessageHandler] Final content length: 327
+23:06:27.176  Fetch failed loading: POST "https://corsproxy.io/?https%3A%2F%2Fapi.groq.com%2Fopenai%2Fv1%2Fchat%2Fcompletions".
+streamOpenAICompatible @ llmService.ts?t=1770493794478:439
+sendMessageToLLM @ llmService.ts?t=1770493794478:258
+await in sendMessageToLLM
+sendMessageWithContext @ messageHandlers.ts?t=1770493794478:129
+handleSendMessage @ messageHandlers.ts?t=1770493794478:75
+await in handleSendMessage
+onSendMessage @ App.tsx?t=1770493794478:1263
+executeDispatch @ react-dom_client.js?v=be37ebb8:13622
+runWithFiberInDEV @ react-dom_client.js?v=be37ebb8:997
+processDispatchQueue @ react-dom_client.js?v=be37ebb8:13658
+(anonymous) @ react-dom_client.js?v=be37ebb8:14071
+batchedUpdates$1 @ react-dom_client.js?v=be37ebb8:2626
+dispatchEventForPluginEventSystem @ react-dom_client.js?v=be37ebb8:13763
+dispatchEvent @ react-dom_client.js?v=be37ebb8:16784
+dispatchDiscreteEvent @ react-dom_client.js?v=be37ebb8:16765

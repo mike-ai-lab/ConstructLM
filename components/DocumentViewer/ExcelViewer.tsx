@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { ProcessedFile } from '../../types';
 import { FileSpreadsheet } from 'lucide-react';
+import { scrollToElementById, HIGHLIGHT_CLASSES } from '@/utils/scrollUtils';
 
 interface ExcelViewerProps {
   file: ProcessedFile;
@@ -9,18 +10,21 @@ interface ExcelViewerProps {
 }
 
 const ExcelViewer: React.FC<ExcelViewerProps> = ({ file, location, textScale }) => {
+  console.log('📊 [ExcelViewer] Rendered with:', { 
+    fileName: file.name, 
+    location, 
+    hasContent: !!file.content,
+    contentLength: file.content?.length 
+  });
+
   useEffect(() => {
-    const tryScroll = () => {
-      const rowEl = document.getElementById('excel-highlight-row');
-      if (rowEl) {
-        rowEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        return true;
-      }
-      return false;
-    };
-    setTimeout(tryScroll, 100);
-    setTimeout(tryScroll, 300);
-    setTimeout(tryScroll, 600);
+    if (location) {
+      console.log('📊 [ExcelViewer] useEffect triggered - attempting scroll to:', location);
+      // Use unified scroll utility with proper delay
+      scrollToElementById('excel-highlight-row', 200);
+    } else {
+      console.log('📊 [ExcelViewer] No location provided, skipping scroll');
+    }
   }, [location, file]);
 
   // ✅ NEW: Robust CSV Parser that handles newlines inside quotes
@@ -75,6 +79,12 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({ file, location, textScale }) 
   };
 
   const parseExcelContent = (content: string, highlightLoc?: string) => {
+    console.log('📊 [ExcelViewer.parseExcelContent] Parsing with:', {
+      contentLength: content.length,
+      highlightLoc,
+      hasHighlight: !!highlightLoc
+    });
+
     const sheetRegex = /--- \[Sheet: (.*?)\] ---/g;
     const parts = content.split(sheetRegex);
     
@@ -87,6 +97,13 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({ file, location, textScale }) 
       if (sheetMatch) targetSheet = sheetMatch[1].trim().toLowerCase();
       const rowMatch = highlightLoc.match(/(?:Row|Line)\s*[:#.]?\s*(\d+)/i);
       if (rowMatch) targetRow = parseInt(rowMatch[1], 10);
+      
+      console.log('📊 [ExcelViewer.parseExcelContent] Extracted highlight info:', {
+        targetSheet,
+        targetRow,
+        sheetMatch: !!sheetMatch,
+        rowMatch: !!rowMatch
+      });
     }
 
     if (parts[0].trim()) {
@@ -106,15 +123,24 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({ file, location, textScale }) 
       
       const isTargetSheet = targetSheet && sheetName.toLowerCase().includes(targetSheet);
       
+      console.log('📊 [ExcelViewer.parseExcelContent] Processing sheet:', {
+        sheetName,
+        isTargetSheet,
+        rowCount: rows.length,
+        targetRow
+      });
+
       // Logic to find row by content if line number missing
       if (targetRow === -1 && location) {
         const quoteMatch = location.match(/["']([^"']+)["']/);
         if (quoteMatch) {
           const searchText = quoteMatch[1].toLowerCase();
+          console.log('📊 [ExcelViewer.parseExcelContent] Searching for quote:', searchText);
           for (let r = 0; r < rows.length; r++) {
             const rowText = rows[r].join(' ').toLowerCase();
             if (rowText.includes(searchText)) {
               targetRow = r + 1;
+              console.log('✅ [ExcelViewer.parseExcelContent] Found quote in row:', targetRow);
               break;
             }
           }
@@ -138,7 +164,7 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({ file, location, textScale }) 
                     <tr 
                       key={rIdx} 
                       id={isHighlightRow ? "excel-highlight-row" : undefined}
-                      className={`transition-colors duration-500 ${isHeaderRow ? "bg-gray-100 dark:bg-[#1a1a1a] font-semibold text-[#1a1a1a] dark:text-white sticky top-0 z-20" : "text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#222222]"} ${isHighlightRow ? "bg-yellow-200 dark:bg-yellow-600/50 ring-2 ring-inset ring-yellow-400 dark:ring-yellow-600 z-10 relative" : ""}`}
+                      className={`transition-colors duration-500 ${isHeaderRow ? "bg-gray-100 dark:bg-[#1a1a1a] font-semibold text-[#1a1a1a] dark:text-white sticky top-0 z-20" : "text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#222222]"} ${isHighlightRow ? `${HIGHLIGHT_CLASSES.ROW} bg-yellow-200 dark:bg-yellow-600/50 ring-2 ring-inset ring-yellow-400 dark:ring-yellow-600 z-10 relative` : ""}`}
                     >
                       <td className={`px-1 py-1 w-8 select-none text-[12px] text-right border-r border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] ${isHeaderRow ? "bg-gray-100 dark:bg-[#1a1a1a]" : "bg-[rgba(0,0,0,0.03)] dark:bg-[#1a1a1a]"} ${isHighlightRow ? "text-yellow-700 dark:text-yellow-400 font-bold" : "text-[#999999] dark:text-[#666666]"}`}>
                         {visualRowNumber}

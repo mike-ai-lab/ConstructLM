@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ProcessedFile } from '../../types';
+import { scrollToElementById, HIGHLIGHT_CLASSES } from '@/utils/scrollUtils';
 
 interface TextViewerProps {
   file: ProcessedFile;
@@ -8,21 +9,20 @@ interface TextViewerProps {
 }
 
 const TextViewer: React.FC<TextViewerProps> = ({ file, highlightQuote, textScale }) => {
+  console.log('📄 [TextViewer] Rendered with:', {
+    fileName: file.name,
+    fileType: file.type,
+    highlightQuote,
+    hasContent: !!file.content,
+    contentLength: file.content?.length
+  });
+
   useEffect(() => {
     if (highlightQuote) {
-      const tryScroll = () => {
-        const textEl = document.getElementById('text-highlight-match');
-        if (textEl) {
-          textEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          return true;
-        }
-        return false;
-      };
-      if (!tryScroll()) {
-        setTimeout(tryScroll, 100);
-        setTimeout(tryScroll, 300);
-        setTimeout(tryScroll, 600);
-      }
+      console.log('📄 [TextViewer] useEffect triggered - attempting scroll for quote:', highlightQuote);
+      scrollToElementById('text-highlight-match', 200);
+    } else {
+      console.log('📄 [TextViewer] No highlight quote provided');
     }
   }, [highlightQuote, textScale]);
 
@@ -47,7 +47,7 @@ const TextViewer: React.FC<TextViewerProps> = ({ file, highlightQuote, textScale
       <pre className="font-mono text-sm text-[#1a1a1a] dark:text-white whitespace-pre-wrap leading-relaxed">
         {parts.map((part, i) => 
           part.toLowerCase() === highlightQuote.toLowerCase() 
-            ? <mark key={i} id="text-highlight-match" className="bg-[#9ce8d6]/40 dark:bg-[#5bd8bb]/20 text-[#1a1a1a] dark:text-white rounded px-0.5 font-bold border-b-2 border-[#25b5cd]">{part}</mark>
+            ? <mark key={i} id="text-highlight-match" className={`${HIGHLIGHT_CLASSES.MARK} bg-[#9ce8d6]/40 dark:bg-[#5bd8bb]/20 text-[#1a1a1a] dark:text-white rounded px-0.5 font-bold border-b-2 border-[#25b5cd]`}>{part}</mark>
             : part
         )}
       </pre>

@@ -1,5 +1,7 @@
 import React, { useMemo, useEffect, useRef } from 'react';
 import { ProcessedFile } from '../../types';
+import { scrollToHighlight, HIGHLIGHT_SELECTORS, HIGHLIGHT_CLASSES } from '@/utils/scrollUtils';
+import { normalizeForMatching } from '@/utils/textNormalization';
 
 interface MarkdownViewerProps {
   file: ProcessedFile;
@@ -8,19 +10,11 @@ interface MarkdownViewerProps {
 }
 
 const parseMarkdown = (md: string, highlightQuote?: string): string => {
-  console.log('🔍 parseMarkdown called');
-  console.log('  - Input length:', md.length);
-  console.log('  - Input preview:', md.substring(0, 200));
-  
   // Normalize line breaks and handle content that's all on one line
   let normalized = md.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
   
-  console.log('  - After normalization, has newlines:', normalized.includes('\n'));
-  console.log('  - Line count:', normalized.split('\n').length);
-  
   // If content appears to be on one line, try to split by common markdown patterns
   if (!normalized.includes('\n') || normalized.split('\n').length < 3) {
-    console.log('  ⚠️ Content is on one line, attempting to split...');
     normalized = normalized
       .replace(/([.!?])\s+(#{1,6}\s)/g, '$1\n\n$2')  // Split before headers
       .replace(/(#{1,6}\s[^#]+?)\s+(#{1,6}\s)/g, '$1\n\n$2')  // Split between headers
@@ -30,11 +24,9 @@ const parseMarkdown = (md: string, highlightQuote?: string): string => {
       .replace(/([^\n])(```)/g, '$1\n$2')  // Split before code blocks
       .replace(/(```[^`]*```)/g, '\n$1\n')  // Wrap code blocks
       .replace(/([.!?])\s+([A-Z])/g, '$1\n\n$2');  // Split sentences into paragraphs
-    console.log('  ✅ After splitting, line count:', normalized.split('\n').length);
   }
   
   const lines = normalized.split('\n');
-  console.log('  - Processing', lines.length, 'lines');
   
   
   const result: string[] = [];
@@ -45,7 +37,7 @@ const parseMarkdown = (md: string, highlightQuote?: string): string => {
   let listType = '';
   let inHtmlBlock = false;
   let htmlBlockContent: string[] = [];
-  const quoteNorm = highlightQuote?.toLowerCase().trim();
+  const quoteNorm = highlightQuote ? normalizeForMatching(highlightQuote) : undefined;
 
   const flushList = () => {
     if (listItems.length > 0) {
@@ -68,14 +60,15 @@ const parseMarkdown = (md: string, highlightQuote?: string): string => {
       .replace(/~~(.*?)~~/g, '<del>$1</del>')
       .replace(/`([^`]+)`/g, '<code class="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-sm font-mono">$1</code>');
     
-    if (quoteNorm && processed.toLowerCase().includes(quoteNorm)) {
-      const lowerProcessed = processed.toLowerCase();
-      const startIdx = lowerProcessed.indexOf(quoteNorm);
+    // Apply highlighting if quote is present
+    if (quoteNorm && highlightQuote) {
+      const processedNorm = normalizeForMatching(processed);
+      const startIdx = processedNorm.indexOf(quoteNorm);
       if (startIdx !== -1) {
         const before = processed.substring(0, startIdx);
-        const match = processed.substring(startIdx, startIdx + highlightQuote!.length);
-        const after = processed.substring(startIdx + highlightQuote!.length);
-        processed = `${before}<mark class="bg-yellow-300 dark:bg-yellow-700 highlight-target">${match}</mark>${after}`;
+        const match = processed.substring(startIdx, startIdx + highlightQuote.length);
+        const after = processed.substring(startIdx + highlightQuote.length);
+        processed = `${before}<mark class="${HIGHLIGHT_CLASSES.TARGET} bg-yellow-300 dark:bg-yellow-700 highlight-target">${match}</mark>${after}`;
       }
     }
     return processed;
@@ -220,28 +213,13 @@ const parseMarkdown = (md: string, highlightQuote?: string): string => {
 const MarkdownViewer: React.FC<MarkdownViewerProps> = ({ file, textScale, highlightQuote }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   
-  console.log('🎨 MarkdownViewer RENDERING');
-  console.log('  - File name:', file.name);
-  console.log('  - File type:', file.type);
-  console.log('  - Content length:', file.content.length);
-  console.log('  - Content preview:', file.content.substring(0, 200));
-  
   const htmlContent = useMemo(() => {
-    console.log('🔄 Parsing markdown...');
-    const result = parseMarkdown(file.content, highlightQuote);
-    console.log('✅ Parsed HTML length:', result.length);
-    console.log('✅ Parsed HTML preview:', result.substring(0, 500));
-    return result;
+    return parseMarkdown(file.content, highlightQuote);
   }, [file.content, highlightQuote]);
   
   useEffect(() => {
     if (highlightQuote && containerRef.current) {
-      setTimeout(() => {
-        const target = containerRef.current?.querySelector('.highlight-target');
-        if (target) {
-          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }, 100);
+      scrollToHighlight(containerRef, HIGHLIGHT_SELECTORS.ANY, 200);
     }
   }, [highlightQuote, htmlContent]);
   

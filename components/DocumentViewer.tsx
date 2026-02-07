@@ -16,11 +16,6 @@ interface DocumentViewerProps {
 }
 
 const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, initialPage = 1, highlightQuote, location, onClose }) => {
-  console.log('📺 DocumentViewer RENDERING');
-  console.log('  - File name:', file.name);
-  console.log('  - File type:', file.type);
-  console.log('  - Content length:', file.content?.length || 0);
-  
   const isPdf = file.type === 'pdf';
   const [viewScale, setViewScale] = useState(1);
   const [textScale, setTextScale] = useState(1.0);

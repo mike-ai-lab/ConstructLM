@@ -1,10 +1,13 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { ProcessedFile } from '../../types';
 import { Table } from 'lucide-react';
+import { scrollToElementById, HIGHLIGHT_CLASSES } from '@/utils/scrollUtils';
 
 interface CsvViewerProps {
   file: ProcessedFile;
   textScale: number;
+  highlightQuote?: string;
+  location?: string;
 }
 
 const parseCSV = (text: string): string[][] => {
@@ -52,8 +55,25 @@ const parseCSV = (text: string): string[][] => {
   return rows;
 };
 
-const CsvViewer: React.FC<CsvViewerProps> = ({ file, textScale }) => {
+const CsvViewer: React.FC<CsvViewerProps> = ({ file, textScale, highlightQuote, location }) => {
+  console.log('📊 [CsvViewer] Rendered with:', { 
+    fileName: file.name, 
+    highlightQuote,
+    location,
+    hasContent: !!file.content,
+    contentLength: file.content?.length 
+  });
+
   const rows = parseCSV(file.content);
+  
+  useEffect(() => {
+    if (location || highlightQuote) {
+      console.log('📊 [CsvViewer] useEffect triggered - attempting scroll');
+      scrollToElementById('csv-highlight-row', 200);
+    } else {
+      console.log('📊 [CsvViewer] No location/quote provided, skipping scroll');
+    }
+  }, [location, highlightQuote, file]);
   
   if (!rows.length) {
     return (
@@ -66,6 +86,17 @@ const CsvViewer: React.FC<CsvViewerProps> = ({ file, textScale }) => {
   const headers = rows[0];
   const dataRows = rows.slice(1);
   const maxCols = Math.max(headers.length, ...dataRows.map(r => r.length));
+  
+  // Find highlight row if quote provided
+  let highlightRowIndex = -1;
+  if (highlightQuote) {
+    const searchTerm = highlightQuote.toLowerCase();
+    console.log('📊 [CsvViewer] Searching for quote:', searchTerm);
+    highlightRowIndex = dataRows.findIndex(row => 
+      row.join(' ').toLowerCase().includes(searchTerm)
+    );
+    console.log('📊 [CsvViewer] Highlight row index:', highlightRowIndex);
+  }
 
   return (
     <div className="overflow-auto w-full h-full">
@@ -94,24 +125,28 @@ const CsvViewer: React.FC<CsvViewerProps> = ({ file, textScale }) => {
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-[#1e1e1e]">
-              {dataRows.map((row, rIdx) => (
-                <tr
-                  key={rIdx}
-                  className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#252525] transition-colors"
-                >
-                  <td className="px-2 py-1.5 text-right text-gray-400 dark:text-gray-600 font-mono text-[11px] border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0f0f0f] select-none">
-                    {rIdx + 2}
-                  </td>
-                  {Array.from({ length: maxCols }).map((_, cIdx) => {
-                    const cell = row[cIdx] || '';
-                    return (
-                      <td key={cIdx} className="px-3 py-1.5 text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-gray-700 last:border-r-0" title={cell}>
-                        {cell}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
+              {dataRows.map((row, rIdx) => {
+                const isHighlight = rIdx === highlightRowIndex;
+                return (
+                  <tr
+                    key={rIdx}
+                    id={isHighlight ? 'csv-highlight-row' : undefined}
+                    className={`border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#252525] transition-colors ${isHighlight ? `${HIGHLIGHT_CLASSES.ROW} bg-yellow-200 dark:bg-yellow-600/50 ring-2 ring-inset ring-yellow-400 dark:ring-yellow-600` : ''}`}
+                  >
+                    <td className="px-2 py-1.5 text-right text-gray-400 dark:text-gray-600 font-mono text-[11px] border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0f0f0f] select-none">
+                      {rIdx + 2}
+                    </td>
+                    {Array.from({ length: maxCols }).map((_, cIdx) => {
+                      const cell = row[cIdx] || '';
+                      return (
+                        <td key={cIdx} className="px-3 py-1.5 text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-gray-700 last:border-r-0" title={cell}>
+                          {cell}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

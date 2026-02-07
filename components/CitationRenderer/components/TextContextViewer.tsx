@@ -1,5 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { ProcessedFile } from '../../../types';
+import { scrollToHighlight, HIGHLIGHT_SELECTORS, HIGHLIGHT_CLASSES } from '@/utils/scrollUtils';
+import { normalizeForMatching, decodeHtmlEntities } from '@/utils/textNormalization';
 
 interface TextContextViewerProps {
   file?: ProcessedFile;
@@ -8,27 +10,12 @@ interface TextContextViewerProps {
 }
 
 const TextContextViewer: React.FC<TextContextViewerProps> = ({ file, quote, location }) => {
-  const tableRef = useRef<HTMLElement | null>(null);
-  
-  console.log('📝 TEXT VIEWER DEBUG:');
-  console.log('  File:', file?.name, 'Type:', file?.type);
-  console.log('  Quote:', quote);
-  console.log('  Location:', location);
-  console.log('  Has content:', !!file?.content);
+  const highlightContainerRef = useRef<HTMLElement | null>(null);
   
   useEffect(() => {
-    const scrollToRow = () => {
-      if (tableRef.current) {
-        const highlightedRow = tableRef.current.querySelector('.highlighted-row, .highlight-target');
-        if (highlightedRow) {
-          highlightedRow.scrollIntoView({ behavior: 'instant', block: 'center' });
-          return true;
-        }
-      }
-      return false;
-    };
-    
-    requestAnimationFrame(() => scrollToRow());
+    if (highlightContainerRef.current) {
+      scrollToHighlight(highlightContainerRef, HIGHLIGHT_SELECTORS.ANY, 200);
+    }
   }, [file, location, quote]);
   
   if ((file?.type === 'excel' || file?.type === 'csv') && location) {
@@ -62,15 +49,6 @@ const TextContextViewer: React.FC<TextContextViewerProps> = ({ file, quote, loca
       
       const lines = sheetContent.trim().split('\n').filter(l => l.trim());
       const delimiter = lines[0]?.includes('\t') ? '\t' : ',';
-      
-      const decodeHtmlEntities = (text: string) => {
-        return text
-          .replace(/&quot;/g, '"')
-          .replace(/&#39;/g, "'")
-          .replace(/&lt;/g, '<')
-          .replace(/&gt;/g, '>')
-          .replace(/&amp;/g, '&');
-      };
       
       const parseRow = (row: string) => {
         const cells: string[] = [];
@@ -122,7 +100,7 @@ const TextContextViewer: React.FC<TextContextViewerProps> = ({ file, quote, loca
       const contextRows = rows.slice(startIdx, endIdx);
       
       return (
-        <table ref={tableRef} className="w-full text-[9px] border-collapse">
+        <table ref={highlightContainerRef as any} className="w-full text-[9px] border-collapse">
             <thead className="sticky top-0 bg-gray-100 dark:bg-[#2a2a2a] z-10">
               <tr>
                 {headers.map((h, idx) => (
@@ -135,7 +113,7 @@ const TextContextViewer: React.FC<TextContextViewerProps> = ({ file, quote, loca
                 const visualRowNum = startIdx + rowIdx + 2;
                 const isHighlight = visualRowNum === finalTargetRow;
                 return (
-                  <tr key={rowIdx} className={`${isHighlight ? 'highlighted-row bg-yellow-300 dark:bg-yellow-700 ring-2 ring-yellow-500' : 'hover:bg-gray-50 dark:hover:bg-[#222222]'}`}>
+                  <tr key={rowIdx} className={`${isHighlight ? `${HIGHLIGHT_CLASSES.ROW} highlighted-row bg-yellow-300 dark:bg-yellow-700 ring-2 ring-yellow-500` : 'hover:bg-gray-50 dark:hover:bg-[#222222]'}`}>
                     {row.map((cell, cellIdx) => (
                       <td key={cellIdx} className="border border-gray-300 dark:border-gray-600 px-1 py-0.5 text-[#1a1a1a] dark:text-white">{cell}</td>
                     ))}
@@ -222,28 +200,14 @@ const TextContextViewer: React.FC<TextContextViewerProps> = ({ file, quote, loca
     };
     
     const lines = file.content.split('\n');
-    const quoteNorm = quote.toLowerCase().trim();
-    
-    // Normalize content for search - remove HTML tags and decode entities
-    const normalizeForSearch = (text: string) => {
-      return text
-        .replace(/<[^>]+>/g, '') // Remove ALL HTML tags
-        .replace(/&#39;/g, "'")
-        .replace(/&quot;/g, '"')
-        .replace(/&amp;/g, '&')
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/\s+/g, ' ') // Normalize whitespace
-        .toLowerCase()
-        .trim();
-    };
+    const quoteNorm = normalizeForMatching(quote);
     
     let contextStart = -1;
     let contextEnd = -1;
     let highlightLineIndex = -1;
     
     for (let i = 0; i < lines.length; i++) {
-      if (normalizeForSearch(lines[i]).includes(quoteNorm)) {
+      if (normalizeForMatching(lines[i]).includes(quoteNorm)) {
         contextStart = Math.max(0, i - 2);
         contextEnd = Math.min(lines.length, i + 3);
         highlightLineIndex = i - contextStart;
@@ -263,18 +227,18 @@ const TextContextViewer: React.FC<TextContextViewerProps> = ({ file, quote, loca
             const before = cleanLine.substring(0, startIdx);
             const match = cleanLine.substring(startIdx, startIdx + quote.length);
             const after = cleanLine.substring(startIdx + quote.length);
-            return `${before}<mark class="bg-yellow-300 dark:bg-yellow-700 highlight-target">${match}</mark>${after}`;
+            return `${before}<mark class="${HIGHLIGHT_CLASSES.TARGET} bg-yellow-300 dark:bg-yellow-700 highlight-target">${match}</mark>${after}`;
           }
         }
         return line.replace(/<sup[^>]*>.*?<\/sup>/gi, '').replace(/&#39;/g, "'").replace(/&quot;/g, '"');
       }).join('\n');
       const contextHtml = parseMarkdown(contextMd);
       
-      return <div ref={tableRef} className="p-2"><div className="text-xs leading-relaxed max-w-none" dangerouslySetInnerHTML={{ __html: contextHtml }} /></div>;
+      return <div ref={highlightContainerRef as any} className="p-2"><div className="text-xs leading-relaxed max-w-none" dangerouslySetInnerHTML={{ __html: contextHtml }} /></div>;
     }
     
     // Fallback: if quote not found in lines, search entire content
-    const contentLower = normalizeForSearch(file.content);
+    const contentLower = normalizeForMatching(file.content);
     if (contentLower.includes(quoteNorm)) {
       const startIdx = contentLower.indexOf(quoteNorm);
       const contextStart = Math.max(0, startIdx - 200);
@@ -283,10 +247,10 @@ const TextContextViewer: React.FC<TextContextViewerProps> = ({ file, quote, loca
       const before = contextText.substring(0, startIdx - contextStart);
       const match = contextText.substring(startIdx - contextStart, startIdx - contextStart + quote.length);
       const after = contextText.substring(startIdx - contextStart + quote.length);
-      const highlighted = `${before}<mark class="bg-yellow-300 dark:bg-yellow-700 highlight-target">${match}</mark>${after}`;
+      const highlighted = `${before}<mark class="${HIGHLIGHT_CLASSES.TARGET} bg-yellow-300 dark:bg-yellow-700 highlight-target">${match}</mark>${after}`;
       const contextHtml = parseMarkdown(highlighted);
       
-      return <div ref={tableRef} className="p-2"><div className="text-xs leading-relaxed max-w-none" dangerouslySetInnerHTML={{ __html: contextHtml }} /></div>;
+      return <div ref={highlightContainerRef as any} className="p-2"><div className="text-xs leading-relaxed max-w-none" dangerouslySetInnerHTML={{ __html: contextHtml }} /></div>;
     } else {
       // Quote not found, but render the section mentioned in location
       const locationMatch = location.match(/Section\s+([\d.]+\s+[A-Z\s&]+)/i);
@@ -300,7 +264,7 @@ const TextContextViewer: React.FC<TextContextViewerProps> = ({ file, quote, loca
           const contextMd = lines.slice(contextStart, contextEnd).join('\n');
           const contextHtml = parseMarkdown(contextMd);
           
-          return <div ref={tableRef} className="p-2"><div className="text-xs leading-relaxed max-w-none" dangerouslySetInnerHTML={{ __html: contextHtml }} /></div>;
+          return <div ref={highlightContainerRef as any} className="p-2"><div className="text-xs leading-relaxed max-w-none" dangerouslySetInnerHTML={{ __html: contextHtml }} /></div>;
         }
       }
     }

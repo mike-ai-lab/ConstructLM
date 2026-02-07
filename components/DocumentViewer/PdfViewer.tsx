@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ProcessedFile } from '../../types';
 import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from 'lucide-react';
+import { HIGHLIGHT_CLASSES } from '@/utils/scrollUtils';
 
 interface PdfViewerProps {
   file: ProcessedFile;
@@ -138,11 +139,21 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ file, initialPage, highlightQuote
   }, [pageNumber, pdfScale, pdfDocument, highlightQuote]);
 
   const renderHighlights = (textContent: any, viewport: any, quote: string) => {
+    console.log('📕 [PdfViewer.renderHighlights] Called with:', {
+      quote,
+      quoteLength: quote.length,
+      hasHighlightLayer: !!highlightLayerRef.current,
+      textItemsCount: textContent.items?.length
+    });
+
     if (!highlightLayerRef.current) return;
     highlightLayerRef.current.innerHTML = '';
     const normalize = (str: string) => str.replace(/\s+/g, '').toLowerCase();
     const normQuote = normalize(quote);
-    if (!normQuote || normQuote.length < 3) return;
+    if (!normQuote || normQuote.length < 3) {
+      console.warn('📕 [PdfViewer.renderHighlights] Quote too short or empty');
+      return;
+    }
 
     let fullText = "";
     const itemMap: { start: number, end: number, item: any }[] = [];
@@ -153,9 +164,21 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ file, initialPage, highlightQuote
       itemMap.push({ start, end: fullText.length, item });
     });
 
+    console.log('📕 [PdfViewer.renderHighlights] Text extraction:', {
+      fullTextLength: fullText.length,
+      fullTextPreview: fullText.substring(0, 100),
+      normQuote,
+      itemMapLength: itemMap.length
+    });
+
     const matchIndex = fullText.indexOf(normQuote);
+    console.log('📕 [PdfViewer.renderHighlights] Match index:', matchIndex);
+
     if (matchIndex !== -1) {
       const matchEnd = matchIndex + normQuote.length;
+      let firstHighlight: HTMLDivElement | null = null;
+      let highlightCount = 0;
+      
       itemMap.forEach(({ start, end, item }) => {
         if (Math.max(start, matchIndex) < Math.min(end, matchEnd)) {
           try {
@@ -165,6 +188,7 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ file, initialPage, highlightQuote
             const fontWidth = item.width * viewport.scale;
             const angle = Math.atan2(tx[1], tx[0]);
             const rect = document.createElement('div');
+            rect.className = HIGHLIGHT_CLASSES.TARGET;
             Object.assign(rect.style, {
               position: 'absolute',
               left: `${tx[4]}px`,
@@ -178,9 +202,32 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ file, initialPage, highlightQuote
               transformOrigin: '0% 100%'
             });
             highlightLayerRef.current?.appendChild(rect);
-          } catch (err) {}
+            if (!firstHighlight) firstHighlight = rect;
+            highlightCount++;
+          } catch (err) {
+            console.error('📕 [PdfViewer.renderHighlights] Error creating highlight:', err);
+          }
         }
       });
+      
+      console.log('📕 [PdfViewer.renderHighlights] Created highlights:', highlightCount);
+      
+      // Auto-scroll to first highlight after render
+      if (firstHighlight) {
+        console.log('📕 [PdfViewer.renderHighlights] Scheduling scroll to first highlight');
+        setTimeout(() => {
+          console.log('📕 [PdfViewer.renderHighlights] Executing scroll');
+          firstHighlight?.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center',
+            inline: 'nearest'
+          });
+        }, 200);
+      } else {
+        console.warn('📕 [PdfViewer.renderHighlights] No highlights created despite match');
+      }
+    } else {
+      console.warn('📕 [PdfViewer.renderHighlights] No match found in text');
     }
   };
 

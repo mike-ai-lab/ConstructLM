@@ -9,7 +9,12 @@ import { diagnosticLogger } from "./diagnosticLogger";
 import { getNextProxy } from "./proxyRotation";
 
 // --- System Prompt Construction ---
-export const constructBaseSystemPrompt = (hasFiles: boolean = false, hasSources: boolean = false, sources: any[] = []) => {
+export const constructBaseSystemPrompt = (
+  hasFiles: boolean = false, 
+  hasSources: boolean = false, 
+  sources: any[] = [],
+  activeFiles: ProcessedFile[] = []
+) => {
   if (hasSources && sources.length > 0) {
     const sourcesList = sources.map((s, i) => `[${i + 1}] ${s.title || s.url}: ${s.url}`).join('\n');
     return `You are ConstructLM, an AI assistant analyzing the following sources:
@@ -24,15 +29,58 @@ If the sources don't contain the answer, say something like "That's not covered 
   }
   
   if (hasFiles) {
+    // Detect file types
+    const fileTypes = new Set(activeFiles.map(f => f.type));
+    const hasPdf = fileTypes.has('pdf');
+    const hasExcel = fileTypes.has('excel');
+    const hasCsv = fileTypes.has('csv');
+    const hasMarkdown = fileTypes.has('markdown') || activeFiles.some(f => f.name.endsWith('.md'));
+    const hasText = fileTypes.has('text') || fileTypes.has('code');
+    
+    // Build file-type-specific citation instructions
+    let citationInstructions = '';
+    
+    if (hasPdf) {
+      citationInstructions += `\n📄 **PDF Files:** Use {{citation:FileName.pdf|Page X|exact quote}}
+   - Find page numbers from markers like "--- [Page N] ---" in the text
+   - Always include the page number`;
+    }
+    
+    if (hasExcel || hasCsv) {
+      citationInstructions += `\n📊 **Excel/CSV Files:** Use {{citation:FileName.xlsx|Sheet: SheetName, Row X|exact quote}}
+   - Include sheet name and row number when available
+   - Example: {{citation:data.xlsx|Sheet: Sales, Row 15|Product A: $299.99}}
+   - For CSV: {{citation:data.csv|Row X|exact quote}}`;
+    }
+    
+    if (hasMarkdown || hasText) {
+      citationInstructions += `\n📝 **Markdown/Text Files:** Use {{citation:FileName.md|Section: Title|exact quote}}
+   - Use section headers as location (e.g., "Section: Cost Breakdown")
+   - If no clear section, use "Line X" or just the filename
+   - Example: {{citation:report.md|Section: Summary|Total cost: $1,500}}`;
+    }
+    
+    // If no specific types detected, provide generic guidance
+    if (!citationInstructions) {
+      citationInstructions = `\n📄 **Citation Format:** {{citation:FileName|Location|exact quote}}
+   - Location can be: Page X, Section: Title, Row X, or Line X
+   - Always include a specific location when possible`;
+    }
+    
     return `You are ConstructLM. Answer questions using the document chunks provided below.
 
-Cite information using: {{citation:FileName|Page X|exact quote}}
+**CITATION RULES:**${citationInstructions}
 
-Find page numbers from markers like "--- [Page N] ---" in the text. For Excel, use "Sheet: Name".
+**IMPORTANT:**
+- Cite EXACT text from the documents (3-10 words with key information)
+- Include numbers, quantities, and units in citations
+- Give ONE clear answer - no repetitions or alternatives
+- If unsure about location, use the most specific information available
+- Never say "Page not specified" - use section names or row numbers instead
 
 If the documents don't contain the answer, just say "That's not in these documents" - no need to explain why or apologize.
 
-Be direct, confident, and helpful.`;
+Be direct, confident, and helpful. Answer once, clearly.`;
   } else {
     return `You are ConstructLM, an AI assistant.
 
@@ -114,19 +162,19 @@ export const sendMessageToLLM = async (
                         return `[${i + 1}] From ${result.chunk.fileName}${score}:\n${result.chunk.content}`;
                     }).join('\n\n') + 
                     '\n\n🔴 CRITICAL CITATION RULES:\n' +
-                    '1. Find page numbers: Look for "--- [Page N] ---" or "[Page N]" in chunk text\n' +
-                    '2. Extract ALL data: quantities, units, item numbers, descriptions\n' +
-                    '3. Cite EXACT text: Copy 3-10 words directly from chunk (numbers + context)\n' +
-                    '4. Format: {{citation:FileName|Page N|exact text with numbers}}\n' +
-                    '5. For Excel: {{citation:FileName|Sheet: Name|exact text}}\n' +
-                    '6. NEVER use "Page not specified" - find the page marker or use Page 1\n' +
-                    '7. NEVER cite just item names - include quantities/specifications';
+                    '1. Answer ONCE - no repetitions, alternatives, or "better answers"\n' +
+                    '2. Find location markers in chunks: "--- [Page N] ---", "Sheet:", "Row", or section headers\n' +
+                    '3. Cite EXACT text: Copy 3-10 words directly from chunk (include numbers + context)\n' +
+                    '4. Format depends on file type (see instructions above)\n' +
+                    '5. NEVER use "Page not specified" - use the actual location from the chunk\n' +
+                    '6. NEVER cite just item names - include quantities/specifications\n' +
+                    '7. Be confident and direct - give ONE clear answer';
             } else {
                 console.log('[RAG] No relevant chunks found in selected files');
             }
             
             // Construct system prompt
-            const baseSystemPrompt = constructBaseSystemPrompt(activeFiles.length > 0, activeSources.length > 0, activeSources);
+            const baseSystemPrompt = constructBaseSystemPrompt(activeFiles.length > 0, activeSources.length > 0, activeSources, activeFiles);
             const systemPrompt = baseSystemPrompt + ragContext;
             
             // FULL REQUEST LOGGING (always show, even if no RAG results)
@@ -154,7 +202,7 @@ export const sendMessageToLLM = async (
     }
 
     // ✅ REQUIREMENT 1: System prompt MUST ALWAYS include base + RAG context
-    const baseSystemPrompt = constructBaseSystemPrompt(activeFiles.length > 0, activeSources.length > 0, activeSources);
+    const baseSystemPrompt = constructBaseSystemPrompt(activeFiles.length > 0, activeSources.length > 0, activeSources, activeFiles);
     const systemPrompt = baseSystemPrompt + ragContext;
     
     // ✅ REQUIREMENT 4: Strict mode isolation
