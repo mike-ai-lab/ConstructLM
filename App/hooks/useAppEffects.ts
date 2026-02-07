@@ -65,7 +65,9 @@ export const useAppEffects = (
       setChats(chatHistory);
       
       if (chatHistory.length === 0) {
-        const newChat = chatRegistry.createNewChat('New Chat', DEFAULT_MODEL_ID);
+        // Use user's default model or fall back to DEFAULT_MODEL_ID
+        const defaultModelId = localStorage.getItem('defaultModelId') || DEFAULT_MODEL_ID;
+        const newChat = await chatRegistry.createNewChat('New Chat', defaultModelId);
         setCurrentChatId(newChat.id);
         setMessages(newChat.messages);
         setActiveModelId(newChat.modelId);

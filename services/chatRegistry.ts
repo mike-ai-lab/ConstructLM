@@ -199,7 +199,9 @@ class ChatRegistryService {
     }
   }
 
-  createNewChat(name: string, modelId: string): ChatSession {
+  async createNewChat(name: string, modelId: string): Promise<ChatSession> {
+    const greeting = await greetingService.generateGreeting(modelId);
+    
     const chat: ChatSession = {
       id: this.generateChatId(),
       name,
@@ -207,7 +209,7 @@ class ChatRegistryService {
       messages: [{
         id: 'intro',
         role: 'model',
-        content: greetingService.generateGreeting(),
+        content: greeting,
         timestamp: Date.now()
       }],
       fileIds: [],

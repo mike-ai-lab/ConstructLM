@@ -70,15 +70,17 @@ export const createChatHandlers = (
     });
   };
 
-  const handleCreateChat = () => {
+  const handleCreateChat = async () => {
     const hasUserMessages = messages.some(m => m.role === 'user');
     if (!hasUserMessages) {
       return;
     }
     
     saveCurrentChat();
-    const newChat = chatRegistry.createNewChat('New Chat', activeModelId);
-    activityLogger.logChatCreated(newChat.id, activeModelId);
+    // Use user's default model or fall back to active model
+    const defaultModelId = localStorage.getItem('defaultModelId') || activeModelId;
+    const newChat = await chatRegistry.createNewChat('New Chat', defaultModelId);
+    activityLogger.logChatCreated(newChat.id, defaultModelId);
     setCurrentChatId(newChat.id);
     sessionStorage.setItem('currentChatId', newChat.id);
     localStorage.setItem('lastChatId', newChat.id);
