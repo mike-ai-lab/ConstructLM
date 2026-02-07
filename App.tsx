@@ -431,47 +431,47 @@ const App: React.FC = () => {
           }
         }
       } else {
-        // Regular URL handling - try multiple CORS proxies with better fallback
-        let response;
-        let data;
-        
+        // Regular URL handling - just store the URL and title
+        // The web viewer will render it perfectly, and AI can work with the URL reference
         try {
-          // Try corsproxy.io first (more reliable)
-          response = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`);
-          if (!response.ok) throw new Error('corsproxy failed');
-          const html = await response.text();
-          data = { contents: html };
-        } catch (e) {
+          // Try to fetch just to get the title
+          let response;
+          let html = '';
+          
           try {
-            // Fallback to allorigins
-            response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+            response = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`);
             if (response.ok) {
-              data = await response.json();
-            } else {
-              throw new Error('allorigins failed');
+              html = await response.text();
             }
-          } catch (e2) {
-            // Last resort: try direct fetch (may fail due to CORS)
-            response = await fetch(url);
-            if (!response.ok) throw new Error('direct fetch failed');
-            const html = await response.text();
-            data = { contents: html };
+          } catch (e) {
+            try {
+              response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+              if (response.ok) {
+                const data = await response.json();
+                html = data.contents;
+              }
+            } catch (e2) {
+              // If we can't fetch, just use the URL
+              html = '';
+            }
           }
+          
+          // Extract title from HTML if available
+          if (html) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            title = doc.querySelector('title')?.textContent || url;
+          }
+          
+          // Store URL as content for AI - the AI can understand and reference URLs
+          // This is much better than trying to parse HTML which loses all structure
+          content = `Web Source: ${title}\nURL: ${url}\n\nThis is a web page that can be viewed in the browser. The AI can reference this URL and its title for context.`;
+        } catch (error) {
+          content = `Web Source: ${url}`;
         }
-        
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(data.contents, 'text/html');
-        title = doc.querySelector('title')?.textContent || url;
-        
-        // Extract main content, prioritize article/main tags
-        const mainContent = doc.querySelector('article, main, .content, #content');
-        content = (mainContent?.textContent || doc.body.textContent || '').trim();
       }
       
-      // Limit content to reasonable size for API limits
-      if (content.length > 8000) {
-        content = content.slice(0, 8000) + '\n\n[Content truncated...]';
-      }
+      // No need to truncate URL-based content
       
       const updatedSource = { ...newSource, title, content, status: 'fetched' as const };
       setSources(prev => prev.map(s => s.id === newSource.id ? updatedSource : s));

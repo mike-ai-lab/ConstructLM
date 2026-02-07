@@ -4,6 +4,8 @@ import { ProcessedFile } from '../../types';
 import { contextMenuManager, createInputContextMenu } from '../../utils/uiHelpers';
 import { createPortal } from 'react-dom';
 import DocumentViewer from '../../components/DocumentViewer';
+import TabbedWebViewer from '../../components/TabbedWebViewer';
+import TabbedWebViewerElectron from '../../components/TabbedWebViewerElectron';
 
 interface FloatingInputProps {
   input: string;
@@ -406,97 +408,13 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
 };
 
 const PreviewContent: React.FC<{ source: any; onClose: () => void; onLoaded: () => void; cancelRef: React.RefObject<boolean>; isLoading?: boolean }> = ({ source, onClose, onLoaded, cancelRef, isLoading }) => {
-  console.log('🚀 PreviewContent RENDERING (component function called)');
-  const [file, setFile] = useState<ProcessedFile | null>(null);
+  const isElectron = typeof window !== 'undefined' && !!(window as any).electron;
+  const WebViewerComponent = isElectron ? TabbedWebViewerElectron : TabbedWebViewer;
 
   useEffect(() => {
-    console.log('🚀 PreviewContent MOUNTED - useEffect running');
-    const load = async () => {
-      console.log('⏳ Starting load...');
-      await new Promise(resolve => setTimeout(resolve, 50));
-      
-      console.log('✅ After delay, cancelRef.current:', cancelRef.current);
-      if (cancelRef.current) {
-        console.log('🛑 CANCELLED');
-        return;
-      }
-      
-      const url = source.url.toLowerCase();
-      let type: ProcessedFile['type'] = 'document';
-      let content = source.content || '';
-      
-      console.log('📄 URL:', url);
-      console.log('📝 Content preview:', content.substring(0, 200));
-      
-      // Detect markdown FIRST
-      if (url.endsWith('.md') || url.endsWith('.markdown') || 
-          content.match(/^#{1,6}\s/m) || 
-          content.includes('```') || 
-          content.match(/\[.+?\]\(.+?\)/) ||
-          content.match(/^[-*+]\s/m) ||
-          content.match(/^>\s/m)) {
-        type = 'markdown';
-        console.log('✅ DETECTED AS MARKDOWN');
-      }
-      // Detect Excel
-      else if (url.endsWith('.xlsx') || url.endsWith('.xls')) {
-        type = 'excel';
-        console.log('✅ DETECTED AS EXCEL');
-        if (!content.includes('--- [Sheet:')) {
-          content = `--- [Sheet: Sheet1] ---\n${content}`;
-        }
-      }
-      // Detect CSV
-      else if (url.endsWith('.csv') || content.split('\n').slice(0, 5).every(line => line.includes(',') || line.includes('\t'))) {
-        type = 'csv';
-        console.log('✅ DETECTED AS CSV');
-      }
-      
-      console.log('🎯 Final type:', type);
-      
-      if (cancelRef.current) {
-        console.log('🛑 CANCELLED before setFile');
-        return;
-      }
-      
-      const fileObj = {
-        id: source.id,
-        name: source.title || source.url.split('/').pop() || 'source',
-        type,
-        content,
-        size: content.length,
-        status: 'ready' as const,
-        tokenCount: Math.ceil(content.length / 4)
-      };
-      
-      console.log('📦 Setting file:', fileObj.name, fileObj.type);
-      setFile(fileObj);
-      
-      if (!cancelRef.current) {
-        console.log('✅ Calling onLoaded');
-        onLoaded();
-      }
-    };
-    
-    load();
-  }, [source, onLoaded, cancelRef]);
+    // Immediately call onLoaded since web viewer renders instantly
+    onLoaded();
+  }, [onLoaded]);
 
-  if (!file) {
-    console.log('⏳ No file yet, isLoading:', isLoading);
-    return (
-      <div className="h-full flex items-center justify-center">
-        {isLoading ? (
-          <div className="flex flex-col items-center gap-4">
-            <Loader className="animate-spin text-blue-600" size={32} />
-            <p className="text-sm text-[#666666] dark:text-[#a0a0a0]">Loading preview...</p>
-          </div>
-        ) : (
-          <Loader className="animate-spin text-blue-600" size={32} />
-        )}
-      </div>
-    );
-  }
-
-  console.log('🎬 Rendering DocumentViewer:', file.name, file.type);
-  return <DocumentViewer file={file} onClose={onClose} />;
+  return <WebViewerComponent initialUrl={source.url} onClose={onClose} onNewTabRequest={() => {}} />;
 };

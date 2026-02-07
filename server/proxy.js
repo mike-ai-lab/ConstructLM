@@ -82,6 +82,7 @@ app.get('/api/proxy/web', async (req, res) => {
 
     const urlObj = new URL(targetUrl);
     const domain = urlObj.hostname;
+    const baseUrl = `${urlObj.protocol}//${urlObj.host}`;
     
     // Get or create cookie jar for this domain
     if (!cookieJars.has(domain)) {
@@ -124,12 +125,69 @@ app.get('/api/proxy/web', async (req, res) => {
       }
     });
 
-    const html = await response.text();
+    let html = await response.text();
+    
+    // Rewrite relative URLs to go through proxy
+    // This ensures CSS, JS, images, etc. are also proxied
+    const proxyUrl = (url) => `http://localhost:3002/api/proxy/web?url=${encodeURIComponent(url)}`;
+    
+    // Count replacements for debugging
+    let replacementCount = 0;
+    
+    html = html
+      // Rewrite href="/path" or href='/path'
+      .replace(/href\s*=\s*["']\/([^"']*?)["']/gi, (match, path) => {
+        replacementCount++;
+        const fullUrl = baseUrl + '/' + path;
+        console.log(`[Proxy] Rewriting href: /${path} -> ${fullUrl}`);
+        return `href="${proxyUrl(fullUrl)}"`;
+      })
+      // Rewrite src="/path" or src='/path'
+      .replace(/src\s*=\s*["']\/([^"']*?)["']/gi, (match, path) => {
+        replacementCount++;
+        const fullUrl = baseUrl + '/' + path;
+        console.log(`[Proxy] Rewriting src: /${path} -> ${fullUrl}`);
+        return `src="${proxyUrl(fullUrl)}"`;
+      })
+      // Rewrite data-src="/path" (lazy loading)
+      .replace(/data-src\s*=\s*["']\/([^"']*?)["']/gi, (match, path) => {
+        replacementCount++;
+        const fullUrl = baseUrl + '/' + path;
+        console.log(`[Proxy] Rewriting data-src: /${path} -> ${fullUrl}`);
+        return `data-src="${proxyUrl(fullUrl)}"`;
+      })
+      // Rewrite srcset="/path" (responsive images)
+      .replace(/srcset\s*=\s*["']\/([^"']*?)["']/gi, (match, path) => {
+        replacementCount++;
+        const fullUrl = baseUrl + '/' + path;
+        console.log(`[Proxy] Rewriting srcset: /${path} -> ${fullUrl}`);
+        return `srcset="${proxyUrl(fullUrl)}"`;
+      })
+      // Rewrite @import url("/path") in style tags
+      .replace(/@import\s+url\s*\(\s*["']\/([^"']*?)["']\s*\)/gi, (match, path) => {
+        replacementCount++;
+        const fullUrl = baseUrl + '/' + path;
+        console.log(`[Proxy] Rewriting @import: /${path} -> ${fullUrl}`);
+        return `@import url("${proxyUrl(fullUrl)}")`;
+      })
+      // Rewrite background: url("/path") in style attributes
+      .replace(/url\s*\(\s*["']?\/([^"')]*?)["']?\s*\)/gi, (match, path) => {
+        replacementCount++;
+        const fullUrl = baseUrl + '/' + path;
+        console.log(`[Proxy] Rewriting url(): /${path} -> ${fullUrl}`);
+        return `url("${proxyUrl(fullUrl)}")`;
+      });
+    
+    console.log(`[Proxy] Total URL replacements: ${replacementCount} for ${targetUrl}`);
     
     // Set CORS headers to allow iframe access
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    
+    // Detect content type from response
+    const contentType = response.headers.get('content-type') || 'text/html; charset=utf-8';
+    res.setHeader('Content-Type', contentType);
+    
     res.send(html);
   } catch (error) {
     console.error('[Web Proxy] Error:', error);

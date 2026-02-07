@@ -1,0 +1,1462 @@
+Sources
+
+Chats
+0 sources
+
+
+Files
+Folders
+No sources yet
+
+Upload documents, images, spreadsheets, or drag files anywhere to get started.
+
+
+
+Gemini 2.5 Flash
+
+
+Chat
+
+Notes
+0
+
+Todos
+6
+
+GitHub
+
+
+
+
+AI
+07:55 AM
+
+
+Hello! I'm Construct AI LM, your AI assistant.
+Before we start, would you like to personalize your experience? You can set this up in Settings (⚙️) anytime.
+I can help you with:
+• Code development & debugging
+• Document analysis (PDF, Excel, images)
+• Architecture & design questions
+• And much more!
+Tip: Type "@" to mention files, or just drag and drop them here.
+OptiNest | Nesting Software | Wood Designer
+OptiNest : general shapes optimization and nesting. Plasma and laser cutting, oxycutting, pinking, punching.
+modelcontextprotocol/servers
+
+Regenerate
+✓
+OptiNest | Nesting Software | Wood Designer
+
+×
+✓
+OptiNest : general shapes optimization and nesting. Plasma and laser cutting, oxycutting, pinking, punching.
+
+×
+✓
+modelcontextprotocol/servers
+
+×
+Paste source link here...
+3/3 LINKS USED
+
+Ask anything
+
+AI can make mistakes. Please verify citations. v1.0.0-374652
+
+OptiNest | Nesting Software | Wood Designer
+Text View
+
+100%
+
+
+OptiNest nesting software
+	
+	
+
+
+	
+		
+	Professional nesting software for highly optimised cutting of parts of any shape on to sheets of any shape.
+Multi sector applications, includes option to combine with our PolyBoard cabinet software to drive your nesting CNC, the ideal solution for custom woodwork projects.
+
+	
+
+
+
+			
+	
+	
+		
+
+		
+		
+
+
+	
+
+
+
+	
+		
+	
+
+
+	
+		
+
+						
+		
+
+			
+	
+	
+		
+	
+		
+			
+							Download
+					
+	
+
+			
+							Request a demo
+					
+	
+
+			
+							Buy OptiNest
+					
+	
+	
+
+	
+
+
+
+	
+		
+	
+
+
+	
+		
+
+						
+		
+
+			
+	
+	
+		
+	
+	
+						
+							
+						
+			
+		
+		
+						 Minimise material waste with true shape nesting					
+		
+	
+		
+					
+			
+
+	
+
+
+
+			
+	
+	
+		
+	
+	
+						
+							
+						
+			
+		
+		
+						Fully manufacture parts directly on your CNC machine					
+		
+	
+		
+					
+			
+
+	
+
+
+
+			
+	
+	
+		
+	
+	
+						
+							
+						
+			
+		
+		
+						Interfaces with our PolyBoard furniture design software					
+		
+	
+		
+					
+			
+
+	
+
+
+
+	
+		
+	
+
+
+	
+		
+
+						
+		
+
+			
+	
+	
+		
+		OptiNest key features
+	
+	
+
+
+
+	
+
+
+			
+	
+	
+		
+	
+				
+					
+	
+	
+
+
+
+			
+	
+
+			
+	
+	
+		
+		 Optimise according to your own priorities
+	
+	
+
+
+
+	
+
+
+			
+	
+	
+		
+	OptiNest's adaptable algorithms make it possible to adjust the optimisation to your specific needs.
+If cutting very expensive material put the priority on minimising waste, if cutting cheaper materials on an expensive CNC optimise the machine cutting time. If you have a lot of parts to nest minimise the nesting calculation time.
+This is what makes OptiNest truly industrial grade nesting.
+
+	
+
+
+
+	
+
+
+	
+		
+	
+
+
+	
+		
+
+						
+		
+
+			
+	
+
+			
+	
+	
+		
+		Grain management function
+	
+	
+
+
+
+	
+
+
+			
+	
+	
+		
+	This feature works in combination with PolyBoard. In your cabinet design group a series of parts e.g. door façades, then apply continuous grain across them.
+PolyBoard writes a post processor report including this grain identifier, for input to OptiNest so the parts are placed in sequence next to each other.
+Another reason OptiNest is the ideal nesting software for woodworking.
+
+	
+
+
+
+	
+
+
+			
+	
+	
+		
+	
+				
+					
+	
+	
+
+
+
+	
+		
+	
+
+
+	
+		
+
+						
+		
+
+			
+	
+	
+		
+	
+				
+					
+	
+	
+
+
+
+			
+	
+	
+		
+		Parts grouping function
+	
+	
+
+
+	
+		
+	Parts are paired to create 'virtual pieces', which in turn will be used as single parts during the optimisation process.
+
+	
+
+
+	
+		
+	
+
+
+	
+		
+		 Drilled parts
+	
+	
+
+
+	
+		
+	OptiNest can manage drilled or bored parts. Holes are treated as a specific tooling type. The software also recovers the material freed by cut outs, and re-uses it to place smaller parts.
+
+	
+
+
+	
+		
+	
+
+
+	
+		
+		Rotations and reversals
+	
+	
+
+
+	
+		
+	Rotation and reversal parameters define the permitted part movements, rotations and flipping. Our nesting software accommodates 4 rotation levels and flipping.
+
+	
+
+
+	
+		
+	
+
+
+	
+		
+		Propagation mode
+	
+	
+
+
+	
+		
+	Propagation describes the placing method of a single part produced in large quantities, minimising the off cut rate.
+As a general rule, the part is grouped with itself, then the grouping is propagated along 2 axes. The larger the panel size, the greater the level of optimisation you'll obtain.
+
+	
+
+
+
+	
+		
+	
+
+
+	
+		
+
+						
+		
+
+			
+	
+
+			
+	
+	
+		
+		Automatic stock and off cuts management
+	
+	
+
+
+
+	
+
+
+			
+	
+	
+		
+	As an alternative to setting unlimited panel stock levels, you can specify your existing stock levels for all materials and define your own usable off cut settings.
+After each optimization, your stock will be depleted accordingly but you can also add back in those valuable off cuts for use in future projects.
+
+	
+
+
+
+	
+
+
+			
+	
+	
+		
+	
+				
+					
+	
+	
+
+
+
+	
+		
+	
+
+
+	
+		
+
+						
+		
+
+			
+	
+	
+		
+		Stop wasting time, money and effort
+	
+	
+
+
+	
+		
+	It's not only material savings you'll make with OptiNest.
+Nesting optimisation will increase throughput, boost quality control as you create the right parts every single time, reduce programming time compared with your current method and reduce overheads as you minimise machine usage and wear.
+At the end of the day, more cash in your pocket.
+
+	
+
+
+
+	
+		
+	
+
+
+	
+		
+
+						
+		
+
+			
+	
+	
+		
+		Nested manufacturing power
+	
+	
+
+
+
+	
+
+
+			
+	
+	
+		
+	
+				
+					
+	
+	
+
+
+
+			
+	
+
+			
+	
+	
+		
+		Parts import or direct entry
+	
+	
+
+
+
+	
+
+
+			
+	
+	
+		
+	Parts can be imported from DXF files or drawn directly in OptiNest's graphic editor.
+Parts can be drawn with any shape and cut out. To fully minimise waste, our nesting software will also use the cut outs to nest parts where possible.
+OptiNest is a stand alone solution but woodworkers can benefit from seamless integration with our PolyBoard cabinet design software. Design in PolyBoard, all parts are automatically sent to OptiNest.
+
+	
+
+
+
+	
+
+
+	
+		
+	
+
+
+	
+		
+
+						
+		
+
+			
+	
+
+			
+	
+	
+		
+		Nesting maps DXF export
+	
+	
+
+
+
+	
+
+
+			
+	
+	
+		
+	The nesting maps created by OptiNest can be exported in DXF format, and then transferred to your CAD/CAM software and on to your CNC machine.
+These DXF files include a series of layers. Each layer maps the machining operation for a specific tool. It is possible to link the layer names to your specific tools so they are automatically chosen. No need to manually chose the right tool each time.
+All the data is included to cut your parts and machine them in a single manufacturing process. This is the key benefit of nested production and is perfect for custom projects.
+
+	
+
+
+
+	
+
+
+			
+	
+	
+		
+	
+				
+					
+	
+	
+
+
+
+	
+		
+	
+
+
+	
+		
+
+						
+		
+
+			
+	
+	
+		
+	
+				
+					
+	
+	
+
+
+
+			
+	
+
+			
+	
+	
+		
+		Integration with all nesting CNCs
+	
+	
+
+
+
+	
+
+
+			
+	
+	
+		
+	OptiNest outputs industry standard 2D DXF files with full cutting and machining details for every part.
+DXF files are accepted by virtually all CNC software which in turn generates the code to run your machine.
+In addition, OptiNest outputs G-code directly for users who are proficient in this type of integration.
+
+	
+
+
+	
+				
+			
+								
+					
+																				
+								More on CNC saw integration							
+											
+					
+													
+								+ sample output							
+											
+				
+						
+		
+			
+
+
+
+	
+
+
+	
+		
+	
+
+
+	
+		
+
+						
+		
+
+			
+	
+
+			
+	
+	
+		
+		Double sided machining of parts
+	
+	
+
+
+
+	
+
+
+			
+	
+	
+		
+	A nesting CNC is constrained to machining one side at a time. You can either flip whole panels that require machining on both faces, or perform those additional tooling operations by placing single parts on the machine again or on another machine.
+In conjunction with PolyBoard, both solutions are efficiently managed by a powerful filtering system to separate the output as required.
+
+	
+
+
+
+	
+
+
+			
+	
+	
+		
+	
+				
+					
+	
+	
+
+
+
+	
+		
+	
+
+
+	
+		
+
+						
+		
+
+			
+	
+	
+		
+	
+				
+					
+	
+	
+
+
+
+			
+	
+	
+		
+		Automatic label printing
+	
+	
+
+
+	
+		
+	OptiNest's customisable labels include QR code, barcode and touch screen functionality.
+Labels are printed in the sequence the parts are nested for easy application.
+Choose the information you need, data fields including but not limited to:
+
+	
+
+
+	
+		
+
+	
+	
+			
+				
+				Part name and number
+			
+
+		
+			
+				
+				Material
+			
+
+		
+			
+				
+				Dimensions
+			
+
+		
+			
+				
+				Part shape graphic and position on the panel
+			
+
+		
+			
+				
+				Edging location and material
+			
+
+		
+		
+
+	
+
+
+
+	
+		
+	
+
+
+	
+		
+
+						
+		
+
+			
+	
+
+			
+	
+	
+		
+		Material, cost and optimisation reporting
+	
+	
+
+
+
+	
+
+
+			
+	
+	
+		
+	View and print a report detailing the results of your optimisation.
+Metrics include total stock of material used, the material cost, off cut reuse statistics, and machining load for the job.
+All measuring units, all currencies supported.
+
+	
+
+
+
+	
+
+
+			
+	
+	
+		
+	
+				
+					
+	
+	
+
+
+
+	
+		
+	
+
+
+	
+		
+
+						
+		
+
+			
+	
+	
+		
+		Watch your productivity and business grow
+	
+	
+
+
+	
+		
+	OptiNest is a key component of nesting CNC production, ideal for small and medium business working on custom projects.
+
+	
+
+
+
+	
+		
+	
+
+
+	
+		
+
+						
+		
+
+			
+	
+	
+		
+	
+					
+				
+			
+				
+			
+				I found this workflow amazingly user friendly and great to pass all the manufacturing information down through production with ease, the visual aspects of both PolyBoard and OptiNest meant spotting mistakes before they could even happen.
+			
+					
+	
+
+	
+
+
+
+			
+	
+	
+		
+	
+	
+		
+			
+
+[Content truncated...]
+
+
+THE SECOND LINK https://blog.olivierlarose.com/tutorials/paint-reveal:
+
+19 rows × 22 cols CSV FORMAT:
+
+Getting Started
+
+Introduction
+
+Gallery
+
+Courses
+
+Web Animation Course
+
+Article
+
+Placeholder Guide using Next Image
+
+Nextjs Page Transition Guide
+
+Scroll
+
+Mask Section Transition
+
+Background Image Parallax
+
+Text Parallax
+
+Sticky Footer
+
+Perspective Section Transition
+
+Text Along Path
+
+SVG Path On Scroll
+
+Horizontal Section
+
+Zoom Parallax
+
+Parallax Scroll
+
+Horizontal Scroll
+
+Text Gradient Scroll Opacity v2
+
+Cards Parallax
+
+3D perspective Scroll
+
+SVG Mask Scroll
+
+Smooth Parallax Scroll
+
+Smooth Scroll
+
+Mouse
+
+Mouse Image Distortion
+
+Paint Reveal
+
+Blend Mode Cursor
+
+Creative Buttons
+
+Gradient Mouse Move
+
+Text Gooey
+
+Sticky Cursor
+
+Painting Animation
+
+Split Vignette
+
+Magnetic Button
+
+Mask Cursor Effect
+
+Mouse Scale Image Gallery
+
+Text Disperse Effect
+
+Svg Bezier Curve
+
+Misc
+
+Mask Entry
+
+Capsule Physics
+
+Image Pixel Loading
+
+3D
+
+Ripple Shader
+
+Bulge Effect
+
+3D Wave on Scroll
+
+3D Glass Effect
+
+Creative 404
+
+3D Parallax Letters
+
+3D Float Effect
+
+3D Cube
+
+3D Earth
+
+Menu
+
+Awwwards Side Menu
+
+Curved Menu
+
+Navigation Menu
+
+Landing Page
+
+Awwwards Landing Page
+
+Infinite Text Move On Scroll
+
+Archive
+
+Pixel Transition
+
+SVG Morph
+
+Sliding Stairs Menu
+
+Floating Image Gallery
+
+Project Gallery Mouse Hover
+
+Text Gradient Opacity On Scroll
+
+Svg Curve Loading
+
+Text Clip Mask On Scroll
+
+Image slide project gallery
+
+Mouse Image Gallery
+
+Pixel Cursor Trailing
+
+Text Mask Animation
+
+3D Perspective Text
+
+Project Gallery Colored Card
+
+Cartoon Cursor Trailing
+
+Tutorials
+profile picture of Olivier Larose
+Olivier Larose
+
+May 4, 2024
+
+/
+
+Beginner
+
+/
+
+
+Short
+
+Paint Reveal
+How to Make a Paint Reveal Effect using Canvas API and React
+A website tutorial on making a paint reveal / erasing effect using the destination out blend mode of the canvas API, made with React and Next.js
+
+Live DemoSource code
+background video
+Initializing the Scene
+Let's start the project by creating a Next.js application. We can do that by running npx create-next-app@latest client inside of a terminal.
+
+Setting up the Project
+page.js
+
+
+import Scene from '@/components/Scene';
+
+import Text from '@/components/Text';
+
+
+
+export default function Home() {
+
+  return (
+
+    <main className="flex w-full h-screen items-center justify-center">
+
+      <Text />
+
+      <Scene />
+
+    </main>
+
+  );
+
+}
+Getting the Windows dimensions
+The canvas requires that we specify a width and a height to know how many pixels it should be rendering. We can provide it by listening and putting the dimensions of the window inside a state.
+
+useWindow hook
+
+
+import { useEffect, useState } from 'react'
+
+
+
+export default function useWindow() {
+
+  const [dimension, setDimension] = useState({width: 0, height: 0})
+
+
+
+  const resize = () => {
+
+    setDimension({
+
+      width: window.innerWidth,
+
+      height: window.innerHeight
+
+    })
+
+  }
+
+
+
+  useEffect(() => {
+
+    resize();
+
+    window.addEventListener("resize", resize);
+
+    return () => window.removeEventListener("resize", resize);
+
+  }, [])
+
+
+
+  return { dimension }
+
+}
+Initializing the Canvas
+With the dimensions of the window, we can initialize the canvas. I also use the destination-out global composite operation on the canvas so that every time we draw additional shapes on the canvas, it will erase the black rectangle used as a background.
+
+Scene.jsx
+
+
+'use client'
+
+import React, { useEffect, useRef } from 'react'
+
+import useWindow from './useWindow'
+
+
+
+export default function Scene() {
+
+  const { dimension } = useWindow();
+
+  const canvas = useRef();
+
+
+
+  useEffect( () => {
+
+    dimension.width > 0 && init();
+
+  }, [dimension])
+
+
+
+  const init = () => {
+
+    const ctx = canvas.current.getContext("2d");
+
+    ctx.fillStyle = "black";
+
+    ctx.fillRect(0, 0, dimension.width, dimension.height); 
+
+    ctx.globalCompositeOperation = "destination-out";
+
+  }
+
+
+
+  return (
+
+    <div className='relative w-full h-full'>
+
+      {dimension.width == 0 && <div className='absolute w-full h-full bg-black'/>}
+
+      <canvas ref={canvas} height={dimension.height} width={dimension.width}/>
+
+    </div>
+
+  )
+
+}
+Drawing Circles on Mouse Move
+The concept to create the brush or paint effect is to draw a bunch of circles everytime we move our mouse. Here's how we can do this:
+
+Scene.jsx
+
+
+const manageMouseMove = (e) => {
+
+    const { clientX, clientY} = e;
+
+    draw(clientX, clientY, 50)
+
+}
+
+
+
+const draw = (x, y, radius) => {
+
+    const ctx = canvas.current.getContext("2d");
+
+    ctx.beginPath();
+
+    ctx.arc(x, y, radius, 0, 2 * Math.PI);
+
+   ctx.fill();
+
+}
+
+
+
+return (
+
+<div className='relative w-full h-full'>
+
+    ...
+
+    <canvas onMouseMove={manageMouseMove} ref={canvas} height={dimension.height} width={dimension.width}/>
+
+</div>
+
+)
+We should have something like this:
+However, as you can when I move my mouse fast, the brush effect is not smooth, and that's because I move my mouse so fast it's actually skipping the mouse move events and thus not drawing enough circles to create a smooth line.
+
+Smoothing the Animation
+To smooth out the animation, I'll use a Lerp to fill the gap between every circle that I draw. That way, the animation will be smooth not matter the speed of mouse.
+
+Screenshot of the SVG bézier curve
+Linear Interpolation
+Linear interpolation is a key concept in animations. It is often used by motion designers, but we can also use it for web animations! In short, it is form of interpolation, which involves the generation of new values based on an existing set of values
+
+Lerp in Javascript
+
+
+let value = 10;
+
+
+
+const lerp = (x, y, a) => x * (1 - a) + y * a
+
+value = lerp(value, 0, 0.1);
+
+
+
+console.log(value) 
+
+//9
+x: The value we want to interpolate from (start)
+y: The target value we want to interpolate to (end)
+a: The amount by which we want x to be closer to y.
+Putting everything together
+Scene.jsx
+
+
+...
+
+const prevPosition = useRef(null)
+
+
+
+const lerp = (x, y, a) => x * (1 - a) + y * a;
+
+
+
+const manageMouseMove = (e) => {
+
+  const { clientX, clientY, movementX, movementY } = e;
+
+
+
+  const nbOfCircles = Math.max(Math.abs(movementX), Math.abs(movementY)) / 10;
+
+
+
+  if(prevPosition.current != null){
+
+    const { x, y } = prevPosition.current;
+
+    for(let i = 0 ; i < nbOfCircles ; i++){
+
+      const targetX = lerp(x, clientX, (1 / nbOfCircles) * i);
+
+      const targetY = lerp(y, clientY, (1 / nbOfCircles) * i);
+
+      draw(targetX, targetY, 50)
+
+    }
+
+  }
+
+
+
+  prevPosition.current = {
+
+    x: clientX,
+
+    y: clientY
+
+  }
+
+}
+
+
+
+const draw = (x, y, radius) => {
+
+  const ctx = canvas.current.getContext("2d");
+
+  ctx.beginPath();
+
+  ctx.arc(x, y, radius, 0, 2 * Math.PI);
+
+  ctx.fill();
+
+}
+Notes about the code:
+
+prevPosition is used to store the previous position of the mouse, which allows us to interpolate between it and the current position.
+nbOfCircles is based on the speed of the mouse, the faster the mouse, the higher the number of circles requires to draw a smooth line.
+We should have something like this:
+Wrapping up
+As simple as this!
+
+A very smooth animation, kind of different than using the DOM to create a web animation. But still the result is nice and it's a sweet animation with good story telling potential. Hope you learned something!
+
+-Oli
+
+Related Animations
+image
+June 2, 2024
+
+Mouse
+Mouse Image Distortion
+A website animation featuring an image distortion in a curved, using the sin function, React, React Three Fiber and Framer Motion
+
+image
+March 8, 2024
+
+Mouse
+Blend Mode Cursor
+A website tutorial featuring a moving cursor on mouse move, colored with CSS blend mode difference, made with React and GSAP. Inspired by https://trionn.com/
+
+image
+March 8, 2024
+
+Mouse
+Creative Buttons
+A website tutorial featuring animated buttons taken from awwwards winning websites. Remade using React and SASS. Inspired by https://timestwo.design, https://hello.cuberto.com/ and https://lusion.co/
+
+Subscribe to the newsletters to stay in touch with the latest.
+example@gmail.com
+
+Subscribe
+
+Tutorials
+Demos
+Design system inspired by Maxime Heckel
+
+Copyright 2023 © Olivier Larose
+
+How to Make a Paint Reveal Effect using Canvas API and React

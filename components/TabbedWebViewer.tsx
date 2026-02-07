@@ -16,14 +16,22 @@ interface TabbedWebViewerProps {
 }
 
 const TabbedWebViewer: React.FC<TabbedWebViewerProps> = ({ initialUrl, onClose, onNewTabRequest }) => {
+  const isElectron = typeof window !== 'undefined' && !!(window as any).electron;
+  
   const [tabs, setTabs] = useState<WebTab[]>(() => {
     // Ensure initial URL has protocol
     let validUrl = initialUrl;
-    if (!initialUrl.startsWith('http://') && !initialUrl.startsWith('https://')) {
-      validUrl = 'https://' + initialUrl;
+    if (!validUrl.startsWith('http://') && !validUrl.startsWith('https://')) {
+      validUrl = 'https://' + validUrl;
     }
-    console.log('🚀 TabbedWebViewer initialized with URL:', validUrl);
-    return [{ id: Date.now().toString(), url: validUrl, title: new URL(validUrl).hostname, isLoading: true }];
+    
+    // In browser mode (not Electron), use local proxy server to bypass iframe blocking
+    if (!isElectron) {
+      validUrl = `http://localhost:3002/api/proxy/web?url=${encodeURIComponent(validUrl)}`;
+    }
+    
+    console.log('🚀 TabbedWebViewer initialized with URL:', validUrl, 'isElectron:', isElectron);
+    return [{ id: Date.now().toString(), url: validUrl, title: new URL(initialUrl).hostname, isLoading: true }];
   });
   const [activeTabId, setActiveTabId] = useState(tabs[0].id);
   const [tabsScrollPosition, setTabsScrollPosition] = useState(0);
