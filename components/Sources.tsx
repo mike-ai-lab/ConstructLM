@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, Trash2, ExternalLink, CheckCircle, XCircle, Loader, ChevronDown, ChevronUp, FileText, Download, Eye } from 'lucide-react';
 import { Source } from '../types';
 import { createPortal } from 'react-dom';
@@ -44,7 +44,7 @@ const Sources: React.FC<SourcesProps> = ({ sources, onAddSource, onDeleteSource,
     if (!source.content) return null;
     
     const url = source.url.toLowerCase();
-    let type: ProcessedFile['type'] = 'text';
+    let type: ProcessedFile['type'] = 'document';
     let content = source.content;
     
     // Detect type from URL or content
@@ -73,7 +73,8 @@ const Sources: React.FC<SourcesProps> = ({ sources, onAddSource, onDeleteSource,
       name: source.title || source.url.split('/').pop() || 'source',
       type,
       content,
-      status: 'processed',
+      size: content.length,
+      status: 'ready',
       tokenCount: Math.ceil(content.length / 4)
     };
   };
@@ -91,6 +92,11 @@ const Sources: React.FC<SourcesProps> = ({ sources, onAddSource, onDeleteSource,
     setPreviewSource(null);
     setIsLoadingPreview(false);
   };
+
+  const handlePreviewLoaded = useCallback(() => {
+    console.log('✅ Preview loaded, hiding spinner');
+    setIsLoadingPreview(false);
+  }, []);
 
   return (
     <>
@@ -248,7 +254,7 @@ const Sources: React.FC<SourcesProps> = ({ sources, onAddSource, onDeleteSource,
             </div>
           ) : (
             <div className="bg-white dark:bg-[#1a1a1a] rounded-lg shadow-2xl overflow-hidden" style={{ width: '90vw', height: '90vh', maxWidth: '1400px' }}>
-              <PreviewContent source={previewSource} onClose={handleClosePreview} onLoaded={() => setIsLoadingPreview(false)} cancelRef={cancelRef} />
+              <PreviewContent source={previewSource} onClose={handleClosePreview} onLoaded={handlePreviewLoaded} cancelRef={cancelRef} />
             </div>
           )}
         </div>
@@ -276,7 +282,7 @@ const PreviewContent: React.FC<{ source: Source; onClose: () => void; onLoaded: 
       }
       
       const url = source.url.toLowerCase();
-      let type: ProcessedFile['type'] = 'text';
+      let type: ProcessedFile['type'] = 'document';
       let content = source.content || '';
       
       console.log('📄 URL:', url);
@@ -337,7 +343,8 @@ const PreviewContent: React.FC<{ source: Source; onClose: () => void; onLoaded: 
         name: source.title || source.url.split('/').pop() || 'source',
         type,
         content,
-        status: 'processed' as const,
+        size: content.length,
+        status: 'ready' as const,
         tokenCount: Math.ceil(content.length / 4)
       };
       

@@ -1,6 +1,5 @@
 import React, { useRef, useEffect } from 'react';
 import { ProcessedFile } from '../../../types';
-import { parseCSVLine } from '../utils/tableUtils';
 
 interface TextContextViewerProps {
   file?: ProcessedFile;
@@ -9,7 +8,7 @@ interface TextContextViewerProps {
 }
 
 const TextContextViewer: React.FC<TextContextViewerProps> = ({ file, quote, location }) => {
-  const tableRef = useRef<HTMLDivElement | null>(null);
+  const tableRef = useRef<HTMLElement | null>(null);
   
   console.log('📝 TEXT VIEWER DEBUG:');
   console.log('  File:', file?.name, 'Type:', file?.type);

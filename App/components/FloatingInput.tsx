@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Send, FileText, Mic, Sparkles, Plus, X, Eye, Loader } from 'lucide-react';
 import { ProcessedFile } from '../../types';
 import { contextMenuManager, createInputContextMenu } from '../../utils/uiHelpers';
@@ -88,7 +88,12 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
   };
 
   const handlePreview = (source: any) => {
-    console.log('🔍 PREVIEW CLICKED:', source.url);
+    console.log('🔍 PREVIEW CLICKED:', source);
+    console.log('  - URL:', source.url);
+    console.log('  - Title:', source.title);
+    console.log('  - Has content:', !!source.content);
+    console.log('  - Content length:', source.content?.length || 0);
+    console.log('  - Status:', source.status);
     cancelRef.current = false;
     setIsLoadingPreview(true);
     setPreviewSource(source);
@@ -100,6 +105,21 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
     setPreviewSource(null);
     setIsLoadingPreview(false);
   };
+
+  useEffect(() => {
+    if (previewSource) {
+      console.log('📺 PORTAL CONDITION CHECK:');
+      console.log('  - previewSource exists:', !!previewSource);
+      console.log('  - previewSource.content exists:', !!previewSource.content);
+      console.log('  - isLoadingPreview:', isLoadingPreview);
+      console.log('  - Should render portal:', !!(previewSource && previewSource.content));
+    }
+  }, [previewSource, isLoadingPreview]);
+
+  const handlePreviewLoaded = useCallback(() => {
+    console.log('✅ Preview loaded callback triggered');
+    setIsLoadingPreview(false);
+  }, []);
 
   const checkedCount = sources.filter(s => s.selected !== false).length;
   const totalCount = sources.length;
@@ -366,38 +386,31 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
         </div>
       </div>
       
-      {previewSource && previewSource.content && createPortal(
-        <div className="fixed inset-0 z-[100000] bg-black/50 backdrop-blur-sm" onClick={handleClosePreview}>
-          <div className="h-full w-full flex items-center justify-center p-4" onClick={(e) => e.stopPropagation()}>
-            {isLoadingPreview ? (
-              <div className="bg-white dark:bg-[#1a1a1a] rounded-lg shadow-2xl p-8 flex flex-col items-center gap-4">
-                <Loader className="animate-spin text-blue-600" size={32} />
-                <p className="text-sm text-[#666666] dark:text-[#a0a0a0]">Loading preview...</p>
-                <button
-                  onClick={handleClosePreview}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium"
-                >
-                  Cancel
-                </button>
+      {previewSource && previewSource.content && (
+        <>
+          {console.log('DEBUG: Portal is rendering, isLoadingPreview =', isLoadingPreview)}
+          {createPortal(
+            <div className="fixed inset-0 z-[100000] bg-black/50 backdrop-blur-sm" onClick={handleClosePreview}>
+              <div className="h-full w-full flex items-center justify-center p-4" onClick={(e) => e.stopPropagation()}>
+                <div className="bg-white dark:bg-[#1a1a1a] rounded-lg shadow-2xl overflow-hidden" style={{ width: '90vw', height: '90vh', maxWidth: '1400px' }}>
+                  <PreviewContent source={previewSource} onClose={handleClosePreview} onLoaded={handlePreviewLoaded} cancelRef={cancelRef} isLoading={isLoadingPreview} />
+                </div>
               </div>
-            ) : (
-              <div className="bg-white dark:bg-[#1a1a1a] rounded-lg shadow-2xl overflow-hidden" style={{ width: '90vw', height: '90vh', maxWidth: '1400px' }}>
-                <PreviewContent source={previewSource} onClose={handleClosePreview} onLoaded={() => setIsLoadingPreview(false)} cancelRef={cancelRef} />
-              </div>
-            )}
-          </div>
-        </div>,
-        document.body
+            </div>,
+            document.body
+          )}
+        </>
       )}
     </div>
   );
 };
 
-const PreviewContent: React.FC<{ source: any; onClose: () => void; onLoaded: () => void; cancelRef: React.RefObject<boolean> }> = ({ source, onClose, onLoaded, cancelRef }) => {
+const PreviewContent: React.FC<{ source: any; onClose: () => void; onLoaded: () => void; cancelRef: React.RefObject<boolean>; isLoading?: boolean }> = ({ source, onClose, onLoaded, cancelRef, isLoading }) => {
+  console.log('🚀 PreviewContent RENDERING (component function called)');
   const [file, setFile] = useState<ProcessedFile | null>(null);
 
   useEffect(() => {
-    console.log('🚀 PreviewContent MOUNTED');
+    console.log('🚀 PreviewContent MOUNTED - useEffect running');
     const load = async () => {
       console.log('⏳ Starting load...');
       await new Promise(resolve => setTimeout(resolve, 50));
@@ -409,7 +422,7 @@ const PreviewContent: React.FC<{ source: any; onClose: () => void; onLoaded: () 
       }
       
       const url = source.url.toLowerCase();
-      let type: ProcessedFile['type'] = 'text';
+      let type: ProcessedFile['type'] = 'document';
       let content = source.content || '';
       
       console.log('📄 URL:', url);
@@ -451,7 +464,8 @@ const PreviewContent: React.FC<{ source: any; onClose: () => void; onLoaded: () 
         name: source.title || source.url.split('/').pop() || 'source',
         type,
         content,
-        status: 'processed' as const,
+        size: content.length,
+        status: 'ready' as const,
         tokenCount: Math.ceil(content.length / 4)
       };
       
@@ -468,10 +482,17 @@ const PreviewContent: React.FC<{ source: any; onClose: () => void; onLoaded: () 
   }, [source, onLoaded, cancelRef]);
 
   if (!file) {
-    console.log('⏳ No file yet');
+    console.log('⏳ No file yet, isLoading:', isLoading);
     return (
       <div className="h-full flex items-center justify-center">
-        <Loader className="animate-spin text-blue-600" size={32} />
+        {isLoading ? (
+          <div className="flex flex-col items-center gap-4">
+            <Loader className="animate-spin text-blue-600" size={32} />
+            <p className="text-sm text-[#666666] dark:text-[#a0a0a0]">Loading preview...</p>
+          </div>
+        ) : (
+          <Loader className="animate-spin text-blue-600" size={32} />
+        )}
       </div>
     );
   }
