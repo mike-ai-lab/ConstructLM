@@ -38,15 +38,15 @@ const TodoHeader: React.FC<TodoHeaderProps> = ({
           <span className="text-sm text-[#666666] dark:text-[#a0a0a0]">{todos.filter(t => !t.archived).length} total</span>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => onViewModeChange('list')} className={`p-2 rounded-lg transition-colors ${viewMode === 'list' ? 'bg-[#1a1a1a] dark:bg-white text-white dark:text-[#1a1a1a]' : 'text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.04)] dark:hover:bg-[#2a2a2a]'}`}>
+          <button onClick={() => onViewModeChange('list')} className={`p-2 rounded-lg transition-colors ${viewMode === 'list' ? 'bg-[#4485d1] text-white' : 'text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.04)] dark:hover:bg-[#2a2a2a]'}`}>
             <List size={18} />
           </button>
-          <button onClick={() => onViewModeChange('board')} className={`p-2 rounded-lg transition-colors ${viewMode === 'board' ? 'bg-[#1a1a1a] dark:bg-white text-white dark:text-[#1a1a1a]' : 'text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.04)] dark:hover:bg-[#2a2a2a]'}`}>
+          <button onClick={() => onViewModeChange('board')} className={`p-2 rounded-lg transition-colors ${viewMode === 'board' ? 'bg-[#4485d1] text-white' : 'text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.04)] dark:hover:bg-[#2a2a2a]'}`}>
             <LayoutGrid size={18} />
           </button>
           <div className="w-px h-6 bg-[rgba(0,0,0,0.08)] dark:bg-[rgba(255,255,255,0.08)] mx-2" />
           {(['all', 'active', 'archived'] as const).map(f => (
-            <button key={f} onClick={() => onFilterChange(f)} className={`px-4 py-2 text-sm rounded-lg transition-colors ${filter === f ? 'bg-[#1a1a1a] dark:bg-white text-white dark:text-[#1a1a1a]' : 'text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.04)] dark:hover:bg-[#2a2a2a]'}`}>
+            <button key={f} onClick={() => onFilterChange(f)} className={`px-4 py-2 text-sm rounded-lg transition-colors ${filter === f ? 'bg-[#4485d1] text-white' : 'text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.04)] dark:hover:bg-[#2a2a2a]'}`}>
               {f.charAt(0).toUpperCase() + f.slice(1)}
             </button>
           ))}

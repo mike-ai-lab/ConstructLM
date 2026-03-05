@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Folder, X } from 'lucide-react';
+import { Plus, Folder, X, Search } from 'lucide-react';
 import { Todo, TodoGroup } from '../../types';
 
 interface TodoGroupsSidebarProps {
@@ -8,6 +8,8 @@ interface TodoGroupsSidebarProps {
   selectedGroup: string | null;
   showGroupForm: boolean;
   groupFormData: { name: string; color: string };
+  searchQuery: string;
+  onSearchChange: (query: string) => void;
   onSelectGroup: (id: string | null) => void;
   onToggleGroupForm: () => void;
   onGroupFormChange: (data: { name: string; color: string }) => void;
@@ -21,6 +23,8 @@ const TodoGroupsSidebar: React.FC<TodoGroupsSidebarProps> = ({
   selectedGroup,
   showGroupForm,
   groupFormData,
+  searchQuery,
+  onSearchChange,
   onSelectGroup,
   onToggleGroupForm,
   onGroupFormChange,
@@ -29,8 +33,26 @@ const TodoGroupsSidebar: React.FC<TodoGroupsSidebarProps> = ({
 }) => {
   return (
     <div className="w-64 flex-shrink-0 border-r border-[rgba(0,0,0,0.08)] dark:border-[rgba(255,255,255,0.08)] flex flex-col">
-      <div className="p-4 border-b border-[rgba(0,0,0,0.08)] dark:border-[rgba(255,255,255,0.08)]">
-        <h2 className="text-sm font-semibold text-[#1a1a1a] dark:text-white mb-3">Groups</h2>
+      <div className="p-4 border-b border-[rgba(0,0,0,0.08)] dark:border-[rgba(255,255,255,0.08)] space-y-3">
+        <div className="relative">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#a0a0a0]" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            placeholder="Search tasks..."
+            className="w-full pl-9 pr-3 py-2 text-sm bg-[#f5f5f5] dark:bg-[#252525] border border-[rgba(0,0,0,0.08)] dark:border-[rgba(255,255,255,0.08)] rounded-lg focus:outline-none focus:border-[#4485d1]"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => onSearchChange('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-[#a0a0a0] hover:text-[#1a1a1a] dark:hover:text-white"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+        <h2 className="text-sm font-semibold text-[#1a1a1a] dark:text-white">Groups</h2>
         <button onClick={onToggleGroupForm} className="w-full px-3 py-2 text-sm bg-[#4485d1] hover:bg-[#3674c1] text-white rounded-lg transition-colors flex items-center justify-center gap-2">
           <Plus size={14} />
           New Group

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, RotateCcw, Trash2, Calendar, Tag, Repeat } from 'lucide-react';
+import { Check, RotateCcw, Trash2, Calendar, Tag, Repeat, Play, Pause, Clock } from 'lucide-react';
 import { Todo } from '../../types';
 
 interface TodoBoardViewProps {
@@ -13,6 +13,7 @@ interface TodoBoardViewProps {
   onEdit: (todo: Todo) => void;
   onDuplicate: (todo: Todo) => void;
   onReorder: (todos: Todo[]) => void;
+  onUpdateTodo: (id: string, updates: Partial<Todo>) => void;
 }
 
 const TodoBoardView: React.FC<TodoBoardViewProps> = ({
@@ -24,10 +25,12 @@ const TodoBoardView: React.FC<TodoBoardViewProps> = ({
   highlightFilter,
   onEdit,
   onDuplicate,
-  onReorder
+  onReorder,
+  onUpdateTodo
 }) => {
   const [draggedTask, setDraggedTask] = useState<string | null>(null);
   const [placeholder, setPlaceholder] = useState<HTMLElement | null>(null);
+  const [activeTimers, setActiveTimers] = useState<Record<string, number>>({});
 
   const handleDragStart = (e: React.DragEvent, taskId: string) => {
     setDraggedTask(taskId);
@@ -108,6 +111,44 @@ const TodoBoardView: React.FC<TodoBoardViewProps> = ({
     return false;
   };
 
+  const toggleTimer = (todoId: string) => {
+    const todo = todos.find(t => t.id === todoId);
+    if (!todo) return;
+
+    const timeEntries = todo.timeEntries || [];
+    const activeEntry = timeEntries.find(e => !e.end);
+
+    if (activeEntry) {
+      const elapsed = Date.now() - activeEntry.start;
+      const newEntries = timeEntries.map(e => e === activeEntry ? { ...e, end: Date.now() } : e);
+      const actualTime = (todo.actualTime || 0) + elapsed;
+      onUpdateTodo(todoId, { timeEntries: newEntries, actualTime });
+      setActiveTimers(prev => { const next = { ...prev }; delete next[todoId]; return next; });
+    } else {
+      const newEntry = { start: Date.now() };
+      onUpdateTodo(todoId, { timeEntries: [...timeEntries, newEntry] });
+      setActiveTimers(prev => ({ ...prev, [todoId]: Date.now() }));
+    }
+  };
+
+  const formatTime = (ms: number) => {
+    const mins = Math.floor(ms / 60000);
+    const hrs = Math.floor(mins / 60);
+    const remainMins = mins % 60;
+    return hrs > 0 ? `${hrs}h ${remainMins}m` : `${mins}m`;
+  };
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveTimers(prev => {
+        const next = { ...prev };
+        Object.keys(next).forEach(id => next[id] = Date.now());
+        return next;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <>
       <style>
@@ -169,11 +210,16 @@ const TodoBoardView: React.FC<TodoBoardViewProps> = ({
                 <div className="w-0.5 h-2 bg-[#666666] dark:bg-[#999999] -mt-1 opacity-40"></div>
               </div>
 
+              {/* Task Number Badge */}
+              <div className="absolute top-2 right-2 px-2 py-0.5 rounded-md bg-[rgba(0,0,0,0.06)] dark:bg-[rgba(255,255,255,0.06)] text-[10px] font-mono font-semibold text-[#999999] dark:text-[#666666]">
+                #{todos.indexOf(todo) + 1}
+              </div>
+
               <div className="pt-2">
-                <h4 className={`text-lg font-medium leading-tight text-[#1a1a1a] dark:text-white mb-2 ${todo.completed ? 'opacity-40 line-through' : ''}`}>
+                <h4 className={`text-lg font-medium leading-tight text-[#1a1a1a] dark:text-white mb-2 break-words ${todo.completed ? 'opacity-40 line-through' : ''}`}>
                   {todo.title}
                 </h4>
-                {todo.notes && <p className="text-xs text-[#666666] dark:text-[#a0a0a0] line-clamp-2 mb-2">{todo.notes}</p>}
+                {todo.notes && <p className="text-xs text-[#666666] dark:text-[#a0a0a0] line-clamp-2 mb-2 break-words">{todo.notes}</p>}
                 
                 <div className="flex items-center gap-1 flex-wrap">
                   {todo.recurring?.enabled && (
@@ -187,13 +233,36 @@ const TodoBoardView: React.FC<TodoBoardViewProps> = ({
                       {new Date(todo.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
                     </span>
                   )}
+                  {todo.actualTime && todo.actualTime > 0 && (
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 flex items-center gap-1">
+                      <Clock size={10} />
+                      {formatTime(todo.actualTime)}
+                    </span>
+                  )}
                 </div>
               </div>
 
               <div className="flex justify-between items-center mt-4 pt-3 border-t border-[rgba(0,0,0,0.06)] dark:border-[rgba(255,255,255,0.06)]">
-                <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-[#999999] dark:text-[#666666]">
-                  <Tag size={10} />
-                  {todo.priority || 'medium'}
+                <div className="flex items-center gap-1">
+                  {(() => {
+                    const activeEntry = todo.timeEntries?.find(e => !e.end);
+                    const isRunning = !!activeEntry;
+                    const elapsed = isRunning && activeEntry ? activeTimers[todo.id] - activeEntry.start : 0;
+                    return (
+                      <button
+                        onClick={() => toggleTimer(todo.id)}
+                        className={`p-1.5 rounded-lg transition-colors ${isRunning ? 'bg-red-500 text-white' : 'hover:bg-gray-200 dark:hover:bg-gray-700'}`}
+                        style={{ pointerEvents: 'auto' }}
+                        title={isRunning ? `Running: ${formatTime(elapsed)}` : 'Start timer'}
+                      >
+                        {isRunning ? <Pause size={14} /> : <Play size={14} />}
+                      </button>
+                    );
+                  })()}
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-[#999999] dark:text-[#666666] flex items-center gap-1">
+                    <Tag size={10} />
+                    {todo.priority || 'medium'}
+                  </div>
                 </div>
                 
                 <div className="flex gap-1">

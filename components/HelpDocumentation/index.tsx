@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, FileText, MessageSquare, Sparkles, Keyboard, Settings, Network, Image, Phone, Search, Database, ExternalLink } from 'lucide-react';
+import { X, FileText, MessageSquare, Sparkles, Keyboard, Settings, Network, Image, Phone, Search, Database, ExternalLink, Plus } from 'lucide-react';
 import { DOCUMENTATION_KB } from '../../data/documentationKB';
 import ReactMarkdown from 'react-markdown';
 
@@ -75,6 +75,15 @@ const HelpDocumentation: React.FC<HelpDocumentationProps> = ({ onClose }) => {
 
     try {
       const { sendMessageToLLM } = await import('../../services/llmService');
+      const { getStoredApiKey } = await import('../../services/modelRegistry');
+      
+      // Check available API keys
+      const cerebrasKey = getStoredApiKey('CEREBRAS_API_KEY');
+      const groqKey = getStoredApiKey('GROQ_API_KEY');
+      
+      if (!cerebrasKey && !groqKey) {
+        throw new Error('No API keys configured. Please add Cerebras or Groq API key in Settings.');
+      }
       
       const relevantUnits = searchKnowledgeBase(message, 3);
       const context = relevantUnits.map(u => `${u.title}:\n${u.content}`).join('\n\n');
@@ -92,80 +101,55 @@ const HelpDocumentation: React.FC<HelpDocumentationProps> = ({ onClose }) => {
       const enhancedMessage = `You are a helpful ConstructLM documentation assistant.\n\nRelevant Documentation:\n${context}\n\nUser Question: ${message}\n\nProvide a clear, direct answer based on the documentation. Be conversational and focus on the official methods. Present information factually without speculating on outcomes. Format your response in markdown.\n\nAt the very end of your response, on a new line, add: [SECTION:section-id] where section-id is the most relevant documentation section. Valid sections: getting-started, sources, chat, notebook, todos, mindmap, live, graphics, data, shortcuts, settings, support. Only include this if your answer references a specific section.`;
 
       let response = '';
-      let modelUsed = 'llama-3.3-70b'; // Cerebras default
+      let modelUsed = cerebrasKey ? 'llama3.3-70b' : 'llama-3.3-70b-versatile';
       
-      try {
-        // Try Cerebras first (free unlimited, ultra-fast)
-        await sendMessageToLLM(
-          'llama-3.3-70b',
-          assistantMessages,
-          enhancedMessage,
-          [],
-          (chunk) => {
-            response += chunk;
-            setAssistantMessages(prev => {
-              const newMessages = [...prev];
-              const lastMsg = newMessages[newMessages.length - 1];
-              if (lastMsg?.role === 'model') {
-                const sectionMatch = response.match(/\[SECTION:([a-z-]+)\]/);
-                if (sectionMatch) {
-                  setLastRelevantSection(sectionMatch[1]);
-                  lastMsg.content = response.replace(/\[SECTION:[a-z-]+\]/, '').trim();
-                } else {
-                  lastMsg.content = response;
-                }
-              } else {
-                newMessages.push({ id: `model-${Date.now()}`, role: 'model', content: response, timestamp: Date.now() });
-              }
-              return newMessages;
-            });
-          },
-          []
-        );
-      } catch (cerebasError) {
-        console.warn('[DOC-ASSISTANT] Cerebras failed, falling back to Groq:', cerebasError);
-        
-        // Fallback to Groq
-        try {
-          response = '';
-          modelUsed = 'llama-3.1-8b';
+      const streamHandler = (chunk: string) => {
+        response += chunk;
+        setAssistantMessages(prev => {
+          const newMessages = [...prev];
+          const lastMsg = newMessages[newMessages.length - 1];
           
-          await sendMessageToLLM(
-            'llama-3.1-8b',
-            assistantMessages,
-            enhancedMessage,
-            [],
-            (chunk) => {
-              response += chunk;
-              setAssistantMessages(prev => {
-                const newMessages = [...prev];
-                const lastMsg = newMessages[newMessages.length - 1];
-                if (lastMsg?.role === 'model') {
-                  const sectionMatch = response.match(/\[SECTION:([a-z-]+)\]/);
-                  if (sectionMatch) {
-                    setLastRelevantSection(sectionMatch[1]);
-                    lastMsg.content = response.replace(/\[SECTION:[a-z-]+\]/, '').trim();
-                  } else {
-                    lastMsg.content = response;
-                  }
-                } else {
-                  newMessages.push({ id: `model-${Date.now()}`, role: 'model', content: response, timestamp: Date.now() });
-                }
-                return newMessages;
-              });
-            },
-            []
-          );
-        } catch (groqError) {
-          console.error('[DOC-ASSISTANT] Both Cerebras and Groq failed:', groqError);
-          throw groqError;
+          // Extract section marker and clean content
+          const sectionMatch = response.match(/\[SECTION:\s*([a-z-]+)\s*\]/i);
+          const cleanContent = response.replace(/\[SECTION:\s*[a-z-]+\s*\]/gi, '').trim();
+          
+          if (sectionMatch) {
+            setLastRelevantSection(sectionMatch[1]);
+          }
+          
+          if (lastMsg?.role === 'model') {
+            lastMsg.content = cleanContent;
+          } else {
+            newMessages.push({ id: `model-${Date.now()}`, role: 'model', content: cleanContent, timestamp: Date.now() });
+          }
+          return newMessages;
+        });
+      };
+      
+      if (cerebrasKey) {
+        try {
+          await sendMessageToLLM('llama3.3-70b', assistantMessages, enhancedMessage, [], streamHandler, []);
+        } catch (cerebasError) {
+          console.warn('[DOC-ASSISTANT] Cerebras failed, falling back to Groq:', cerebasError);
+          if (!groqKey) throw cerebasError;
+          response = '';
+          modelUsed = 'llama-3.3-70b-versatile';
+          await sendMessageToLLM('llama-3.3-70b-versatile', assistantMessages, enhancedMessage, [], streamHandler, []);
         }
+      } else {
+        await sendMessageToLLM('llama-3.3-70b-versatile', assistantMessages, enhancedMessage, [], streamHandler, []);
       }
       
       console.log(`[DOC-ASSISTANT] Response generated using ${modelUsed}`);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Assistant error:', error);
-      setAssistantMessages(prev => [...prev, { id: `model-${Date.now()}`, role: 'model', content: 'Sorry, I encountered an error. Please try again.', timestamp: Date.now() }]);
+      const errorMsg = error?.message || 'An error occurred. Please try again.';
+      setAssistantMessages(prev => [...prev, { 
+        id: `model-${Date.now()}`, 
+        role: 'model', 
+        content: `**Error:** ${errorMsg}\n\nPlease check your API keys in Settings (gear icon).`, 
+        timestamp: Date.now() 
+      }]);
     } finally {
       setIsGenerating(false);
     }
@@ -293,15 +277,27 @@ const HelpDocumentation: React.FC<HelpDocumentationProps> = ({ onClose }) => {
 
       {/* AI Assistant Sidebar */}
       {showAssistant && (
-        <div className="w-[450px] border-l border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] flex flex-col bg-white dark:bg-[#1a1a1a]">
+        <div className="w-[400px] border-l border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] flex flex-col bg-white dark:bg-[#1a1a1a]">
           <div className="h-[65px] flex items-center justify-between px-4 border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)]">
             <div className="flex items-center gap-2">
               <Sparkles size={16} className="text-[#4485d1]" />
               <h3 className="text-sm font-semibold text-[#1a1a1a] dark:text-white">AI Assistant</h3>
             </div>
-            <button onClick={() => setShowAssistant(false)} className="p-1.5 hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] rounded-full">
-              <X size={16} className="text-[#a0a0a0]" />
-            </button>
+            <div className="flex items-center gap-1">
+              <button 
+                onClick={() => {
+                  setAssistantMessages([]);
+                  setLastRelevantSection(null);
+                }} 
+                className="p-1.5 hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] rounded-full"
+                title="New Chat"
+              >
+                <Plus size={16} className="text-[#a0a0a0]" />
+              </button>
+              <button onClick={() => setShowAssistant(false)} className="p-1.5 hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] rounded-full">
+                <X size={16} className="text-[#a0a0a0]" />
+              </button>
+            </div>
           </div>
 
           <div className="flex-1 overflow-y-auto p-2 space-y-4">

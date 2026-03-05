@@ -1,5 +1,5 @@
 import React from 'react';
-import { PanelLeft, PanelLeftOpen, Cpu, ChevronDown, Phone, Plus, Edit3, Trash2, Check, Minus, Camera, Image, Moon, Sun, HelpCircle, Settings, BookMarked, CheckSquare, Bell, MessageSquare, FileText, Github, Terminal, Activity } from 'lucide-react';
+import { PanelLeft, PanelLeftOpen, Cpu, ChevronDown, Phone, Plus, Edit3, Trash2, Check, Minus, Camera, Image, Moon, Sun, HelpCircle, Settings, BookMarked, CheckSquare, Bell, MessageSquare, FileText, Github, Terminal, Activity, List, LayoutGrid, Archive, Download, ArrowUpDown } from 'lucide-react';
 import { MODEL_REGISTRY } from '../../services/modelRegistry';
 import { DRAWING_COLORS } from '../../services/drawingService';
 import GraphicsLibrary from '../../components/GraphicsLibrary';
@@ -57,6 +57,7 @@ interface AppHeaderProps {
   onOpenGitHub?: () => void;
   onOpenRAGViewer?: () => void;
   notebookControls?: React.ReactNode;
+  todoControls?: React.ReactNode;
 }
 
 const AppHeader: React.FC<AppHeaderProps> = (props) => {
@@ -90,6 +91,11 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
         {props.activeTab === 'notebook' && props.notebookControls && (
           <div className="flex items-center gap-2">
             {(props.notebookControls as any).viewControls}
+          </div>
+        )}
+        {props.activeTab === 'todos' && props.todoControls && (
+          <div className="flex items-center gap-2">
+            {(props.todoControls as any).viewControls}
           </div>
         )}
         <h1 className="font-semibold text-[#1a1a1a] dark:text-white text-base md:text-lg tracking-tight truncate hidden sm:block">ConstructLM</h1>
@@ -172,6 +178,7 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
 
       <div className="flex items-center gap-1 md:gap-2 flex-shrink-0 pl-20">
         {props.activeTab === 'notebook' && props.notebookControls && (props.notebookControls as any).element}
+        {props.activeTab === 'todos' && props.todoControls && (props.todoControls as any).element}
         
         {/* Drawing Tools - Only show on chat tab */}
         {props.activeTab === 'chat' && !isCompact && (

@@ -71,10 +71,13 @@ export interface Todo {
   subtasks?: { id: string; title: string; completed: boolean }[];
   progress?: number;
   estimatedTime?: number;
+  actualTime?: number;
+  timeEntries?: { start: number; end?: number }[];
   category?: string;
   attachments?: string[];
   archived?: boolean;
   groupId?: string;
+  completedAt?: number;
   recurring?: {
     enabled: boolean;
     frequency: 'daily' | 'weekly' | 'monthly' | 'custom';

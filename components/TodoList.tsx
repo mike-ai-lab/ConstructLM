@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { CheckSquare, Square, Trash2, Calendar, Tag, Clock, X, ChevronDown, ChevronRight, Copy, Circle, CheckCircle2, Edit2, Repeat } from 'lucide-react';
+import { CheckSquare, Square, Trash2, Calendar, Tag, Clock, X, ChevronDown, ChevronRight, Copy, Circle, CheckCircle2, Edit2, Repeat, ChevronUp, List, LayoutGrid, Archive, Download, Upload, ArrowUpDown, BarChart3 } from 'lucide-react';
 import { Todo, TodoGroup } from '../types';
 import TodoHeader from './TodoList/TodoHeader';
 import TodoStats from './TodoList/TodoStats';
 import TodoBoardView from './TodoList/TodoBoardView';
 import TodoGroupsSidebar from './TodoList/TodoGroupsSidebar';
 import TodoAddForm from './TodoList/TodoAddForm';
+import TodoAnalytics from './TodoList/TodoAnalytics';
+import TodoSearchFilter from './TodoList/TodoSearchFilter';
 
 interface TodoListProps {
   todos: Todo[];
@@ -18,11 +20,12 @@ interface TodoListProps {
   onAddGroup: (group: Omit<TodoGroup, 'id' | 'timestamp'>) => void;
   onDeleteGroup: (id: string) => void;
   onUpdateGroup: (id: string, updates: Partial<TodoGroup>) => void;
+  onRenderControls?: (controls: React.ReactNode) => void;
 }
 
-const TodoList: React.FC<TodoListProps> = ({ todos, groups, onAddTodo, onToggleTodo, onDeleteTodo, onUpdateTodo, onDeleteSubtask, onAddGroup, onDeleteGroup, onUpdateGroup }) => {
-  const [filter, setFilter] = useState<'all' | 'active' | 'archived'>('all');
+const TodoList: React.FC<TodoListProps> = ({ todos, groups, onAddTodo, onToggleTodo, onDeleteTodo, onUpdateTodo, onDeleteSubtask, onAddGroup, onDeleteGroup, onUpdateGroup, onRenderControls }) => {
   const [viewMode, setViewMode] = useState<'list' | 'board'>('board');
+  const [filter, setFilter] = useState<'all' | 'active' | 'archived'>('all');
   const [sortBy, setSortBy] = useState<'created' | 'modified' | 'priority-high' | 'priority-low' | 'duedate'>('created');
   const [showAddForm, setShowAddForm] = useState(false);
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
@@ -36,6 +39,10 @@ const TodoList: React.FC<TodoListProps> = ({ todos, groups, onAddTodo, onToggleT
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [completingId, setCompletingId] = useState<string | null>(null);
   const [highlightFilter, setHighlightFilter] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [quickFilter, setQuickFilter] = useState<string | null>(null);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [showAnalytics, setShowAnalytics] = useState(false);
 
   const getCountdown = (dueDate: number) => {
     const now = Date.now();
@@ -65,6 +72,29 @@ const TodoList: React.FC<TodoListProps> = ({ todos, groups, onAddTodo, onToggleT
     if (filter === 'archived') return t.archived;
     if (selectedGroup) return t.groupId === selectedGroup && !t.archived;
     return !t.archived;
+  }).filter(t => {
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      return t.title.toLowerCase().includes(query) || t.notes?.toLowerCase().includes(query) || t.tags?.some(tag => tag.toLowerCase().includes(query));
+    }
+    return true;
+  }).filter(t => {
+    if (quickFilter === 'today') {
+      return t.dueDate && new Date(t.dueDate).toDateString() === new Date().toDateString();
+    }
+    if (quickFilter === 'week') {
+      const weekFromNow = Date.now() + 7 * 24 * 60 * 60 * 1000;
+      return t.dueDate && t.dueDate <= weekFromNow;
+    }
+    if (quickFilter === 'overdue') {
+      return t.dueDate && t.dueDate < Date.now() && !t.completed;
+    }
+    return true;
+  }).filter(t => {
+    if (selectedTags.length > 0) {
+      return selectedTags.every(tag => t.tags?.includes(tag));
+    }
+    return true;
   }).sort((a, b) => {
     // Board view uses boardOrder, list view uses sortBy
     if (viewMode === 'board') {
@@ -198,11 +228,12 @@ const TodoList: React.FC<TodoListProps> = ({ todos, groups, onAddTodo, onToggleT
       onUpdateTodo(id, { 
         completed: true,
         archived: true,
+        completedAt: Date.now(),
         recurring: { ...todo.recurring, lastCompleted: Date.now() }
       });
       onAddTodo({ ...todo, id: undefined, timestamp: undefined, completed: false, dueDate: nextDue, recurring: { ...todo.recurring, nextDue } } as any);
     } else if (!todo.completed) {
-      onUpdateTodo(id, { completed: true, archived: true });
+      onUpdateTodo(id, { completed: true, archived: true, completedAt: Date.now() });
     } else {
       onUpdateTodo(id, { completed: false, archived: false });
     }
@@ -247,6 +278,103 @@ const TodoList: React.FC<TodoListProps> = ({ todos, groups, onAddTodo, onToggleT
     }, 300);
   };
 
+  const allTags = Array.from(new Set(todos.flatMap(t => t.tags || [])));
+  const toggleTag = (tag: string) => {
+    setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
+  };
+
+  const exportTodos = () => {
+    const text = filteredTodos.map(t => 
+      `- [${t.completed ? 'x' : ' '}] ${t.title}\n  Priority: ${t.priority}\n  ${t.notes ? `Notes: ${t.notes}\n  ` : ''}${t.dueDate ? `Due: ${new Date(t.dueDate).toLocaleDateString()}\n  ` : ''}${t.tags?.length ? `Tags: ${t.tags.join(', ')}\n` : ''}`
+    ).join('\n');
+    const blob = new Blob([text], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `todos-${Date.now()}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const importTodos = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.md,.txt,.json';
+    input.onchange = async (e: any) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const content = await file.text();
+      const lines = content.split('\n').filter(l => l.trim().startsWith('- ['));
+      lines.forEach(line => {
+        const completed = line.includes('[x]');
+        const title = line.replace(/^- \[[x ]\] /, '').trim();
+        if (title) {
+          onAddTodo({ title, completed, priority: 'medium', archived: false });
+        }
+      });
+    };
+    input.click();
+  };
+
+  React.useEffect(() => {
+    if (onRenderControls) {
+      const activeTodos = todos.filter(t => !t.completed && !t.archived);
+      const controls = {
+        element: (
+          <>
+            <button onClick={() => setShowAnalytics(!showAnalytics)} className={`p-2 rounded-lg transition-colors ${showAnalytics ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600' : 'text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[#2a2a2a]'}`} title="Toggle Analytics">
+              <BarChart3 size={18} />
+            </button>
+            <button onClick={importTodos} className="p-2 hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[#2a2a2a] rounded-lg text-[#666666] dark:text-[#a0a0a0] transition-colors" title="Import Todos">
+              <Upload size={18} />
+            </button>
+            <button onClick={exportTodos} className="p-2 hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[#2a2a2a] rounded-lg text-[#666666] dark:text-[#a0a0a0] transition-colors" title="Export All">
+              <Download size={18} />
+            </button>
+            {viewMode === 'list' && (
+              <>
+                <ArrowUpDown size={14} className="text-[#666666] dark:text-[#a0a0a0]" />
+                <select value={sortBy} onChange={(e) => setSortBy(e.target.value as any)} className="px-3 py-1.5 rounded-lg text-sm bg-slate-100 dark:bg-[#2a2a2a] text-[#666666] dark:text-[#a0a0a0] border-none focus:outline-none cursor-pointer">
+                  <option value="created">Created</option>
+                  <option value="modified">Modified</option>
+                  <option value="priority-high">Priority: High to Low</option>
+                  <option value="priority-low">Priority: Low to High</option>
+                  <option value="duedate">Due Date</option>
+                </select>
+              </>
+            )}
+            {filter !== 'archived' && activeTodos.some(t => t.completed) && (
+              <button onClick={archiveCompleted} className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 flex items-center gap-1 transition-colors" title="Archive Completed">
+                <Archive size={14} />
+                Archive
+              </button>
+            )}
+          </>
+        ),
+        viewControls: (
+          <>
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-[#2a2a2a] rounded-lg p-1">
+              <button onClick={() => setViewMode('list')} className={`p-1.5 rounded transition-colors ${viewMode === 'list' ? 'bg-white dark:bg-[#1a1a1a] text-blue-600 shadow-sm' : 'text-[#666666] dark:text-[#a0a0a0]'}`} title="List View">
+                <List size={16} />
+              </button>
+              <button onClick={() => setViewMode('board')} className={`p-1.5 rounded transition-colors ${viewMode === 'board' ? 'bg-white dark:bg-[#1a1a1a] text-blue-600 shadow-sm' : 'text-[#666666] dark:text-[#a0a0a0]'}`} title="Board View">
+                <LayoutGrid size={16} />
+              </button>
+            </div>
+            <div className="flex items-center gap-0.5 bg-slate-100 dark:bg-[#2a2a2a] rounded-lg p-0.5 ml-2">
+              {(['all', 'active', 'archived'] as const).map(f => (
+                <button key={f} onClick={() => setFilter(f)} className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${filter === f ? 'bg-white dark:bg-[#1a1a1a] text-blue-600 shadow-sm' : 'text-[#666666] dark:text-[#a0a0a0]'}`}>
+                  {f.charAt(0).toUpperCase() + f.slice(1)}
+                </button>
+              ))}
+            </div>
+          </>
+        )
+      };
+      onRenderControls(controls as any);
+    }
+  }, [viewMode, filter, sortBy, todos, showAnalytics, onRenderControls]);
+
   return (
     <div className="flex h-full bg-white dark:bg-[#1a1a1a]">
       <TodoGroupsSidebar
@@ -255,6 +383,8 @@ const TodoList: React.FC<TodoListProps> = ({ todos, groups, onAddTodo, onToggleT
         selectedGroup={selectedGroup}
         showGroupForm={showGroupForm}
         groupFormData={groupFormData}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
         onSelectGroup={setSelectedGroup}
         onToggleGroupForm={() => setShowGroupForm(!showGroupForm)}
         onGroupFormChange={setGroupFormData}
@@ -264,46 +394,14 @@ const TodoList: React.FC<TodoListProps> = ({ todos, groups, onAddTodo, onToggleT
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
-      {/* Header */}
-      <div className="flex-shrink-0 px-6 py-4 border-b border-[rgba(0,0,0,0.08)] dark:border-[rgba(255,255,255,0.08)]">
-        <TodoHeader
-          todos={todos}
-          showAddForm={showAddForm}
-          filter={filter}
-          viewMode={viewMode}
-          sortBy={sortBy}
-          activeTodos={activeTodos}
-          onToggleAddForm={() => setShowAddForm(!showAddForm)}
-          onFilterChange={setFilter}
-          onViewModeChange={setViewMode}
-          onSortChange={(sort) => setSortBy(sort as any)}
-          onArchiveCompleted={archiveCompleted}
-        />
-
-        {!showAddForm && (
-          <TodoStats
-            todos={todos}
-            activeTodos={activeTodos}
-            archivedTodos={archivedTodos}
-            highPriority={highPriority}
-            mediumPriority={mediumPriority}
-            lowPriority={lowPriority}
-            highlightFilter={highlightFilter}
-            onHighlightFilter={setHighlightFilter}
-          />
-        )}
-
-        {showAddForm && (
-          <TodoAddForm
-            formData={formData}
-            groups={groups}
-            onFormChange={setFormData}
-            onCancel={() => { setShowAddForm(false); setFormData({ title: '', priority: 'medium', dueDate: '', tags: '', notes: '', category: '', estimatedTime: '', groupId: '', recurring: false, recurringFrequency: 'daily', recurringInterval: '1' }); }}
-            onAdd={handleAdd}
-          />
-        )}
-      </div>
-
+      {showAnalytics && (
+        <div className="px-6 pt-4">
+          <div className="flex items-center gap-3 mb-3">
+            <TodoStats todos={todos} activeTodos={activeTodos} archivedTodos={archivedTodos} highPriority={highPriority} mediumPriority={mediumPriority} lowPriority={lowPriority} highlightFilter={highlightFilter} onHighlightFilter={setHighlightFilter} />
+          </div>
+          <TodoAnalytics todos={todos} />
+        </div>
+      )}
       {/* Task List */}
       <div className="flex-1 overflow-y-auto px-6 py-4">
         {filteredTodos.length === 0 ? (
@@ -322,6 +420,7 @@ const TodoList: React.FC<TodoListProps> = ({ todos, groups, onAddTodo, onToggleT
               highlightFilter={highlightFilter}
               onEdit={handleEdit}
               onDuplicate={duplicateTodo}
+              onUpdateTodo={onUpdateTodo}
               onReorder={(reorderedTodos) => {
                 console.log('🔧 PARENT REORDER CALLED:', reorderedTodos.map(t => t.title));
                 const baseOrder = Date.now();

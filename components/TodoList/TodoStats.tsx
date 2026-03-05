@@ -23,41 +23,26 @@ const TodoStats: React.FC<TodoStatsProps> = ({
   onHighlightFilter
 }) => {
   return (
-    <div className="grid grid-cols-5 gap-4">
-      <button onClick={() => onHighlightFilter(highlightFilter === 'active' ? null : 'active')} className={`bg-[#f8f9fa] dark:bg-[#2a2a2a] rounded-xl p-4 text-left transition-all hover:scale-105 ${highlightFilter === 'active' ? 'ring-2 ring-[#4485d1]' : ''}`}>
-        <div className="text-xs text-[#666666] dark:text-[#a0a0a0] mb-2 font-medium">Active</div>
-        <div className="text-3xl font-bold text-[#1a1a1a] dark:text-white mb-1">{activeTodos.length}</div>
-        <div className="h-1 bg-[rgba(0,0,0,0.06)] dark:bg-[rgba(255,255,255,0.06)] rounded-full overflow-hidden">
-          <div className="h-full bg-[#4485d1]" style={{ width: `${todos.length ? (activeTodos.length / todos.length) * 100 : 0}%` }} />
-        </div>
+    <div className="flex items-center gap-2">
+      <button onClick={() => onHighlightFilter(highlightFilter === 'active' ? null : 'active')} className={`bg-[#f8f9fa] dark:bg-[#2a2a2a] rounded-lg px-3 py-2 text-left transition-all hover:scale-105 ${highlightFilter === 'active' ? 'ring-2 ring-[#4485d1]' : ''}`}>
+        <div className="text-[10px] text-[#666666] dark:text-[#a0a0a0] font-medium uppercase tracking-wider">Active</div>
+        <div className="text-lg font-bold text-[#1a1a1a] dark:text-white">{activeTodos.length}</div>
       </button>
-      <button onClick={() => onHighlightFilter(highlightFilter === 'archived' ? null : 'archived')} className={`bg-[#f8f9fa] dark:bg-[#2a2a2a] rounded-xl p-4 text-left transition-all hover:scale-105 ${highlightFilter === 'archived' ? 'ring-2 ring-[#a8d5e2]' : ''}`}>
-        <div className="text-xs text-[#666666] dark:text-[#a0a0a0] mb-2 font-medium">Archived</div>
-        <div className="text-3xl font-bold text-[#1a1a1a] dark:text-white mb-1">{archivedTodos.length}</div>
-        <div className="h-1 bg-[rgba(0,0,0,0.06)] dark:bg-[rgba(255,255,255,0.06)] rounded-full overflow-hidden">
-          <div className="h-full bg-[#a8d5e2]" style={{ width: `${todos.length ? (archivedTodos.length / todos.length) * 100 : 0}%` }} />
-        </div>
+      <button onClick={() => onHighlightFilter(highlightFilter === 'archived' ? null : 'archived')} className={`bg-[#f8f9fa] dark:bg-[#2a2a2a] rounded-lg px-3 py-2 text-left transition-all hover:scale-105 ${highlightFilter === 'archived' ? 'ring-2 ring-[#a8d5e2]' : ''}`}>
+        <div className="text-[10px] text-[#666666] dark:text-[#a0a0a0] font-medium uppercase tracking-wider">Archived</div>
+        <div className="text-lg font-bold text-[#1a1a1a] dark:text-white">{archivedTodos.length}</div>
       </button>
-      <button onClick={() => onHighlightFilter(highlightFilter === 'high' ? null : 'high')} className={`bg-[#f8f9fa] dark:bg-[#2a2a2a] rounded-xl p-4 text-left transition-all hover:scale-105 ${highlightFilter === 'high' ? 'ring-2 ring-red-500' : ''}`}>
-        <div className="text-xs text-[#666666] dark:text-[#a0a0a0] mb-2 font-medium">High Priority</div>
-        <div className="text-3xl font-bold text-[#1a1a1a] dark:text-white mb-1">{highPriority}</div>
-        <div className="h-1 bg-[rgba(0,0,0,0.06)] dark:bg-[rgba(255,255,255,0.06)] rounded-full overflow-hidden">
-          <div className="h-full bg-[#666666]" style={{ width: `${activeTodos.length ? (highPriority / activeTodos.length) * 100 : 0}%` }} />
-        </div>
+      <button onClick={() => onHighlightFilter(highlightFilter === 'high' ? null : 'high')} className={`bg-[#f8f9fa] dark:bg-[#2a2a2a] rounded-lg px-3 py-2 text-left transition-all hover:scale-105 ${highlightFilter === 'high' ? 'ring-2 ring-red-500' : ''}`}>
+        <div className="text-[10px] text-[#666666] dark:text-[#a0a0a0] font-medium uppercase tracking-wider">High</div>
+        <div className="text-lg font-bold text-[#1a1a1a] dark:text-white">{highPriority}</div>
       </button>
-      <button onClick={() => onHighlightFilter(highlightFilter === 'medium' ? null : 'medium')} className={`bg-[#f8f9fa] dark:bg-[#2a2a2a] rounded-xl p-4 text-left transition-all hover:scale-105 ${highlightFilter === 'medium' ? 'ring-2 ring-[#FBF719]' : ''}`}>
-        <div className="text-xs text-[#666666] dark:text-[#a0a0a0] mb-2 font-medium">Medium Priority</div>
-        <div className="text-3xl font-bold text-[#1a1a1a] dark:text-white mb-1">{mediumPriority}</div>
-        <div className="h-1 bg-[rgba(0,0,0,0.06)] dark:bg-[rgba(255,255,255,0.06)] rounded-full overflow-hidden">
-          <div className="h-full bg-[#999999]" style={{ width: `${activeTodos.length ? (mediumPriority / activeTodos.length) * 100 : 0}%` }} />
-        </div>
+      <button onClick={() => onHighlightFilter(highlightFilter === 'medium' ? null : 'medium')} className={`bg-[#f8f9fa] dark:bg-[#2a2a2a] rounded-lg px-3 py-2 text-left transition-all hover:scale-105 ${highlightFilter === 'medium' ? 'ring-2 ring-[#FBF719]' : ''}`}>
+        <div className="text-[10px] text-[#666666] dark:text-[#a0a0a0] font-medium uppercase tracking-wider">Medium</div>
+        <div className="text-lg font-bold text-[#1a1a1a] dark:text-white">{mediumPriority}</div>
       </button>
-      <button onClick={() => onHighlightFilter(highlightFilter === 'low' ? null : 'low')} className={`bg-[#f8f9fa] dark:bg-[#2a2a2a] rounded-xl p-4 text-left transition-all hover:scale-105 ${highlightFilter === 'low' ? 'ring-2 ring-green-500' : ''}`}>
-        <div className="text-xs text-[#666666] dark:text-[#a0a0a0] mb-2 font-medium">Low Priority</div>
-        <div className="text-3xl font-bold text-[#1a1a1a] dark:text-white mb-1">{lowPriority}</div>
-        <div className="h-1 bg-[rgba(0,0,0,0.06)] dark:bg-[rgba(255,255,255,0.06)] rounded-full overflow-hidden">
-          <div className="h-full bg-[#cccccc]" style={{ width: `${activeTodos.length ? (lowPriority / activeTodos.length) * 100 : 0}%` }} />
-        </div>
+      <button onClick={() => onHighlightFilter(highlightFilter === 'low' ? null : 'low')} className={`bg-[#f8f9fa] dark:bg-[#2a2a2a] rounded-lg px-3 py-2 text-left transition-all hover:scale-105 ${highlightFilter === 'low' ? 'ring-2 ring-green-500' : ''}`}>
+        <div className="text-[10px] text-[#666666] dark:text-[#a0a0a0] font-medium uppercase tracking-wider">Low</div>
+        <div className="text-lg font-bold text-[#1a1a1a] dark:text-white">{lowPriority}</div>
       </button>
     </div>
   );

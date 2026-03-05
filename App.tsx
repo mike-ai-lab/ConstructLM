@@ -76,6 +76,7 @@ const App: React.FC = () => {
   const [notebookControls, setNotebookControls] = React.useState<React.ReactNode>(null);
   const [notebookSidebarOpen, setNotebookSidebarOpen] = React.useState(true);
   const [isRAGViewerOpen, setIsRAGViewerOpen] = React.useState(false);
+  const [todoControls, setTodoControls] = React.useState<React.ReactNode>(null);
 
   // REMOVED: Pipeline tracker moved to Help Documentation
   // const [pipelineSteps, setPipelineSteps] = React.useState<any[]>([]);
@@ -976,6 +977,7 @@ const App: React.FC = () => {
           onOpenGitHub={() => handleOpenGitHubTab()}
           onOpenRAGViewer={() => setIsLogsOpen(true)}
           notebookControls={notebookControls}
+          todoControls={todoControls}
         />
         )}
 
@@ -1058,6 +1060,7 @@ const App: React.FC = () => {
               onAddGroup={handleAddTodoGroup}
               onDeleteGroup={handleDeleteTodoGroup}
               onUpdateGroup={handleUpdateTodoGroup}
+              onRenderControls={setTodoControls}
             />
           </div>
         ) : activeTab === 'github' ? (

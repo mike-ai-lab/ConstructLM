@@ -208,7 +208,7 @@ export const MODEL_REGISTRY: ModelConfig[] = [
 
   // --- Cerebras Models (Free Unlimited) ---
   {
-    id: 'llama-3.3-70b',
+    id: 'llama3.3-70b',
     name: 'Llama 3.3 70B • Cerebras',
     provider: 'cerebras',
     contextWindow: 8192,
