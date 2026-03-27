@@ -1,6 +1,6 @@
 import React from 'react';
 import { PanelLeft, PanelLeftOpen, Cpu, ChevronDown, Phone, Plus, Edit3, Trash2, Check, Minus, Camera, Image, Moon, Sun, HelpCircle, Settings, BookMarked, CheckSquare, Bell, MessageSquare, FileText, Github, Terminal, Activity, List, LayoutGrid, Archive, Download, ArrowUpDown } from 'lucide-react';
-import { MODEL_REGISTRY } from '../../services/modelRegistry';
+import { MODEL_REGISTRY, getAllModels } from '../../services/modelRegistry';
 import { DRAWING_COLORS } from '../../services/drawingService';
 import GraphicsLibrary from '../../components/GraphicsLibrary';
 import { InteractiveBlob } from '../../components/InteractiveBlob';
@@ -63,6 +63,7 @@ interface AppHeaderProps {
 const AppHeader: React.FC<AppHeaderProps> = (props) => {
   const [isCompact, setIsCompact] = React.useState(false);
   const headerRef = React.useRef<HTMLElement>(null);
+  const allModels = getAllModels();
   
   React.useEffect(() => {
     const header = headerRef.current;
@@ -104,13 +105,27 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
             <div className="relative flex-shrink-0" ref={props.modelMenuRef}>
               <button onClick={(e) => { e.stopPropagation(); props.setShowModelMenu(!props.showModelMenu); }} className="flex items-center gap-1 px-2 md:px-3 py-1.5 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] hover:bg-[rgba(0,0,0,0.06)] dark:hover:bg-[#222222] rounded-full text-xs font-medium text-[#1a1a1a] dark:text-white">
                 <Cpu size={12} />
-                <span>{props.activeModel.name}</span>
+                <div className="flex flex-col items-start">
+                  <span className="leading-tight">{props.activeModel.name}</span>
+                  <span className="text-[9px] text-[#666666] dark:text-[#a0a0a0] leading-tight">
+                    {props.activeModel.provider === 'google' ? 'Google Gemini' :
+                     props.activeModel.provider === 'groq' ? 'Groq' :
+                     props.activeModel.provider === 'cerebras' ? 'Cerebras' :
+                     props.activeModel.provider === 'openrouter' ? 'OpenRouter' :
+                     props.activeModel.provider === 'openai' ? 'OpenAI' :
+                     props.activeModel.provider === 'aws' ? 'AWS Bedrock' :
+                     props.activeModel.provider === 'ollama-cloud' ? 'Ollama Cloud' :
+                     props.activeModel.provider}
+                  </span>
+                </div>
                 <ChevronDown size={10} />
               </button>
-            <div style={{display: props.showModelMenu ? 'block' : 'none'}} className="absolute top-full left-0 mt-2 w-72 bg-white dark:bg-[#222222] rounded-xl shadow-xl border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] overflow-hidden z-[100]">
+            <div style={{display: props.showModelMenu ? 'block' : 'none'}} className="absolute top-full left-0 mt-2 w-80 bg-white dark:bg-[#222222] rounded-xl shadow-xl border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] overflow-hidden z-[100]">
               <div className="px-3 py-2 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] text-[12px] font-bold text-[#666666] dark:text-[#a0a0a0] uppercase">Select Model</div>
-              <div className="max-h-[400px] overflow-y-auto p-1">
-                {MODEL_REGISTRY.map(model => {
+              <div className="max-h-[500px] overflow-y-auto p-1">
+                {/* Google Gemini Models */}
+                <div className="px-2 py-1.5 text-[10px] font-bold text-[#4485d1] uppercase tracking-wider">Google Gemini</div>
+                {allModels.filter(m => m.provider === 'google').map(model => {
                   const cooldown = props.rateLimitTimers[model.id];
                   const isRateLimited = cooldown && cooldown > Date.now();
                   const remainingMs = isRateLimited ? cooldown - Date.now() : 0;
@@ -121,7 +136,37 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
                     <button key={model.id} onClick={() => { props.setActiveModelId(model.id); props.setShowModelMenu(false); }} className={`w-full text-left px-3 py-2.5 rounded-lg transition-colors ${props.activeModelId === model.id ? 'bg-[rgba(68,133,209,0.1)]' : 'hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a]'}`}>
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2 flex-1 min-w-0">
-                          <div className={`w-2 h-2 rounded-full flex-shrink-0 ${model.provider === 'google' ? 'bg-blue-500' : 'bg-orange-500'}`} />
+                          <div className="w-2 h-2 rounded-full flex-shrink-0 bg-[#4485d1]" />
+                          <span className="text-sm font-medium text-[#1a1a1a] dark:text-white truncate">{model.name}</span>
+                          {model.supportsImages && <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-semibold flex-shrink-0">Vision</span>}
+                        </div>
+                        <div className="flex-shrink-0">
+                          {isRateLimited ? (
+                            <span className="text-[12px] px-1.5 py-0.5 rounded bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 font-mono">▽{timeDisplay}</span>
+                          ) : (
+                            <span className={`text-[12px] px-1.5 py-0.5 rounded ${model.capacityTag === 'High' ? 'bg-[#16b47e]/20 dark:bg-[#16b47e]/10 text-[#16b47e] dark:text-[#5bd8bb]' : model.capacityTag === 'Medium' ? 'bg-[#25b5cd]/20 dark:bg-[#25b5cd]/10 text-[#25b5cd] dark:text-[#5bd8bb]' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}>{model.capacityTag}</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-[12px] text-[#666666] dark:text-[#a0a0a0] pl-4 mt-0.5">{model.description}</div>
+                    </button>
+                  );
+                })}
+                
+                {/* Groq Models */}
+                <div className="px-2 py-1.5 mt-2 text-[10px] font-bold text-[#f59e0b] uppercase tracking-wider">Groq</div>
+                {allModels.filter(m => m.provider === 'groq').map(model => {
+                  const cooldown = props.rateLimitTimers[model.id];
+                  const isRateLimited = cooldown && cooldown > Date.now();
+                  const remainingMs = isRateLimited ? cooldown - Date.now() : 0;
+                  const remainingMinutes = Math.floor(remainingMs / 60000);
+                  const remainingSeconds = Math.floor((remainingMs % 60000) / 1000);
+                  const timeDisplay = remainingMinutes > 0 ? `${remainingMinutes}:${remainingSeconds.toString().padStart(2, '0')}` : `${remainingSeconds}s`;
+                  return (
+                    <button key={model.id} onClick={() => { props.setActiveModelId(model.id); props.setShowModelMenu(false); }} className={`w-full text-left px-3 py-2.5 rounded-lg transition-colors ${props.activeModelId === model.id ? 'bg-[rgba(68,133,209,0.1)]' : 'hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a]'}`}>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <div className="w-2 h-2 rounded-full flex-shrink-0 bg-[#f59e0b]" />
                           <span className="text-sm font-medium text-[#1a1a1a] dark:text-white truncate">{model.name}</span>
                           {model.supportsThinking && <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 font-semibold flex-shrink-0">Thinks</span>}
                         </div>
@@ -137,6 +182,196 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
                     </button>
                   );
                 })}
+                
+                {/* Cerebras Models */}
+                <div className="px-2 py-1.5 mt-2 text-[10px] font-bold text-[#10b981] uppercase tracking-wider">Cerebras</div>
+                {allModels.filter(m => m.provider === 'cerebras').map(model => {
+                  const cooldown = props.rateLimitTimers[model.id];
+                  const isRateLimited = cooldown && cooldown > Date.now();
+                  const remainingMs = isRateLimited ? cooldown - Date.now() : 0;
+                  const remainingMinutes = Math.floor(remainingMs / 60000);
+                  const remainingSeconds = Math.floor((remainingMs % 60000) / 1000);
+                  const timeDisplay = remainingMinutes > 0 ? `${remainingMinutes}:${remainingSeconds.toString().padStart(2, '0')}` : `${remainingSeconds}s`;
+                  return (
+                    <button key={model.id} onClick={() => { props.setActiveModelId(model.id); props.setShowModelMenu(false); }} className={`w-full text-left px-3 py-2.5 rounded-lg transition-colors ${props.activeModelId === model.id ? 'bg-[rgba(68,133,209,0.1)]' : 'hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a]'}`}>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <div className="w-2 h-2 rounded-full flex-shrink-0 bg-[#10b981]" />
+                          <span className="text-sm font-medium text-[#1a1a1a] dark:text-white truncate">{model.name}</span>
+                        </div>
+                        <div className="flex-shrink-0">
+                          {isRateLimited ? (
+                            <span className="text-[12px] px-1.5 py-0.5 rounded bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 font-mono">▽{timeDisplay}</span>
+                          ) : (
+                            <span className={`text-[12px] px-1.5 py-0.5 rounded ${model.capacityTag === 'High' ? 'bg-[#16b47e]/20 dark:bg-[#16b47e]/10 text-[#16b47e] dark:text-[#5bd8bb]' : model.capacityTag === 'Medium' ? 'bg-[#25b5cd]/20 dark:bg-[#25b5cd]/10 text-[#25b5cd] dark:text-[#5bd8bb]' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}>{model.capacityTag}</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-[12px] text-[#666666] dark:text-[#a0a0a0] pl-4 mt-0.5">{model.description}</div>
+                    </button>
+                  );
+                })}
+                
+                {/* OpenAI Models */}
+                {allModels.some(m => m.provider === 'openai') && (
+                  <>
+                    <div className="px-2 py-1.5 mt-2 text-[10px] font-bold text-[#6366f1] uppercase tracking-wider">OpenAI</div>
+                    {allModels.filter(m => m.provider === 'openai').map(model => {
+                      const cooldown = props.rateLimitTimers[model.id];
+                      const isRateLimited = cooldown && cooldown > Date.now();
+                      const remainingMs = isRateLimited ? cooldown - Date.now() : 0;
+                      const remainingMinutes = Math.floor(remainingMs / 60000);
+                      const remainingSeconds = Math.floor((remainingMs % 60000) / 1000);
+                      const timeDisplay = remainingMinutes > 0 ? `${remainingMinutes}:${remainingSeconds.toString().padStart(2, '0')}` : `${remainingSeconds}s`;
+                      return (
+                        <button key={model.id} onClick={() => { 
+                          console.log('[AppHeader] Ollama Cloud model clicked:', model.id, model.name);
+                          console.log('[AppHeader] Current activeModelId:', props.activeModelId);
+                          props.setActiveModelId(model.id); 
+                          props.setShowModelMenu(false);
+                          console.log('[AppHeader] Model selection complete');
+                        }} className={`w-full text-left px-3 py-2.5 rounded-lg transition-colors ${props.activeModelId === model.id ? 'bg-[rgba(68,133,209,0.1)]' : 'hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a]'}`}>
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              <div className="w-2 h-2 rounded-full flex-shrink-0 bg-[#6366f1]" />
+                              <span className="text-sm font-medium text-[#1a1a1a] dark:text-white truncate">{model.name}</span>
+                              {model.supportsImages && <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-semibold flex-shrink-0">Vision</span>}
+                            </div>
+                            <div className="flex-shrink-0">
+                              {isRateLimited ? (
+                                <span className="text-[12px] px-1.5 py-0.5 rounded bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 font-mono">▽{timeDisplay}</span>
+                              ) : (
+                                <span className={`text-[12px] px-1.5 py-0.5 rounded ${model.capacityTag === 'High' ? 'bg-[#16b47e]/20 dark:bg-[#16b47e]/10 text-[#16b47e] dark:text-[#5bd8bb]' : model.capacityTag === 'Medium' ? 'bg-[#25b5cd]/20 dark:bg-[#25b5cd]/10 text-[#25b5cd] dark:text-[#5bd8bb]' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}>{model.capacityTag}</span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-[12px] text-[#666666] dark:text-[#a0a0a0] pl-4 mt-0.5">{model.description}</div>
+                        </button>
+                      );
+                    })}
+                  </>
+                )}
+                
+                {/* OpenRouter Models */}
+                {allModels.some(m => m.provider === 'openrouter') && (
+                  <>
+                    <div className="px-2 py-1.5 mt-2 text-[10px] font-bold text-[#8b5cf6] uppercase tracking-wider">OpenRouter</div>
+                    {allModels.filter(m => m.provider === 'openrouter').map(model => {
+                      const cooldown = props.rateLimitTimers[model.id];
+                      const isRateLimited = cooldown && cooldown > Date.now();
+                      const remainingMs = isRateLimited ? cooldown - Date.now() : 0;
+                      const remainingMinutes = Math.floor(remainingMs / 60000);
+                      const remainingSeconds = Math.floor((remainingMs % 60000) / 1000);
+                      const timeDisplay = remainingMinutes > 0 ? `${remainingMinutes}:${remainingSeconds.toString().padStart(2, '0')}` : `${remainingSeconds}s`;
+                      return (
+                        <button key={model.id} onClick={() => { 
+                          console.log('[AppHeader] Ollama Cloud model clicked:', model.id, model.name);
+                          console.log('[AppHeader] Current activeModelId:', props.activeModelId);
+                          props.setActiveModelId(model.id); 
+                          props.setShowModelMenu(false);
+                          console.log('[AppHeader] Ollama Cloud selection complete');
+                        }} className={`w-full text-left px-3 py-2.5 rounded-lg transition-colors ${props.activeModelId === model.id ? 'bg-[rgba(68,133,209,0.1)]' : 'hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a]'}`}>
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              <div className="w-2 h-2 rounded-full flex-shrink-0 bg-[#8b5cf6]" />
+                              <span className="text-sm font-medium text-[#1a1a1a] dark:text-white truncate">{model.name}</span>
+                              {model.supportsImages && <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-semibold flex-shrink-0">Vision</span>}
+                              {model.supportsThinking && <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 font-semibold flex-shrink-0">Thinks</span>}
+                            </div>
+                            <div className="flex-shrink-0">
+                              {isRateLimited ? (
+                                <span className="text-[12px] px-1.5 py-0.5 rounded bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 font-mono">▽{timeDisplay}</span>
+                              ) : (
+                                <span className={`text-[12px] px-1.5 py-0.5 rounded ${model.capacityTag === 'High' ? 'bg-[#16b47e]/20 dark:bg-[#16b47e]/10 text-[#16b47e] dark:text-[#5bd8bb]' : model.capacityTag === 'Medium' ? 'bg-[#25b5cd]/20 dark:bg-[#25b5cd]/10 text-[#25b5cd] dark:text-[#5bd8bb]' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}>{model.capacityTag}</span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-[12px] text-[#666666] dark:text-[#a0a0a0] pl-4 mt-0.5">{model.description}</div>
+                        </button>
+                      );
+                    })}
+                  </>
+                )}
+                
+                {/* AWS Bedrock Models */}
+                {allModels.some(m => m.provider === 'aws') && (
+                  <>
+                    <div className="px-2 py-1.5 mt-2 text-[10px] font-bold text-[#ff9900] uppercase tracking-wider">AWS Bedrock</div>
+                    {allModels.filter(m => m.provider === 'aws').map(model => {
+                      const cooldown = props.rateLimitTimers[model.id];
+                      const isRateLimited = cooldown && cooldown > Date.now();
+                      const remainingMs = isRateLimited ? cooldown - Date.now() : 0;
+                      const remainingMinutes = Math.floor(remainingMs / 60000);
+                      const remainingSeconds = Math.floor((remainingMs % 60000) / 1000);
+                      const timeDisplay = remainingMinutes > 0 ? `${remainingMinutes}:${remainingSeconds.toString().padStart(2, '0')}` : `${remainingSeconds}s`;
+                      return (
+                        <button key={model.id} onClick={() => { 
+                          console.log('[AppHeader] ✅ Ollama Cloud model clicked:', model.id, model.name);
+                          console.log('[AppHeader] Current activeModelId before:', props.activeModelId);
+                          props.setActiveModelId(model.id); 
+                          props.setShowModelMenu(false);
+                          console.log('[AppHeader] ✅ Ollama Cloud selection complete, new ID:', model.id);
+                        }} className={`w-full text-left px-3 py-2.5 rounded-lg transition-colors ${props.activeModelId === model.id ? 'bg-[rgba(68,133,209,0.1)]' : 'hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a]'}`}>
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              <div className="w-2 h-2 rounded-full flex-shrink-0 bg-[#ff9900]" />
+                              <span className="text-sm font-medium text-[#1a1a1a] dark:text-white truncate">{model.name}</span>
+                              {model.supportsImages && <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-semibold flex-shrink-0">Vision</span>}
+                            </div>
+                            <div className="flex-shrink-0">
+                              {isRateLimited ? (
+                                <span className="text-[12px] px-1.5 py-0.5 rounded bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 font-mono">▽{timeDisplay}</span>
+                              ) : (
+                                <span className={`text-[12px] px-1.5 py-0.5 rounded ${model.capacityTag === 'High' ? 'bg-[#16b47e]/20 dark:bg-[#16b47e]/10 text-[#16b47e] dark:text-[#5bd8bb]' : model.capacityTag === 'Medium' ? 'bg-[#25b5cd]/20 dark:bg-[#25b5cd]/10 text-[#25b5cd] dark:text-[#5bd8bb]' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}>{model.capacityTag}</span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-[12px] text-[#666666] dark:text-[#a0a0a0] pl-4 mt-0.5">{model.description}</div>
+                        </button>
+                      );
+                    })}
+                  </>
+                )}
+                
+                {/* Ollama Cloud Models */}
+                {allModels.some(m => m.provider === 'ollama-cloud') && (
+                  <>
+                    <div className="px-2 py-1.5 mt-2 text-[10px] font-bold text-[#ec4899] uppercase tracking-wider">Ollama Cloud</div>
+                    {allModels.filter(m => m.provider === 'ollama-cloud').map(model => {
+                      const cooldown = props.rateLimitTimers[model.id];
+                      const isRateLimited = cooldown && cooldown > Date.now();
+                      const remainingMs = isRateLimited ? cooldown - Date.now() : 0;
+                      const remainingMinutes = Math.floor(remainingMs / 60000);
+                      const remainingSeconds = Math.floor((remainingMs % 60000) / 1000);
+                      const timeDisplay = remainingMinutes > 0 ? `${remainingMinutes}:${remainingSeconds.toString().padStart(2, '0')}` : `${remainingSeconds}s`;
+                      return (
+                        <button key={model.id} onClick={() => { 
+                          console.log('[AppHeader-OllamaCloud] ✅ Model clicked:', model.id, model.name);
+                          console.log('[AppHeader-OllamaCloud] activeModelId before:', props.activeModelId);
+                          props.setActiveModelId(model.id); 
+                          props.setShowModelMenu(false);
+                          console.log('[AppHeader-OllamaCloud] ✅ Selection complete');
+                        }} className={`w-full text-left px-3 py-2.5 rounded-lg transition-colors ${props.activeModelId === model.id ? 'bg-[rgba(68,133,209,0.1)]' : 'hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a]'}`}>
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              <div className="w-2 h-2 rounded-full flex-shrink-0 bg-[#ec4899]" />
+                              <span className="text-sm font-medium text-[#1a1a1a] dark:text-white truncate">{model.name}</span>
+                              {model.supportsImages && <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-semibold flex-shrink-0">Vision</span>}
+                            </div>
+                            <div className="flex-shrink-0">
+                              {isRateLimited ? (
+                                <span className="text-[12px] px-1.5 py-0.5 rounded bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 font-mono">▽{timeDisplay}</span>
+                              ) : (
+                                <span className={`text-[12px] px-1.5 py-0.5 rounded ${model.capacityTag === 'XLarge' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400' : model.capacityTag === 'Large' ? 'bg-[#16b47e]/20 dark:bg-[#16b47e]/10 text-[#16b47e] dark:text-[#5bd8bb]' : model.capacityTag === 'Medium' ? 'bg-[#25b5cd]/20 dark:bg-[#25b5cd]/10 text-[#25b5cd] dark:text-[#5bd8bb]' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}>{model.capacityTag}</span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-[12px] text-[#666666] dark:text-[#a0a0a0] pl-4 mt-0.5">{model.description}</div>
+                        </button>
+                      );
+                    })}
+                  </>
+                )}
               </div>
             </div>
             </div>

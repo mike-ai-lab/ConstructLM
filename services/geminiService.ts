@@ -38,13 +38,6 @@ export async function sendMessageToGemini(
   console.log('🔵 [GEMINI] Files attached:', activeFiles.length);
   console.log('🔵 [GEMINI] History messages:', history?.length || 0);
 
-  // Extract image data from files and prepare parts
-  const extractImageData = (content: string): { base64: string; mimeType: string } | null => {
-    const match = content.match(/\[IMAGE_DATA:([^\]]+)\]/);
-    if (!match) return null;
-    return { base64: match[1], mimeType: 'image/jpeg' };
-  };
-
   // Separate text and image files
   const imageFiles = activeFiles.filter(f => f.type === 'image');
   const textFiles = activeFiles.filter(f => f.type !== 'image');
@@ -52,8 +45,44 @@ export async function sendMessageToGemini(
   console.log('🔵 [GEMINI] Image files:', imageFiles.length);
   console.log('🔵 [GEMINI] Text files:', textFiles.length);
 
-  // ✅ REQUIREMENT 3: File context in SYSTEM role only (RAG chunks already in systemPrompt)
-  const fileContext = '';
+  // Upload images directly to Gemini File API for efficient token usage (~10 tokens vs 7K)
+  const uploadedFiles: any[] = [];
+  for (const imgFile of imageFiles) {
+    if (imgFile.fileHandle) {
+      try {
+        console.log('🔵 [GEMINI] Uploading image to File API:', imgFile.name, `(${Math.round(imgFile.size / 1024)}KB)`);
+        
+        // Upload original File object directly - no base64 conversion needed!
+        const formData = new FormData();
+        formData.append('file', imgFile.fileHandle, imgFile.name);
+        
+        const uploadResponse = await fetch(
+          `https://generativelanguage.googleapis.com/upload/v1beta/files?key=${apiKey}`,
+          {
+            method: 'POST',
+            body: formData
+          }
+        );
+        
+        if (uploadResponse.ok) {
+          const uploadResult = await uploadResponse.json();
+          const tokenEstimate = Math.ceil(imgFile.size / 750); // Gemini's ~750 bytes per token for images
+          console.log(`🔵 [GEMINI] ✅ Image uploaded successfully: ${uploadResult.file.uri} (~${tokenEstimate} tokens)`);
+          uploadedFiles.push({
+            fileUri: uploadResult.file.uri,
+            mimeType: uploadResult.file.mimeType
+          });
+        } else {
+          const errorText = await uploadResponse.text();
+          console.warn('🔵 [GEMINI] ⚠️ File upload failed:', errorText);
+          throw new Error(`Upload failed: ${errorText}`);
+        }
+      } catch (error) {
+        console.error('🔵 [GEMINI] ❌ File upload error:', error);
+        throw new Error(`Failed to upload image "${imgFile.name}": ${error instanceof Error ? error.message : 'Unknown error'}. Try using a smaller image or switch to a different model.`);
+      }
+    }
+  }
 
   const contents = [];
   
@@ -69,24 +98,18 @@ export async function sendMessageToGemini(
     }
   }
   
-  // ✅ REQUIREMENT 3: User message contains ONLY user intent
-  const currentMessage = message;
+  // Build parts for current message - include text and uploaded file references
+  const currentParts: any[] = [{ text: message }];
   
-  // Build parts for current message - include text and images
-  const currentParts: any[] = [{ text: currentMessage }];
-  
-  // Add image data as inline data parts
-  for (const imgFile of imageFiles) {
-    const imageData = extractImageData(imgFile.content);
-    if (imageData) {
-      console.log('🔵 [GEMINI] Adding image:', imgFile.name, 'size:', imageData.base64.length);
-      currentParts.push({
-        inlineData: {
-          mimeType: imgFile.fileHandle?.type || 'image/jpeg',
-          data: imageData.base64
-        }
-      });
-    }
+  // Add uploaded files (uses file URI - only ~10 tokens instead of 7K!)
+  for (const file of uploadedFiles) {
+    console.log('🔵 [GEMINI] Adding file reference (efficient):', file.fileUri);
+    currentParts.push({
+      fileData: {
+        mimeType: file.mimeType,
+        fileUri: file.fileUri
+      }
+    });
   }
   
   contents.push({ role: "user", parts: currentParts });
@@ -101,7 +124,6 @@ export async function sendMessageToGemini(
     }
   };
   
-  // ✅ REQUIREMENT 1: System prompt MUST ALWAYS be sent
   if (systemPrompt) {
     requestBody.systemInstruction = { parts: [{ text: systemPrompt }] };
   }

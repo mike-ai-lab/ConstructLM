@@ -8,6 +8,7 @@ import { contextMenuManager, createMessageContextMenu } from '../utils/uiHelpers
 import { InteractiveBlob } from './InteractiveBlob';
 import { highlightService } from '../services/highlightService';
 import { getTextDirection } from '../utils/textDirection';
+import { MODEL_REGISTRY, getModel } from '../services/modelRegistry';
 
 // --- ROBUST TEXT MAPPING UTILITIES ---
 
@@ -469,9 +470,32 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
         {/* Content */}
         <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
           <div className="flex items-center gap-2 mb-1.5 px-1">
-             <span className="text-[12px] font-bold text-[#666666] dark:text-[#a0a0a0] uppercase tracking-widest">
-                 {isUser ? 'You' : (message.modelId || 'AI')}
-             </span>
+             {isUser ? (
+               <span className="text-[12px] font-bold text-[#666666] dark:text-[#a0a0a0] uppercase tracking-widest">
+                 You
+               </span>
+             ) : (
+               <div className="flex flex-col">
+                 <span className="text-[12px] font-bold text-[#666666] dark:text-[#a0a0a0] uppercase tracking-widest">
+                   {message.modelId || 'AI'}
+                 </span>
+                 {message.modelId && (() => {
+                   const model = getModel(message.modelId);
+                   const providerNames: Record<string, string> = {
+                     'google': 'Google Gemini',
+                     'groq': 'Groq',
+                     'cerebras': 'Cerebras',
+                     'openai': 'OpenAI',
+                     'aws': 'AWS Bedrock'
+                   };
+                   return (
+                     <span className="text-[9px] text-[#999999] dark:text-[#666666] uppercase tracking-wider">
+                       {providerNames[model.provider] || model.provider}
+                     </span>
+                   );
+                 })()}
+               </div>
+             )}
              <span className="text-[10px] text-[#999999] dark:text-[#666666]">
                {new Date(message.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
              </span>

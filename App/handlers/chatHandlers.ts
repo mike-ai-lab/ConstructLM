@@ -122,6 +122,77 @@ export const createChatHandlers = (
     saveCurrentChat(true);
   };
 
+  const handleExportChat = (chatId: string) => {
+    const chat = chatRegistry.getChat(chatId);
+    if (!chat) return;
+
+    // Clean filename from chat name
+    const cleanName = chat.name
+      .replace(/[^a-z0-9\s-]/gi, '')
+      .replace(/\s+/g, '_')
+      .substring(0, 50) || 'chat';
+    
+    // Add timestamp suffix
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
+    const filename = `${cleanName}_${timestamp}.md`;
+
+    // Build markdown content
+    let markdown = `# ${chat.name}\n\n`;
+    markdown += `**Exported:** ${new Date().toLocaleString()}\n`;
+    markdown += `**Model:** ${chat.modelId}\n`;
+    markdown += `**Messages:** ${chat.messages.length}\n\n`;
+    markdown += `---\n\n`;
+
+    chat.messages.forEach((msg, index) => {
+      const msgNumber = Math.floor(index / 2) + 1;
+      
+      if (msg.role === 'user') {
+        markdown += `## 💬 User Message ${msgNumber}\n\n`;
+        markdown += `**Model:** ${msg.modelId || chat.modelId}\n\n`;
+        markdown += `${msg.content}\n\n`;
+        
+        if (msg.sourcesUsed && msg.sourcesUsed.length > 0) {
+          markdown += `📚 *Sources used: ${msg.sourcesUsed.join(', ')}*\n\n`;
+        }
+      } else {
+        markdown += `## 🤖 Assistant Response ${msgNumber}\n\n`;
+        markdown += `**Model:** ${msg.modelId || chat.modelId}\n\n`;
+        
+        if (msg.thinking) {
+          markdown += `### 💭 Thinking Process\n\n${msg.thinking}\n\n`;
+        }
+        
+        markdown += `${msg.content}\n\n`;
+        
+        if (msg.usage) {
+          markdown += `*📊 Token Usage: Input ${msg.usage.inputTokens} • Output ${msg.usage.outputTokens} • Total ${msg.usage.totalTokens}*\n\n`;
+        }
+      }
+      
+      markdown += `---\n\n`;
+    });
+
+    markdown += `\n*Exported from ConstructLM - ${new Date().toISOString()}*\n`;
+
+    // Create blob and download
+    const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    
+    // Cleanup
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 100);
+
+    activityLogger.logAction('CHAT', 'Chat exported', { chatId, filename });
+  };
+
   return {
     loadChat,
     saveCurrentChat,
@@ -129,5 +200,6 @@ export const createChatHandlers = (
     handleSelectChat,
     handleDeleteChat,
     updateChatName,
+    handleExportChat,
   };
 };

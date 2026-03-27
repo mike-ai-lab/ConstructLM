@@ -1,10 +1,11 @@
 
 import { ModelConfig } from "../types";
 import { LOCAL_MODELS, updateLocalModelsStatus } from "./localModelService";
+import { OLLAMA_CLOUD_MODELS } from "./ollamaCloudService";
 
 // Registry of currently supported models
 export const MODEL_REGISTRY: ModelConfig[] = [
-  // --- Google Gemini Models (Free Tier Available) ---
+  // --- Google Gemini Models (Verified Working) ---
   {
     id: 'gemini-flash-latest',
     name: 'Gemini Flash (Latest)',
@@ -42,32 +43,6 @@ export const MODEL_REGISTRY: ModelConfig[] = [
     maxInputWords: 786432,
     maxOutputWords: 49152,
     description: "Lightweight and efficient.",
-    capacityTag: 'High'
-  },
-  {
-    id: 'gemini-2.5-pro',
-    name: 'Gemini 2.5 Pro',
-    provider: 'google',
-    contextWindow: 1048576,
-    apiKeyEnv: 'GEMINI_API_KEY',
-    supportsImages: true,
-    supportsFilesApi: true,
-    maxInputWords: 786432,
-    maxOutputWords: 49152,
-    description: "Most capable. Higher rate limits.",
-    capacityTag: 'High'
-  },
-  {
-    id: 'gemini-2.0-flash',
-    name: 'Gemini 2.0 Flash',
-    provider: 'google',
-    contextWindow: 1048576,
-    apiKeyEnv: 'GEMINI_API_KEY',
-    supportsImages: true,
-    supportsFilesApi: true,
-    maxInputWords: 786432,
-    maxOutputWords: 6144,
-    description: "Stable 2.0 generation.",
     capacityTag: 'High'
   },
   
@@ -206,17 +181,17 @@ export const MODEL_REGISTRY: ModelConfig[] = [
     capacityTag: 'Low'
   },
 
-  // --- Cerebras Models (Free Unlimited) ---
+  // --- Cerebras Models (Verified Working) ---
   {
-    id: 'llama3.3-70b',
-    name: 'Llama 3.3 70B • Cerebras',
+    id: 'llama3.1-8b',
+    name: 'Llama 3.1 8B • Cerebras',
     provider: 'cerebras',
     contextWindow: 8192,
     apiKeyEnv: 'CEREBRAS_API_KEY',
     supportsImages: false,
     maxInputWords: 6144,
     maxOutputWords: 2048,
-    description: "Ultra-fast inference. Free unlimited.",
+    description: "Ultra-fast 8B model. ~2,200 tokens/s.",
     capacityTag: 'High'
   },
   {
@@ -228,32 +203,193 @@ export const MODEL_REGISTRY: ModelConfig[] = [
     supportsImages: false,
     maxInputWords: 24576,
     maxOutputWords: 8192,
-    description: "Largest model. Reasoning support.",
+    description: "Powerful 120B model. ~3,000 tokens/s.",
+    capacityTag: 'High'
+  },
+
+  // --- OpenRouter Models (Verified Free Tier) ---
+  {
+    id: 'openai/gpt-oss-20b:free',
+    name: 'GPT OSS 20B',
+    provider: 'openrouter',
+    contextWindow: 131072,
+    apiKeyEnv: 'OPENROUTER_API_KEY',
+    supportsImages: false,
+    maxInputWords: 98304,
+    maxOutputWords: 32768,
+    description: "OpenAI's 20B open model.",
     capacityTag: 'High'
   },
   {
-    id: 'qwen-3-235b-a22b-instruct-2507',
-    name: 'Qwen 3 235B • Cerebras',
-    provider: 'cerebras',
-    contextWindow: 20000,
-    apiKeyEnv: 'CEREBRAS_API_KEY',
+    id: 'stepfun/step-3.5-flash:free',
+    name: 'Step 3.5 Flash',
+    provider: 'openrouter',
+    contextWindow: 256000,
+    apiKeyEnv: 'OPENROUTER_API_KEY',
     supportsImages: false,
-    maxInputWords: 15000,
-    maxOutputWords: 5000,
-    description: "Alibaba's powerful model.",
+    maxInputWords: 192000,
+    maxOutputWords: 64000,
+    description: "Fast general-purpose model with 256K context.",
     capacityTag: 'High'
   },
   {
-    id: 'zai-glm-4.7',
-    name: 'ZAI GLM 4.7 • Cerebras',
-    provider: 'cerebras',
-    contextWindow: 65000,
-    apiKeyEnv: 'CEREBRAS_API_KEY',
+    id: 'z-ai/glm-4.5-air:free',
+    name: 'GLM-4.5-Air',
+    provider: 'openrouter',
+    contextWindow: 131072,
+    apiKeyEnv: 'OPENROUTER_API_KEY',
     supportsImages: false,
-    maxInputWords: 48750,
-    maxOutputWords: 16250,
-    description: "Large context window.",
+    maxInputWords: 98304,
+    maxOutputWords: 32768,
+    description: "Lightweight general model.",
     capacityTag: 'High'
+  },
+  {
+    id: 'arcee-ai/trinity-large-preview:free',
+    name: 'Arcee Trinity Large',
+    provider: 'openrouter',
+    contextWindow: 131072,
+    apiKeyEnv: 'OPENROUTER_API_KEY',
+    supportsImages: false,
+    supportsThinking: true,
+    maxInputWords: 98304,
+    maxOutputWords: 32768,
+    description: "Large reasoning model.",
+    capacityTag: 'High'
+  },
+  {
+    id: 'arcee-ai/trinity-mini:free',
+    name: 'Arcee Trinity Mini',
+    provider: 'openrouter',
+    contextWindow: 131072,
+    apiKeyEnv: 'OPENROUTER_API_KEY',
+    supportsImages: false,
+    supportsThinking: true,
+    maxInputWords: 98304,
+    maxOutputWords: 32768,
+    description: "Compact reasoning model.",
+    capacityTag: 'High'
+  },
+  {
+    id: 'liquid/lfm-2.5-1.2b-thinking:free',
+    name: 'LFM 2.5 Thinking',
+    provider: 'openrouter',
+    contextWindow: 32000,
+    apiKeyEnv: 'OPENROUTER_API_KEY',
+    supportsImages: false,
+    supportsThinking: true,
+    maxInputWords: 24000,
+    maxOutputWords: 8000,
+    description: "1.2B reasoning-focused model.",
+    capacityTag: 'Medium'
+  },
+  {
+    id: 'liquid/lfm-2.5-1.2b-instruct:free',
+    name: 'LFM 2.5 Instruct',
+    provider: 'openrouter',
+    contextWindow: 32000,
+    apiKeyEnv: 'OPENROUTER_API_KEY',
+    supportsImages: false,
+    maxInputWords: 24000,
+    maxOutputWords: 8000,
+    description: "1.2B instruction-following model.",
+    capacityTag: 'Medium'
+  },
+  {
+    id: 'nvidia/nemotron-nano-12b-v2-vl:free',
+    name: 'Nemotron Nano 12B VL',
+    provider: 'openrouter',
+    contextWindow: 128000,
+    apiKeyEnv: 'OPENROUTER_API_KEY',
+    supportsImages: true,
+    maxInputWords: 96000,
+    maxOutputWords: 32000,
+    description: "12B vision-language model.",
+    capacityTag: 'High'
+  },
+  {
+    id: 'google/gemma-3-27b-it:free',
+    name: 'Gemma 3 27B',
+    provider: 'openrouter',
+    contextWindow: 131072,
+    apiKeyEnv: 'OPENROUTER_API_KEY',
+    supportsImages: true,
+    maxInputWords: 98304,
+    maxOutputWords: 32768,
+    description: "27B multimodal with vision support.",
+    capacityTag: 'High'
+  },
+  {
+    id: 'google/gemma-3-12b-it:free',
+    name: 'Gemma 3 12B',
+    provider: 'openrouter',
+    contextWindow: 33000,
+    apiKeyEnv: 'OPENROUTER_API_KEY',
+    supportsImages: true,
+    maxInputWords: 24750,
+    maxOutputWords: 8250,
+    description: "12B multimodal model.",
+    capacityTag: 'Medium'
+  },
+  {
+    id: 'google/gemma-3-4b-it:free',
+    name: 'Gemma 3 4B',
+    provider: 'openrouter',
+    contextWindow: 33000,
+    apiKeyEnv: 'OPENROUTER_API_KEY',
+    supportsImages: true,
+    maxInputWords: 24750,
+    maxOutputWords: 8250,
+    description: "Compact 4B multimodal model.",
+    capacityTag: 'Medium'
+  },
+  {
+    id: 'nvidia/nemotron-3-nano-30b-a3b:free',
+    name: 'Nemotron 3 Nano 30B',
+    provider: 'openrouter',
+    contextWindow: 256000,
+    apiKeyEnv: 'OPENROUTER_API_KEY',
+    supportsImages: false,
+    maxInputWords: 192000,
+    maxOutputWords: 64000,
+    description: "30B MoE optimized for AI agents.",
+    capacityTag: 'High'
+  },
+  {
+    id: 'nvidia/nemotron-nano-9b-v2:free',
+    name: 'Nemotron Nano 9B V2',
+    provider: 'openrouter',
+    contextWindow: 128000,
+    apiKeyEnv: 'OPENROUTER_API_KEY',
+    supportsImages: false,
+    maxInputWords: 96000,
+    maxOutputWords: 32000,
+    description: "9B agent-optimized model.",
+    capacityTag: 'High'
+  },
+  {
+    id: 'google/gemma-3n-e2b-it:free',
+    name: 'Gemma 3N E2B',
+    provider: 'openrouter',
+    contextWindow: 33000,
+    apiKeyEnv: 'OPENROUTER_API_KEY',
+    supportsImages: false,
+    maxInputWords: 24750,
+    maxOutputWords: 8250,
+    description: "Ultra-compact 2B model.",
+    capacityTag: 'Low'
+  },
+  {
+    id: 'google/gemma-3n-e4b-it:free',
+    name: 'Gemma 3N E4B',
+    provider: 'openrouter',
+    contextWindow: 33000,
+    apiKeyEnv: 'OPENROUTER_API_KEY',
+    supportsImages: false,
+    maxInputWords: 24750,
+    maxOutputWords: 8250,
+    description: "Ultra-compact 4B model.",
+    capacityTag: 'Low'
   },
 
   // --- OpenAI Models (Paid) ---
@@ -340,10 +476,10 @@ export const MODEL_REGISTRY: ModelConfig[] = [
 export const DEFAULT_MODEL_ID = 'gemini-2.5-flash';
 
 /**
- * Get all available models (online + local)
+ * Get all available models (online + local + ollama cloud)
  */
 export const getAllModels = (): ModelConfig[] => {
-  return [...MODEL_REGISTRY, ...LOCAL_MODELS];
+  return [...MODEL_REGISTRY, ...LOCAL_MODELS, ...OLLAMA_CLOUD_MODELS];
 };
 
 /**

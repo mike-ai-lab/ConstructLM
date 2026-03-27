@@ -18,6 +18,7 @@ interface FileSidebarProps {
   onSelectChat: (chatId: string) => void;
   onCreateChat: () => void;
   onDeleteChat: (chatId: string) => void;
+  onExportChat: (chatId: string) => void;
   isDragOver: boolean;
   onDragStateChange: (isDragging: boolean) => void;
   selectedSourceIds: string[];
@@ -57,7 +58,7 @@ interface TreeNode {
 
 const FileSidebar: React.FC<FileSidebarProps> = ({ 
   files, onUpload, onRemove, isProcessing, onGenerateMindMap,
-  chats, activeChatId, onSelectChat, onCreateChat, onDeleteChat,
+  chats, activeChatId, onSelectChat, onCreateChat, onDeleteChat, onExportChat,
   isDragOver, onDragStateChange, selectedSourceIds, onToggleSource,
   onUpdateFile
 }) => {
@@ -957,6 +958,7 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
             onSelectChat={onSelectChat}
             onCreateChat={onCreateChat}
             onDeleteChat={onDeleteChat}
+            onExportChat={onExportChat}
           />
         )}
       </div>

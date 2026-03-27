@@ -5,7 +5,7 @@
   "type": "module",
   "main": "dist-electron/main.cjs",
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently \"node proxy-server.js\" \"vite\"",
     "proxy": "node server/proxy.js",
     "prebuild": "node scripts/update-version.cjs",
     "build": "vite build",

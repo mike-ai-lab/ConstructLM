@@ -279,11 +279,7 @@ const extractExcelText = async (file: File): Promise<string> => {
 
 const extractImageInfo = async (file: File): Promise<string> => {
   try {
-    // Convert image to base64 for AI model processing
-    const arrayBuffer = await file.arrayBuffer();
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
-    
-    // Get image dimensions
+    // Get image dimensions and basic metadata
     const img = new Image();
     const url = URL.createObjectURL(file);
     
@@ -291,23 +287,25 @@ const extractImageInfo = async (file: File): Promise<string> => {
       img.onload = () => {
         URL.revokeObjectURL(url);
         const sizeKB = Math.round(file.size / 1024);
-        // Store base64 data with special marker for AI processing
-        const content = `[IMAGE_DATA:${base64}]\n` +
+        // Store only metadata - actual image will be uploaded to Gemini File API when needed
+        // This reduces storage and token usage dramatically (10 tokens vs 7K tokens)
+        const content = `[IMAGE_FILE]\n` +
                       `[METADATA: Image File "${file.name}"]\n` +
                       `Type: ${file.type || 'image/jpeg'}\n` +
                       `Dimensions: ${img.width} x ${img.height} pixels\n` +
-                      `Size: ${sizeKB} KB`;
+                      `Size: ${sizeKB} KB\n` +
+                      `[NOTE: Image will be uploaded to AI provider when sent for analysis]`;
         resolve(content);
       };
       
       img.onerror = () => {
         URL.revokeObjectURL(url);
         const sizeKB = Math.round(file.size / 1024);
-        // Still include base64 even if dimensions fail
-        const content = `[IMAGE_DATA:${base64}]\n` +
+        const content = `[IMAGE_FILE]\n` +
                       `[METADATA: Image File "${file.name}"]\n` +
                       `Type: ${file.type || 'image/jpeg'}\n` +
-                      `Size: ${sizeKB} KB`;
+                      `Size: ${sizeKB} KB\n` +
+                      `[NOTE: Image will be uploaded to AI provider when sent for analysis]`;
         resolve(content);
       };
       

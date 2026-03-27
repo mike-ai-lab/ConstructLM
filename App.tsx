@@ -15,7 +15,7 @@ import { createInputHandlers } from './App/handlers/inputHandlers';
 import { createFeatureHandlers } from './App/handlers/featureHandlers';
 import { createAudioHandlers } from './App/handlers/audioHandlers';
 import { MIN_SIDEBAR_WIDTH, MAX_SIDEBAR_WIDTH, MIN_VIEWER_WIDTH, MAX_VIEWER_WIDTH, MIN_CHAT_WIDTH } from './App/constants';
-import { MODEL_REGISTRY, DEFAULT_MODEL_ID } from './services/modelRegistry';
+import { MODEL_REGISTRY, DEFAULT_MODEL_ID, getAllModels } from './services/modelRegistry';
 import { mindMapCache } from './services/mindMapCache';
 import { userProfileService } from './services/userProfileService';
 import { permanentStorage } from './services/permanentStorage';
@@ -710,7 +710,8 @@ const App: React.FC = () => {
   }, [layoutState.isResizing]);
 
   const activeFile = layoutState.viewState ? fileState.files.find(f => f.id === layoutState.viewState!.fileId) : null;
-  const activeModel = MODEL_REGISTRY.find(m => m.id === featureState.activeModelId) || MODEL_REGISTRY[0];
+  const allModels = getAllModels();
+  const activeModel = allModels.find(m => m.id === featureState.activeModelId) || allModels[0];
   const isElectron = typeof window !== 'undefined' && !!(window as any).electron;
   const handleCloseLiveSession = useCallback(() => featureState.setIsLiveMode(false), []);
   
@@ -890,6 +891,7 @@ const App: React.FC = () => {
             onSelectChat={chatHandlers.handleSelectChat}
             onCreateChat={chatHandlers.handleCreateChat}
             onDeleteChat={chatHandlers.handleDeleteChat}
+            onExportChat={chatHandlers.handleExportChat}
             isDragOver={layoutState.isSidebarDragOver}
             onDragStateChange={layoutState.setIsSidebarDragOver}
             selectedSourceIds={chatState.selectedSourceIds}

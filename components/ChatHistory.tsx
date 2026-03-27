@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect, memo } from 'react';
 import { ChatMetadata } from '../services/chatRegistry';
 import { MODEL_REGISTRY } from '../services/modelRegistry';
-import { MessageCircle, Plus, Trash2 } from 'lucide-react';
+import { MessageCircle, Plus, Trash2, Download } from 'lucide-react';
 
 interface ChatHistoryProps {
   chats: ChatMetadata[];
@@ -9,6 +9,7 @@ interface ChatHistoryProps {
   onSelectChat: (chatId: string) => void;
   onCreateChat: () => void;
   onDeleteChat: (chatId: string) => void;
+  onExportChat: (chatId: string) => void;
 }
 
 // Utility for date formatting
@@ -30,7 +31,8 @@ const ChatListItem = memo(({
   isDeleteConfirming,
   modelName,
   onSelect,
-  onDeleteClick
+  onDeleteClick,
+  onExportClick
 }: {
   chat: ChatMetadata;
   isActive: boolean;
@@ -38,6 +40,7 @@ const ChatListItem = memo(({
   modelName: string;
   onSelect: (id: string) => void;
   onDeleteClick: (id: string, e: React.MouseEvent) => void;
+  onExportClick: (id: string, e: React.MouseEvent) => void;
 }) => {
   return (
     <div
@@ -67,6 +70,14 @@ const ChatListItem = memo(({
       </div>
 
       <button
+        onClick={(e) => onExportClick(chat.id, e)}
+        className="opacity-0 group-hover:opacity-100 p-1.5 rounded transition-all flex-shrink-0 text-[#4485d1] hover:bg-[rgba(68,133,209,0.1)]"
+        title="Export chat as markdown"
+      >
+        <Download size={14} />
+      </button>
+
+      <button
         onClick={(e) => onDeleteClick(chat.id, e)}
         className={`
           opacity-0 group-hover:opacity-100 p-1.5 rounded transition-all flex-shrink-0
@@ -89,7 +100,8 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
   activeChatId,
   onSelectChat,
   onCreateChat,
-  onDeleteChat
+  onDeleteChat,
+  onExportChat
 }) => {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [chatViewTab, setChatViewTab] = useState<'files' | 'links'>('files');
@@ -131,6 +143,11 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
       setDeleteConfirm(chatId);
     }
   }, [deleteConfirm, onDeleteChat]);
+
+  const handleExportClick = useCallback((chatId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    onExportChat(chatId);
+  }, [onExportChat]);
 
   return (
     <div className="flex flex-col h-full">
@@ -185,6 +202,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
                 modelName={modelNameMap.get(chat.modelId) || chat.modelId}
                 onSelect={onSelectChat}
                 onDeleteClick={handleDeleteClick}
+                onExportClick={handleExportClick}
               />
             ))}
           </div>

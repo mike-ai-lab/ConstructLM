@@ -5,6 +5,8 @@ import { sendMessageToGemini } from "./geminiService";
 import { streamLocalModel } from "./localModelService";
 import { ragService } from "./ragService";
 import { streamAWSBedrock } from "./awsBedrockService";
+import { streamOpenRouter } from "./openrouterService";
+import { streamOllamaCloud } from "./ollamaCloudService";
 import { diagnosticLogger } from "./diagnosticLogger";
 import { getNextProxy } from "./proxyRotation";
 
@@ -110,14 +112,17 @@ export const sendMessageToLLM = async (
     
     // Check for images with non-vision models
     const hasImages = activeFiles.some(f => f.type === 'image');
-    const isVisionModel = model.provider === 'google' || (model.provider === 'openai' && model.id.includes('gpt-4'));
+    const isVisionModel = model.provider === 'google' || 
+                         (model.provider === 'openai' && model.id.includes('gpt-4')) ||
+                         (model.provider === 'openrouter' && model.supportsImages);
     
     if (hasImages && !isVisionModel) {
         throw new Error(
             `**Vision Not Supported:** ${model.name} cannot analyze images.\n\n` +
             `**Switch to a vision-enabled model:**\n` +
             `• Google Gemini (any model)\n` +
-            `• OpenAI GPT-4o or GPT-4o Mini`
+            `• OpenAI GPT-4o or GPT-4o Mini\n` +
+            `• OpenRouter: Gemma 3 series, Nemotron VL`
         );
     }
 
@@ -275,11 +280,17 @@ export const sendMessageToLLM = async (
                 throw new Error(`API Key for ${model.name} is missing. Please open Settings (Gear Icon) to add it.`);
             }
             
-            // Helper to extract image data
-            const extractImageData = (content: string): { base64: string; mimeType: string } | null => {
-                const match = content.match(/\[IMAGE_DATA:([^\]]+)\]/);
-                if (!match) return null;
-                return { base64: match[1], mimeType: 'image/jpeg' };
+            // Helper to convert File to base64 on-the-fly (efficient - no storage overhead)
+            const fileToBase64 = async (file: File): Promise<string> => {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                        const base64 = (reader.result as string).split(',')[1];
+                        resolve(base64);
+                    };
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
             };
             
             // Separate image and text files
@@ -311,15 +322,22 @@ export const sendMessageToLLM = async (
             if (imageFiles.length > 0 && model.provider === 'openai') {
                 const contentParts: any[] = [{ type: 'text', text: currentContent }];
                 
+                // Convert images to base64 on-the-fly (only when sending, not stored)
                 for (const imgFile of imageFiles) {
-                    const imageData = extractImageData(imgFile.content);
-                    if (imageData) {
-                        contentParts.push({
-                            type: 'image_url',
-                            image_url: {
-                                url: `data:${imgFile.fileHandle?.type || 'image/jpeg'};base64,${imageData.base64}`
-                            }
-                        });
+                    if (imgFile.fileHandle) {
+                        try {
+                            const base64 = await fileToBase64(imgFile.fileHandle);
+                            const sizeKB = Math.round(imgFile.size / 1024);
+                            console.log(`[OpenAI] Converting image to base64: ${imgFile.name} (${sizeKB}KB)`);
+                            contentParts.push({
+                                type: 'image_url',
+                                image_url: {
+                                    url: `data:${imgFile.fileHandle.type || 'image/jpeg'};base64,${base64}`
+                                }
+                            });
+                        } catch (error) {
+                            console.error(`[OpenAI] Failed to convert image ${imgFile.name}:`, error);
+                        }
                     }
                 }
                 
@@ -354,6 +372,83 @@ export const sendMessageToLLM = async (
             });
             
             return await streamOpenAICompatible(model, apiKey, messages, onStream);
+        } else if (model.provider === 'openrouter') {
+            // OpenRouter
+            const apiKey = getApiKeyForModel(model);
+            if (!apiKey) {
+                throw new Error(`API Key for ${model.name} is missing. Please open Settings (Gear Icon) to add it.`);
+            }
+            
+            // Helper to convert File to base64 on-the-fly (efficient - no storage overhead)
+            const fileToBase64 = async (file: File): Promise<string> => {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                        const base64 = (reader.result as string).split(',')[1];
+                        resolve(base64);
+                    };
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+            };
+            
+            // Separate image and text files
+            const imageFiles = activeFiles.filter(f => f.type === 'image');
+            const textFiles = activeFiles.filter(f => f.type !== 'image');
+            
+            // Build messages array with system prompt
+            const finalSystemPrompt = strictSystemPrompt + sourceContext;
+            const messages: Array<{ role: string; content: string | any[] }> = [{ role: 'system', content: finalSystemPrompt }];
+            
+            // Add history (strict mode isolation)
+            const recentHistory = strictMode ? [] : history.filter(m => !m.isStreaming && m.id !== 'intro').slice(-10);
+            for (const msg of recentHistory) {
+                const role = msg.role === 'model' ? 'assistant' : msg.role;
+                messages.push({ role, content: msg.content });
+            }
+            
+            // Add current user message with images if present
+            if (imageFiles.length > 0 && model.supportsImages) {
+                const contentParts: any[] = [{ type: 'text', text: newMessage }];
+                
+                // Convert images to base64 on-the-fly (only when sending, not stored)
+                for (const imgFile of imageFiles) {
+                    if (imgFile.fileHandle) {
+                        try {
+                            const base64 = await fileToBase64(imgFile.fileHandle);
+                            const sizeKB = Math.round(imgFile.size / 1024);
+                            console.log(`[OpenRouter] Converting image to base64: ${imgFile.name} (${sizeKB}KB)`);
+                            contentParts.push({
+                                type: 'image_url',
+                                image_url: {
+                                    url: `data:${imgFile.fileHandle.type || 'image/jpeg'};base64,${base64}`
+                                }
+                            });
+                        } catch (error) {
+                            console.error(`[OpenRouter] Failed to convert image ${imgFile.name}:`, error);
+                        }
+                    }
+                }
+                
+                messages.push({ role: 'user', content: contentParts });
+            } else {
+                // Standard text-only message
+                messages.push({ role: 'user', content: newMessage });
+            }
+            
+            console.log('[OpenRouter] Sending request with', messages.length, 'messages', imageFiles.length > 0 ? `(${imageFiles.length} images)` : '');
+            
+            // Consume the generator properly
+            const generator = streamOpenRouter(model.id, apiKey, messages, onStream);
+            let result;
+            while (true) {
+                const { done, value } = await generator.next();
+                if (done) {
+                    result = value;
+                    break;
+                }
+            }
+            return result;
         } else if (model.provider === 'aws') {
             // AWS Bedrock
             const accessKeyId = getApiKeyForModel(model);
@@ -391,6 +486,30 @@ export const sendMessageToLLM = async (
                 awsFiles,
                 awsCallback
             );
+        } else if (model.provider === 'ollama-cloud') {
+            // Ollama Cloud
+            const apiKey = getApiKeyForModel(model);
+            if (!apiKey) {
+                throw new Error(`API Key for ${model.name} is missing. Please open Settings (Gear Icon) to add it.`);
+            }
+            
+            const finalSystemPrompt = strictSystemPrompt + sourceContext;
+            const messages: Array<{ role: string; content: string }> = [{ role: 'system', content: finalSystemPrompt }];
+            
+            // Add history (strict mode isolation)
+            const recentHistory = strictMode ? [] : history.filter(m => !m.isStreaming && m.id !== 'intro').slice(-10);
+            for (const msg of recentHistory) {
+                const role = msg.role === 'model' ? 'assistant' : msg.role;
+                messages.push({ role, content: msg.content });
+            }
+            
+            // Add current user message
+            messages.push({ role: 'user', content: newMessage });
+            
+            console.log('[Ollama Cloud] Sending request with', messages.length, 'messages');
+            
+            await streamOllamaCloud(model.modelId || model.id, messages, apiKey, onStream);
+            return {};
         } else {
             throw new Error(`Provider ${model.provider} not implemented yet.`);
         }

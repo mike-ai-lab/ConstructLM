@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import fetch from 'node-fetch';
+import https from 'https';
 
 const app = express();
 app.use(cors());
@@ -13,7 +14,102 @@ const cookieJars = new Map();
 app.head('/api/proxy/groq', (req, res) => res.status(200).end());
 app.head('/api/proxy/openai', (req, res) => res.status(200).end());
 app.head('/api/proxy/web', (req, res) => res.status(200).end());
+app.head('/api/ollama-proxy', (req, res) => res.status(200).end());
 app.get('/', (req, res) => res.json({ status: 'Proxy server running' }));
+
+// Ollama Cloud Proxy Endpoint
+app.post('/api/ollama-proxy', async (req, res) => {
+  try {
+    const { model, messages, stream, temperature, apiKey } = req.body;
+
+    if (!apiKey) {
+      return res.status(400).json({ error: 'Missing Ollama Cloud API key' });
+    }
+
+    if (!model || !messages) {
+      return res.status(400).json({ error: 'Missing model or messages' });
+    }
+
+    console.log(`[OLLAMA-PROXY] Forwarding request to Ollama Cloud for model: ${model}`);
+
+    const requestBody = JSON.stringify({
+      model,
+      messages: messages.map(m => ({
+        role: m.role === 'system' ? 'system' : m.role === 'user' ? 'user' : 'assistant',
+        content: m.content
+      })),
+      stream: stream !== false,
+      temperature: temperature || 0.7
+    });
+
+    const options = {
+      hostname: 'ollama.com',
+      path: '/api/chat',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(requestBody),
+        'Authorization': `Bearer ${apiKey}`
+      }
+    };
+
+    const proxyReq = https.request(options, (proxyRes) => {
+      if (proxyRes.statusCode !== 200) {
+        console.error(`[OLLAMA-PROXY] Error from Ollama Cloud:`, proxyRes.statusCode);
+        
+        let errorBody = '';
+        proxyRes.on('data', (chunk) => {
+          errorBody += chunk;
+        });
+        
+        proxyRes.on('end', () => {
+          console.error(`[OLLAMA-PROXY] Error details:`, errorBody);
+          res.status(proxyRes.statusCode).json({
+            error: `Ollama Cloud API error: ${proxyRes.statusMessage}`,
+            statusCode: proxyRes.statusCode,
+            details: errorBody
+          });
+        });
+        return;
+      }
+
+      if (stream !== false) {
+        res.setHeader('Content-Type', 'application/x-ndjson');
+        res.setHeader('Transfer-Encoding', 'chunked');
+        proxyRes.pipe(res);
+      } else {
+        let data = '';
+        proxyRes.on('data', (chunk) => {
+          data += chunk;
+        });
+        proxyRes.on('end', () => {
+          try {
+            res.json(JSON.parse(data));
+          } catch (e) {
+            res.json({ raw: data });
+          }
+        });
+      }
+    });
+
+    proxyReq.on('error', (error) => {
+      console.error(`[OLLAMA-PROXY] Proxy error:`, error.message);
+      res.status(500).json({
+        error: 'Proxy error',
+        details: error.message
+      });
+    });
+
+    proxyReq.write(requestBody);
+    proxyReq.end();
+  } catch (error) {
+    console.error(`[OLLAMA-PROXY] Proxy error:`, error.message);
+    res.status(500).json({
+      error: 'Proxy error',
+      details: error.message
+    });
+  }
+});
 
 app.post('/api/proxy/groq', async (req, res) => {
   try {
@@ -196,4 +292,10 @@ app.get('/api/proxy/web', async (req, res) => {
 });
 
 const PORT = 3002;
-app.listen(PORT, () => console.log(`Proxy running on http://localhost:${PORT}`));
+app.listen(PORT, () => {
+  console.log(`✅ Proxy Server running on http://localhost:${PORT}`);
+  console.log(`📍 Groq Proxy: POST http://localhost:${PORT}/api/proxy/groq`);
+  console.log(`📍 OpenAI Proxy: POST http://localhost:${PORT}/api/proxy/openai`);
+  console.log(`📍 Web Proxy: GET http://localhost:${PORT}/api/proxy/web`);
+  console.log(`📍 Ollama Cloud Proxy: POST http://localhost:${PORT}/api/ollama-proxy`);
+});

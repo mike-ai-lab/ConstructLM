@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Save, Key, ShieldCheck, CheckCircle, Loader2, Play, AlertCircle, Cpu, ExternalLink, Download, Upload, Database, Trash2, User, CheckSquare, Square, RefreshCw, Sparkles, Settings, Bell } from 'lucide-react';
-import { saveApiKey, getStoredApiKey } from '../services/modelRegistry';
+import { saveApiKey, getStoredApiKey, getAllModels } from '../services/modelRegistry';
 import { checkOllamaConnection, getAvailableOllamaModels, getLocalModelSetupInstructions } from '../services/localModelService';
 import { dataExportService, ExportOptions } from '../services/dataExportService';
 import { userProfileService, UserProfile } from '../services/userProfileService';
@@ -10,12 +10,14 @@ interface SettingsModalProps {
     onClose: () => void;
 }
 
-type Provider = 'google' | 'openai' | 'groq' | 'aws' | 'cerebras';
+type Provider = 'google' | 'openai' | 'groq' | 'aws' | 'cerebras' | 'openrouter' | 'ollama-cloud';
 type SettingsTab = 'general' | 'personalization' | 'apiKeys' | 'data' | 'localModels';
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
     const modalRef = useRef<HTMLDivElement>(null);
     const [activeTab, setActiveTab] = useState<SettingsTab>('general');
+    const [showModelDropdown, setShowModelDropdown] = useState(false);
+    const modelDropdownRef = useRef<HTMLDivElement>(null);
     
     // User Profile State
     const [userProfile, setUserProfile] = useState<UserProfile>({
@@ -66,8 +68,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
         openai: '',
         groq: '',
         cerebras: '',
+        openrouter: '',
         aws: '',
-        awsSecret: ''
+        awsSecret: '',
+        ollamaCloud: ''
     });
     
     // Testing States
@@ -77,7 +81,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
         openai: null,
         groq: null,
         cerebras: null,
-        aws: null
+        openrouter: null,
+        aws: null,
+        'ollama-cloud': null
     });
 
     const [showSuccess, setShowSuccess] = useState(false);
@@ -86,7 +92,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
         openai: 0,
         groq: 0,
         cerebras: 0,
-        aws: 0
+        openrouter: 0,
+        aws: 0,
+        'ollama-cloud': 0
     });
 
     useEffect(() => {
@@ -105,8 +113,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
             openai: getStoredApiKey('OPENAI_API_KEY'),
             groq: getStoredApiKey('GROQ_API_KEY'),
             cerebras: getStoredApiKey('CEREBRAS_API_KEY'),
+            openrouter: getStoredApiKey('OPENROUTER_API_KEY'),
             aws: getStoredApiKey('AWS_ACCESS_KEY_ID'),
-            awsSecret: getStoredApiKey('AWS_SECRET_ACCESS_KEY')
+            awsSecret: getStoredApiKey('AWS_SECRET_ACCESS_KEY'),
+            ollamaCloud: getStoredApiKey('OLLAMA_CLOUD_API_KEY')
         });
     }, []);
 
@@ -128,6 +138,20 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
     }, [onClose]);
+
+    // Close model dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (modelDropdownRef.current && !modelDropdownRef.current.contains(event.target as Node)) {
+                setShowModelDropdown(false);
+            }
+        };
+        
+        if (showModelDropdown) {
+            document.addEventListener('mousedown', handleClickOutside);
+            return () => document.removeEventListener('mousedown', handleClickOutside);
+        }
+    }, [showModelDropdown]);
 
     const validateKey = async (provider: Provider, key: string) => {
         if (!key.trim()) {
@@ -162,6 +186,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
             setTestResults(prev => ({ ...prev, [provider]: { success: false, message: "Invalid OpenAI API key format (should start with sk-)" } }));
             return;
         }
+        if (provider === 'openrouter' && !key.startsWith('sk-or-')) {
+            setTestResults(prev => ({ ...prev, [provider]: { success: false, message: "Invalid OpenRouter API key format (should start with sk-or-)" } }));
+            return;
+        }
 
         setTestingProvider(provider);
         setTestResults(prev => ({ ...prev, [provider]: null }));
@@ -193,6 +221,20 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                 }
                 else if (provider === 'cerebras') {
                     // Cerebras API has CORS restrictions - skip browser validation
+                    setTestResults(prev => ({ ...prev, [provider]: { success: true, message: "Valid format" } }));
+                    clearTimeout(timeoutId);
+                    setTestingProvider(null);
+                    return;
+                }
+                else if (provider === 'openrouter') {
+                    // OpenRouter API has CORS restrictions - skip browser validation
+                    setTestResults(prev => ({ ...prev, [provider]: { success: true, message: "Valid format" } }));
+                    clearTimeout(timeoutId);
+                    setTestingProvider(null);
+                    return;
+                }
+                else if (provider === 'ollama-cloud') {
+                    // Ollama Cloud API has CORS restrictions - skip browser validation
                     setTestResults(prev => ({ ...prev, [provider]: { success: true, message: "Valid format" } }));
                     clearTimeout(timeoutId);
                     setTestingProvider(null);
@@ -249,8 +291,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
         saveApiKey('OPENAI_API_KEY', keys.openai);
         saveApiKey('GROQ_API_KEY', keys.groq);
         saveApiKey('CEREBRAS_API_KEY', keys.cerebras);
+        saveApiKey('OPENROUTER_API_KEY', keys.openrouter);
         saveApiKey('AWS_ACCESS_KEY_ID', keys.aws);
         saveApiKey('AWS_SECRET_ACCESS_KEY', keys.awsSecret);
+        saveApiKey('OLLAMA_CLOUD_API_KEY', keys.ollamaCloud);
         
         setShowSuccess(true);
         setTimeout(() => {
@@ -404,7 +448,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
         }
     };
 
-    const renderApiInput = (label: string, provider: Provider, placeholder: string) => (
+    const renderApiInput = (label: string, provider: Provider, placeholder: string) => {
+        // Map provider to keys object property
+        const keyProp = provider === 'ollama-cloud' ? 'ollamaCloud' : provider as keyof typeof keys;
+        
+        return (
         <div className="space-y-1">
             <div className="flex justify-between items-center">
                 <label className="text-xs font-bold text-[#666666] dark:text-[#a0a0a0] uppercase tracking-wider">{label}</label>
@@ -418,17 +466,17 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
             <div className="flex gap-1.5">
                 <input 
                     type="text" 
-                    value={keys[provider]}
+                    value={keys[keyProp]}
                     onChange={e => {
-                        setKeys({...keys, [provider]: e.target.value});
+                        setKeys({...keys, [keyProp]: e.target.value});
                         setTestResults(prev => ({ ...prev, [provider]: null }));
                     }}
                     placeholder={placeholder}
                     className="flex-1 px-2.5 py-1.5 bg-[rgba(0,0,0,0.03)] dark:bg-[#1a1a1a] border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] rounded-lg text-sm text-[#1a1a1a] dark:text-white focus:outline-none focus:ring-2 focus:ring-[rgba(68,133,209,0.2)] focus:border-[#4485d1] transition-all"
                 />
                 <button
-                    onClick={() => validateKey(provider, keys[provider])}
-                    disabled={testingProvider === provider || !keys[provider] || (Date.now() - lastTestTime[provider] < 5000)}
+                    onClick={() => validateKey(provider, keys[keyProp])}
+                    disabled={testingProvider === provider || !keys[keyProp] || (Date.now() - lastTestTime[provider] < 5000)}
                     className="px-2.5 py-1.5 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] hover:bg-[rgba(0,0,0,0.06)] dark:hover:bg-[#222222] text-[#666666] dark:text-[#a0a0a0] rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     title={Date.now() - lastTestTime[provider] < 5000 ? "Wait before testing again" : "Test API Connection"}
                 >
@@ -436,7 +484,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                 </button>
             </div>
         </div>
-    );
+    )};
 
     const tabs = [
         { id: 'general' as SettingsTab, label: 'General', icon: Settings },
@@ -544,46 +592,61 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                                 Choose which AI model to use for new chats and personalized greetings.
                             </p>
                         </div>
-                        <div>
-                            <label className="text-xs font-medium text-[#666666] dark:text-[#a0a0a0]">Model for New Chats</label>
-                            <select 
-                                value={localStorage.getItem('defaultModelId') || 'gemini-2.5-flash'}
-                                onChange={e => {
-                                    localStorage.setItem('defaultModelId', e.target.value);
-                                    // Show a brief confirmation
-                                    const toast = document.createElement('div');
-                                    toast.className = 'fixed top-4 right-4 bg-[#4485d1] text-white px-3 py-2 rounded-lg shadow-lg z-[9999] text-sm';
-                                    toast.textContent = `Default model set to ${e.target.options[e.target.selectedIndex].text}`;
-                                    document.body.appendChild(toast);
-                                    setTimeout(() => toast.remove(), 2000);
-                                }}
-                                className="w-full px-2.5 py-1.5 bg-[rgba(0,0,0,0.03)] dark:bg-[#1a1a1a] border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] rounded-lg text-sm text-[#1a1a1a] dark:text-white focus:outline-none focus:ring-2 focus:ring-[rgba(68,133,209,0.2)] focus:border-[#4485d1] transition-all"
+                        <div className="relative" ref={modelDropdownRef}>
+                            <button
+                                onClick={() => setShowModelDropdown(!showModelDropdown)}
+                                className="w-full px-2.5 py-1.5 bg-[rgba(0,0,0,0.03)] dark:bg-[#1a1a1a] border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] rounded-lg text-sm text-[#1a1a1a] dark:text-white focus:outline-none focus:ring-2 focus:ring-[rgba(68,133,209,0.2)] focus:border-[#4485d1] transition-all flex items-center justify-between"
                             >
-                                <optgroup label="Google Gemini">
-                                    <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-                                    <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite</option>
-                                    <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
-                                    <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
-                                    <option value="gemini-flash-latest">Gemini Flash (Latest)</option>
-                                </optgroup>
-                                <optgroup label="Groq">
-                                    <option value="llama-3.3-70b-versatile">Llama 3.3 70B</option>
-                                    <option value="llama-3.1-8b-instant">Llama 3.1 8B</option>
-                                </optgroup>
-                                <optgroup label="Cerebras">
-                                    <option value="llama-3.3-70b">Llama 3.3 70B (Cerebras)</option>
-                                    <option value="llama3.1-8b">Llama 3.1 8B (Cerebras)</option>
-                                    <option value="llama3.1-70b">Llama 3.1 70B (Cerebras)</option>
-                                </optgroup>
-                                <optgroup label="OpenAI">
-                                    <option value="gpt-4o">GPT-4o</option>
-                                    <option value="gpt-4o-mini">GPT-4o Mini</option>
-                                </optgroup>
-                                <optgroup label="AWS Bedrock">
-                                    <option value="anthropic.claude-3-5-sonnet-20241022-v2:0">Claude 3.5 Sonnet v2</option>
-                                    <option value="anthropic.claude-3-5-haiku-20241022-v1:0">Claude 3.5 Haiku</option>
-                                </optgroup>
-                            </select>
+                                <span>{getAllModels().find(m => m.id === (localStorage.getItem('defaultModelId') || 'gemini-2.5-flash'))?.name || 'Select Model'}</span>
+                                <svg className={`w-4 h-4 transition-transform ${showModelDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+                            
+                            {showModelDropdown && (
+                                <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-[#222222] rounded-lg shadow-xl border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] max-h-96 overflow-y-auto z-50">
+                                    {['google', 'groq', 'cerebras', 'openrouter', 'openai', 'aws', 'ollama-cloud'].map(provider => {
+                                        const models = getAllModels().filter(m => m.provider === provider);
+                                        if (models.length === 0) return null;
+                                        
+                                        const providerLabels: Record<string, string> = {
+                                            'google': 'Google Gemini',
+                                            'groq': 'Groq',
+                                            'cerebras': 'Cerebras',
+                                            'openrouter': 'OpenRouter',
+                                            'openai': 'OpenAI',
+                                            'aws': 'AWS Bedrock',
+                                            'ollama-cloud': 'Ollama Cloud'
+                                        };
+                                        
+                                        return (
+                                            <div key={provider}>
+                                                <div className="px-3 py-1.5 text-[10px] font-bold text-[#666666] dark:text-[#a0a0a0] uppercase tracking-wider bg-[rgba(0,0,0,0.02)] dark:bg-[#1a1a1a]">
+                                                    {providerLabels[provider]}
+                                                </div>
+                                                {models.map(model => (
+                                                    <button
+                                                        key={model.id}
+                                                        onClick={() => {
+                                                            localStorage.setItem('defaultModelId', model.id);
+                                                            setShowModelDropdown(false);
+                                                            const toast = document.createElement('div');
+                                                            toast.className = 'fixed top-4 right-4 bg-[#4485d1] text-white px-3 py-2 rounded-lg shadow-lg z-[9999] text-sm';
+                                                            toast.textContent = `Default model set to ${model.name}`;
+                                                            document.body.appendChild(toast);
+                                                            setTimeout(() => toast.remove(), 2000);
+                                                        }}
+                                                        className="w-full text-left px-3 py-2 hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] transition-colors"
+                                                    >
+                                                        <div className="text-sm font-medium text-[#1a1a1a] dark:text-white">{model.name}</div>
+                                                        <div className="text-[11px] text-[#666666] dark:text-[#a0a0a0]">{model.description}</div>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
                             <p className="text-[11px] text-[#666666] dark:text-[#a0a0a0] mt-1">
                                 This model will be used when creating new chats and generating personalized greetings. Make sure you have the API key configured below.
                             </p>
@@ -712,7 +775,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                                     {renderApiInput('Google Gemini', 'google', 'AIzaSy...')}
                                     {renderApiInput('Groq', 'groq', 'gsk_...')}
                                     {renderApiInput('Cerebras', 'cerebras', 'csk-...')}
+                                    {renderApiInput('OpenRouter', 'openrouter', 'sk-or-...')}
                                     {renderApiInput('OpenAI', 'openai', 'sk-...')}
+                                    {renderApiInput('Ollama Cloud', 'ollama-cloud', 'ollama-...')}
                                     
                                     {/* AWS Credentials */}
                                     <div className="space-y-1">
