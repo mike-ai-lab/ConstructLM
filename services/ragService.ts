@@ -65,8 +65,8 @@ class RAGService {
       const queries = this.expandQuery(query);
       const allChunks = new Map<string, { chunk: any; score: number }>();
       
-      // Get more chunks per query to ensure coverage
-      const chunksPerQuery = queries.length > 1 ? Math.ceil(limit * 0.8) : limit;
+      // Get more chunks per query to ensure coverage (MAINTAIN FULL COVERAGE)
+      const chunksPerQuery = queries.length > 1 ? limit : limit; // Don't reduce for multi-query
       
       for (const subQuery of queries) {
         console.log(`[RAG] Sub-query: "${subQuery}"`);

@@ -136,7 +136,7 @@ export interface Highlight {
 export interface ModelConfig {
   id: string;
   name: string;
-  provider: 'google' | 'groq' | 'openai' | 'local' | 'aws' | 'openrouter' | 'cerebras';
+  provider: 'google' | 'groq' | 'openai' | 'local' | 'aws' | 'openrouter' | 'cerebras' | 'ollama-cloud';
   contextWindow: number;
   apiKeyEnv: string;
   supportsImages: boolean;

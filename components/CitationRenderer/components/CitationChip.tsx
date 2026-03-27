@@ -215,8 +215,9 @@ const CitationChip: React.FC<CitationChipProps> = ({ index, fileName, location, 
 
   // Clean the quote text by removing quotes and extra whitespace
   const cleanQuote = quote.replace(/^['"`]+|['"`]+$/g, '').trim();
-  // For comma-separated values, only show the first value
-  const displayText = cleanQuote.includes(',') ? cleanQuote.split(',')[0].trim() : (cleanQuote || `Citation ${index + 1}`);
+  
+  // Display as numbered reference [N] instead of showing quote text
+  const displayNumber = index + 1;
 
   return (
     <span className="inline-block relative">
@@ -224,13 +225,13 @@ const CitationChip: React.FC<CitationChipProps> = ({ index, fileName, location, 
         ref={triggerRef}
         onClick={handleToggle}
         onContextMenu={handleContextMenu}
-        className={`citation-text cursor-pointer underline decoration-dotted underline-offset-2 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors ${isUrl ? 'citation-url' : ''}`}
+        className={`citation-number cursor-pointer inline-flex items-center justify-center min-w-[20px] h-[18px] px-1 mx-0.5 text-[11px] font-semibold rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors border border-blue-300 dark:border-blue-700 ${isUrl ? 'citation-url' : ''}`}
         data-citation-index={index}
-        title={isUrl ? `${fileName} - ${location}` : `${fileName} - ${location}`}
+        title={`[${displayNumber}] ${fileName} - ${location}: "${cleanQuote}"`}
         aria-expanded={isOpen}
         role="button"
       >
-        {displayText}
+        {displayNumber}
       </span>
       {isOpen && (
         <CitationDepthContext.Provider value={depth + 1}>

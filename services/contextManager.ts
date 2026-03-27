@@ -69,7 +69,7 @@ class ContextManager {
       
       const maxTokens = model?.provider === 'groq' && groqLimits[modelId]
         ? groqLimits[modelId]
-        : contextWindow - 4000;
+        : contextWindow - 2000; // Changed from 4000 to 2000 for more generous context budget
 
       return await this.keywordBasedSelection(query, selectedFiles, maxTokens);
     }

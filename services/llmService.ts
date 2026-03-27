@@ -27,7 +27,11 @@ Answer questions based on these sources. Cite facts using this format:
 - Web: {{citation:https://url.com|Section|exact quote}}
 - Files: {{citation:FileName.ext|Location|exact quote}}
 
-If the sources don't contain the answer, say something like "That's not covered in these sources" or "I don't see that information here" - keep it natural and brief.`;
+**RESPONSE GUIDELINES:**
+- Provide COMPREHENSIVE, DETAILED answers (minimum 3-5 sentences)
+- Include specific examples, data, and context from the sources
+- If sources don't contain the answer, explain what information IS available
+- Never give one-sentence answers. Always provide context and explanation.`;
   }
   
   if (hasFiles) {
@@ -37,7 +41,7 @@ If the sources don't contain the answer, say something like "That's not covered 
     const hasExcel = fileTypes.has('excel');
     const hasCsv = fileTypes.has('csv');
     const hasMarkdown = fileTypes.has('markdown') || activeFiles.some(f => f.name.endsWith('.md'));
-    const hasText = fileTypes.has('text') || fileTypes.has('code');
+    const hasText = fileTypes.has('document') || fileTypes.has('other');
     
     // Build file-type-specific citation instructions
     let citationInstructions = '';
@@ -71,22 +75,33 @@ If the sources don't contain the answer, say something like "That's not covered 
     
     return `You are ConstructLM. Answer questions using the document chunks provided below.
 
+**RESPONSE QUALITY REQUIREMENTS:**
+1. Provide COMPREHENSIVE answers (minimum 3-5 sentences)
+2. Include specific details, numbers, and context from documents
+3. Explain concepts thoroughly - don't just state facts
+4. Use examples and evidence from the documents
+5. Structure longer answers with clear paragraphs
+
 **CITATION RULES:**${citationInstructions}
 
 **IMPORTANT:**
-- Cite EXACT text from the documents (3-10 words with key information)
+- Cite EXACT text from documents (3-10 words with key information)
 - Include numbers, quantities, and units in citations
-- Give ONE clear answer - no repetitions or alternatives
-- If unsure about location, use the most specific information available
-- Never say "Page not specified" - use section names or row numbers instead
+- Use {{citation:FileName|Location|exact quote}} format
+- Give ONE clear, DETAILED answer - no repetitions
+- Never give single-sentence responses unless the question is yes/no
+- If documents don't contain full answer, explain what IS available
 
-If the documents don't contain the answer, just say "That's not in these documents" - no need to explain why or apologize.
-
-Be direct, confident, and helpful. Answer once, clearly.`;
+Be thorough, detailed, and helpful. Quality over brevity.`;
   } else {
     return `You are ConstructLM, an AI assistant.
 
-Be direct, confident, and helpful. Use clear markdown formatting.
+**RESPONSE GUIDELINES:**
+- Provide COMPREHENSIVE, DETAILED answers
+- Explain concepts thoroughly with examples
+- Use clear markdown formatting
+- Structure longer answers with paragraphs
+- Minimum 3-5 sentences unless question is very simple
 
 When users ask about documents or code, suggest they upload files or use the GitHub tab to import code repositories.`;
   }
@@ -136,17 +151,17 @@ export const sendMessageToLLM = async (
             console.log('[RAG] 🔍 Searching relevant chunks in selected files only...');
             const selectedFileIds = activeFiles.map(f => f.id);
             
-            // Adaptive chunk count based on file types
+            // Adaptive chunk count based on file types (INCREASED FOR BETTER CONTEXT)
             const hasStructuredFiles = activeFiles.some(f => f.type === 'excel' || f.type === 'csv');
             const hasPdfFiles = activeFiles.some(f => f.type === 'pdf');
             
-            let chunkLimit = 10; // Default
+            let chunkLimit = 20; // Default - increased from 10
             if (hasStructuredFiles && !hasPdfFiles) {
-                chunkLimit = 6; // Excel/CSV only: fewer chunks needed (row-based data)
+                chunkLimit = 15; // Excel/CSV only - increased from 6
             } else if (hasPdfFiles && !hasStructuredFiles) {
-                chunkLimit = 12; // PDF only: more chunks for paragraph context
+                chunkLimit = 25; // PDF only - increased from 12
             } else if (hasStructuredFiles && hasPdfFiles) {
-                chunkLimit = 10; // Mixed: balanced approach
+                chunkLimit = 20; // Mixed - increased from 10
             }
             
             console.log(`[RAG] Using ${chunkLimit} chunks (Excel/CSV: ${hasStructuredFiles}, PDF: ${hasPdfFiles})`);
@@ -170,7 +185,7 @@ export const sendMessageToLLM = async (
                     '1. Answer ONCE - no repetitions, alternatives, or "better answers"\n' +
                     '2. Find location markers in chunks: "--- [Page N] ---", "Sheet:", "Row", or section headers\n' +
                     '3. Cite EXACT text: Copy 3-10 words directly from chunk (include numbers + context)\n' +
-                    '4. Format depends on file type (see instructions above)\n' +
+                    '4. Format: {{citation:FileName|Location|exact quote}}\n' +
                     '5. NEVER use "Page not specified" - use the actual location from the chunk\n' +
                     '6. NEVER cite just item names - include quantities/specifications\n' +
                     '7. Be confident and direct - give ONE clear answer';
@@ -273,7 +288,7 @@ export const sendMessageToLLM = async (
             
             await sendMessageToGemini(modelId, apiKey, geminiMessage, activeFiles, onStream, finalSystemPrompt, conversationHistory);
             return {};
-        } else if (model.provider === 'openai' || model.provider === 'groq' || (model.provider as string) === 'cerebras') {
+        } else if (model.provider === 'openai' || model.provider === 'groq' || model.provider === 'cerebras') {
             // OpenAI, Groq, or Cerebras
             const apiKey = getApiKeyForModel(model);
             if (!apiKey) {
@@ -508,7 +523,8 @@ export const sendMessageToLLM = async (
             
             console.log('[Ollama Cloud] Sending request with', messages.length, 'messages');
             
-            await streamOllamaCloud(model.modelId || model.id, messages, apiKey, onStream);
+            // Use model.id instead of model.modelId (which doesn't exist on ModelConfig)
+            await streamOllamaCloud(model.id, messages, apiKey, onStream);
             return {};
         } else {
             throw new Error(`Provider ${model.provider} not implemented yet.`);

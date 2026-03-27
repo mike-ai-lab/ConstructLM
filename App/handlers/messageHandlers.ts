@@ -161,7 +161,7 @@ Extract the KEY TOPIC and create a proper title. Output ONLY 3 words, no punctua
     try {
       let accumText = "";
       let thinkingText = "";
-      let updateTimer: NodeJS.Timeout | null = null;
+      let updateCounter = 0;
       
       const fetchedSources = sources.filter(s => s.status === 'fetched' && s.selected !== false);
       console.log('[MessageHandler] Fetched sources:', fetchedSources.length);
@@ -182,17 +182,19 @@ Extract the KEY TOPIC and create a proper title. Output ONLY 3 words, no punctua
         (chunk, thinking) => {
           accumText += chunk;
           if (thinking) thinkingText = thinking;
-          if (updateTimer) clearTimeout(updateTimer);
-          updateTimer = setTimeout(() => {
+          
+          // Update every 5 chunks OR immediately for final chunk (BATCHED UPDATES)
+          updateCounter++;
+          if (updateCounter % 5 === 0 || chunk.length === 0) {
             setMessages(prev => prev.map(msg => 
               msg.id === modelMsgId ? { ...msg, content: accumText, thinking: thinkingText || undefined } : msg
             ));
-          }, 50);
+          }
         },
         fetchedSources
       );
       
-      if (updateTimer) clearTimeout(updateTimer);
+      // ✅ ENSURE FINAL UPDATE AFTER STREAMING COMPLETES
       setMessages(prev => prev.map(msg => 
         msg.id === modelMsgId ? { ...msg, content: accumText, thinking: thinkingText || undefined } : msg
       ));

@@ -83,25 +83,89 @@ const SimpleMarkdown: React.FC<SimpleMarkdownProps> = ({ text, block = true, fil
     }
 
     if (trimmed.startsWith('#### ')) {
-      elements.push(<h4 key={`h4-${i}`} className="text-sm font-bold text-[#0a0a0a] dark:text-[#f0f0f0] mt-2 mb-1">{parseInline(trimmed.slice(5))}</h4>);
+      const renderCitation = (match: RegExpMatchArray, index: number) => {
+        const citIndex = incrementCitationCounter();
+        return (
+          <CitationChip
+            key={`h4-cit-${i}-${index}`}
+            index={citIndex}
+            fileName={match[1].trim()}
+            location={match[2].trim()}
+            quote={match[3].trim()}
+            files={files || []}
+            onViewDocument={onViewDocument || (() => {})}
+            onOpenWebViewer={onOpenWebViewer}
+            onOpenWebViewerNewTab={onOpenWebViewerNewTab}
+          />
+        );
+      };
+      elements.push(<h4 key={`h4-${i}`} className="text-sm font-bold text-[#0a0a0a] dark:text-[#f0f0f0] mt-2 mb-1">{parseInline(trimmed.slice(5), renderCitation)}</h4>);
       i++;
       continue;
     }
 
     if (trimmed.startsWith('### ')) {
-      elements.push(<h3 key={`h3-${i}`} className="text-[15px] font-bold text-[#0a0a0a] dark:text-[#f0f0f0] mt-3 mb-1.5">{parseInline(trimmed.slice(4))}</h3>);
+      const renderCitation = (match: RegExpMatchArray, index: number) => {
+        const citIndex = incrementCitationCounter();
+        return (
+          <CitationChip
+            key={`h3-cit-${i}-${index}`}
+            index={citIndex}
+            fileName={match[1].trim()}
+            location={match[2].trim()}
+            quote={match[3].trim()}
+            files={files || []}
+            onViewDocument={onViewDocument || (() => {})}
+            onOpenWebViewer={onOpenWebViewer}
+            onOpenWebViewerNewTab={onOpenWebViewerNewTab}
+          />
+        );
+      };
+      elements.push(<h3 key={`h3-${i}`} className="text-[15px] font-bold text-[#0a0a0a] dark:text-[#f0f0f0] mt-3 mb-1.5">{parseInline(trimmed.slice(4), renderCitation)}</h3>);
       i++;
       continue;
     }
 
     if (trimmed.startsWith('## ')) {
-      elements.push(<h2 key={`h2-${i}`} className="text-base font-black text-[#0a0a0a] dark:text-[#f0f0f0] mt-4 mb-2">{parseInline(trimmed.slice(3))}</h2>);
+      const renderCitation = (match: RegExpMatchArray, index: number) => {
+        const citIndex = incrementCitationCounter();
+        return (
+          <CitationChip
+            key={`h2-cit-${i}-${index}`}
+            index={citIndex}
+            fileName={match[1].trim()}
+            location={match[2].trim()}
+            quote={match[3].trim()}
+            files={files || []}
+            onViewDocument={onViewDocument || (() => {})}
+            onOpenWebViewer={onOpenWebViewer}
+            onOpenWebViewerNewTab={onOpenWebViewerNewTab}
+          />
+        );
+      };
+      elements.push(<h2 key={`h2-${i}`} className="text-base font-black text-[#0a0a0a] dark:text-[#f0f0f0] mt-4 mb-2">{parseInline(trimmed.slice(3), renderCitation)}</h2>);
       i++;
       continue;
     }
 
     if (trimmed.startsWith('# ')) {
-      elements.push(<h1 key={`h1-${i}`} className="text-lg font-black text-[#0a0a0a] dark:text-[#f0f0f0] mt-5 mb-2.5">{parseInline(trimmed.slice(2))}</h1>);
+      const renderCitation = (match: RegExpMatchArray, index: number) => {
+        const citIndex = incrementCitationCounter();
+        return (
+          <CitationChip
+            key={`h1-cit-${i}-${index}`}
+            index={citIndex}
+            fileName={match[1].trim()}
+            location={match[2].trim()}
+            quote={match[3].trim()}
+            files={files || []}
+            onViewDocument={onViewDocument || (() => {})}
+            onOpenWebViewer={onOpenWebViewer}
+            onOpenWebViewerNewTab={onOpenWebViewerNewTab}
+          />
+        );
+      };
+      elements.push(<h1 key={`h1-${i}`} className="text-lg font-black text-[#0a0a0a] dark:text-[#f0f0f0] mt-5 mb-2.5">{parseInline(trimmed.slice(2), renderCitation)}</h1>);
       i++;
       continue;
     }
