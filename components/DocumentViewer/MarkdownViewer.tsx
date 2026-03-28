@@ -2,6 +2,7 @@ import React, { useMemo, useEffect, useRef } from 'react';
 import { ProcessedFile } from '../../types';
 import { scrollToHighlight, HIGHLIGHT_SELECTORS, HIGHLIGHT_CLASSES } from '@/utils/scrollUtils';
 import { normalizeForMatching } from '@/utils/textNormalization';
+import { highlightService } from '@/services/highlightService';
 
 interface MarkdownViewerProps {
   file: ProcessedFile;
@@ -60,17 +61,7 @@ const parseMarkdown = (md: string, highlightQuote?: string): string => {
       .replace(/~~(.*?)~~/g, '<del>$1</del>')
       .replace(/`([^`]+)`/g, '<code class="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-sm font-mono">$1</code>');
     
-    // Apply highlighting if quote is present
-    if (quoteNorm && highlightQuote) {
-      const processedNorm = normalizeForMatching(processed);
-      const startIdx = processedNorm.indexOf(quoteNorm);
-      if (startIdx !== -1) {
-        const before = processed.substring(0, startIdx);
-        const match = processed.substring(startIdx, startIdx + highlightQuote.length);
-        const after = processed.substring(startIdx + highlightQuote.length);
-        processed = `${before}<mark class="${HIGHLIGHT_CLASSES.TARGET} bg-yellow-300 dark:bg-yellow-700 highlight-target">${match}</mark>${after}`;
-      }
-    }
+    // Don't use inline highlighting - Mark.js will handle it via event listener
     return processed;
   };
 
@@ -216,6 +207,27 @@ const MarkdownViewer: React.FC<MarkdownViewerProps> = ({ file, textScale, highli
   const htmlContent = useMemo(() => {
     return parseMarkdown(file.content, highlightQuote);
   }, [file.content, highlightQuote]);
+  
+  // Listen for citation highlight events
+  useEffect(() => {
+    const handleCitationHighlight = (event: CustomEvent) => {
+      const { fileName, quote } = event.detail;
+      
+      if (fileName === file.name && containerRef.current && quote) {
+        console.log('🎯[CITE-HL] MarkdownViewer: Citation highlight event received', { 
+          fileName, 
+          quote: quote?.substring(0, 50)
+        });
+        highlightService.applyCitationHighlight(containerRef.current, quote, 'MarkdownViewer');
+      }
+    };
+
+    window.addEventListener('citationHighlight', handleCitationHighlight as EventListener);
+    
+    return () => {
+      window.removeEventListener('citationHighlight', handleCitationHighlight as EventListener);
+    };
+  }, [file.name]);
   
   useEffect(() => {
     if (highlightQuote && containerRef.current) {

@@ -565,7 +565,7 @@ const TodoList: React.FC<TodoListProps> = ({ todos, groups, onAddTodo, onToggleT
                               <Repeat size={10} /> {todo.recurring.frequency === 'custom' ? `Every ${todo.recurring.interval}d` : todo.recurring.frequency}
                             </span>
                           )}
-                          {todo.category && <span className="text-xs px-3 py-1 rounded-full bg-[#e9f7fa] dark:bg-[#1a4d5c] text-[#1a1a1a] dark:text-white font-medium">{todo.category}</span>}
+                          {todo.category && <span className="text-xs px-3 py-1 rounded-full bg-[#f1f1f1] dark:bg-[#1a4d5c] text-[#1a1a1a] dark:text-white font-medium">{todo.category}</span>}
                           {todo.tags?.map(tag => (
                             <span key={tag} className="text-xs px-3 py-1 rounded-full bg-[#f8f8f8] dark:bg-[#333333] text-[#666666] dark:text-[#a0a0a0] flex items-center gap-1.5">
                               <Tag size={10} /> {tag}

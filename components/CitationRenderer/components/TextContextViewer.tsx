@@ -113,7 +113,7 @@ const TextContextViewer: React.FC<TextContextViewerProps> = ({ file, quote, loca
                 const visualRowNum = startIdx + rowIdx + 2;
                 const isHighlight = visualRowNum === finalTargetRow;
                 return (
-                  <tr key={rowIdx} className={`${isHighlight ? `${HIGHLIGHT_CLASSES.ROW} highlighted-row bg-yellow-300 dark:bg-yellow-700 ring-2 ring-yellow-500` : 'hover:bg-gray-50 dark:hover:bg-[#222222]'}`}>
+                  <tr key={rowIdx} className={`${isHighlight ? `${HIGHLIGHT_CLASSES.ROW} highlighted-row bg-blue-300 dark:bg-blue-700 ring-2 ring-blue-500` : 'hover:bg-gray-50 dark:hover:bg-[#222222]'}`}>
                     {row.map((cell, cellIdx) => (
                       <td key={cellIdx} className="border border-gray-300 dark:border-gray-600 px-1 py-0.5 text-[#1a1a1a] dark:text-white">{cell}</td>
                     ))}
@@ -146,7 +146,7 @@ const TextContextViewer: React.FC<TextContextViewerProps> = ({ file, quote, loca
           .replace(/`([^`]+)`/g, '<code class="bg-gray-100 dark:bg-gray-800 px-1 rounded text-xs">$1</code>');
         
         if (shouldHighlight) {
-          processed = `<span class="bg-yellow-100 dark:bg-yellow-600/40 text-[#1a1a1a] dark:text-white p-1 rounded">${processed}</span>`;
+          processed = `<span class="bg-blue-100 dark:bg-blue-600/40 text-[#1a1a1a] dark:text-white p-1 rounded">${processed}</span>`;
         }
         return processed;
       };
@@ -227,7 +227,7 @@ const TextContextViewer: React.FC<TextContextViewerProps> = ({ file, quote, loca
             const before = cleanLine.substring(0, startIdx);
             const match = cleanLine.substring(startIdx, startIdx + quote.length);
             const after = cleanLine.substring(startIdx + quote.length);
-            return `${before}<mark class="${HIGHLIGHT_CLASSES.TARGET} bg-yellow-300 dark:bg-yellow-700 highlight-target">${match}</mark>${after}`;
+            return `${before}<mark class="${HIGHLIGHT_CLASSES.TARGET} bg-blue-300 dark:bg-blue-700 highlight-target">${match}</mark>${after}`;
           }
         }
         return line.replace(/<sup[^>]*>.*?<\/sup>/gi, '').replace(/&#39;/g, "'").replace(/&quot;/g, '"');
@@ -247,7 +247,7 @@ const TextContextViewer: React.FC<TextContextViewerProps> = ({ file, quote, loca
       const before = contextText.substring(0, startIdx - contextStart);
       const match = contextText.substring(startIdx - contextStart, startIdx - contextStart + quote.length);
       const after = contextText.substring(startIdx - contextStart + quote.length);
-      const highlighted = `${before}<mark class="${HIGHLIGHT_CLASSES.TARGET} bg-yellow-300 dark:bg-yellow-700 highlight-target">${match}</mark>${after}`;
+      const highlighted = `${before}<mark class="${HIGHLIGHT_CLASSES.TARGET} bg-blue-300 dark:bg-blue-700 highlight-target">${match}</mark>${after}`;
       const contextHtml = parseMarkdown(highlighted);
       
       return <div ref={highlightContainerRef as any} className="p-2"><div className="text-xs leading-relaxed max-w-none" dangerouslySetInnerHTML={{ __html: contextHtml }} /></div>;
@@ -274,7 +274,7 @@ const TextContextViewer: React.FC<TextContextViewerProps> = ({ file, quote, loca
     <div className="p-2">
       <div className="text-sm leading-relaxed text-[#666666] dark:text-[#a0a0a0] bg-white dark:bg-[#2a2a2a] p-2 rounded border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] font-serif">
         <div className="mb-1 text-[10px] text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wider">{location || "Excerpt"}</div>
-        <span className="bg-yellow-100 dark:bg-yellow-600/40 text-[#1a1a1a] dark:text-white p-1 rounded italic text-xs">"{quote}"</span>
+        <span className="bg-blue-100 dark:bg-blue-600/40 text-[#1a1a1a] dark:text-white p-1 rounded italic text-xs">"{quote}"</span>
       </div>
     </div>
   );

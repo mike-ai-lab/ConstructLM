@@ -7,7 +7,7 @@ export default defineConfig(({ mode }) => {
     return {
       base: './',
       server: {
-        port: 5173,
+        port: 5847,
         host: '0.0.0.0',
         proxy: {
           // Don't proxy HuggingFace requests

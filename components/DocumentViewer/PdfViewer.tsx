@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ProcessedFile } from '../../types';
 import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from 'lucide-react';
 import { HIGHLIGHT_CLASSES } from '@/utils/scrollUtils';
+import { highlightService } from '@/services/highlightService';
 
 interface PdfViewerProps {
   file: ProcessedFile;
@@ -30,6 +31,38 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ file, initialPage, highlightQuote
   const containerRef = useRef<HTMLDivElement>(null);
   const renderTaskRef = useRef<any>(null);
   const pdfContentRef = useRef<HTMLDivElement>(null);
+  const currentFileNameRef = useRef<string>(file.name);
+
+  // Listen for citation highlight events
+  useEffect(() => {
+    const handleCitationHighlight = (event: CustomEvent) => {
+      const { fileName, quote } = event.detail;
+      
+      if (fileName === file.name && quote) {
+        console.log('🎯[CITE-HL] PdfViewer: Citation highlight event received', { 
+          fileName, 
+          quote: quote?.substring(0, 50)
+        });
+        // PDF uses its own renderHighlights system during page render
+        // Just wait for highlights to render and scroll to them
+        setTimeout(() => {
+          const firstHighlight = highlightLayerRef.current?.querySelector(`.${HIGHLIGHT_CLASSES.TARGET}`);
+          if (firstHighlight) {
+            console.log('🎯[CITE-HL] PdfViewer: Scrolling to existing highlight');
+            firstHighlight.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          } else {
+            console.warn('🎯[CITE-HL] PdfViewer: No highlight found to scroll to');
+          }
+        }, 500); // Increased delay to ensure rendering is complete
+      }
+    };
+
+    window.addEventListener('citationHighlight', handleCitationHighlight as EventListener);
+    
+    return () => {
+      window.removeEventListener('citationHighlight', handleCitationHighlight as EventListener);
+    };
+  }, [file.name]);
 
   useEffect(() => {
     let isMounted = true;
@@ -195,7 +228,7 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ file, initialPage, highlightQuote
               top: `${tx[5] - fontHeight}px`,
               width: `${Math.abs(fontWidth)}px`,
               height: `${fontHeight}px`,
-              backgroundColor: 'rgba(255, 235, 59, 0.5)',
+              backgroundColor: 'rgba(59, 130, 246, 0.4)', // BLUE - same as Mark.js
               mixBlendMode: 'multiply',
               pointerEvents: 'none',
               transform: `rotate(${angle}rad)`,

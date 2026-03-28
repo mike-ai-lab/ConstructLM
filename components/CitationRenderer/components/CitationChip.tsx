@@ -2,6 +2,7 @@ import React, { useState, useRef, useCallback, useEffect, useContext, createCont
 import { ProcessedFile } from '../../../types';
 import CitationPopup from './CitationPopup';
 import { isUrlCitation } from '../utils/citationUtils';
+import { highlightService } from '@/services/highlightService';
 
 interface CitationChipProps {
   index: number;
@@ -164,6 +165,10 @@ const CitationChip: React.FC<CitationChipProps> = ({ index, fileName, location, 
       const pageMatch = location.match(/Page\s*(\d+)/i);
       if (pageMatch) page = parseInt(pageMatch[1], 10);
     }
+    
+    // Trigger citation highlight event for document viewers
+    highlightService.triggerCitationHighlight(actualFile.name, quote, location);
+    
     onViewDocument(actualFile.name, page, quote, location);
     setIsOpen(false);
   };

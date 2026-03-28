@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ProcessedFile } from '../../types';
 import { scrollToElementById, HIGHLIGHT_CLASSES } from '@/utils/scrollUtils';
+import { highlightService } from '@/services/highlightService';
 
 interface TextViewerProps {
   file: ProcessedFile;
@@ -9,6 +10,8 @@ interface TextViewerProps {
 }
 
 const TextViewer: React.FC<TextViewerProps> = ({ file, highlightQuote, textScale }) => {
+  const contentRef = useRef<HTMLDivElement>(null);
+  
   console.log('📄 [TextViewer] Rendered with:', {
     fileName: file.name,
     fileType: file.type,
@@ -16,6 +19,27 @@ const TextViewer: React.FC<TextViewerProps> = ({ file, highlightQuote, textScale
     hasContent: !!file.content,
     contentLength: file.content?.length
   });
+
+  // Listen for citation highlight events
+  useEffect(() => {
+    const handleCitationHighlight = (event: CustomEvent) => {
+      const { fileName, quote } = event.detail;
+      
+      if (fileName === file.name && contentRef.current && quote) {
+        console.log('🎯[CITE-HL] TextViewer: Citation highlight event received', { 
+          fileName, 
+          quote: quote?.substring(0, 50)
+        });
+        highlightService.applyCitationHighlight(contentRef.current, quote, 'TextViewer');
+      }
+    };
+
+    window.addEventListener('citationHighlight', handleCitationHighlight as EventListener);
+    
+    return () => {
+      window.removeEventListener('citationHighlight', handleCitationHighlight as EventListener);
+    };
+  }, [file.name]);
 
   useEffect(() => {
     if (highlightQuote) {
@@ -33,6 +57,7 @@ const TextViewer: React.FC<TextViewerProps> = ({ file, highlightQuote, textScale
     
     const content = file.content;
     if (!highlightQuote) {
+      // Don't use inline highlighting - Mark.js will handle it via event listener
       return (
         <pre className="font-mono text-sm text-[#1a1a1a] dark:text-white whitespace-pre-wrap leading-relaxed">
           {content}
@@ -40,23 +65,21 @@ const TextViewer: React.FC<TextViewerProps> = ({ file, highlightQuote, textScale
       );
     }
     
-    const escapeRegExp = (string: string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const parts = content.split(new RegExp(`(${escapeRegExp(highlightQuote)})`, 'gi'));
-    
+    // Don't use inline highlighting - Mark.js will handle it via event listener
     return (
       <pre className="font-mono text-sm text-[#1a1a1a] dark:text-white whitespace-pre-wrap leading-relaxed">
-        {parts.map((part, i) => 
-          part.toLowerCase() === highlightQuote.toLowerCase() 
-            ? <mark key={i} id="text-highlight-match" className={`${HIGHLIGHT_CLASSES.MARK} bg-[#9ce8d6]/40 dark:bg-[#5bd8bb]/20 text-[#1a1a1a] dark:text-white rounded px-0.5 font-bold border-b-2 border-[#25b5cd]`}>{part}</mark>
-            : part
-        )}
+        {content}
       </pre>
     );
   };
 
   return (
     <div className="overflow-auto w-full h-full">
-      <div className="bg-white dark:bg-[#2a2a2a] shadow-sm border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] w-full max-w-5xl min-h-full mx-auto my-8" style={{ fontSize: `${textScale * 0.875}rem` }}>
+      <div 
+        ref={contentRef}
+        className="bg-white dark:bg-[#2a2a2a] shadow-sm border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] w-full max-w-5xl min-h-full mx-auto my-8" 
+        style={{ fontSize: `${textScale * 0.875}rem` }}
+      >
         <div className="p-12">{renderContent()}</div>
       </div>
     </div>

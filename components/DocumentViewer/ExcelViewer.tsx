@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { ProcessedFile } from '../../types';
 import { FileSpreadsheet } from 'lucide-react';
 import { scrollToElementById, HIGHLIGHT_CLASSES } from '@/utils/scrollUtils';
@@ -10,12 +10,48 @@ interface ExcelViewerProps {
 }
 
 const ExcelViewer: React.FC<ExcelViewerProps> = ({ file, location, textScale }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  
   console.log('📊 [ExcelViewer] Rendered with:', { 
     fileName: file.name, 
     location, 
     hasContent: !!file.content,
     contentLength: file.content?.length 
   });
+
+  // Listen for citation highlight events
+  useEffect(() => {
+    const handleCitationHighlight = (event: CustomEvent) => {
+      const { fileName, quote, location: citationLocation } = event.detail;
+      
+      if (fileName === file.name) {
+        console.log('🎯[CITE-HL] ExcelViewer: Citation highlight event received', { 
+          fileName, 
+          quote: quote?.substring(0, 50),
+          citationLocation 
+        });
+        
+        // Excel uses ONLY row highlighting, NOT Mark.js text highlighting
+        // The row highlighting is already handled by the existing parseExcelContent logic
+        // Just scroll to the highlighted row if it exists
+        setTimeout(() => {
+          const highlightedRow = document.getElementById('excel-highlight-row');
+          if (highlightedRow) {
+            console.log('🎯[CITE-HL] ExcelViewer: Scrolling to highlighted row');
+            highlightedRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          } else {
+            console.warn('🎯[CITE-HL] ExcelViewer: No highlighted row found');
+          }
+        }, 300);
+      }
+    };
+
+    window.addEventListener('citationHighlight', handleCitationHighlight as EventListener);
+    
+    return () => {
+      window.removeEventListener('citationHighlight', handleCitationHighlight as EventListener);
+    };
+  }, [file.name]);
 
   useEffect(() => {
     if (location) {
@@ -164,9 +200,9 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({ file, location, textScale }) 
                     <tr 
                       key={rIdx} 
                       id={isHighlightRow ? "excel-highlight-row" : undefined}
-                      className={`transition-colors duration-500 ${isHeaderRow ? "bg-gray-100 dark:bg-[#1a1a1a] font-semibold text-[#1a1a1a] dark:text-white sticky top-0 z-20" : "text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#222222]"} ${isHighlightRow ? `${HIGHLIGHT_CLASSES.ROW} bg-yellow-200 dark:bg-yellow-600/50 ring-2 ring-inset ring-yellow-400 dark:ring-yellow-600 z-10 relative` : ""}`}
+                      className={`transition-colors duration-500 ${isHeaderRow ? "bg-gray-100 dark:bg-[#1a1a1a] font-semibold text-[#1a1a1a] dark:text-white sticky top-0 z-20" : "text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#222222]"} ${isHighlightRow ? `${HIGHLIGHT_CLASSES.ROW} bg-blue-200 dark:bg-blue-600/50 ring-2 ring-inset ring-blue-400 dark:ring-blue-600 z-10 relative` : ""}`}
                     >
-                      <td className={`px-1 py-1 w-8 select-none text-[12px] text-right border-r border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] ${isHeaderRow ? "bg-gray-100 dark:bg-[#1a1a1a]" : "bg-[rgba(0,0,0,0.03)] dark:bg-[#1a1a1a]"} ${isHighlightRow ? "text-yellow-700 dark:text-yellow-400 font-bold" : "text-[#999999] dark:text-[#666666]"}`}>
+                      <td className={`px-1 py-1 w-8 select-none text-[12px] text-right border-r border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] ${isHeaderRow ? "bg-gray-100 dark:bg-[#1a1a1a]" : "bg-[rgba(0,0,0,0.03)] dark:bg-[#1a1a1a]"} ${isHighlightRow ? "text-blue-700 dark:text-blue-400 font-bold" : "text-[#999999] dark:text-[#666666]"}`}>
                         {visualRowNumber}
                       </td>
                       {row.map((cell, cIdx) => (
@@ -187,7 +223,7 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({ file, location, textScale }) 
   };
 
   return (
-    <div className="overflow-auto w-full h-full">
+    <div ref={containerRef} className="overflow-auto w-full h-full">
       <div className="bg-white dark:bg-[#2a2a2a] shadow-sm border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] w-full max-w-5xl min-h-full mx-auto my-8" style={{ fontSize: `${textScale * 0.875}rem` }}>
         <div className="p-2">{parseExcelContent(file.content, location)}</div>
       </div>

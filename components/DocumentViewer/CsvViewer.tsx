@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { ProcessedFile } from '../../types';
 import { Table } from 'lucide-react';
 import { scrollToElementById, HIGHLIGHT_CLASSES } from '@/utils/scrollUtils';
@@ -56,6 +56,8 @@ const parseCSV = (text: string): string[][] => {
 };
 
 const CsvViewer: React.FC<CsvViewerProps> = ({ file, textScale, highlightQuote, location }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  
   console.log('📊 [CsvViewer] Rendered with:', { 
     fileName: file.name, 
     highlightQuote,
@@ -65,6 +67,39 @@ const CsvViewer: React.FC<CsvViewerProps> = ({ file, textScale, highlightQuote, 
   });
 
   const rows = parseCSV(file.content);
+  
+  // Listen for citation highlight events
+  useEffect(() => {
+    const handleCitationHighlight = (event: CustomEvent) => {
+      const { fileName, quote } = event.detail;
+      
+      if (fileName === file.name) {
+        console.log('🎯[CITE-HL] CsvViewer: Citation highlight event received', { 
+          fileName, 
+          quote: quote?.substring(0, 50)
+        });
+        
+        // CSV uses ONLY row highlighting, NOT Mark.js text highlighting
+        // The row highlighting is already handled by the existing logic
+        // Just scroll to the highlighted row if it exists
+        setTimeout(() => {
+          const highlightedRow = document.getElementById('csv-highlight-row');
+          if (highlightedRow) {
+            console.log('🎯[CITE-HL] CsvViewer: Scrolling to highlighted row');
+            highlightedRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          } else {
+            console.warn('🎯[CITE-HL] CsvViewer: No highlighted row found');
+          }
+        }, 300);
+      }
+    };
+
+    window.addEventListener('citationHighlight', handleCitationHighlight as EventListener);
+    
+    return () => {
+      window.removeEventListener('citationHighlight', handleCitationHighlight as EventListener);
+    };
+  }, [file.name]);
   
   useEffect(() => {
     if (location || highlightQuote) {
@@ -99,7 +134,7 @@ const CsvViewer: React.FC<CsvViewerProps> = ({ file, textScale, highlightQuote, 
   }
 
   return (
-    <div className="overflow-auto w-full h-full">
+    <div ref={containerRef} className="overflow-auto w-full h-full">
       <div className="bg-white dark:bg-[#1e1e1e] w-full max-w-7xl min-h-full mx-auto p-2" style={{ fontSize: `${textScale * 0.875}rem` }}>
         <div className="flex items-center gap-2 mb-3 px-2 py-1.5">
           <Table size={16} className="text-blue-600 dark:text-blue-400" />
@@ -131,7 +166,7 @@ const CsvViewer: React.FC<CsvViewerProps> = ({ file, textScale, highlightQuote, 
                   <tr
                     key={rIdx}
                     id={isHighlight ? 'csv-highlight-row' : undefined}
-                    className={`border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#252525] transition-colors ${isHighlight ? `${HIGHLIGHT_CLASSES.ROW} bg-yellow-200 dark:bg-yellow-600/50 ring-2 ring-inset ring-yellow-400 dark:ring-yellow-600` : ''}`}
+                    className={`border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#252525] transition-colors ${isHighlight ? `${HIGHLIGHT_CLASSES.ROW} bg-blue-200 dark:bg-blue-600/50 ring-2 ring-inset ring-blue-400 dark:ring-blue-600` : ''}`}
                   >
                     <td className="px-2 py-1.5 text-right text-gray-400 dark:text-gray-600 font-mono text-[11px] border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#0f0f0f] select-none">
                       {rIdx + 2}

@@ -1036,3 +1036,49 @@ html.dark .citation-marker[aria-expanded="true"] {
   animation: highlightFlash 2s ease-in-out;
   border-radius: 1rem;
 }
+
+/* ========================================
+   CITATION AUTO-HIGHLIGHT STYLES
+   (Separate from manual Rangy-based highlighting)
+   ======================================== */
+
+/* Mark.js citation auto-highlight - BLUE for all citation highlights */
+mark.citation-auto-highlight {
+  background-color: rgba(59, 130, 246, 0.4) !important; /* BLUE */
+  padding: 2px 0;
+  border-radius: 2px;
+  transition: background-color 0.3s ease;
+  color: inherit;
+}
+
+/* Pulse animation for first highlight */
+mark.citation-auto-highlight-pulse {
+  animation: citationHighlightPulse 2s ease-in-out;
+}
+
+@keyframes citationHighlightPulse {
+  0%, 100% {
+    background-color: rgba(59, 130, 246, 0.4);
+  }
+  50% {
+    background-color: rgba(59, 130, 246, 0.7);
+  }
+}
+
+/* Dark mode support */
+html.dark mark.citation-auto-highlight {
+  background-color: rgba(59, 130, 246, 0.3) !important;
+}
+
+html.dark mark.citation-auto-highlight-pulse {
+  animation: citationHighlightPulseDark 2s ease-in-out;
+}
+
+@keyframes citationHighlightPulseDark {
+  0%, 100% {
+    background-color: rgba(59, 130, 246, 0.3);
+  }
+  50% {
+    background-color: rgba(59, 130, 246, 0.6);
+  }
+}
