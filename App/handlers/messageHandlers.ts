@@ -4,6 +4,7 @@ import { contextManager } from '../../services/contextManager';
 import { activityLogger } from '../../services/activityLogger';
 import { diagnosticLogger } from '../../services/diagnosticLogger';
 import { embeddingService } from '../../services/embeddingService';
+import { UploadedImage } from '../components/ImageUploadPanel';
 
 export const createMessageHandlers = (
   input: string,
@@ -18,6 +19,8 @@ export const createMessageHandlers = (
   saveCurrentChat: (updateTimestamp: boolean, sourceType?: 'files' | 'links') => void,
   sources: any[] = [],
   selectedSourceIds: string[] = [],
+  uploadedImages: UploadedImage[] = [],
+  setUploadedImages: (images: UploadedImage[] | ((prev: UploadedImage[]) => UploadedImage[])) => void,
   onShowContextWarning?: (data: { totalTokens: number; filesUsed: string[]; selectedCount: number; onProceed: () => void }) => void,
   updateChatName?: (name: string) => void
 ) => {
@@ -60,31 +63,73 @@ Extract the KEY TOPIC and create a proper title. Output ONLY 3 words, no punctua
     const textToSend = typeof messageText === 'string' ? messageText : input;
     if (!textToSend || typeof textToSend !== 'string' || !textToSend.trim() || isGenerating) return null;
 
+    // Check if images are attached and model support
+    let imageFiles: ProcessedFile[] = [];
+    let imagePlaceholderText = '';
+    
+    if (uploadedImages.length > 0) {
+      const { MODEL_REGISTRY } = await import('../../services/modelRegistry');
+      const currentModel = MODEL_REGISTRY.find(m => m.id === activeModelId);
+      
+      if (currentModel?.supportsImages) {
+        // Model supports images - convert to ProcessedFile format
+        imageFiles = uploadedImages.map(img => ({
+          id: img.id,
+          name: img.file.name,
+          type: 'image' as const,
+          content: '',
+          size: img.size,
+          status: 'ready' as const,
+          fileHandle: img.file,
+          uploadedAt: Date.now()
+        }));
+        
+        console.log('[MessageHandler] Sending images to vision model:', imageFiles.length);
+      } else {
+        // Model doesn't support images - create placeholder text
+        const imageNames = uploadedImages.map(img => img.file.name).join(', ');
+        imagePlaceholderText = uploadedImages.length === 1
+          ? `\n\n[Image attached: ${imageNames}]`
+          : `\n\n[${uploadedImages.length} images attached: ${imageNames}]`;
+        
+        console.log('[MessageHandler] Model does not support images, using placeholder text');
+        activityLogger.logWarning('MESSAGE', 'Images sent as placeholder to non-vision model', { 
+          modelId: activeModelId,
+          imageCount: uploadedImages.length 
+        });
+      }
+    }
+
+    // Append placeholder text if needed
+    const finalTextToSend = textToSend + imagePlaceholderText;
+
     // Track user query
-    activityLogger.logRAGUserQuery(textToSend, files.length);
+    activityLogger.logRAGUserQuery(finalTextToSend, files.length + imageFiles.length);
 
     // Priority: @mentioned files override sources panel selection
     const mentionedFiles = files.filter(f => textToSend.includes(`@${f.name}`));
     const selectedFiles = mentionedFiles.length > 0 ? mentionedFiles : files.filter(f => selectedSourceIds.includes(f.id));
 
     console.log('[MessageHandler] Selected files:', selectedFiles.map(f => ({ id: f.id, name: f.name, type: f.type })));
+    console.log('[MessageHandler] Image files:', imageFiles.length);
     console.log('[MessageHandler] Selected source IDs:', selectedSourceIds);
-    console.log('[MessageHandler] All files available:', files.map(f => ({ id: f.id, name: f.name })));
 
     activityLogger.logInfo('MESSAGE', 'Processing user message', { 
-      messageLength: textToSend.length, 
+      messageLength: finalTextToSend.length, 
       filesSelected: selectedFiles.length,
+      imagesAttached: uploadedImages.length,
+      imagesSentAsFiles: imageFiles.length,
       sourcesSelected: selectedSourceIds.length,
       modelId: activeModelId
     });
 
-    const contextResult = await contextManager.selectContext(textToSend, selectedFiles, activeModelId);
+    const contextResult = await contextManager.selectContext(finalTextToSend, selectedFiles, activeModelId);
     console.log('[MessageHandler] Context result:', { 
       chunksCount: contextResult.chunks.length, 
       totalTokens: contextResult.totalTokens,
       filesUsed: contextResult.filesUsed
     });
-    activityLogger.logRAGSemanticSearch(textToSend, 'hybrid', contextResult.chunks.length);
+    activityLogger.logRAGSemanticSearch(finalTextToSend, 'hybrid', contextResult.chunks.length);
     
     activityLogger.logContextProcessing(contextResult.totalTokens, contextResult.filesUsed.length, contextResult.chunks.length);
     
@@ -98,29 +143,29 @@ Extract the KEY TOPIC and create a proper title. Output ONLY 3 words, no punctua
         totalTokens: contextResult.totalTokens,
         filesUsed: fileNames,
         selectedCount: selectedFiles.length,
-        onProceed: () => sendMessageWithContext(contextResult, selectedFiles, textToSend, retryMessageId)
+        onProceed: () => sendMessageWithContext(contextResult, selectedFiles, imageFiles, finalTextToSend, retryMessageId)
       });
       return null;
     }
 
-    return await sendMessageWithContext(contextResult, selectedFiles, textToSend, retryMessageId);
+    return await sendMessageWithContext(contextResult, selectedFiles, imageFiles, finalTextToSend, retryMessageId);
   };
 
-  const sendMessageWithContext = async (contextResult: any, selectedFiles: ProcessedFile[], textToSend: string, retryMessageId?: string): Promise<string | null> => {
+  const sendMessageWithContext = async (contextResult: any, selectedFiles: ProcessedFile[], imageFiles: ProcessedFile[], textToSend: string, retryMessageId?: string): Promise<string | null> => {
     console.log('[MessageHandler] Context result:', { 
       totalTokens: contextResult.totalTokens, 
       filesUsed: contextResult.filesUsed.length,
       chunksCount: contextResult.chunks.length,
-      selectedFilesCount: selectedFiles.length
+      selectedFilesCount: selectedFiles.length,
+      imageFilesCount: imageFiles.length
     });
     
     const fileNames = contextManager.getFileNames(contextResult.filesUsed, files);
     console.log('[MessageHandler] Sources:', fileNames);
     
-    // Pass selected files to trigger RAG, but they won't be sent as full content
-    // RAG will extract chunks and add them to system prompt
-    const excerptedFiles: ProcessedFile[] = selectedFiles;
-    console.log('[MessageHandler] Triggering RAG with', selectedFiles.length, 'files');
+    // Combine document files and image files for LLM
+    const allFiles = [...selectedFiles, ...imageFiles];
+    console.log('[MessageHandler] Sending to LLM with', selectedFiles.length, 'documents and', imageFiles.length, 'images');
     
     const userMsg: Message = {
       id: `user-${Date.now()}`,
@@ -133,6 +178,15 @@ Extract the KEY TOPIC and create a proper title. Output ONLY 3 words, no punctua
     if (!retryMessageId) {
       setMessages(prev => [...prev, userMsg]);
       setInput('');
+      // Clear uploaded images after sending
+      setUploadedImages([]);
+      // Clean up blob URLs
+      imageFiles.forEach(img => {
+        if (img.fileHandle) {
+          const preview = URL.createObjectURL(img.fileHandle);
+          URL.revokeObjectURL(preview);
+        }
+      });
       const actualFileNames = selectedFiles.map(f => f.name);
       activityLogger.logMessageSent('current', textToSend.length, activeModelId, actualFileNames);
     }
@@ -170,7 +224,7 @@ Extract the KEY TOPIC and create a proper title. Output ONLY 3 words, no punctua
       const isFirstUserMessage = messages.filter(m => m.role === 'user').length === 0;
       const sourceType = isFirstUserMessage ? (fetchedSources.length > 0 ? 'links' : 'files') : undefined;
       
-      activityLogger.logRequestSent(activeModelId, textToSend.length, excerptedFiles.length, fetchedSources.length);
+      activityLogger.logRequestSent(activeModelId, textToSend.length, allFiles.length, fetchedSources.length);
       
       const responseStartTime = Date.now();
       
@@ -178,7 +232,7 @@ Extract the KEY TOPIC and create a proper title. Output ONLY 3 words, no punctua
         activeModelId,
         messages,
         userMsg.content,
-        excerptedFiles,
+        allFiles, // Send both documents and images
         (chunk, thinking) => {
           accumText += chunk;
           if (thinking) thinkingText = thinking;

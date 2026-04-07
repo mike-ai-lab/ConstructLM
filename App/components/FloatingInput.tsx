@@ -6,6 +6,7 @@ import { createPortal } from 'react-dom';
 import DocumentViewer from '../../components/DocumentViewer';
 import TabbedWebViewer from '../../components/TabbedWebViewer';
 import TabbedWebViewerElectron from '../../components/TabbedWebViewerElectron';
+import { ImageUploadPanel, UploadedImage } from './ImageUploadPanel';
 
 interface FloatingInputProps {
   input: string;
@@ -21,10 +22,16 @@ interface FloatingInputProps {
   inputHeight: number;
   sources: any[];
   selectedSourceIds: string[];
+  uploadedImages: UploadedImage[];
+  activeModelId: string;
   onInputChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
   onKeyDown: (e: React.KeyboardEvent) => void;
+  onPaste: (e: React.ClipboardEvent) => void;
   onSendMessage: () => void;
   onFileUpload: (files: FileList) => void;
+  onImageUpload: (files: FileList) => void;
+  onRemoveImage: (id: string) => void;
+  onRecalculateImageTokens?: (modelId: string) => void;
   onToggleRecording: () => void;
   onInsertMention: (fileName: string) => void;
   setIsInputDragOver: (value: boolean) => void;
@@ -56,10 +63,16 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
   inputHeight,
   sources,
   selectedSourceIds,
+  uploadedImages,
+  activeModelId,
   onInputChange,
   onKeyDown,
+  onPaste,
   onSendMessage,
   onFileUpload,
+  onImageUpload,
+  onRemoveImage,
+  onRecalculateImageTokens,
   onToggleRecording,
   onInsertMention,
   setIsInputDragOver,
@@ -75,6 +88,24 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
   const [previewSource, setPreviewSource] = useState<any>(null);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const cancelRef = useRef(false);
+
+  // Check if current model supports images
+  const [modelSupportsImages, setModelSupportsImages] = React.useState(true);
+  
+  React.useEffect(() => {
+    const checkModelSupport = async () => {
+      const { MODEL_REGISTRY } = await import('../../services/modelRegistry');
+      const currentModel = MODEL_REGISTRY.find(m => m.id === activeModelId);
+      const supportsImages = currentModel?.supportsImages ?? false;
+      setModelSupportsImages(supportsImages);
+      
+      // Recalculate image token estimates when model changes
+      if (uploadedImages.length > 0 && onRecalculateImageTokens) {
+        onRecalculateImageTokens(activeModelId);
+      }
+    };
+    checkModelSupport();
+  }, [activeModelId, uploadedImages.length, onRecalculateImageTokens]);
 
   useEffect(() => {
     if (showSourcePopup && sourceInputRef.current) {
@@ -125,6 +156,41 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
 
   const checkedCount = sources.filter(s => s.selected !== false).length;
   const totalCount = sources.length;
+
+  // Handle file input change to separate images from documents
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    
+    const fileList = e.target.files;
+    const imageFiles: File[] = [];
+    const documentFiles: File[] = [];
+    
+    Array.from(fileList).forEach(file => {
+      if (file.type.startsWith('image/')) {
+        imageFiles.push(file);
+      } else {
+        documentFiles.push(file);
+      }
+    });
+    
+    // Handle images separately
+    if (imageFiles.length > 0) {
+      const imageDataTransfer = new DataTransfer();
+      imageFiles.forEach(file => imageDataTransfer.items.add(file));
+      onImageUpload(imageDataTransfer.files);
+    }
+    
+    // Handle documents
+    if (documentFiles.length > 0) {
+      const docDataTransfer = new DataTransfer();
+      documentFiles.forEach(file => docDataTransfer.items.add(file));
+      onFileUpload(docDataTransfer.files);
+    }
+    
+    // Reset input
+    e.target.value = '';
+  };
+
   return (
     <div className="w-full relative">
       {/* Source Popup List */}
@@ -201,22 +267,38 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
         
         {/* File/Token Count - Right Side */}
         <div>
-          {!isInputDragOver && input.trim() && files.length > 0 && (() => {
+          {!isInputDragOver && (() => {
             const mentionedFiles = files.filter(f => input.includes(`@${f.name}`));
-            const totalTokens = mentionedFiles.reduce((sum, f) => sum + (f.tokenCount || 0), 0);
+            const totalFileTokens = mentionedFiles.reduce((sum, f) => sum + (f.tokenCount || 0), 0);
+            const totalImageTokens = uploadedImages.reduce((sum, img) => sum + img.estimatedTokens, 0);
+            const totalTokens = totalFileTokens + totalImageTokens;
+            const totalItems = mentionedFiles.length + uploadedImages.length;
             const isOverLimit = totalTokens > 30000;
             
-            if (mentionedFiles.length === 0) return null;
+            if (totalItems === 0) return null;
+            
+            // Smart token display: full numbers under 10k, abbreviated above
+            const tokenDisplay = totalTokens < 10000 
+              ? `${totalTokens} tokens`
+              : `${(totalTokens / 1000).toFixed(1)}k tokens`;
             
             return (
               <span className={`inline-flex items-center gap-1 px-2 py-1 bg-white dark:bg-[#1a1a1a] border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] rounded text-[11px] font-medium shadow-sm ${isOverLimit ? 'text-[#ef4444]' : 'text-[#4485d1]'}`}>
-                <Sparkles size={10} /> {mentionedFiles.length} file(s) • ~{(totalTokens / 1000).toFixed(0)}k tokens
+                <Sparkles size={10} /> {totalItems} item(s) • ~{tokenDisplay}
                 {isOverLimit && ' ⚠️'}
               </span>
             );
           })()}
         </div>
       </div>
+      
+      {/* Image Upload Panel */}
+      <ImageUploadPanel 
+        images={uploadedImages} 
+        onRemoveImage={onRemoveImage}
+        activeModelId={activeModelId}
+        modelSupportsImages={modelSupportsImages}
+      />
       
       {isInputDragOver && (
         <div className="absolute -top-8 left-1/2 -translate-x-1/2 text-xs font-medium bg-[#4485d1] text-white px-3 py-1.5 rounded-full shadow-lg animate-bounce">
@@ -253,7 +335,7 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
           id="chat-file-input"
           multiple
           accept=".pdf,.xlsx,.xls,.csv,.txt,.md,.json,.png,.jpg,.jpeg,.gif,.bmp,.webp,.doc,.docx,.ppt,.pptx"
-          onChange={(e) => e.target.files && onFileUpload(e.target.files)}
+          onChange={handleFileInputChange}
           className="hidden"
         />
         <button
@@ -302,6 +384,7 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
           value={input}
           onChange={onInputChange}
           onKeyDown={onKeyDown}
+          onPaste={onPaste}
           className="floating-input-field"
           onDrop={async (e) => {
             e.preventDefault();
@@ -313,8 +396,22 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
             const after = input.slice(cursorPos);
             const space = (before && !before.endsWith(' ')) ? ' ' : '';
             
+            // Check if it's a mention drag from sidebar
             const mention = e.dataTransfer.getData('text/plain');
             if (mention && mention.startsWith('@')) {
+              // Check if the mentioned file is an image
+              const fileName = mention.substring(1); // Remove @
+              const file = files.find(f => f.name === fileName);
+              
+              if (file && file.type === 'image' && file.fileHandle) {
+                // It's an image - add to image panel instead of mention
+                const imageDataTransfer = new DataTransfer();
+                imageDataTransfer.items.add(file.fileHandle);
+                await onImageUpload(imageDataTransfer.files);
+                return;
+              }
+              
+              // Not an image - add as mention
               const newValue = before + space + mention + ' ' + after;
               setInput(newValue);
               setTimeout(() => {
@@ -327,12 +424,39 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
               return;
             }
             
+            // Handle file drops
             const droppedFiles = e.dataTransfer.files;
             if (droppedFiles.length > 0) {
-              await onFileUpload(droppedFiles);
-              const mentions = Array.from(droppedFiles).map(f => `@${f.name}`).join(' ');
-              const newValue = before + space + mentions + ' ' + after;
-              setInput(newValue);
+              // Separate images from documents
+              const imageFiles: File[] = [];
+              const documentFiles: File[] = [];
+              
+              Array.from(droppedFiles).forEach(file => {
+                if (file.type.startsWith('image/')) {
+                  imageFiles.push(file);
+                } else {
+                  documentFiles.push(file);
+                }
+              });
+              
+              // Handle images
+              if (imageFiles.length > 0) {
+                const imageDataTransfer = new DataTransfer();
+                imageFiles.forEach(file => imageDataTransfer.items.add(file));
+                await onImageUpload(imageDataTransfer.files);
+              }
+              
+              // Handle documents with mentions
+              if (documentFiles.length > 0) {
+                const docDataTransfer = new DataTransfer();
+                documentFiles.forEach(file => docDataTransfer.items.add(file));
+                await onFileUpload(docDataTransfer.files);
+                
+                const mentions = documentFiles.map(f => `@${f.name}`).join(' ');
+                const newValue = before + space + mentions + ' ' + after;
+                setInput(newValue);
+              }
+              
               setTimeout(() => {
                 if (inputRef.current) {
                   inputRef.current.focus();

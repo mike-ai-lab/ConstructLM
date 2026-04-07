@@ -17,21 +17,18 @@ export const constructBaseSystemPrompt = (
   sources: any[] = [],
   activeFiles: ProcessedFile[] = []
 ) => {
+  // ✅ MINIMAL PROMPT - No files/sources = minimal tokens
+  if (!hasFiles && !hasSources) {
+    return `You are ConstructLM, an AI assistant. Provide helpful, detailed answers.`;
+  }
+  
   if (hasSources && sources.length > 0) {
     const sourcesList = sources.map((s, i) => `[${i + 1}] ${s.title || s.url}: ${s.url}`).join('\n');
-    return `You are ConstructLM, an AI assistant analyzing the following sources:
+    return `You are ConstructLM. Answer based on these sources:
 
 ${sourcesList}
 
-Answer questions based on these sources. Cite facts using this format:
-- Web: {{citation:https://url.com|Section|exact quote}}
-- Files: {{citation:FileName.ext|Location|exact quote}}
-
-**RESPONSE GUIDELINES:**
-- Provide COMPREHENSIVE, DETAILED answers (minimum 3-5 sentences)
-- Include specific examples, data, and context from the sources
-- If sources don't contain the answer, explain what information IS available
-- Never give one-sentence answers. Always provide context and explanation.`;
+Cite: {{citation:URL|Section|exact quote}}`;
   }
   
   if (hasFiles) {
@@ -40,71 +37,31 @@ Answer questions based on these sources. Cite facts using this format:
     const hasPdf = fileTypes.has('pdf');
     const hasExcel = fileTypes.has('excel');
     const hasCsv = fileTypes.has('csv');
-    const hasMarkdown = fileTypes.has('markdown') || activeFiles.some(f => f.name.endsWith('.md'));
-    const hasText = fileTypes.has('document') || fileTypes.has('other');
     
-    // Build file-type-specific citation instructions
+    // Build MINIMAL file-type-specific citation instructions
     let citationInstructions = '';
     
     if (hasPdf) {
-      citationInstructions += `\n📄 **PDF Files:** Use {{citation:FileName.pdf|Page X|exact quote}}
-   - Find page numbers from markers like "--- [Page N] ---" in the text
-   - Always include the page number`;
+      citationInstructions += `\nPDF: {{citation:File.pdf|Page X|quote}}`;
     }
     
     if (hasExcel || hasCsv) {
-      citationInstructions += `\n📊 **Excel/CSV Files:** Use {{citation:FileName.xlsx|Sheet: SheetName, Row X|exact quote}}
-   - Include sheet name and row number when available
-   - Example: {{citation:data.xlsx|Sheet: Sales, Row 15|Product A: $299.99}}
-   - For CSV: {{citation:data.csv|Row X|exact quote}}`;
+      citationInstructions += `\nExcel/CSV: {{citation:File.xlsx|Sheet: Name, Row X|quote}}`;
     }
     
-    if (hasMarkdown || hasText) {
-      citationInstructions += `\n📝 **Markdown/Text Files:** Use {{citation:FileName.md|Section: Title|exact quote}}
-   - Use section headers as location (e.g., "Section: Cost Breakdown")
-   - If no clear section, use "Line X" or just the filename
-   - Example: {{citation:report.md|Section: Summary|Total cost: $1,500}}`;
-    }
-    
-    // If no specific types detected, provide generic guidance
+    // If no specific types, generic
     if (!citationInstructions) {
-      citationInstructions = `\n📄 **Citation Format:** {{citation:FileName|Location|exact quote}}
-   - Location can be: Page X, Section: Title, Row X, or Line X
-   - Always include a specific location when possible`;
+      citationInstructions = `\nCite: {{citation:FileName|Location|exact quote}}`;
     }
     
-    return `You are ConstructLM. Answer questions using the document chunks provided below.
+    return `You are ConstructLM. Answer using document chunks below.
 
-**RESPONSE QUALITY REQUIREMENTS:**
-1. Provide COMPREHENSIVE answers (minimum 3-5 sentences)
-2. Include specific details, numbers, and context from documents
-3. Explain concepts thoroughly - don't just state facts
-4. Use examples and evidence from the documents
-5. Structure longer answers with clear paragraphs
+**Citation:**${citationInstructions}
 
-**CITATION RULES:**${citationInstructions}
-
-**IMPORTANT:**
-- Cite EXACT text from documents (3-10 words with key information)
-- Include numbers, quantities, and units in citations
-- Use {{citation:FileName|Location|exact quote}} format
-- Give ONE clear, DETAILED answer - no repetitions
-- Never give single-sentence responses unless the question is yes/no
-- If documents don't contain full answer, explain what IS available
-
-Be thorough, detailed, and helpful. Quality over brevity.`;
-  } else {
-    return `You are ConstructLM, an AI assistant.
-
-**RESPONSE GUIDELINES:**
-- Provide COMPREHENSIVE, DETAILED answers
-- Explain concepts thoroughly with examples
-- Use clear markdown formatting
-- Structure longer answers with paragraphs
-- Minimum 3-5 sentences unless question is very simple
-
-When users ask about documents or code, suggest they upload files or use the GitHub tab to import code repositories.`;
+Cite exact text (3-10 words). Be detailed and thorough.`;
   }
+  
+  return `You are ConstructLM, an AI assistant. Provide helpful, detailed answers.`;
 };
 
 // --- Generic Message Handler ---
@@ -286,8 +243,8 @@ export const sendMessageToLLM = async (
             // ✅ REQUIREMENT 3: Source context in SYSTEM, not USER
             const finalSystemPrompt = strictSystemPrompt + sourceContext;
             
-            await sendMessageToGemini(modelId, apiKey, geminiMessage, activeFiles, onStream, finalSystemPrompt, conversationHistory);
-            return {};
+            const usage = await sendMessageToGemini(modelId, apiKey, geminiMessage, activeFiles, onStream, finalSystemPrompt, conversationHistory);
+            return usage;
         } else if (model.provider === 'openai' || model.provider === 'groq' || model.provider === 'cerebras') {
             // OpenAI, Groq, or Cerebras
             const apiKey = getApiKeyForModel(model);

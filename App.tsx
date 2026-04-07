@@ -587,6 +587,8 @@ const App: React.FC = () => {
     chatHandlers.saveCurrentChat,
     sources,
     chatState.selectedSourceIds,
+    inputState.uploadedImages,
+    inputState.setUploadedImages,
     setContextWarning,
     chatHandlers.updateChatName
   );
@@ -604,7 +606,10 @@ const App: React.FC = () => {
     filteredFiles,
     inputState.mentionIndex,
     inputState.showMentionMenu,
-    messageHandlers.handleSendMessage
+    messageHandlers.handleSendMessage,
+    inputState.uploadedImages,
+    inputState.setUploadedImages,
+    featureState.activeModelId
   );
 
   const featureHandlers = createFeatureHandlers(
@@ -1108,10 +1113,16 @@ const App: React.FC = () => {
               inputHeight={inputState.inputHeight}
               sources={sources}
               selectedSourceIds={chatState.selectedSourceIds}
+              uploadedImages={inputState.uploadedImages}
+              activeModelId={featureState.activeModelId}
               onInputChange={inputHandlers.handleInputChange}
               onKeyDown={inputHandlers.handleKeyDown}
+              onPaste={inputHandlers.handlePaste}
               onSendMessage={() => messageHandlers.handleSendMessage()}
               onFileUpload={fileHandlers.handleFileUpload}
+              onImageUpload={inputHandlers.handleImageUpload}
+              onRemoveImage={inputHandlers.handleRemoveImage}
+              onRecalculateImageTokens={inputHandlers.recalculateImageTokens}
               onToggleRecording={audioHandlers.handleToggleRecording}
               onInsertMention={inputHandlers.insertMention}
               setIsInputDragOver={layoutState.setIsInputDragOver}

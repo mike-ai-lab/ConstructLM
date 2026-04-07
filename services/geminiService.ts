@@ -29,7 +29,7 @@ export async function sendMessageToGemini(
   onStream: (chunk: string, thinking?: string) => void,
   systemPrompt?: string,
   history?: any[]
-): Promise<void> {
+): Promise<{ inputTokens?: number; outputTokens?: number; totalTokens?: number }> {
   if (!apiKey) throw new Error("API Key missing");
 
   console.log('🔵 [GEMINI] === REQUEST START ===');
@@ -160,6 +160,7 @@ export async function sendMessageToGemini(
   let thinkingContent = "";
   let chunkCount = 0;
   let totalChars = 0;
+  let usage = { inputTokens: 0, outputTokens: 0, totalTokens: 0 };
 
   while (true) {
     const { done, value } = await reader.read();
@@ -184,6 +185,13 @@ export async function sendMessageToGemini(
               onStream(part.text, thinkingContent || undefined);
             }
           }
+          
+          // Capture usage metadata from Gemini response
+          if (json.usageMetadata) {
+            usage.inputTokens = json.usageMetadata.promptTokenCount || 0;
+            usage.outputTokens = json.usageMetadata.candidatesTokenCount || 0;
+            usage.totalTokens = json.usageMetadata.totalTokenCount || 0;
+          }
         } catch (e) {}
       }
     }
@@ -192,7 +200,10 @@ export async function sendMessageToGemini(
   console.log('🟢 [GEMINI] Streaming complete');
   console.log('🟢 [GEMINI] Chunks received:', chunkCount);
   console.log('🟢 [GEMINI] Total characters:', totalChars);
+  console.log('🟢 [GEMINI] Token usage:', usage);
   console.log('🔵 [GEMINI] === REQUEST END ===');
+  
+  return usage;
 }
 
 export async function generateSpeech(text: string): Promise<Uint8Array | null> {
