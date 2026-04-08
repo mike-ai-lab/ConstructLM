@@ -9,13 +9,13 @@ interface ChatGreetingProps {
 const ChatGreeting: React.FC<ChatGreetingProps> = ({ content, isExiting = false }) => {
   return (
     <div 
-      className={`flex items-center justify-center px-4 py-2 transition-all duration-700 ease-in-out ${
+      className={`flex items-center justify-center px-4 py-2 transition-all duration-700 ease-in-out cursor-default select-none ${
         isExiting ? '-translate-x-full opacity-0 blur-sm' : 'translate-x-0 opacity-100'
       }`}
     >
       <div className="max-w-2xl w-full text-center space-y-3">
         {/* Blob Avatar with optimized glow */}
-        <div className="flex justify-center mb-4">
+        <div className="flex justify-center mb-6">
           <div className="relative">
             {/* Reduced blur and scale for less space usage */}
             <div className="absolute inset-0 bg-blue-500/50 blur-[50px] rounded-full scale-[1.5]"></div>
@@ -25,9 +25,9 @@ const ChatGreeting: React.FC<ChatGreetingProps> = ({ content, isExiting = false 
           </div>
         </div>
 
-        {/* Greeting Text - Reduced spacing */}
-        <div className="space-y-2">
-          <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+        {/* Greeting Text - Increased spacing to avoid glow overlap */}
+        <div className="space-y-2 relative z-10">
+          <h1 className="text-2xl md:text-3xl font-bold text-blue-600 dark:text-blue-400">
             ConstructLM
           </h1>
           

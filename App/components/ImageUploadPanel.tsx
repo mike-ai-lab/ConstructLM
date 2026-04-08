@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, ChevronDown, ChevronUp, Image as ImageIcon, AlertTriangle } from 'lucide-react';
+import { X, ChevronDown, ChevronUp, Image as ImageIcon } from 'lucide-react';
 
 export interface UploadedImage {
   id: string;
@@ -12,109 +12,89 @@ export interface UploadedImage {
 interface ImageUploadPanelProps {
   images: UploadedImage[];
   onRemoveImage: (id: string) => void;
-  activeModelId?: string;
-  modelSupportsImages?: boolean;
+  isOpen: boolean;
+  onToggle: () => void;
 }
 
 export const ImageUploadPanel: React.FC<ImageUploadPanelProps> = ({ 
   images, 
-  onRemoveImage, 
-  activeModelId,
-  modelSupportsImages = true 
+  onRemoveImage,
+  isOpen,
+  onToggle
 }) => {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(true); // Internal state for expand/collapse
 
   if (images.length === 0) return null;
 
-  const formatFileSize = (bytes: number): string => {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  const formatSize = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   const totalTokens = images.reduce((sum, img) => sum + img.estimatedTokens, 0);
 
   return (
-    <div className={`mb-2 border rounded-lg shadow-sm overflow-hidden ${
-      modelSupportsImages 
-        ? 'bg-white dark:bg-[#2a2a2a] border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.1)]'
-        : 'bg-[#fff3cd] dark:bg-[#664d03] border-[#ffc107]'
+    <div className={`absolute bottom-full left-0 w-full mb-2 bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-2xl border-2 border-slate-300 dark:border-[rgba(255,255,255,0.15)] overflow-hidden transition-all duration-300 transform ${
+      isOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
     }`}>
-      {/* Vision Warning Banner */}
-      {!modelSupportsImages && (
-        <div className="px-3 py-2 bg-[#ffc107] dark:bg-[#856404] border-b border-[#ffb300] flex items-center gap-2">
-          <AlertTriangle size={16} className="text-[#664d03] dark:text-[#fff3cd] flex-shrink-0" />
-          <span className="text-xs font-medium text-[#664d03] dark:text-[#fff3cd]">
-            Current model doesn't support images, switch to a Vision model to send your image/s
-          </span>
-        </div>
-      )}
-      
-      {/* Header */}
+      {/* Header - Clickable to toggle expand/collapse */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className={`w-full flex items-center justify-between px-3 py-2 transition-colors ${
-          modelSupportsImages
-            ? 'hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[rgba(255,255,255,0.05)]'
-            : 'hover:bg-[#ffe69c] dark:hover:bg-[#7a5c04]'
-        }`}
+        className="w-full px-4 py-3 bg-slate-50 dark:bg-[#2a2a2a] border-b-2 border-slate-200 dark:border-[rgba(255,255,255,0.1)] flex items-center justify-between hover:bg-slate-100 dark:hover:bg-[#333] transition-colors"
       >
         <div className="flex items-center gap-2">
-          <ImageIcon size={16} className={modelSupportsImages ? 'text-[#0078d4]' : 'text-[#664d03] dark:text-[#fff3cd]'} />
-          <span className={`text-sm font-medium ${
-            modelSupportsImages 
-              ? 'text-[#1a1a1a] dark:text-white'
-              : 'text-[#664d03] dark:text-[#fff3cd]'
-          }`}>
-            {images.length} {images.length === 1 ? 'Image' : 'Images'} Attached
-          </span>
-          <span className={`text-xs ${
-            modelSupportsImages
-              ? 'text-[#666] dark:text-[#a0a0a0]'
-              : 'text-[#664d03] dark:text-[#fff3cd]'
-          }`}>
-            ~{totalTokens} tokens
+          <ImageIcon size={16} className="text-slate-500 dark:text-slate-400" />
+          <span className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-tight">
+            Attached Assets ({images.length})
           </span>
         </div>
-        {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] bg-blue-600 text-white px-2 py-0.5 rounded-full font-semibold">
+            Total: ~{totalTokens} Tokens
+          </span>
+          {isExpanded ? <ChevronUp size={16} className="text-slate-500" /> : <ChevronDown size={16} className="text-slate-500" />}
+        </div>
       </button>
 
-      {/* Image List */}
+      {/* Image List - Collapsible */}
       {isExpanded && (
-        <div className="px-3 pb-3 space-y-2 max-h-[300px] overflow-y-auto">
-          {images.map((image) => (
-            <div
-              key={image.id}
-              className="flex items-center gap-3 p-2 bg-[rgba(0,0,0,0.02)] dark:bg-[rgba(255,255,255,0.03)] rounded-lg hover:bg-[rgba(0,0,0,0.04)] dark:hover:bg-[rgba(255,255,255,0.05)] transition-colors"
+        <div className="max-h-60 overflow-y-auto divide-y divide-slate-50 dark:divide-[rgba(255,255,255,0.05)]">
+          {images.map((img) => (
+            <div 
+              key={img.id} 
+              className="p-3 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-[#2a2a2a] transition-colors"
             >
-              {/* Thumbnail */}
-              <div className="flex-shrink-0 w-12 h-12 rounded overflow-hidden bg-[rgba(0,0,0,0.05)] dark:bg-[rgba(255,255,255,0.05)]">
-                <img
-                  src={image.preview}
-                  alt={image.file.name}
-                  className="w-full h-full object-cover"
+              <div className="flex items-center gap-3">
+                {/* Thumbnail */}
+                <img 
+                  src={img.preview} 
+                  className="w-10 h-10 rounded shadow-sm object-cover border border-slate-200 dark:border-[rgba(255,255,255,0.1)]" 
+                  alt="preview" 
                 />
-              </div>
-
-              {/* File Info */}
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-[#1a1a1a] dark:text-white truncate">
-                  {image.file.name}
-                </div>
-                <div className="flex items-center gap-2 text-xs text-[#666] dark:text-[#a0a0a0]">
-                  <span>{formatFileSize(image.size)}</span>
-                  <span>•</span>
-                  <span>~{image.estimatedTokens} tokens</span>
+                
+                {/* File Info */}
+                <div className="flex flex-col">
+                  <span className="text-xs font-medium text-slate-700 dark:text-slate-200 truncate max-w-[200px]">
+                    {img.file.name}
+                  </span>
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                    {formatSize(img.size)} • {img.estimatedTokens} tkn
+                  </span>
                 </div>
               </div>
 
               {/* Remove Button */}
-              <button
-                onClick={() => onRemoveImage(image.id)}
-                className="flex-shrink-0 p-1 text-[#666] hover:text-[#ef4444] dark:text-[#a0a0a0] dark:hover:text-[#ef4444] transition-colors rounded hover:bg-[rgba(239,68,68,0.1)]"
-                title="Remove image"
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRemoveImage(img.id);
+                }} 
+                className="flex-shrink-0 w-7 h-7 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors"
               >
-                <X size={16} />
+                <X size={16} strokeWidth={2.5} />
               </button>
             </div>
           ))}

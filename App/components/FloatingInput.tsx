@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Plus, ChevronRight, Mic, Square, Loader2, FileText, Lightbulb, Sparkles, BookOpen, Code } from 'lucide-react';
+import { ImageUploadPanel, UploadedImage } from './ImageUploadPanel';
+import { getAllModels } from '../../services/modelRegistry';
 
 interface Suggestion {
   icon: React.ReactNode;
@@ -13,13 +15,18 @@ interface FloatingInputProps {
   isGenerating: boolean;
   onInputChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
   onKeyDown: (e: React.KeyboardEvent) => void;
+  onPaste?: (e: React.ClipboardEvent) => void; // Paste handler for images
   onSendMessage: () => void;
   onFileUpload?: (files: FileList) => void;
+  onImageUpload?: (files: FileList) => void; // Handler for image uploads
   onToggleRecording?: () => void;
   isRecording?: boolean;
   isTranscribing?: boolean;
   setInput: (value: string) => void;
   showSuggestions?: boolean; // Control whether to show template suggestions
+  uploadedImages?: UploadedImage[]; // Images uploaded by user
+  onRemoveImage?: (id: string) => void; // Handler to remove an image
+  activeModelId?: string; // Current active model ID
   [key: string]: any;
 }
 
@@ -29,16 +36,45 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
   isGenerating,
   onInputChange,
   onKeyDown,
+  onPaste, // Add paste handler
   onSendMessage,
   onFileUpload,
+  onImageUpload, // Add this to destructuring
   onToggleRecording,
   isRecording = false,
   isTranscribing = false,
   setInput,
   showSuggestions = false, // Default to false (no suggestions)
+  uploadedImages = [], // Default to empty array
+  onRemoveImage,
+  activeModelId,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-open panel when images are added
+  React.useEffect(() => {
+    if (uploadedImages && uploadedImages.length > 0) {
+      setIsPanelOpen(true);
+    }
+  }, [uploadedImages?.length]);
+
+  // Check if current model supports images
+  const modelSupportsImages = React.useMemo(() => {
+    if (!activeModelId) return false;
+    const allModels = getAllModels();
+    const model = allModels.find(m => m.id === activeModelId);
+    return model?.supportsImages || false;
+  }, [activeModelId]);
+
+  // DEBUG: Log image state
+  React.useEffect(() => {
+    console.log('[FloatingInput] uploadedImages:', uploadedImages);
+    console.log('[FloatingInput] uploadedImages.length:', uploadedImages?.length);
+    console.log('[FloatingInput] onRemoveImage exists:', !!onRemoveImage);
+    console.log('[FloatingInput] Should render panel:', uploadedImages && uploadedImages.length > 0 && onRemoveImage);
+  }, [uploadedImages, onRemoveImage]);
 
   // Template suggestions for ConstructLM
   const suggestions: Suggestion[] = [
@@ -65,10 +101,36 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && onFileUpload) {
-      onFileUpload(e.target.files);
-      e.target.value = '';
+    if (!e.target.files || e.target.files.length === 0) return;
+    
+    const files = e.target.files;
+    const imageFiles: File[] = [];
+    const documentFiles: File[] = [];
+    
+    // Separate images from documents
+    Array.from(files).forEach(file => {
+      if (file.type.startsWith('image/')) {
+        imageFiles.push(file);
+      } else {
+        documentFiles.push(file);
+      }
+    });
+    
+    // Handle images
+    if (imageFiles.length > 0 && onImageUpload) {
+      const imageDataTransfer = new DataTransfer();
+      imageFiles.forEach(file => imageDataTransfer.items.add(file));
+      onImageUpload(imageDataTransfer.files);
     }
+    
+    // Handle documents
+    if (documentFiles.length > 0 && onFileUpload) {
+      const docDataTransfer = new DataTransfer();
+      documentFiles.forEach(file => docDataTransfer.items.add(file));
+      onFileUpload(docDataTransfer.files);
+    }
+    
+    e.target.value = '';
   };
 
   const handleSuggestionClick = (text: string) => {
@@ -82,6 +144,45 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
     // Delegate all key handling to parent (including Enter key)
     // This prevents double submission when Enter is pressed
     onKeyDown(e);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const files = e.dataTransfer.files;
+    if (!files || files.length === 0) return;
+    
+    const imageFiles: File[] = [];
+    const documentFiles: File[] = [];
+    
+    // Separate images from documents
+    Array.from(files).forEach(file => {
+      if (file.type.startsWith('image/')) {
+        imageFiles.push(file);
+      } else {
+        documentFiles.push(file);
+      }
+    });
+    
+    // Handle images
+    if (imageFiles.length > 0 && onImageUpload) {
+      const imageDataTransfer = new DataTransfer();
+      imageFiles.forEach(file => imageDataTransfer.items.add(file));
+      onImageUpload(imageDataTransfer.files);
+    }
+    
+    // Handle documents
+    if (documentFiles.length > 0 && onFileUpload) {
+      const docDataTransfer = new DataTransfer();
+      documentFiles.forEach(file => docDataTransfer.items.add(file));
+      onFileUpload(docDataTransfer.files);
+    }
   };
 
   return (
@@ -110,12 +211,24 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
       />
 
       <div className="w-full space-y-4">
-        <div className={`smooth-shadow relative flex flex-col bg-white dark:bg-[#1a1a1a] border rounded-[32px] ${
-          isFocused 
-            ? 'border-[#4485d1]/40 shadow-[0_0_80px_-20px_rgba(68,133,209,0.3)]' 
-            : 'border-gray-300 dark:border-[rgba(255,255,255,0.1)] shadow-lg'
-        }`}>
-          <div className="flex items-center p-3 gap-2">
+        {/* Container with relative positioning for absolute panel */}
+        <div className="relative">
+          {/* Image Upload Panel - Positioned above input */}
+          {uploadedImages && uploadedImages.length > 0 && onRemoveImage && (
+            <ImageUploadPanel
+              images={uploadedImages}
+              onRemoveImage={onRemoveImage}
+              isOpen={isPanelOpen}
+              onToggle={() => setIsPanelOpen(!isPanelOpen)}
+            />
+          )}
+
+          <div className={`smooth-shadow relative flex flex-col bg-white dark:bg-[#1a1a1a] border rounded-[32px] ${
+            isFocused 
+              ? 'border-[#4485d1]/40 shadow-[0_0_80px_-20px_rgba(68,133,209,0.3)]' 
+              : 'border-gray-300 dark:border-[rgba(255,255,255,0.1)] shadow-lg'
+          }`}>
+          <div className="flex items-center p-3 gap-2 cursor-default select-none">
             <button
               onClick={handleAttach}
               aria-label="Add Attachment"
@@ -135,6 +248,9 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
                 value={input}
                 onChange={onInputChange}
                 onKeyDown={handleKeyDownInternal}
+                onPaste={onPaste}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
                 disabled={isGenerating}
               />
             </div>
@@ -189,7 +305,7 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
 
         {/* Floating Suggestions - Only show when showSuggestions is true */}
         {showSuggestions && suggestions.length > 0 && (
-          <div className={`floating-suggestions flex flex-row justify-center gap-2 px-4 ${
+          <div className={`floating-suggestions flex flex-row justify-center gap-2 px-4 relative z-20 ${
             (!input && !isTranscribing && !isGenerating) 
               ? 'opacity-100 translate-y-0 scale-100' 
               : 'opacity-0 -translate-y-4 scale-95 pointer-events-none'
@@ -208,6 +324,7 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
             ))}
           </div>
         )}
+        </div>
       </div>
     </div>
   );

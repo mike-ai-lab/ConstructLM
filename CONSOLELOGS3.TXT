@@ -1,0 +1,49 @@
+22:45:26.909 inputHandlers.ts:104 [inputHandlers] handleImageUpload called with files: FileList {0: File, length: 1}
+22:45:26.909 inputHandlers.ts:105 [inputHandlers] Number of files: 1
+22:45:26.909 inputHandlers.ts:111 [inputHandlers] Image files after filter: 1
+22:45:26.918 inputHandlers.ts:143 [inputHandlers] Adding image: {id: 'img-1775677526909-ftf4beyts', file: File, preview: 'blob:http://localhost:5847/6e5a66ed-75e5-455d-b961-2588578a43b4', size: 270563, estimatedTokens: 10}
+22:45:26.918 inputHandlers.ts:146 [inputHandlers] New uploadedImages array: [{…}]
+22:45:27.087 FloatingInput.tsx:65 [FloatingInput] uploadedImages: [{…}]
+22:45:27.088 FloatingInput.tsx:66 [FloatingInput] uploadedImages.length: 1
+22:45:27.089 FloatingInput.tsx:67 [FloatingInput] onRemoveImage exists: true
+22:45:27.089 FloatingInput.tsx:68 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+22:45:31.114 (index):96 Fetch finished loading: GET "https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js".
+initWorker @ (index):96
+(anonymous) @ (index):124
+setInterval
+(anonymous) @ (index):121
+(anonymous) @ (index):85
+22:45:31.115 (index):106 PDF Worker initialized via Blob
+22:45:35.872 FloatingInput.tsx:65 [FloatingInput] uploadedImages: [{…}]
+22:45:35.873 FloatingInput.tsx:66 [FloatingInput] uploadedImages.length: 1
+22:45:35.873 FloatingInput.tsx:67 [FloatingInput] onRemoveImage exists: true
+22:45:35.874 FloatingInput.tsx:68 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+22:45:36.093 FloatingInput.tsx:65 [FloatingInput] uploadedImages: [{…}]
+22:45:36.094 FloatingInput.tsx:66 [FloatingInput] uploadedImages.length: 1
+22:45:36.095 FloatingInput.tsx:67 [FloatingInput] onRemoveImage exists: true
+22:45:36.095 FloatingInput.tsx:68 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+22:45:41.870 FloatingInput.tsx:65 [FloatingInput] uploadedImages: [{…}]
+22:45:41.871 FloatingInput.tsx:66 [FloatingInput] uploadedImages.length: 1
+22:45:41.872 FloatingInput.tsx:67 [FloatingInput] onRemoveImage exists: true
+22:45:41.872 FloatingInput.tsx:68 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+22:45:42.058 FloatingInput.tsx:65 [FloatingInput] uploadedImages: [{…}]
+22:45:42.059 FloatingInput.tsx:66 [FloatingInput] uploadedImages.length: 1
+22:45:42.059 FloatingInput.tsx:67 [FloatingInput] onRemoveImage exists: true
+22:45:42.059 FloatingInput.tsx:68 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+22:45:55.665 FloatingInput.tsx:65 [FloatingInput] uploadedImages: [{…}]
+22:45:55.666 FloatingInput.tsx:66 [FloatingInput] uploadedImages.length: 1
+22:45:55.666 FloatingInput.tsx:67 [FloatingInput] onRemoveImage exists: true
+22:45:55.667 FloatingInput.tsx:68 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+22:46:00.363 FloatingInput.tsx:65 [FloatingInput] uploadedImages: [{…}]
+22:46:00.363 FloatingInput.tsx:66 [FloatingInput] uploadedImages.length: 1
+22:46:00.363 FloatingInput.tsx:67 [FloatingInput] onRemoveImage exists: true
+22:46:00.364 FloatingInput.tsx:68 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+22:46:29.138 inputHandlers.ts:104 [inputHandlers] handleImageUpload called with files: FileList {0: File, length: 1}
+22:46:29.138 inputHandlers.ts:105 [inputHandlers] Number of files: 1
+22:46:29.139 inputHandlers.ts:111 [inputHandlers] Image files after filter: 1
+22:46:29.140 inputHandlers.ts:143 [inputHandlers] Adding image: {id: 'img-1775677589139-90sd8cfui', file: File, preview: 'blob:http://localhost:5847/22f57c9f-422e-4212-a979-3af40c8507a5', size: 21603, estimatedTokens: 10}
+22:46:29.140 inputHandlers.ts:146 [inputHandlers] New uploadedImages array: (2) [{…}, {…}]
+22:46:29.273 FloatingInput.tsx:65 [FloatingInput] uploadedImages: (2) [{…}, {…}]
+22:46:29.274 FloatingInput.tsx:66 [FloatingInput] uploadedImages.length: 2
+22:46:29.274 FloatingInput.tsx:67 [FloatingInput] onRemoveImage exists: true
+22:46:29.275 FloatingInput.tsx:68 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)

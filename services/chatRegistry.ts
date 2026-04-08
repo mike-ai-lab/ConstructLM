@@ -199,12 +199,34 @@ class ChatRegistryService {
     }
   }
 
-  async createNewChat(name: string, modelId: string): Promise<ChatSession> {
-    // DISABLED: AI-generated greeting to save API tokens during testing
-    // const greeting = await greetingService.generateGreeting(modelId);
+  async createNewChat(name: string, modelId: string, isExplicitUserAction: boolean = false): Promise<ChatSession> {
+    let greeting: string;
     
-    // Static placeholder greeting
-    const greeting = "Hey there! I'm ConstructLM, your AI assistant for document analysis and research.\n\nI can help you analyze documents, answer questions, generate summaries, and more. What would you like to explore today?";
+    // Import userProfileService dynamically to avoid circular dependency
+    const { userProfileService } = await import('./userProfileService');
+    const profile = userProfileService.getProfile();
+    
+    // Only generate AI greeting if user explicitly clicked "New Chat" button
+    if (isExplicitUserAction && profile && (profile.name || profile.role)) {
+      try {
+        console.log('[ChatRegistry] 🎯 Explicit user action - attempting AI greeting');
+        const aiGreeting = await greetingService.generateGreeting(modelId);
+        if (aiGreeting) {
+          greeting = aiGreeting;
+          console.log('[ChatRegistry] ✅ AI greeting generated:', greeting);
+        } else {
+          greeting = this.getPlaceholderGreeting(profile.greetingStyle);
+          console.log('[ChatRegistry] ⚠️ AI greeting failed, using placeholder:', greeting);
+        }
+      } catch (error) {
+        console.warn('[ChatRegistry] Failed to generate AI greeting, using placeholder:', error);
+        greeting = this.getPlaceholderGreeting(profile.greetingStyle);
+      }
+    } else {
+      // Page reload, auto-load, or no profile - always use placeholder
+      greeting = this.getPlaceholderGreeting(profile?.greetingStyle);
+      console.log('[ChatRegistry] 📋 Using placeholder greeting (isExplicit:', isExplicitUserAction, ', hasProfile:', !!profile, ')');
+    }
     
     const chat: ChatSession = {
       id: this.generateChatId(),
@@ -224,6 +246,36 @@ class ChatRegistryService {
     
     this.saveChat(chat);
     return chat;
+  }
+
+  private getPlaceholderGreeting(style?: 'professional' | 'casual' | 'minimal'): string {
+    const greetingStyle = style || 'casual';
+    
+    // Ultra-short placeholder pools per mode (4-5 words max, no profile needed)
+    const placeholders = {
+      professional: [
+        "Ready to get started?",
+        "What's on the agenda?",
+        "Let's tackle this together.",
+        "How can I assist today?"
+      ],
+      casual: [
+        "Hey! Let's get started.",
+        "What's up? Ready to go?",
+        "Let's build something cool!",
+        "Ready when you are!"
+      ],
+      minimal: [
+        "Ready?",
+        "Let's go.",
+        "What's next?",
+        "Start here."
+      ]
+    };
+    
+    const pool = placeholders[greetingStyle];
+    const index = Math.floor(Math.random() * pool.length);
+    return pool[index];
   }
 
   saveFiles(files: ProcessedFile[]): void {

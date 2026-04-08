@@ -79,7 +79,8 @@ export const createChatHandlers = (
     saveCurrentChat();
     // Use user's default model or fall back to active model
     const defaultModelId = localStorage.getItem('defaultModelId') || activeModelId;
-    const newChat = await chatRegistry.createNewChat('New Chat', defaultModelId);
+    // Pass true for isExplicitUserAction - user clicked "New Chat" button
+    const newChat = await chatRegistry.createNewChat('New Chat', defaultModelId, true);
     activityLogger.startNewSession(`Chat ${newChat.id}`);
     activityLogger.logChatCreated(newChat.id, defaultModelId);
     setCurrentChatId(newChat.id);

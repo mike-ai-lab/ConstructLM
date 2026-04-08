@@ -126,21 +126,8 @@ class GreetingService {
       const { getModel, getApiKeyForModel } = await import('./modelRegistry');
       
       const timeOfDay = this.getTimeOfDay();
-      const sessionCount = profile.sessionCount || 1;
-      const isReturning = sessionCount > 1;
-      
-      // Build greeting context
-      const greetingContext = {
-        timeOfDay,
-        isReturning,
-        sessionCount,
-        style: profile.greetingStyle || 'casual'
-      };
-      
-      // Build context for AI
+      const style = profile.greetingStyle || 'casual';
       const name = profile.name || 'there';
-      const role = profile.role || 'user';
-      const style = greetingContext.style;
       
       console.log('[Greeting] Using model:', modelId);
       
@@ -155,18 +142,18 @@ class GreetingService {
         return null;
       }
       
-      console.log('[Greeting] API key found! Generating greeting with', model.name);
+      console.log('[Greeting] API key found! Generating ultra-short greeting with', model.name);
       
-      // Create prompt based on greeting style (greeting-only, no capabilities)
+      // Create ultra-short prompt based on greeting style (4-5 words max)
       let prompt = '';
       
       if (style === 'minimal') {
-        prompt = `Generate a very brief, minimal greeting (1 short sentence, max 10 words) for ${name}, a ${role}. Time: ${greetingContext.timeOfDay}. ${greetingContext.isReturning ? `Session #${greetingContext.sessionCount}.` : 'First session.'} Be concise and welcoming. Do NOT use markdown, emojis, or special characters.`;
+        prompt = `Generate a VERY brief greeting for ${name}. Maximum 4-5 words. Be direct and minimal. Examples: "Ready?", "${name}. — what's the ask?", "Talk to me." Do NOT use markdown, emojis, or special characters. Just the greeting text.`;
       } else if (style === 'professional') {
-        prompt = `Generate a professional greeting (2 sentences max) for ${name}, a ${role}. Time: ${greetingContext.timeOfDay}. ${greetingContext.isReturning ? `Session #${greetingContext.sessionCount}.` : 'First session.'} Mention you're ${ASSISTANT_NAME}. Be professional but warm. Do NOT use markdown, asterisks, emojis, or special characters.`;
+        prompt = `Generate a brief professional greeting for ${name}. Maximum 4-5 words. Be direct and professional. Examples: "Ready to build, ${name}?", "What's the priority, ${name}?", "Where should we start?" Do NOT use markdown, emojis, or special characters. Just the greeting text.`;
       } else {
         // Casual style
-        prompt = `Generate a friendly, casual greeting (2 sentences max) for ${name}, a ${role}. Time: ${greetingContext.timeOfDay}. ${greetingContext.isReturning ? `Session #${greetingContext.sessionCount}.` : 'First session.'} Keep it natural and conversational. Do NOT use markdown, asterisks, emojis, or special formatting.`;
+        prompt = `Generate a brief casual greeting for ${name}. Maximum 4-5 words. Be friendly and energetic. Examples: "${name}'s back — what's cooking?", "hey ${name}. — ready to build?", "yo, ${name}. — let's ship something." Do NOT use markdown, emojis, or special characters. Just the greeting text.`;
       }
       
       // Generate greeting using the specified model
@@ -183,16 +170,33 @@ class GreetingService {
       );
       
       if (fullResponse && fullResponse.trim()) {
-        // Clean up any markdown that might have slipped through and cap length
+        // Clean up and enforce strict length limit
         let cleaned = fullResponse.trim()
           .replace(/\*\*/g, '') // Remove bold
           .replace(/\*/g, '')   // Remove italics
           .replace(/^#+\s/gm, '') // Remove headers
           .replace(/`/g, '')    // Remove code formatting
           .replace(/[^\x00-\x7F]/g, '') // Remove non-ASCII (emojis)
-          .slice(0, 300);       // Hard cap to prevent rambling
+          .split('\n')[0]       // Take only first line
+          .slice(0, 50);        // Hard cap at 50 chars (roughly 4-5 words)
         
-        console.log('[Greeting] Successfully generated AI greeting');
+        // Fix capitalization: capitalize first letter and proper names
+        cleaned = cleaned
+          .split(' ')
+          .map((word, index) => {
+            // First word should be capitalized
+            if (index === 0) {
+              return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+            }
+            // Capitalize names (words that are all caps or start with capital)
+            if (word.length > 1 && (word === word.toUpperCase() || /^[A-Z]/.test(word))) {
+              return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+            }
+            return word.toLowerCase();
+          })
+          .join(' ');
+        
+        console.log('[Greeting] Successfully generated ultra-short AI greeting:', cleaned);
         return cleaned;
       }
       
