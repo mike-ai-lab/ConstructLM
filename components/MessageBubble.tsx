@@ -95,6 +95,7 @@ interface MessageBubbleProps {
   onOpenWebViewerNewTab?: (url: string) => void;
   onEnableDrawing?: (x: number, y: number) => void;
   onCreateSummaryDoc?: (content: string, modelId: string) => void;
+  onViewImageAnnotation?: (fileName: string, region: any, quote: string) => void;
 }
 
 const HIGHLIGHT_COLORS = [
@@ -122,7 +123,8 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   onOpenWebViewer,
   onOpenWebViewerNewTab,
   onEnableDrawing,
-  onCreateSummaryDoc
+  onCreateSummaryDoc,
+  onViewImageAnnotation
 }) => {
   const isUser = message.role === 'user';
   const [isPlaying, setIsPlaying] = useState(false);
@@ -610,6 +612,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
                       onViewDocument={onViewDocument}
                       onOpenWebViewer={onOpenWebViewer}
                       onOpenWebViewerNewTab={onOpenWebViewerNewTab}
+                      onViewImageAnnotation={onViewImageAnnotation}
                     />
                   </>
               )}

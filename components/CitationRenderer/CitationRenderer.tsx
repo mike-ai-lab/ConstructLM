@@ -11,9 +11,10 @@ interface CitationRendererProps {
   onViewDocument: (fileName: string, page?: number, quote?: string, location?: string) => void;
   onOpenWebViewer?: (url: string) => void;
   onOpenWebViewerNewTab?: (url: string) => void;
+  onViewImageAnnotation?: (fileName: string, region: any, quote: string) => void;
 }
 
-const CitationRenderer: React.FC<CitationRendererProps> = ({ text, files, onViewDocument, onOpenWebViewer, onOpenWebViewerNewTab }) => {
+const CitationRenderer: React.FC<CitationRendererProps> = ({ text, files, onViewDocument, onOpenWebViewer, onOpenWebViewerNewTab, onViewImageAnnotation }) => {
   if (!text) return null;
   resetCitationCounter();
 
@@ -52,7 +53,7 @@ const CitationRenderer: React.FC<CitationRendererProps> = ({ text, files, onView
       {thinkingBlocks.map((block, idx) => (
         <ThinkingBlock key={`think-${idx}`} content={block.content} />
       ))}
-      <SimpleMarkdown text={cleanedText} block={true} files={files} onViewDocument={onViewDocument} onOpenWebViewer={onOpenWebViewer} onOpenWebViewerNewTab={onOpenWebViewerNewTab} />
+      <SimpleMarkdown text={cleanedText} block={true} files={files} onViewDocument={onViewDocument} onOpenWebViewer={onOpenWebViewer} onOpenWebViewerNewTab={onOpenWebViewerNewTab} onViewImageAnnotation={onViewImageAnnotation} />
       {sourceFiles.size > 0 && (
         <div className="mt-4 pt-3 border-t border-[rgba(0,0,0,0.1)] dark:border-[rgba(255,255,255,0.1)]">
           <div className="text-xs text-[#666666] dark:text-[#a0a0a0] flex items-center gap-2">

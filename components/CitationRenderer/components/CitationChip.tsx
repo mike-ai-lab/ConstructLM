@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect, useContext, createContext } from 'react';
 import { ProcessedFile } from '../../../types';
 import CitationPopup from './CitationPopup';
-import { isUrlCitation } from '../utils/citationUtils';
+import { isUrlCitation, isImageCitation, parseImageRegion, ImageRegion } from '../utils/citationUtils';
 import { highlightService } from '@/services/highlightService';
 
 interface CitationChipProps {
@@ -13,6 +13,7 @@ interface CitationChipProps {
   onViewDocument: (fileName: string, page?: number, quote?: string, location?: string) => void;
   onOpenWebViewer?: (url: string) => void;
   onOpenWebViewerNewTab?: (url: string) => void;
+  onViewImageAnnotation?: (fileName: string, region: ImageRegion | null, quote: string) => void;
 }
 
 const CitationDepthContext = createContext(0);
@@ -20,7 +21,7 @@ const CitationDepthContext = createContext(0);
 // Global state to track open citations
 let currentOpenCitationId: string | null = null;
 
-const CitationChip: React.FC<CitationChipProps> = ({ index, fileName, location, quote, files, onViewDocument, onOpenWebViewer, onOpenWebViewerNewTab }) => {
+const CitationChip: React.FC<CitationChipProps> = ({ index, fileName, location, quote, files, onViewDocument, onOpenWebViewer, onOpenWebViewerNewTab, onViewImageAnnotation }) => {
   const depth = useContext(CitationDepthContext);
   const [isOpen, setIsOpen] = useState(false);
   const triggerRef = useRef<HTMLSpanElement>(null);
@@ -28,6 +29,7 @@ const CitationChip: React.FC<CitationChipProps> = ({ index, fileName, location, 
   const [isInTable, setIsInTable] = useState(false);
   const citationId = useRef(`${fileName}-${index}-${Date.now()}`).current;
   const isUrl = isUrlCitation(fileName);
+  const isImage = isImageCitation(fileName);
   
   // More robust file matching: case-insensitive and handles partial matches
   const fileExists = isUrl ? true : files.find(f => {
@@ -135,6 +137,16 @@ const CitationChip: React.FC<CitationChipProps> = ({ index, fileName, location, 
       setIsOpen(false);
       return;
     }
+    
+    if (isImage) {
+      const region = parseImageRegion(location);
+      if (onViewImageAnnotation) {
+        onViewImageAnnotation(fileName, region, quote);
+      }
+      setIsOpen(false);
+      return;
+    }
+    
     if (!fileExists) return;
     
     // Find the actual file using the same robust matching

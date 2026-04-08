@@ -1,0 +1,206 @@
+import React, { useState } from 'react';
+import { Search, Image as ImageIcon, X, Maximize2, MousePointer2, ChevronLeft, ChevronRight, Info } from 'lucide-react';
+
+const App = () => {
+  const [hoveredCitation, setHoveredCitation] = useState(null);
+  const [activeCitation, setActiveCitation] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Schematic data with corrected coordinates
+  const imageData = {
+    url: "https://images.unsplash.com/photo-1503387762-592deb58ef4e?q=80&w=2000&auto=format&fit=crop",
+    regions: [
+      { id: "ZONE 1 ZONE 4", x: 15, y: 15, w: 35, h: 25, label: "Structural Zone Alpha", detail: "Primary load-bearing sector with reinforced concrete framing." },
+      { id: "ZONE 2 ZONE 3", x: 15, y: 65, w: 35, h: 25, label: "Structural Zone Beta", detail: "Secondary retail space with flexible partition capabilities." },
+      { id: "13800", x: 10, y: 6, w: 80, h: 10, label: "Horizontal Boundary", detail: "Total building length dimension marker: 13,800mm." },
+      { id: "5000", x: 85, y: 15, w: 10, h: 70, label: "Vertical Boundary", detail: "Total building width dimension marker: 5,000mm." }, { id: "CHECKOUT $", x: 60, y: 35, w: 20, h: 15, label: "Transaction Hub", detail: "Integrated POS system and customer service counter." },
+      { id: "F7", x: 75, y: 15, w: 12, h: 12, label: "Service Fixture 07", detail: "Custom modular shelving unit with integrated lighting." },
+      { id: "2500", x: 10, y: 30, w: 4, h: 40, label: "Internal Clearance", detail: "Standard vertical clearance for aisle navigation: 2,500mm." }
+    ]
+  };
+
+  const assistantMessage = `The provided floor plan details a layout divided into several sections, specifically {{citation:ZONE 1 ZONE 4}} and {{citation:ZONE 2 ZONE 3}}. The overall length of the facility is indicated as {{citation:13800}}, while the total width is shown as {{citation:5000}}. A transaction area is identified as {{citation:CHECKOUT $}}. Fixture F7 is specifically detailed at {{citation:F7}} with vertical spacing marked at {{citation:2500}}.`;
+
+  const getRegionById = (id) => imageData.regions.find(r => r.id === id);
+
+  const handleNext = (e) => {
+    e.stopPropagation();
+    const idx = imageData.regions.findIndex(r => r.id === activeCitation);
+    setActiveCitation(imageData.regions[(idx + 1) % imageData.regions.length].id);
+  };
+
+  const handlePrev = (e) => {
+    e.stopPropagation();
+    const idx = imageData.regions.findIndex(r => r.id === activeCitation);
+    setActiveCitation(imageData.regions[(idx - 1 + imageData.regions.length) % imageData.regions.length].id);
+  };
+
+  const renderMessage = (text) => {
+    return text.split(/(\{\{citation:.*?\}\})/g).map((part, i) => {
+      if (part.startsWith('{{citation:')) {
+        const key = part.replace('{{citation:', '').replace('}}', '');
+        return (
+          <button
+            key= { i }
+        onMouseEnter = {() => setHoveredCitation(key)}
+onMouseLeave = {() => setHoveredCitation(null)}
+onClick = {() => { setActiveCitation(key); setIsModalOpen(true); }}
+className = {`inline-flex items-center px-2 py-0.5 mx-1 rounded border transition-all duration-200 text-xs font-bold uppercase tracking-tight ${(hoveredCitation === key || activeCitation === key)
+    ? 'bg-indigo-600 text-white border-indigo-700 shadow-lg'
+    : 'bg-white text-indigo-600 border-indigo-100 hover:bg-indigo-50'
+  }`}
+          >
+  <ImageIcon size={ 10 } className = "mr-1" /> { key }
+    < /button>
+        );
+      }
+return <span key={ i }> { part } < /span>;
+    });
+  };
+
+const activeFocus = hoveredCitation || (isModalOpen ? activeCitation : null);
+const focusRegion = getRegionById(activeFocus);
+
+return (
+  <div className= "flex flex-col h-screen bg-neutral-50 font-sans text-neutral-900" >
+  {/* Sleek Navigation */ }
+  < nav className = "h-14 bg-white/80 backdrop-blur-md border-b px-6 flex items-center justify-between sticky top-0 z-20" >
+    <div className="flex items-center gap-3" >
+      <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center" >
+        <Search className="text-white" size = { 16} />
+          </div>
+          < span className = "font-bold tracking-tighter text-lg uppercase" > Muhamad Studio < /span>
+            < /div>
+            < div className = "flex gap-4 items-center" >
+              <div className="h-2 w-2 rounded-full bg-green-500" />
+                <span className="text-[10px] font-black opacity-30 tracking-widest uppercase" > System Ready < /span>
+                  < /div>
+                  < /nav>
+
+                  < main className = "flex-1 flex overflow-hidden" >
+                    {/* Chat - Focus on content */ }
+                    < section className = "w-1/2 flex flex-col bg-white overflow-y-auto" >
+                      <div className="p-10 space-y-12 max-w-2xl mx-auto" >
+                        <div className="space-y-2" >
+                          <label className="text-[10px] font-black text-neutral-300 uppercase tracking-widest" > Architectural Query < /label>
+                            < p className = "text-lg text-neutral-500 font-medium leading-relaxed" >
+                              Muhamad, demonstrate the vision citation feature with a minimalist, non - bulky interface.
+              < /p>
+                                < /div>
+                                < div className = "space-y-3 p-8 bg-neutral-50 rounded-3xl border border-neutral-100" >
+                                  <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest" > AI Response < /label>
+                                    < div className = "text-neutral-800 leading-relaxed text-base" >
+                                      { renderMessage(assistantMessage) }
+                                      < /div>
+                                      < /div>
+                                      < /div>
+                                      < /section>
+
+{/* Side Inspector - Clean & Functional */ }
+<section className="w-1/2 p-6 bg-neutral-100 flex items-center justify-center" >
+  <div className="w-full h-full bg-white rounded-[32px] shadow-2xl overflow-hidden relative border border-white flex items-center justify-center p-8" >
+    <img src={ imageData.url } className = "max-w-full max-h-full object-contain rounded-xl" alt = "Schematic" />
+
+      {/* Overlay Grid */ }
+      < svg className = "absolute inset-0 w-full h-full pointer-events-none" >
+        { focusRegion && (
+          <rect 
+                  x={ `${focusRegion.x}%` } y = {`${focusRegion.y}%`}
+width = {`${focusRegion.w}%`} height = {`${focusRegion.h}%`}
+className = "fill-transparent stroke-indigo-600 stroke-2 transition-all duration-300"
+rx = "4"
+  />
+              )}
+</svg>
+
+{/* Floating Quick-Info Chip */ }
+{
+  hoveredCitation && focusRegion && (
+    <div className="absolute top-8 left-1/2 -translate-x-1/2 bg-black/90 backdrop-blur-xl text-white px-4 py-2 rounded-full flex items-center gap-3 shadow-2xl animate-in fade-in slide-in-from-top-4" >
+      <div className="p-1.5 bg-indigo-500 rounded-full" > <Info size={ 12 } /></div >
+        <span className="text-[10px] font-bold uppercase tracking-widest whitespace-nowrap" > { focusRegion.label } < /span>
+          < /div>
+            )
+}
+</div>
+  < /section>
+  < /main>
+
+{/* MODAL: Minimal & Floating */ }
+{
+  isModalOpen && (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-8 bg-neutral-900/60 backdrop-blur-sm animate-in fade-in duration-300" >
+      <div className="w-full max-w-6xl h-full flex flex-col relative group" >
+
+        {/* The Floating Canvas (Main focus) */ }
+        < div className = "flex-1 bg-black rounded-[40px] shadow-2xl overflow-hidden relative border border-white/10 flex items-center justify-center" >
+          <img src={ imageData.url } className = "max-w-[85%] max-h-[85%] object-contain opacity-50" alt = "Detail View" />
+
+            {/* High-Resolution Focus Frame */ }
+  {
+    getRegionById(activeCitation) && (
+      <div 
+                  className="absolute border-2 border-indigo-400 rounded-2xl shadow-[0_0_80px_rgba(99,102,241,0.3)] flex items-center justify-center transition-all duration-500"
+    style = {{
+      left: `${getRegionById(activeCitation).x}%`,
+        top: `${getRegionById(activeCitation).y}%`,
+          width: `${getRegionById(activeCitation).w}%`,
+            height: `${getRegionById(activeCitation).h}%`,
+                  }
+  }
+                >
+    <div className="absolute -top-10 left-0 bg-indigo-500 text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-tighter" >
+      Focal Point: { activeCitation }
+  </div>
+    < /div>
+              )
+}
+
+{/* Minimal Top Nav (Floating inside canvas) */ }
+<div className="absolute top-8 left-8 right-8 flex justify-between items-start pointer-events-none" >
+  <div className="p-4 bg-white/10 backdrop-blur-md rounded-2xl border border-white/10 text-white max-w-xs pointer-events-auto" >
+    <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1" > Spatial Context < /h4>
+      < p className = "text-xs text-neutral-300 leading-snug" > { getRegionById(activeCitation)?.detail } < /p>
+        < /div>
+
+        < div className = "flex gap-2 pointer-events-auto" >
+          <button onClick={ () => setIsModalOpen(false) } className = "w-12 h-12 bg-white/10 hover:bg-white text-white hover:text-black rounded-full backdrop-blur-md border border-white/10 flex items-center justify-center transition-all" >
+            <X size={ 20 } />
+              < /button>
+              < /div>
+              < /div>
+
+{/* Minimal Bottom Nav (Floating inside canvas) */ }
+<div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-6 pointer-events-auto bg-black/40 backdrop-blur-2xl p-2 rounded-full border border-white/10" >
+  <button onClick={ handlePrev } className = "w-10 h-10 hover:bg-white/10 text-white rounded-full flex items-center justify-center transition-all" >
+    <ChevronLeft size={ 20 } />
+      < /button>
+      < div className = "px-2 flex flex-col items-center" >
+        <span className="text-[10px] font-black text-white/40 uppercase tracking-widest" > Citation < /span>
+          < span className = "text-sm font-bold text-white leading-none tracking-tighter" >
+            { imageData.regions.findIndex(r => r.id === activeCitation) + 1 } / { imageData.regions.length }
+            < /span>
+            < /div>
+            < button onClick = { handleNext } className = "w-10 h-10 hover:bg-white/10 text-white rounded-full flex items-center justify-center transition-all" >
+              <ChevronRight size={ 20 } />
+                < /button>
+                < /div>
+
+{/* Floating Action (Bottom-Right) */ }
+<div className="absolute bottom-8 right-8 pointer-events-auto" >
+  <button 
+                  onClick={ () => setIsModalOpen(false) }
+className = "px-8 h-14 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-2xl shadow-xl shadow-indigo-900/40 transition-all uppercase tracking-widest text-xs"
+  >
+  Verify Anchor
+    < /button>
+    < /div>
+    < /div>
+    < /div>
+    < /div>
+      )}
+</div>
+  );
+};
+
+export default App;

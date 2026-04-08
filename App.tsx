@@ -29,6 +29,7 @@ import LiveSession from './components/LiveSession';
 import SettingsModal from './components/SettingsModal';
 import HelpDocumentation from './components/HelpDocumentation';
 import MindMapViewer from './components/MindMapViewer';
+import { ImageAnnotationViewer } from './components/ImageAnnotationViewer';
 import Notebook from './components/Notebook';
 import TodoList from './components/TodoList';
 import ReminderOverlay from './components/ReminderOverlay';
@@ -72,6 +73,12 @@ const App: React.FC = () => {
   const [contextWarning, setContextWarning] = React.useState<{ totalTokens: number; filesUsed: string[]; selectedCount: number; onProceed: () => void } | null>(null);
   const [isLogsOpen, setIsLogsOpen] = React.useState(false);
   const [webViewerUrl, setWebViewerUrl] = React.useState<string | null>(null);
+  const [imageAnnotationState, setImageAnnotationState] = React.useState<{
+    fileName: string;
+    region: any;
+    quote: string;
+    imageUrl: string;
+  } | null>(null);
   const [showDrawingToolbar, setShowDrawingToolbar] = React.useState(false);
   const [drawingToolbarPos, setDrawingToolbarPos] = React.useState({ x: 0, y: 0 });
   const [githubRepoUrl, setGithubRepoUrl] = React.useState('');
@@ -345,6 +352,22 @@ const App: React.FC = () => {
   const handleOpenGitHubTab = (url?: string) => {
     if (url) setGithubRepoUrl(url);
     handleTabChange('github');
+  };
+
+  const handleViewImageAnnotation = (fileName: string, region: any, quote: string) => {
+    // Find image in uploaded images
+    const uploadedImage = inputState.uploadedImages.find(img => img.file.name === fileName);
+    
+    if (uploadedImage) {
+      setImageAnnotationState({
+        fileName,
+        region,
+        quote,
+        imageUrl: uploadedImage.preview
+      });
+    } else {
+      console.warn('Image not found for annotation:', fileName);
+    }
   };
 
   const handleImportGitHubFiles = async (files: { name: string; content: string; path: string }[]) => {
@@ -845,6 +868,16 @@ const App: React.FC = () => {
         </div>
       )}
       
+      {imageAnnotationState && (
+        <ImageAnnotationViewer
+          fileName={imageAnnotationState.fileName}
+          region={imageAnnotationState.region}
+          quote={imageAnnotationState.quote}
+          imageUrl={imageAnnotationState.imageUrl}
+          onClose={() => setImageAnnotationState(null)}
+        />
+      )}
+      
       <DrawingToolbar
         isOpen={showDrawingToolbar}
         position={drawingToolbarPos}
@@ -1072,6 +1105,7 @@ const App: React.FC = () => {
               const msg = chatState.messages.find(m => m.id === messageId);
               if (msg) handleCreateSummaryDoc(msg.content, msg.modelId || featureState.activeModelId);
             }}
+            onViewImageAnnotation={handleViewImageAnnotation}
           />
         ) : activeTab === 'todos' ? (
           <div className="flex-1 overflow-hidden">

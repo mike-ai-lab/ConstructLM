@@ -73,6 +73,7 @@ interface ChatAreaProps {
   onOpenWebViewerNewTab: (url: string) => void;
   onEnableDrawing: (messageId: string) => void;
   onCreateSummaryDoc: (messageId: string) => void;
+  onViewImageAnnotation?: (fileName: string, region: any, quote: string) => void;
 }
 
 export const ChatArea: React.FC<ChatAreaProps> = ({
@@ -128,6 +129,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   onOpenWebViewerNewTab,
   onEnableDrawing,
   onCreateSummaryDoc,
+  onViewImageAnnotation,
 }) => {
   const isNewChatState = showGreeting && messages.length === 1 && messages[0].id === 'intro';
   const shouldShowInput = !mindMapData && !isSettingsOpen && !isCallingEffect && !isHelpOpen;
@@ -218,6 +220,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 onOpenWebViewerNewTab={onOpenWebViewerNewTab}
                 onEnableDrawing={onEnableDrawing}
                 onCreateSummaryDoc={msg.role === 'model' && msg.id !== 'intro' ? onCreateSummaryDoc : undefined}
+                onViewImageAnnotation={onViewImageAnnotation}
               />
             </div>
           ))}

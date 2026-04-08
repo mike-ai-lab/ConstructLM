@@ -9,9 +9,10 @@ interface TableCellWithCitationsProps {
   onViewDocument: (fileName: string, page?: number, quote?: string, location?: string) => void;
   onOpenWebViewer?: (url: string) => void;
   onOpenWebViewerNewTab?: (url: string) => void;
+  onViewImageAnnotation?: (fileName: string, region: any, quote: string) => void;
 }
 
-const TableCellWithCitations: React.FC<TableCellWithCitationsProps> = ({ text, files, onViewDocument, onOpenWebViewer, onOpenWebViewerNewTab }) => {
+const TableCellWithCitations: React.FC<TableCellWithCitationsProps> = ({ text, files, onViewDocument, onOpenWebViewer, onOpenWebViewerNewTab, onViewImageAnnotation }) => {
   let decodedText = text.replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
   const parts = decodedText.split(SPLIT_REGEX).filter(p => p !== undefined && p !== null);
   
@@ -45,6 +46,7 @@ const TableCellWithCitations: React.FC<TableCellWithCitationsProps> = ({ text, f
               onViewDocument={onViewDocument}
               onOpenWebViewer={onOpenWebViewer}
               onOpenWebViewerNewTab={onOpenWebViewerNewTab}
+              onViewImageAnnotation={onViewImageAnnotation}
             />
           );
         }

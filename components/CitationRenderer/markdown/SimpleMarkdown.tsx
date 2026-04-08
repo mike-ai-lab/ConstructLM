@@ -13,9 +13,10 @@ interface SimpleMarkdownProps {
   onViewDocument?: (fileName: string, page?: number, quote?: string, location?: string) => void;
   onOpenWebViewer?: (url: string) => void;
   onOpenWebViewerNewTab?: (url: string) => void;
+  onViewImageAnnotation?: (fileName: string, region: any, quote: string) => void;
 }
 
-const SimpleMarkdown: React.FC<SimpleMarkdownProps> = ({ text, block = true, files, onViewDocument, onOpenWebViewer, onOpenWebViewerNewTab }) => {
+const SimpleMarkdown: React.FC<SimpleMarkdownProps> = ({ text, block = true, files, onViewDocument, onOpenWebViewer, onOpenWebViewerNewTab, onViewImageAnnotation }) => {
   const processedText = text.replace(/<br\s*\/?>/gi, '\n');
   const lines = processedText.split('\n');
   const elements: React.ReactNode[] = [];
@@ -43,7 +44,7 @@ const SimpleMarkdown: React.FC<SimpleMarkdownProps> = ({ text, block = true, fil
               <tr>
                 {headers.map((cell, idx) => (
                   <th key={idx} className="border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.2)] px-2 py-1 text-left font-bold text-[#0a0a0a] dark:text-[#f0f0f0] bg-[#eaeaea] dark:bg-[#2a2a2a]">
-                    {files && onViewDocument ? <TableCellWithCitations text={cell} files={files} onViewDocument={onViewDocument} onOpenWebViewer={onOpenWebViewer} onOpenWebViewerNewTab={onOpenWebViewerNewTab} /> : cell}
+                    {files && onViewDocument ? <TableCellWithCitations text={cell} files={files} onViewDocument={onViewDocument} onOpenWebViewer={onOpenWebViewer} onOpenWebViewerNewTab={onOpenWebViewerNewTab} onViewImageAnnotation={onViewImageAnnotation} /> : cell}
                   </th>
                 ))}
               </tr>
@@ -55,7 +56,7 @@ const SimpleMarkdown: React.FC<SimpleMarkdownProps> = ({ text, block = true, fil
                   <tr key={rowIdx} className="hover:bg-[#eaeaea] dark:hover:bg-[#222222]">
                     {cells.map((cell, cellIdx) => (
                       <td key={cellIdx} className="border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.2)] px-2 py-1">
-                        {files && onViewDocument ? <TableCellWithCitations text={cell} files={files} onViewDocument={onViewDocument} onOpenWebViewer={onOpenWebViewer} onOpenWebViewerNewTab={onOpenWebViewerNewTab} /> : cell}
+                        {files && onViewDocument ? <TableCellWithCitations text={cell} files={files} onViewDocument={onViewDocument} onOpenWebViewer={onOpenWebViewer} onOpenWebViewerNewTab={onOpenWebViewerNewTab} onViewImageAnnotation={onViewImageAnnotation} /> : cell}
                       </td>
                     ))}
                   </tr>
@@ -96,6 +97,7 @@ const SimpleMarkdown: React.FC<SimpleMarkdownProps> = ({ text, block = true, fil
             onViewDocument={onViewDocument || (() => {})}
             onOpenWebViewer={onOpenWebViewer}
             onOpenWebViewerNewTab={onOpenWebViewerNewTab}
+            onViewImageAnnotation={onViewImageAnnotation}
           />
         );
       };
@@ -118,6 +120,7 @@ const SimpleMarkdown: React.FC<SimpleMarkdownProps> = ({ text, block = true, fil
             onViewDocument={onViewDocument || (() => {})}
             onOpenWebViewer={onOpenWebViewer}
             onOpenWebViewerNewTab={onOpenWebViewerNewTab}
+            onViewImageAnnotation={onViewImageAnnotation}
           />
         );
       };
@@ -140,6 +143,7 @@ const SimpleMarkdown: React.FC<SimpleMarkdownProps> = ({ text, block = true, fil
             onViewDocument={onViewDocument || (() => {})}
             onOpenWebViewer={onOpenWebViewer}
             onOpenWebViewerNewTab={onOpenWebViewerNewTab}
+            onViewImageAnnotation={onViewImageAnnotation}
           />
         );
       };
@@ -162,6 +166,7 @@ const SimpleMarkdown: React.FC<SimpleMarkdownProps> = ({ text, block = true, fil
             onViewDocument={onViewDocument || (() => {})}
             onOpenWebViewer={onOpenWebViewer}
             onOpenWebViewerNewTab={onOpenWebViewerNewTab}
+            onViewImageAnnotation={onViewImageAnnotation}
           />
         );
       };
@@ -188,6 +193,7 @@ const SimpleMarkdown: React.FC<SimpleMarkdownProps> = ({ text, block = true, fil
               onViewDocument={onViewDocument || (() => {})}
               onOpenWebViewer={onOpenWebViewer}
               onOpenWebViewerNewTab={onOpenWebViewerNewTab}
+              onViewImageAnnotation={onViewImageAnnotation}
             />
           );
         }
@@ -223,6 +229,7 @@ const SimpleMarkdown: React.FC<SimpleMarkdownProps> = ({ text, block = true, fil
               onViewDocument={onViewDocument || (() => {})}
               onOpenWebViewer={onOpenWebViewer}
               onOpenWebViewerNewTab={onOpenWebViewerNewTab}
+              onViewImageAnnotation={onViewImageAnnotation}
             />
           );
         }
@@ -279,6 +286,7 @@ const SimpleMarkdown: React.FC<SimpleMarkdownProps> = ({ text, block = true, fil
             onViewDocument={onViewDocument || (() => {})}
             onOpenWebViewer={onOpenWebViewer}
             onOpenWebViewerNewTab={onOpenWebViewerNewTab}
+            onViewImageAnnotation={onViewImageAnnotation}
           />
         );
       }
