@@ -1,0 +1,161 @@
+/* ========================================
+   CHAT AREA - ALL STYLES IN ONE PLACE
+   Self-contained component with no external CSS dependencies
+   ======================================== */
+
+/* NEW CHAT STATE - Centered greeting + input */
+.chat-area-new-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: white;
+  padding: 1rem;
+  position: relative;
+}
+
+html.dark .chat-area-new-state {
+  background: #1a1a1a;
+}
+
+.chat-area-centered-container {
+  width: 100%;
+  max-width: 800px; /* Match FloatingInput max-width */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  position: relative;
+}
+
+/* Greeting stays in place */
+.chat-area-greeting-section {
+  flex-shrink: 0; /* Don't shrink */
+  margin-bottom: 0.5rem;
+}
+
+/* Input wrapper with fixed positioning */
+.chat-area-input-wrapper {
+  width: 100%;
+  max-width: 800px;
+  flex-shrink: 0; /* Don't shrink */
+  position: relative;
+  /* Add bottom margin to ensure template suggestions have space */
+  margin-bottom: 1rem;
+}
+
+/* ACTIVE CHAT STATE - Scrollable messages */
+.chat-area-active-state {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem 1.5rem;
+  background: white;
+  scroll-behavior: smooth;
+}
+
+html.dark .chat-area-active-state {
+  background: #1a1a1a;
+}
+
+@media (min-width: 768px) {
+  .chat-area-active-state {
+    padding: 1.5rem;
+  }
+}
+
+.chat-area-messages-container {
+  max-width: 800px; /* Match FloatingInput max-width */
+  margin: 0 auto;
+  width: 100%;
+  position: relative;
+}
+
+.chat-area-message-wrapper {
+  opacity: 0;
+  animation: chat-area-slide-in 0.7s ease-out forwards;
+}
+
+/* Side-shift animation for messages */
+@keyframes chat-area-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+    filter: blur(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+    filter: blur(0);
+  }
+}
+
+/* Accessibility - Reduce motion */
+@media (prefers-reduced-motion: reduce) {
+  .chat-area-message-wrapper {
+    animation: none;
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .chat-area-new-state {
+    padding: 0.75rem;
+  }
+  
+  .chat-area-active-state {
+    padding: 1rem;
+  }
+  
+  .chat-area-centered-container {
+    gap: 0.75rem;
+  }
+  
+  .chat-area-input-wrapper {
+    margin-bottom: 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .chat-area-new-state {
+    padding: 0.5rem;
+  }
+  
+  .chat-area-centered-container {
+    gap: 0.5rem;
+  }
+  
+  .chat-area-input-wrapper {
+    max-width: 100%;
+    margin-bottom: 0.5rem;
+  }
+}
+
+/* Ensure enough space for template suggestions */
+@media (max-height: 800px) {
+  .chat-area-greeting-section {
+    margin-bottom: 0.25rem;
+  }
+  
+  .chat-area-input-wrapper {
+    margin-bottom: 0.75rem;
+  }
+}
+
+@media (max-height: 700px) {
+  .chat-area-centered-container {
+    gap: 0.5rem;
+  }
+  
+  .chat-area-greeting-section {
+    margin-bottom: 0;
+  }
+  
+  .chat-area-input-wrapper {
+    margin-bottom: 0.5rem;
+  }
+}

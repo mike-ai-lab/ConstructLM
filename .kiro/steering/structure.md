@@ -1,218 +1,213 @@
-# Project Structure
+---
+inclusion: always
+---
 
-## Root Directory Organization
+# Project Structure & Architecture
 
-```
-ConstructLM-1/
-├── App/                    # Core application logic (refactored structure)
-├── components/             # UI components
-├── services/               # Business logic services
-├── hooks/                  # Shared React hooks
-├── utils/                  # Utility functions
-├── styles/                 # Global CSS
-├── electron/               # Electron main/preload
-├── server/                 # Proxy server
-├── public/                 # Static assets
-├── data/                   # Static data (KB, docs)
-├── dist/                   # Web build output
-├── dist-electron/          # Electron build output
-└── release/                # Electron installer output
-```
+## Directory Organization
 
-## App/ Directory (Core Logic)
+### Root Structure
+- `App/` - Core application logic with handlers, hooks, and app-level components
+- `components/` - Reusable UI components organized by feature
+- `services/` - Business logic, external integrations, singleton services
+- `hooks/` - Shared React hooks for cross-cutting concerns
+- `utils/` - Pure utility functions
+- `electron/` - Electron main process and preload scripts
+- `types.ts` - Root-level TypeScript types
 
-Refactored application structure following separation of concerns:
+### App/ Directory (Application Core)
+**Purpose**: Centralized application logic following separation of concerns
 
-```
-App/
-├── components/             # App-level components
-│   ├── AppHeader.tsx       # Main header with model selector
-│   └── FloatingInput.tsx   # Chat input component
-├── handlers/               # Event handlers (pure functions)
-│   ├── chatHandlers.ts     # Chat operations
-│   ├── fileHandlers.ts     # File upload/management
-│   ├── messageHandlers.ts  # Message operations
-│   ├── inputHandlers.ts    # Input field handlers
-│   ├── featureHandlers.ts  # Feature toggles
-│   └── audioHandlers.ts    # Voice input
-├── hooks/                  # Custom React hooks
-│   ├── useChatState.ts     # Chat state management
-│   ├── useFileState.ts     # File state management
-│   ├── useLayoutState.ts   # Layout/UI state
-│   ├── useInputState.ts    # Input field state
-│   ├── useFeatureState.ts  # Feature flags state
-│   ├── useAppEffects.ts    # Side effects
-│   └── useActivityLogger.ts # Activity logging
-├── constants.ts            # App constants (widths, limits)
-└── types.ts                # App-specific types
-```
+- `App/components/` - App-level UI (AppHeader, FloatingInput)
+- `App/handlers/` - Pure event handler functions (chat, file, message, input, feature, audio)
+- `App/hooks/` - State management hooks (chat, file, layout, input, feature, effects, activity)
+- `App/constants.ts` - Application constants (widths, limits, defaults)
+- `App/types.ts` - App-specific TypeScript types
 
-## components/ Directory
+### components/ Directory
+**Purpose**: Feature-based UI components with co-located logic
 
-UI components organized by feature:
+Complex components use folder structure:
+- `index.tsx` - Main component export
+- `types.ts` - Component-specific types
+- `utils.ts` - Helper functions
+- `components/` - Sub-components
 
-```
-components/
-├── CitationRenderer/       # Citation display system
-│   ├── components/         # Sub-components (chips, popups, viewers)
-│   ├── markdown/           # Markdown parsers with citations
-│   ├── utils/              # Citation utilities
-│   └── types.ts            # Citation types
-├── DocumentViewer/         # Document viewing
-│   ├── PdfViewer.tsx
-│   ├── ExcelViewer.tsx
-│   ├── MarkdownViewer.tsx
-│   ├── TextViewer.tsx
-│   └── CsvViewer.tsx
-├── FileSidebar/            # File management sidebar
-│   ├── index.tsx           # Main component
-│   ├── FileContextMenu.tsx
-│   ├── FilePreviewViewer.tsx
-│   ├── PdfPageRenderer.tsx
-│   ├── ConfirmModal.tsx
-│   ├── types.ts
-│   └── utils.ts
-├── HelpDocumentation/      # Help system
-│   ├── sections/           # Help sections (basics, features, advanced, sources)
-│   └── SharedComponents.tsx
-├── Notebook/               # Note-taking feature
-├── TodoList/               # Task management
-│   ├── TodoAddForm.tsx
-│   ├── TodoBoardView.tsx
-│   ├── TodoGroupsSidebar.tsx
-│   ├── TodoHeader.tsx
-│   └── TodoStats.tsx
-├── MessageBubble.tsx       # Chat message display
-├── SettingsModal.tsx       # Settings UI
-├── MindMapViewer.tsx       # Mind map visualization
-├── GitHubBrowser.tsx       # GitHub integration
-├── TabbedWebViewer.tsx     # Web browser (web version)
-├── TabbedWebViewerElectron.tsx # Web browser (Electron)
-├── LiveSession.tsx         # Live collaboration
-├── Reminders.tsx           # Reminder system
-├── ReminderOverlay.tsx     # Reminder notifications
-├── LogsModal.tsx           # Activity logs viewer
-├── RAGProcessViewer.tsx    # RAG debugging UI
-└── UpdateNotification.tsx  # Auto-update notifications
-```
+Key component groups:
+- `CitationRenderer/` - Citation system with markdown parsing
+- `DocumentViewer/` - Multi-format document viewers (PDF, Excel, CSV, Markdown, Text)
+- `FileSidebar/` - File management with preview and context menu
+- `HelpDocumentation/` - Help system with sectioned content
+- `TodoList/` - Task management with board view
+- `Notebook/` - Note-taking feature
 
-## services/ Directory
+### services/ Directory
+**Purpose**: Business logic, external APIs, and data persistence
 
-Business logic and external integrations:
+Service categories:
+- **LLM Integration**: `llmService`, `geminiService`, `awsBedrockService`, `localModelService`, `modelRegistry`
+- **RAG System**: `ragService`, `embeddingService`, `vectorStore`, `contextManager`, `smartContextManager`, `hybridContextManager`
+- **Document Processing**: `fileParser`, `advancedPdfParser`
+- **Storage**: `permanentStorage`, `chatRegistry`, `vectorStore`
+- **Utilities**: `activityLogger`, `diagnosticLogger`, `compressionService`, `rateLimiter`
 
-```
-services/
-├── llmService.ts           # Multi-model LLM orchestration
-├── geminiService.ts        # Google Gemini integration
-├── awsBedrockService.ts    # AWS Bedrock integration
-├── localModelService.ts    # Ollama integration
-├── modelRegistry.ts        # Model configuration registry
-├── ragService.ts           # RAG orchestration
-├── embeddingService.ts     # Local embeddings (Transformers.js)
-├── vectorStore.ts          # Vector storage (IndexedDB)
-├── embeddingUtils.ts       # Embedding utilities
-├── fileParser.ts           # Document parsing
-├── advancedPdfParser.ts    # PDF extraction
-├── contextManager.ts       # Context window management
-├── smartContextManager.ts  # Smart context selection
-├── hybridContextManager.ts # Hybrid search (keyword + semantic)
-├── chatRegistry.ts         # Chat persistence
-├── permanentStorage.ts     # IndexedDB wrapper
-├── activityLogger.ts       # Usage tracking
-├── diagnosticLogger.ts     # Debug logging
-├── mindMapService.ts       # Mind map generation
-├── mindMapCache.ts         # Mind map caching
-├── githubService.ts        # GitHub API integration
-├── userProfileService.ts   # User profile management
-├── greetingService.ts      # Smart greetings
-├── compressionService.ts   # Text compression
-├── rateLimiter.ts          # Rate limit handling
-├── proxyRotation.ts        # CORS proxy rotation
-├── highlightService.ts     # Text highlighting
-├── drawingService.ts       # Drawing tools
-├── audioUtils.ts           # Audio recording
-├── dataExportService.ts    # Data export
-├── pdfExport.ts            # PDF generation
-├── snapshotService.ts      # Conversation snapshots
-├── pipelineTracker.ts      # RAG pipeline tracking
-└── ragProcessTracker.ts    # RAG process monitoring
-```
+## Architectural Patterns
 
-## Key Architectural Patterns
-
-### Handler Pattern
-- Pure functions in `App/handlers/`
+### Handler Pattern (App/handlers/)
+**Rules**:
+- Pure functions only - no side effects
 - Accept state and callbacks as parameters
-- Return new state or trigger callbacks
-- No direct state mutation
+- Return new state or invoke callbacks
+- Never mutate state directly
+- Keep handlers focused on single responsibility
 
-### Hook Pattern
-- Custom hooks in `App/hooks/` and `hooks/`
-- Encapsulate state logic and side effects
+**Example**:
+```typescript
+export const handleSendMessage = (
+  message: string,
+  chatState: ChatState,
+  onUpdate: (state: ChatState) => void
+) => {
+  const newState = { ...chatState, messages: [...chatState.messages, message] };
+  onUpdate(newState);
+};
+```
+
+### Hook Pattern (App/hooks/, hooks/)
+**Rules**:
+- Encapsulate related state and logic
 - Return state and setter functions
-- Composable and reusable
+- Use composition for complex state
+- Keep hooks focused and reusable
+- Follow React hooks rules (no conditional calls)
 
-### Service Pattern
-- Singleton services in `services/`
-- Export single instance (e.g., `export const ragService = new RAGService()`)
-- Stateful services use classes
-- Stateless services use plain objects with functions
+**Example**:
+```typescript
+export const useChatState = () => {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  return { messages, setMessages, isLoading, setIsLoading };
+};
+```
+
+### Service Pattern (services/)
+**Rules**:
+- Export singleton instances for stateful services
+- Use classes for stateful services, plain objects for stateless
+- Keep services focused on single domain
+- Handle errors internally and return results
+- Use async/await for asynchronous operations
+
+**Example**:
+```typescript
+class RAGService {
+  private vectorStore: VectorStore;
+  async search(query: string): Promise<SearchResult[]> { /* ... */ }
+}
+export const ragService = new RAGService();
+```
 
 ### Component Organization
-- Feature-based folders for complex components
-- `index.tsx` as main export
-- `types.ts` for component-specific types
-- `utils.ts` for helper functions
-- Sub-components in `components/` subfolder
+**Rules**:
+- Use feature-based folders for complex components
+- Co-locate types, utils, and sub-components
+- Export main component from `index.tsx`
+- Keep components focused on presentation
+- Delegate business logic to services and handlers
 
 ## File Naming Conventions
 
-- **Components**: PascalCase (e.g., `MessageBubble.tsx`)
-- **Services**: camelCase (e.g., `ragService.ts`)
-- **Hooks**: camelCase with `use` prefix (e.g., `useChatState.ts`)
-- **Handlers**: camelCase with `Handlers` suffix (e.g., `chatHandlers.ts`)
-- **Types**: PascalCase for interfaces/types, camelCase for files (e.g., `types.ts`)
-- **Utils**: camelCase (e.g., `uiHelpers.ts`)
+| Type | Convention | Example |
+|------|-----------|---------|
+| Components | PascalCase | `MessageBubble.tsx` |
+| Services | camelCase | `ragService.ts` |
+| Hooks | camelCase with `use` prefix | `useChatState.ts` |
+| Handlers | camelCase with `Handlers` suffix | `chatHandlers.ts` |
+| Types | camelCase file, PascalCase exports | `types.ts` → `export interface Message` |
+| Utils | camelCase | `uiHelpers.ts` |
 
-## Import Path Conventions
+## Import Path Rules
 
-- Use `@/` alias for workspace root imports
-- Relative imports for same-directory files
-- Absolute imports for cross-directory references
-
-Example:
+**Always use `@/` alias for workspace root imports**:
 ```typescript
-import { Message } from '@/types';              // Root types
-import { ragService } from '@/services/ragService';  // Service
-import { useChatState } from './hooks/useChatState'; // Relative
+import { Message } from '@/types';                    // Root types
+import { ragService } from '@/services/ragService';   // Services
+import { useChatState } from '@/App/hooks/useChatState'; // App hooks
 ```
 
-## State Management
+**Use relative imports only for same-directory files**:
+```typescript
+import { formatDate } from './utils';  // Same directory
+import { SubComponent } from './components/SubComponent'; // Subdirectory
+```
 
-- **No Redux/MobX**: Uses React hooks and context
+## State Management Strategy
+
+**No Redux/MobX** - Uses React hooks and custom hooks pattern:
 - **Local state**: `useState` for component-specific state
-- **Shared state**: Custom hooks (e.g., `useChatState`)
+- **Shared state**: Custom hooks in `App/hooks/` (e.g., `useChatState`)
 - **Persistent state**: Services with localStorage/IndexedDB
-- **Global state**: Minimal, mostly in `App.tsx`
+- **Global state**: Minimal, primarily in `App.tsx`
 
-## Data Flow
+## Data Flow Architecture
 
-1. User interaction → Handler function
-2. Handler → Service (business logic)
-3. Service → External API or storage
-4. Response → State update via hook
-5. State change → Component re-render
+```
+User Interaction
+    ↓
+Handler Function (App/handlers/)
+    ↓
+Service (services/)
+    ↓
+External API / Storage
+    ↓
+State Update (via hook)
+    ↓
+Component Re-render
+```
 
-## Testing Strategy
+## Code Placement Guidelines
 
-- No formal test suite currently
-- Manual testing via development builds
-- Diagnostic logging for debugging
-- Activity logging for usage tracking
+**When adding new code, follow these rules**:
 
-## Build Artifacts
+1. **New UI Component**: 
+   - Simple: `components/ComponentName.tsx`
+   - Complex: `components/ComponentName/index.tsx` with types, utils, sub-components
 
-- **Web**: `dist/` - Static files for web deployment
-- **Electron**: `dist-electron/` - Compiled main/preload
-- **Release**: `release/` - Installers and unpacked builds
-- **Cache**: `.vite/` - Vite cache (gitignored)
+2. **New Business Logic**: 
+   - Create service in `services/serviceName.ts`
+   - Export singleton instance
+
+3. **New Event Handler**: 
+   - Add to appropriate handler file in `App/handlers/`
+   - Create new handler file if needed for new domain
+
+4. **New State Management**: 
+   - Create custom hook in `App/hooks/` for app-level state
+   - Create in `hooks/` for cross-cutting concerns
+
+5. **New Utility Function**: 
+   - Add to `utils/` for general utilities
+   - Add to component's `utils.ts` for component-specific helpers
+
+## Common Patterns to Follow
+
+### Error Handling
+- Services should catch and handle errors internally
+- Return error states rather than throwing
+- Log errors using `diagnosticLogger`
+
+### Async Operations
+- Always use async/await (no raw promises)
+- Handle loading states in hooks
+- Show user feedback for long operations
+
+### Type Safety
+- Define interfaces for all data structures
+- Use TypeScript strict mode
+- Avoid `any` - use `unknown` if type is truly unknown
+
+### Performance
+- Lazy load heavy components
+- Debounce expensive operations (search, API calls)
+- Use React.memo for expensive renders
+- Cache results in services when appropriate

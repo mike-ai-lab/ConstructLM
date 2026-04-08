@@ -200,7 +200,11 @@ class ChatRegistryService {
   }
 
   async createNewChat(name: string, modelId: string): Promise<ChatSession> {
-    const greeting = await greetingService.generateGreeting(modelId);
+    // DISABLED: AI-generated greeting to save API tokens during testing
+    // const greeting = await greetingService.generateGreeting(modelId);
+    
+    // Static placeholder greeting
+    const greeting = "Hey there! I'm ConstructLM, your AI assistant for document analysis and research.\n\nI can help you analyze documents, answer questions, generate summaries, and more. What would you like to explore today?";
     
     const chat: ChatSession = {
       id: this.generateChatId(),

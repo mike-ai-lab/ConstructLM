@@ -1,0 +1,143 @@
+18:18:10.593 ?plugins=typography:66 cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation
+(anonymous) @ ?plugins=typography:66
+18:18:10.766 (index):106 PDF Worker initialized via Blob
+18:18:13.022 react-dom-client.development.js:28004 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+18:18:13.119 ragService.ts:23 [RAG] Status: ✅ ENABLED (local embeddings)
+18:18:13.659 App.tsx:555 [App] Current chat ID changed: null
+18:18:14.107 permanentStorage.ts:22 ✅ Permanent storage initialized
+18:18:14.111 useAppEffects.ts:52 ✅ Permanent storage initialized
+18:18:14.131 App.tsx:89 🚀 ConstructLM v1.0.0 | Build: 1775637208302 | 4/8/2026, 11:33:28 AM
+18:18:14.260 useAppEffects.ts:57 ✅ Restored 8 files from permanent storage
+18:18:14.263 chatRegistry.ts:103 🔍 Loading chat: chat_1775660211097_rp9i0b437
+18:18:14.263 chatRegistry.ts:111 📊 Found 2 chats in storage
+18:18:14.263 chatRegistry.ts:118 ✅ Chat chat_1775660211097_rp9i0b437 loaded with 1 messages
+18:18:14.753 App.tsx:555 [App] Current chat ID changed: chat_1775660211097_rp9i0b437
+18:18:15.270 (index):77 ✅ PDF.js loaded successfully: 3.11.174
+18:19:48.438 messageHandlers.ts:113 [MessageHandler] Selected files: Array(0)
+18:19:48.438 messageHandlers.ts:114 [MessageHandler] Image files: 0
+18:19:48.439 messageHandlers.ts:115 [MessageHandler] Selected source IDs: Array(0)
+18:19:48.439 messageHandlers.ts:113 [MessageHandler] Selected files: Array(0)
+18:19:48.439 messageHandlers.ts:114 [MessageHandler] Image files: 0
+18:19:48.439 messageHandlers.ts:115 [MessageHandler] Selected source IDs: Array(0)
+18:19:48.439 messageHandlers.ts:127 [MessageHandler] Context result: Object
+18:19:48.440 messageHandlers.ts:155 [MessageHandler] Context result: Object
+18:19:48.440 messageHandlers.ts:164 [MessageHandler] Sources: Array(0)
+18:19:48.440 messageHandlers.ts:168 [MessageHandler] Sending to LLM with 0 documents and 0 images
+18:19:48.441 messageHandlers.ts:196 [MessageHandler] Sending to LLM, model: gemini-flash-latest
+18:19:48.441 messageHandlers.ts:221 [MessageHandler] Fetched sources: 0
+18:19:48.443 llmService.ts:76 🔶 [LLM] === SEND MESSAGE START ===
+18:19:48.443 llmService.ts:77 🔶 [LLM] Model: gemini-flash-latest
+18:19:48.443 llmService.ts:78 🔶 [LLM] Message: what is the capital of uk...
+18:19:48.443 llmService.ts:79 🔶 [LLM] Active files: 0
+18:19:48.443 llmService.ts:80 🔶 [LLM] Active sources: 0
+18:19:48.443 llmService.ts:81 🔶 [LLM] History length: 1
+18:19:48.445 geminiService.ts:35 🔵 [GEMINI] === REQUEST START ===
+18:19:48.445 geminiService.ts:36 🔵 [GEMINI] Model: gemini-flash-latest
+18:19:48.445 geminiService.ts:37 🔵 [GEMINI] Message length: 25
+18:19:48.445 geminiService.ts:38 🔵 [GEMINI] Files attached: 0
+18:19:48.445 geminiService.ts:39 🔵 [GEMINI] History messages: 0
+18:19:48.445 geminiService.ts:45 🔵 [GEMINI] Image files: 0
+18:19:48.445 geminiService.ts:46 🔵 [GEMINI] Text files: 0
+18:19:48.445 geminiService.ts:131 🔵 [GEMINI] Request body size: 277 bytes
+18:19:48.445 geminiService.ts:132 🔵 [GEMINI] Total content messages: 1
+18:19:48.445 geminiService.ts:133 🔵 [GEMINI] Current message parts: 1
+18:19:48.445 geminiService.ts:134 🔵 [GEMINI] Sending request to API...
+18:19:48.446 messageHandlers.ts:127 [MessageHandler] Context result: Object
+18:19:48.449 messageHandlers.ts:155 [MessageHandler] Context result: Object
+18:19:48.449 messageHandlers.ts:164 [MessageHandler] Sources: Array(0)
+18:19:48.449 messageHandlers.ts:168 [MessageHandler] Sending to LLM with 0 documents and 0 images
+18:19:48.450 messageHandlers.ts:196 [MessageHandler] Sending to LLM, model: gemini-flash-latest
+18:19:48.450 messageHandlers.ts:221 [MessageHandler] Fetched sources: 0
+18:19:48.450 llmService.ts:76 🔶 [LLM] === SEND MESSAGE START ===
+18:19:48.450 llmService.ts:77 🔶 [LLM] Model: gemini-flash-latest
+18:19:48.450 llmService.ts:78 🔶 [LLM] Message: what is the capital of uk...
+18:19:48.450 llmService.ts:79 🔶 [LLM] Active files: 0
+18:19:48.450 llmService.ts:80 🔶 [LLM] Active sources: 0
+18:19:48.450 llmService.ts:81 🔶 [LLM] History length: 1
+18:19:48.450 geminiService.ts:35 🔵 [GEMINI] === REQUEST START ===
+18:19:48.450 geminiService.ts:36 🔵 [GEMINI] Model: gemini-flash-latest
+18:19:48.451 geminiService.ts:37 🔵 [GEMINI] Message length: 25
+18:19:48.451 geminiService.ts:38 🔵 [GEMINI] Files attached: 0
+18:19:48.451 geminiService.ts:39 🔵 [GEMINI] History messages: 0
+18:19:48.451 geminiService.ts:45 🔵 [GEMINI] Image files: 0
+18:19:48.451 geminiService.ts:46 🔵 [GEMINI] Text files: 0
+18:19:48.451 geminiService.ts:131 🔵 [GEMINI] Request body size: 277 bytes
+18:19:48.451 geminiService.ts:132 🔵 [GEMINI] Total content messages: 1
+18:19:48.451 geminiService.ts:133 🔵 [GEMINI] Current message parts: 1
+18:19:48.451 geminiService.ts:134 🔵 [GEMINI] Sending request to API...
+18:20:15.127 geminiService.ts:145 🔵 [GEMINI] Response status: 200 
+18:20:15.128 geminiService.ts:155 🟢 [GEMINI] Streaming response started...
+18:20:15.213 geminiService.ts:145 🔵 [GEMINI] Response status: 200 
+18:20:15.214 geminiService.ts:155 🟢 [GEMINI] Streaming response started...
+18:20:15.255 geminiService.ts:200 🟢 [GEMINI] Streaming complete
+18:20:15.255 geminiService.ts:201 🟢 [GEMINI] Chunks received: 3
+18:20:15.255 geminiService.ts:202 🟢 [GEMINI] Total characters: 250
+18:20:15.255 geminiService.ts:203 🟢 [GEMINI] Token usage: {inputTokens: 39, outputTokens: 56, totalTokens: 294}
+18:20:15.255 geminiService.ts:204 🔵 [GEMINI] === REQUEST END ===
+18:20:15.256 messageHandlers.ts:256 [MessageHandler] LLM response complete. Usage: {inputTokens: 39, outputTokens: 56, totalTokens: 294}
+18:20:15.256 messageHandlers.ts:257 [MessageHandler] Final content length: 250
+18:20:15.257 llmService.ts:76 🔶 [LLM] === SEND MESSAGE START ===
+18:20:15.257 llmService.ts:77 🔶 [LLM] Model: gemini-flash-latest
+18:20:15.258 llmService.ts:78 🔶 [LLM] Message: You must create a descriptive 3-word title that summarizes the TOPIC of this user request. DO NOT ju...
+18:20:15.258 llmService.ts:79 🔶 [LLM] Active files: 0
+18:20:15.258 llmService.ts:80 🔶 [LLM] Active sources: 0
+18:20:15.258 llmService.ts:81 🔶 [LLM] History length: 0
+18:20:15.259 geminiService.ts:35 🔵 [GEMINI] === REQUEST START ===
+18:20:15.259 geminiService.ts:36 🔵 [GEMINI] Model: gemini-flash-latest
+18:20:15.261 geminiService.ts:37 🔵 [GEMINI] Message length: 592
+18:20:15.262 geminiService.ts:38 🔵 [GEMINI] Files attached: 0
+18:20:15.262 geminiService.ts:39 🔵 [GEMINI] History messages: 0
+18:20:15.263 geminiService.ts:45 🔵 [GEMINI] Image files: 0
+18:20:15.263 geminiService.ts:46 🔵 [GEMINI] Text files: 0
+18:20:15.263 geminiService.ts:131 🔵 [GEMINI] Request body size: 878 bytes
+18:20:15.264 geminiService.ts:132 🔵 [GEMINI] Total content messages: 1
+18:20:15.264 geminiService.ts:133 🔵 [GEMINI] Current message parts: 1
+18:20:15.264 geminiService.ts:134 🔵 [GEMINI] Sending request to API...
+18:20:15.456 geminiService.ts:200 🟢 [GEMINI] Streaming complete
+18:20:15.457 geminiService.ts:201 🟢 [GEMINI] Chunks received: 4
+18:20:15.457 geminiService.ts:202 🟢 [GEMINI] Total characters: 245
+18:20:15.457 geminiService.ts:203 🟢 [GEMINI] Token usage: {inputTokens: 22, outputTokens: 57, totalTokens: 265}
+18:20:15.458 geminiService.ts:204 🔵 [GEMINI] === REQUEST END ===
+18:20:15.458 messageHandlers.ts:256 [MessageHandler] LLM response complete. Usage: {inputTokens: 22, outputTokens: 57, totalTokens: 265}
+18:20:15.458 messageHandlers.ts:257 [MessageHandler] Final content length: 245
+18:20:15.461 llmService.ts:76 🔶 [LLM] === SEND MESSAGE START ===
+18:20:15.462 llmService.ts:77 🔶 [LLM] Model: gemini-flash-latest
+18:20:15.462 llmService.ts:78 🔶 [LLM] Message: You must create a descriptive 3-word title that summarizes the TOPIC of this user request. DO NOT ju...
+18:20:15.462 llmService.ts:79 🔶 [LLM] Active files: 0
+18:20:15.463 llmService.ts:80 🔶 [LLM] Active sources: 0
+18:20:15.463 llmService.ts:81 🔶 [LLM] History length: 0
+18:20:15.463 geminiService.ts:35 🔵 [GEMINI] === REQUEST START ===
+18:20:15.464 geminiService.ts:36 🔵 [GEMINI] Model: gemini-flash-latest
+18:20:15.464 geminiService.ts:37 🔵 [GEMINI] Message length: 592
+18:20:15.464 geminiService.ts:38 🔵 [GEMINI] Files attached: 0
+18:20:15.465 geminiService.ts:39 🔵 [GEMINI] History messages: 0
+18:20:15.465 geminiService.ts:45 🔵 [GEMINI] Image files: 0
+18:20:15.465 geminiService.ts:46 🔵 [GEMINI] Text files: 0
+18:20:15.466 geminiService.ts:131 🔵 [GEMINI] Request body size: 878 bytes
+18:20:15.466 geminiService.ts:132 🔵 [GEMINI] Total content messages: 1
+18:20:15.466 geminiService.ts:133 🔵 [GEMINI] Current message parts: 1
+18:20:15.466 geminiService.ts:134 🔵 [GEMINI] Sending request to API...
+18:20:17.999 geminiService.ts:145 🔵 [GEMINI] Response status: 200 
+18:20:17.999 geminiService.ts:155 🟢 [GEMINI] Streaming response started...
+18:20:18.150 geminiService.ts:200 🟢 [GEMINI] Streaming complete
+18:20:18.150 geminiService.ts:201 🟢 [GEMINI] Chunks received: 1
+18:20:18.151 geminiService.ts:202 🟢 [GEMINI] Total characters: 15
+18:20:18.151 geminiService.ts:203 🟢 [GEMINI] Token usage: {inputTokens: 178, outputTokens: 3, totalTokens: 394}
+18:20:18.151 geminiService.ts:204 🔵 [GEMINI] === REQUEST END ===
+18:20:18.809 geminiService.ts:145 🔵 [GEMINI] Response status: 200 
+18:20:18.810 geminiService.ts:155 🟢 [GEMINI] Streaming response started...
+18:20:18.811 geminiService.ts:200 🟢 [GEMINI] Streaming complete
+18:20:18.811 geminiService.ts:201 🟢 [GEMINI] Chunks received: 1
+18:20:18.812 geminiService.ts:202 🟢 [GEMINI] Total characters: 22
+18:20:18.812 geminiService.ts:203 🟢 [GEMINI] Token usage: {inputTokens: 178, outputTokens: 3, totalTokens: 436}
+18:20:18.812 geminiService.ts:204 🔵 [GEMINI] === REQUEST END ===
+18:20:18.866 geminiService.ts:137 Fetch finished loading: POST "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:streamGenerateContent?key=AIzaSyARziqSE9UuEk8-jm5aWOYa1uNMcS3Pw8Y&alt=sse".
+sendMessageToGemini @ geminiService.ts:137
+sendMessageToLLM @ llmService.ts:246
+generateChatTitle @ messageHandlers.ts:46
+sendMessageWithContext @ messageHandlers.ts:288
+18:20:18.869 geminiService.ts:137 Fetch finished loading: POST "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:streamGenerateContent?key=AIzaSyARziqSE9UuEk8-jm5aWOYa1uNMcS3Pw8Y&alt=sse".
+sendMessageToGemini @ geminiService.ts:137
+sendMessageToLLM @ llmService.ts:246
+generateChatTitle @ messageHandlers.ts:46
+sendMessageWithContext @ messageHandlers.ts:288

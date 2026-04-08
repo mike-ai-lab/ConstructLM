@@ -93,97 +93,10 @@ html.dark {
 }
 
 /* ========================================
-   ENHANCED INPUT FIELD POSITIONING
+   ENHANCED INPUT FIELD POSITIONING - REMOVED (Using new FloatingInput component)
    ======================================== */
 
-.floating-input-wrapper {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  background: #F8F8FF;
-  border-radius: 50px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
-  border: 1px solid var(--color-border);
-  padding: 6px;
-  backdrop-filter: blur(10px);
-  transition: none;
-  position: relative;
-}
-
-html.dark .floating-input-wrapper {
-  background: #303030;
-}
-
-html.dark .floating-input-wrapper {
-  box-shadow: var(--shadow-lg);
-}
-
-.floating-input-field {
-  flex-grow: 1;
-  font-size: var(--font-size-md);
-  font-weight: var(--font-weight-normal);
-  padding: 8px 12px;
-  color: #374151;
-  background: transparent;
-  border: none;
-  outline: none;
-  font-family: var(--font-primary);
-  resize: none;
-  overflow-y: auto;
-  min-height: 40px;
-  line-height: 20px;
-  transition: none;
-}
-
-html.dark .floating-input-field {
-  color: var(--color-text);
-}
-
-.floating-input-field::placeholder {
-  color: #9ca3af;
-  font-style: italic;
-  font-size: 14px;
-  transition: none;
-}
-
-html.dark .floating-input-field::placeholder {
-  color: #6b7280;
-  font-style: italic;
-  font-size: 14px;
-}
-
-.floating-send-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: #0361d2;
-  color: white;
-  border-radius: 50%;
-  border: none;
-  cursor: pointer;
-  transition: all 150ms ease;
-  margin-right: 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-
-.floating-send-button:hover {
-  background: #024fa8;
-}
-
-.floating-send-button:focus {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
-}
-
-html.dark .floating-send-button {
-  background: #0361d2;
-}
-
-html.dark .floating-send-button:hover {
-  background: #024fa8;
-}
+/* Old floating-input CSS rules removed - now handled by FloatingInput.tsx component */
 
 /* ========================================
    DYNAMIC TOOLTIPS
@@ -784,20 +697,11 @@ html.dark ::-webkit-scrollbar-thumb:hover {
    ======================================== */
 
 @media (max-width: 1024px) {
-  .floating-input-container {
-    width: 85%;
-  }
+  /* Removed old floating-input-container rules */
 }
 
 @media (max-width: 768px) {
-  .floating-input-container {
-    width: 90%;
-    bottom: 20px;
-  }
-  
-  .floating-input-wrapper {
-    padding: 12px 16px;
-  }
+  /* Removed old floating-input rules */
   
   .context-menu {
     min-width: 160px;
@@ -819,9 +723,7 @@ html.dark ::-webkit-scrollbar-thumb:hover {
 }
 
 @media (max-width: 480px) {
-  .floating-input-container {
-    width: 95%;
-  }
+  /* Removed old floating-input-container rules */
   
   .context-menu {
     min-width: 140px;
@@ -878,11 +780,7 @@ html.dark .action-button {
     transform: none !important;
   }
   
-  .floating-input-wrapper,
-  .floating-input-field,
-  .floating-send-button {
-    transition: none !important;
-  }
+  /* Removed old floating-input transition rules */
 }
 
 /* High contrast mode support */
@@ -1080,5 +978,43 @@ html.dark mark.citation-auto-highlight-pulse {
   }
   50% {
     background-color: rgba(59, 130, 246, 0.6);
+  }
+}
+
+
+/* ========================================
+   CHAT GREETING TRANSITION ANIMATIONS
+   ======================================== */
+
+/* Side-shift animation for chat messages */
+@keyframes side-msg {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+    filter: blur(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+    filter: blur(0);
+  }
+}
+
+.animate-side-msg {
+  animation: side-msg 0.7s ease-out forwards;
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .animate-side-msg {
+    animation: none;
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+  
+  /* Disable greeting transitions */
+  .transition-all {
+    transition: none !important;
   }
 }

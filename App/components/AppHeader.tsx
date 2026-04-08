@@ -48,6 +48,7 @@ interface AppHeaderProps {
   notesCount?: number;
   onOpenNotebook?: () => void;
   activeTab?: 'chat' | 'notebook' | 'todos' | 'github';
+  toggleTheme: () => void;
   onTabChange?: (tab: 'chat' | 'notebook' | 'todos' | 'github') => void;
   todosCount?: number;
   remindersCount?: number;
@@ -495,7 +496,7 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
             </div>
           </>
         )}
-        <button onClick={() => document.documentElement.classList.toggle('dark')} className="p-1.5 md:p-2 hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] rounded-full relative flex-shrink-0" style={{ width: '30px', height: '30px' }}>
+        <button onClick={props.toggleTheme} className="p-1.5 md:p-2 hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] rounded-full relative flex-shrink-0" style={{ width: '30px', height: '30px' }}>
           <Moon size={16} className="dark:!hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" style={{ color: '#666666' }} />
           <Sun size={16} className="!hidden dark:!block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" style={{ color: '#ffffff' }} />
         </button>

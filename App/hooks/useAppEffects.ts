@@ -6,6 +6,7 @@ import { drawingService } from '../../services/drawingService';
 import { MODEL_REGISTRY, getRateLimitCooldown, DEFAULT_MODEL_ID } from '../../services/modelRegistry';
 import { Message } from '../../types';
 import { permanentStorage } from '../../services/permanentStorage';
+import { sessionPersistence } from '../../services/sessionPersistence';
 
 export const useAppEffects = (
   setSnapshots: any,
@@ -46,6 +47,9 @@ export const useAppEffects = (
       initializeGemini();
       setSnapshots(snapshotService.getSnapshots());
       
+      // Load session state
+      const session = sessionPersistence.loadSession();
+      
       // Initialize permanent storage
       try {
         await permanentStorage.init();
@@ -79,9 +83,15 @@ export const useAppEffects = (
           createdAt: newChat.createdAt,
           updatedAt: newChat.updatedAt
         }]);
+        sessionPersistence.saveSession({ currentChatId: newChat.id });
       } else {
-        const mostRecent = chatHistory.sort((a, b) => b.updatedAt - a.updatedAt)[0];
-        loadChat(mostRecent.id);
+        // Restore last active chat from session
+        const chatToLoad = session.currentChatId && chatHistory.find(c => c.id === session.currentChatId)
+          ? session.currentChatId
+          : chatHistory.sort((a, b) => b.updatedAt - a.updatedAt)[0].id;
+        
+        console.log('[SessionPersistence] 💾 Restoring chat:', chatToLoad);
+        loadChat(chatToLoad);
       }
     };
     
@@ -100,6 +110,13 @@ export const useAppEffects = (
       unsubscribeDrawing();
     };
   }, []);
+
+  // Save current chat ID when it changes
+  useEffect(() => {
+    if (currentChatId) {
+      sessionPersistence.saveSession({ currentChatId });
+    }
+  }, [currentChatId]);
 
   // Keyboard shortcuts
   useEffect(() => {

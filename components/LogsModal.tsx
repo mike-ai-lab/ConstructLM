@@ -16,6 +16,13 @@ const LogsModal: React.FC<LogsModalProps> = ({ isOpen, onClose }) => {
   const [loadingFiles, setLoadingFiles] = useState(true); // Start with true
   const [expandedLogs, setExpandedLogs] = useState<Set<string>>(new Set());
   const [cachedFiles, setCachedFiles] = useState<string[] | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [copySuccess, setCopySuccess] = useState(false);
+  const [showCopyMenu, setShowCopyMenu] = useState(false);
+  const [clearSuccess, setClearSuccess] = useState(false);
+  const ENTRIES_PER_PAGE = 50;
+  
+  let copyMenuTimeout: NodeJS.Timeout | null = null;
 
   useEffect(() => {
     if (isOpen) {
@@ -66,15 +73,38 @@ const LogsModal: React.FC<LogsModalProps> = ({ isOpen, onClose }) => {
     }
   };
 
-  const handleSelectLog = (fileName: string) => {
-    setSelectedLog(fileName);
-    loadLogContent(fileName);
-  };
 
-  const handleCopyLog = async (fileName: string) => {
+
+  const handleCopyLog = async (fileName: string, mode: 'all' | 'last-chat' = 'all') => {
     try {
       const content = await activityLogger.readLogFile(fileName);
-      const markdown = `# Activity Log: ${fileName}\n\n\`\`\`\n${content}\n\`\`\`\n`;
+      const lines = parseLogLines(content);
+      
+      let contentToCopy = '';
+      
+      if (mode === 'last-chat') {
+        // Find the last NEW_SESSION marker and get entries after it
+        let lastSessionIndex = -1;
+        for (let i = lines.length - 1; i >= 0; i--) {
+          if (lines[i].category.includes('NEW_SESSION') || lines[i].message.includes('STARTING NEW LOG SESSION')) {
+            lastSessionIndex = i;
+            break;
+          }
+        }
+        
+        const lastChatEntries = lastSessionIndex >= 0 ? lines.slice(lastSessionIndex) : lines;
+        // Reverse to match display order (newest first)
+        contentToCopy = lastChatEntries
+          .map(entry => `[${entry.time}] [${entry.level}] [${entry.category}] ${entry.message}`)
+          .join('\n');
+      } else {
+        // lines are already reversed (newest first), just format them
+        contentToCopy = lines
+          .map(entry => `[${entry.time}] [${entry.level}] [${entry.category}] ${entry.message}`)
+          .join('\n');
+      }
+      
+      const markdown = `# Activity Log: ${fileName}${mode === 'last-chat' ? ' (Last Chat Session)' : ''}\n\n\`\`\`\n${contentToCopy}\n\`\`\`\n`;
       
       // Use Electron clipboard if available
       if ((window as any).electron?.clipboard) {
@@ -82,6 +112,11 @@ const LogsModal: React.FC<LogsModalProps> = ({ isOpen, onClose }) => {
       } else {
         await navigator.clipboard.writeText(markdown);
       }
+      
+      // Show success feedback
+      setCopySuccess(true);
+      setShowCopyMenu(false);
+      setTimeout(() => setCopySuccess(false), 2000);
     } catch (error) {
       console.error('Failed to copy log:', error);
     }
@@ -90,13 +125,22 @@ const LogsModal: React.FC<LogsModalProps> = ({ isOpen, onClose }) => {
   const handleDownloadLog = async (fileName: string) => {
     try {
       const content = await activityLogger.readLogFile(fileName);
+      
+      if (!content || content.trim().length === 0) {
+        console.error('Log file is empty');
+        return;
+      }
+      
+      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
       const element = document.createElement('a');
-      element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(content));
+      element.setAttribute('href', url);
       element.setAttribute('download', fileName);
       element.style.display = 'none';
       document.body.appendChild(element);
       element.click();
       document.body.removeChild(element);
+      URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Failed to download log:', error);
     }
@@ -116,18 +160,52 @@ const LogsModal: React.FC<LogsModalProps> = ({ isOpen, onClose }) => {
     }
   };
 
+  const handleClearAllLogs = async () => {
+    try {
+      await activityLogger.clearAllLogs();
+      setLogFiles([]);
+      setSelectedLog(null);
+      setLogContent('');
+      setCachedFiles(null);
+      setCurrentPage(1);
+      
+      // Show success feedback
+      setClearSuccess(true);
+      setTimeout(() => setClearSuccess(false), 2000);
+      
+      await loadLogFiles();
+    } catch (error) {
+      console.error('Failed to clear logs:', error);
+    }
+  };
+
+  const handleSelectLog = (fileName: string) => {
+    setSelectedLog(fileName);
+    setCurrentPage(1);
+    loadLogContent(fileName);
+  };
+
   const handleDownloadDiagnosticLogs = () => {
     const logs = diagnosticLogger.getAllLogs();
+    
+    if (!logs || logs.trim().length === 0) {
+      console.error('Diagnostic logs are empty');
+      return;
+    }
+    
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const fileName = `diagnostic-logs-${timestamp}.txt`;
     
+    const blob = new Blob([logs], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
     const element = document.createElement('a');
-    element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(logs));
+    element.setAttribute('href', url);
     element.setAttribute('download', fileName);
     element.style.display = 'none';
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
+    URL.revokeObjectURL(url);
   };
 
   const toggleLogExpanded = (fileName: string) => {
@@ -156,7 +234,8 @@ const LogsModal: React.FC<LogsModalProps> = ({ isOpen, onClose }) => {
         }
         return null;
       })
-      .filter((entry): entry is typeof entry => entry !== null);
+      .filter((entry): entry is typeof entry => entry !== null)
+      .reverse(); // Newest first
   };
 
   const getLevelColor = (level: string): string => {
@@ -192,10 +271,20 @@ const LogsModal: React.FC<LogsModalProps> = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   const logLines = parseLogLines(logContent);
+  const totalPages = Math.ceil(logLines.length / ENTRIES_PER_PAGE);
+  const startIdx = (currentPage - 1) * ENTRIES_PER_PAGE;
+  const endIdx = startIdx + ENTRIES_PER_PAGE;
+  const paginatedLogs = logLines.slice(startIdx, endIdx);
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="w-full max-w-6xl h-[90vh] bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+    <div 
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60"
+      onClick={onClose}
+    >
+      <div 
+        className="w-full max-w-4xl h-[80vh] bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] bg-[rgba(0,0,0,0.02)] dark:bg-[#2a2a2a]">
           <div className="flex items-center gap-3">
@@ -204,12 +293,23 @@ const LogsModal: React.FC<LogsModalProps> = ({ isOpen, onClose }) => {
           </div>
           <div className="flex items-center gap-2">
             <button
+              onClick={handleClearAllLogs}
+              className={`p-2 rounded-lg transition-all ${
+                clearSuccess 
+                  ? 'bg-red-500 text-white' 
+                  : 'text-[#666666] dark:text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[#222222]'
+              }`}
+              title="Clear all logs"
+            >
+              <Trash2 size={18} className={clearSuccess ? 'animate-pulse' : ''} />
+            </button>
+            <button
               onClick={handleDownloadDiagnosticLogs}
               className="px-3 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors flex items-center gap-2"
               title="Download RAG diagnostic logs"
             >
               <Bug size={16} />
-              Diagnostic Logs
+              Diagnostic
             </button>
             <button
               onClick={handleOpenLogsFolder}
@@ -289,16 +389,49 @@ const LogsModal: React.FC<LogsModalProps> = ({ isOpen, onClose }) => {
                 <div className="px-6 py-3 border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] bg-[rgba(0,0,0,0.02)] dark:bg-[#2a2a2a] flex items-center justify-between">
                   <div>
                     <h3 className="font-semibold text-[#1a1a1a] dark:text-white">{selectedLog}</h3>
-                    <p className="text-xs text-[#666666] dark:text-[#a0a0a0] mt-1">{logLines.length} entries</p>
+                    <p className="text-xs text-[#666666] dark:text-[#a0a0a0] mt-1">
+                      {logLines.length} entries • Page {currentPage} of {totalPages || 1}
+                    </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleCopyLog(selectedLog)}
-                      className="p-2 text-[#4485d1] hover:bg-[rgba(68,133,209,0.1)] rounded-lg transition-colors"
-                      title="Copy as Markdown"
+                    <div 
+                      className="relative"
+                      onMouseEnter={() => {
+                        if (copyMenuTimeout) clearTimeout(copyMenuTimeout);
+                        setShowCopyMenu(true);
+                      }}
+                      onMouseLeave={() => {
+                        copyMenuTimeout = setTimeout(() => setShowCopyMenu(false), 300);
+                      }}
                     >
-                      <Copy size={18} />
-                    </button>
+                      <button
+                        className={`p-2 rounded-lg transition-all ${
+                          copySuccess 
+                            ? 'bg-green-500 text-white' 
+                            : 'text-[#4485d1] hover:bg-[rgba(68,133,209,0.1)]'
+                        }`}
+                        title="Copy options"
+                      >
+                        <Copy size={18} className={copySuccess ? 'animate-pulse' : ''} />
+                      </button>
+                      
+                      {showCopyMenu && (
+                        <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-[#2a2a2a] rounded-lg shadow-xl border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.1)] py-1 z-10">
+                          <button
+                            onClick={() => handleCopyLog(selectedLog, 'all')}
+                            className="w-full text-left px-4 py-2 text-sm text-[#1a1a1a] dark:text-white hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[#333333] transition-colors"
+                          >
+                            Copy All Logs
+                          </button>
+                          <button
+                            onClick={() => handleCopyLog(selectedLog, 'last-chat')}
+                            className="w-full text-left px-4 py-2 text-sm text-[#1a1a1a] dark:text-white hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[#333333] transition-colors"
+                          >
+                            Copy Last Chat Only
+                          </button>
+                        </div>
+                      )}
+                    </div>
                     <button
                       onClick={() => handleDownloadLog(selectedLog)}
                       className="p-2 text-[#4485d1] hover:bg-[rgba(68,133,209,0.1)] rounded-lg transition-colors"
@@ -319,31 +452,65 @@ const LogsModal: React.FC<LogsModalProps> = ({ isOpen, onClose }) => {
                       <p className="text-sm">No log entries</p>
                     </div>
                   ) : (
-                    logLines.reverse().map((entry, idx) => (
-                      <div
-                        key={idx}
-                        className={`p-3 rounded-lg transition-colors ${getLevelColor(entry.level)}`}
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className={`text-xs font-bold ${getLevelTextColor(entry.level)}`}>
-                                {entry.level}
-                              </span>
-                              <span className="text-xs font-semibold text-[#1a1a1a] dark:text-white bg-white/50 dark:bg-black/30 px-2 py-0.5 rounded">
-                                {entry.category}
-                              </span>
-                              <span className="text-xs text-[#666666] dark:text-[#a0a0a0] ml-auto">
-                                {new Date(entry.time).toLocaleTimeString()}
-                              </span>
+                    paginatedLogs.map((entry, idx) => {
+                      const isNewSession = entry.category.includes('NEW_SESSION') || entry.message.includes('STARTING NEW LOG SESSION');
+                      return (
+                        <React.Fragment key={startIdx + idx}>
+                          {isNewSession && idx > 0 && (
+                            <div className="flex items-center gap-3 py-2">
+                              <div className="flex-1 h-px bg-gradient-to-r from-transparent via-blue-500 to-transparent"></div>
+                              <span className="text-xs font-bold text-blue-600 dark:text-blue-400 px-2">NEW CHAT SESSION</span>
+                              <div className="flex-1 h-px bg-gradient-to-r from-blue-500 via-transparent to-transparent"></div>
                             </div>
-                            <p className="text-sm text-[#1a1a1a] dark:text-white break-words">{entry.message}</p>
+                          )}
+                          <div
+                            className={`p-3 rounded-lg transition-colors ${getLevelColor(entry.level)}`}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className={`text-xs font-bold ${getLevelTextColor(entry.level)}`}>
+                                    {entry.level}
+                                  </span>
+                                  <span className="text-xs font-semibold text-[#1a1a1a] dark:text-white bg-white/50 dark:bg-black/30 px-2 py-0.5 rounded">
+                                    {entry.category}
+                                  </span>
+                                  <span className="text-xs text-[#666666] dark:text-[#a0a0a0] ml-auto">
+                                    {new Date(entry.time).toLocaleTimeString()}
+                                  </span>
+                                </div>
+                                <p className="text-sm text-[#1a1a1a] dark:text-white break-words">{entry.message}</p>
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      </div>
-                    ))
+                        </React.Fragment>
+                      );
+                    })
                   )}
                 </div>
+
+                {/* Pagination Controls */}
+                {logLines.length > ENTRIES_PER_PAGE && (
+                  <div className="px-6 py-3 border-t border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] bg-[rgba(0,0,0,0.02)] dark:bg-[#2a2a2a] flex items-center justify-between">
+                    <button
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      className="px-3 py-1.5 text-sm font-medium text-[#1a1a1a] dark:text-white bg-[rgba(0,0,0,0.05)] dark:bg-[#222222] hover:bg-[rgba(0,0,0,0.1)] dark:hover:bg-[#333333] rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Previous
+                    </button>
+                    <span className="text-sm text-[#666666] dark:text-[#a0a0a0]">
+                      Page {currentPage} of {totalPages}
+                    </span>
+                    <button
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                      className="px-3 py-1.5 text-sm font-medium text-[#1a1a1a] dark:text-white bg-[rgba(0,0,0,0.05)] dark:bg-[#222222] hover:bg-[rgba(0,0,0,0.1)] dark:hover:bg-[#333333] rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Next
+                    </button>
+                  </div>
+                )}
               </>
             ) : (
               <div className="flex-1 flex items-center justify-center text-[#666666] dark:text-[#a0a0a0]">

@@ -405,6 +405,22 @@ class ActivityLogger {
     }
     return '';
   }
+
+  // Clear all logs
+  public async clearAllLogs(): Promise<void> {
+    // Clear buffer
+    this.logBuffer = [];
+    
+    if (this.isElectron && (window as any).electron?.clearLogs) {
+      // Clear Electron logs
+      await (window as any).electron.clearLogs();
+    } else {
+      // Clear browser localStorage
+      localStorage.removeItem('activityLogs');
+    }
+    
+    this.logInfo('SYSTEM', 'All logs cleared');
+  }
 }
 
 // Export singleton instance

@@ -5,6 +5,7 @@ import { activityLogger } from '../../services/activityLogger';
 import { diagnosticLogger } from '../../services/diagnosticLogger';
 import { embeddingService } from '../../services/embeddingService';
 import { UploadedImage } from '../components/ImageUploadPanel';
+import { sessionPersistence } from '../../services/sessionPersistence';
 
 export const createMessageHandlers = (
   input: string,
@@ -22,7 +23,8 @@ export const createMessageHandlers = (
   uploadedImages: UploadedImage[] = [],
   setUploadedImages: (images: UploadedImage[] | ((prev: UploadedImage[]) => UploadedImage[])) => void,
   onShowContextWarning?: (data: { totalTokens: number; filesUsed: string[]; selectedCount: number; onProceed: () => void }) => void,
-  updateChatName?: (name: string) => void
+  updateChatName?: (name: string) => void,
+  currentChatId?: string | null
 ) => {
   
   const generateChatTitle = async (userMessage: string) => {
@@ -178,6 +180,10 @@ Extract the KEY TOPIC and create a proper title. Output ONLY 3 words, no punctua
     if (!retryMessageId) {
       setMessages(prev => [...prev, userMsg]);
       setInput('');
+      // Clear input draft for current chat from session persistence
+      if (currentChatId) {
+        sessionPersistence.clearChatDraft(currentChatId);
+      }
       // Clear uploaded images after sending
       setUploadedImages([]);
       // Clean up blob URLs

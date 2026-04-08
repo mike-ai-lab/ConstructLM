@@ -1,6 +1,7 @@
 import React, { useCallback } from 'react';
-import { Menu, X, Phone, Bell, MessageSquare, BookMarked, CheckSquare } from 'lucide-react';
+import { Menu, X, Phone, Bell } from 'lucide-react';
 import { useUIHelpersInit } from './hooks/useUIHelpers';
+import { useTheme } from './hooks/useTheme';
 import { useChatState } from './App/hooks/useChatState';
 import { useFileState } from './App/hooks/useFileState';
 import { useLayoutState } from './App/hooks/useLayoutState';
@@ -15,12 +16,12 @@ import { createInputHandlers } from './App/handlers/inputHandlers';
 import { createFeatureHandlers } from './App/handlers/featureHandlers';
 import { createAudioHandlers } from './App/handlers/audioHandlers';
 import { MIN_SIDEBAR_WIDTH, MAX_SIDEBAR_WIDTH, MIN_VIEWER_WIDTH, MAX_VIEWER_WIDTH, MIN_CHAT_WIDTH } from './App/constants';
-import { MODEL_REGISTRY, DEFAULT_MODEL_ID, getAllModels } from './services/modelRegistry';
+import { DEFAULT_MODEL_ID, getAllModels } from './services/modelRegistry';
 import { mindMapCache } from './services/mindMapCache';
 import { userProfileService } from './services/userProfileService';
 import { permanentStorage } from './services/permanentStorage';
 import FileSidebar from './components/FileSidebar';
-import MessageBubble from './components/MessageBubble';
+import ChatArea from './components/ChatArea';
 import DocumentViewer from './components/DocumentViewer';
 import TabbedWebViewer from './components/TabbedWebViewer';
 import TabbedWebViewerElectron from './components/TabbedWebViewerElectron';
@@ -32,32 +33,34 @@ import Notebook from './components/Notebook';
 import TodoList from './components/TodoList';
 import ReminderOverlay from './components/ReminderOverlay';
 import LogsModal from './components/LogsModal';
-import ClearMarkdownStorage from './components/ClearMarkdownStorage';
-
 // import Sources from './components/Sources';
 import AppHeader from './App/components/AppHeader';
 import { FloatingInput } from './App/components/FloatingInput';
 import ContextWarningModal from './components/ContextWarningModal';
 import DrawingToolbar from './components/DrawingToolbar';
 import GitHubBrowser from './components/GitHubBrowser';
-import { RAGProcessViewer } from './components/RAGProcessViewer';
 import { Note, Todo, TodoGroup, Reminder, Source } from './types';
+import { sessionPersistence } from './services/sessionPersistence';
 
 const App: React.FC = () => {
   useUIHelpersInit();
+  
+  // Initialize theme FIRST to apply it immediately
+  const { theme, toggleTheme } = useTheme();
   
   const [versionInfo, setVersionInfo] = React.useState({ version: '1.0.0', buildId: 'loading', buildDate: '' });
   
   const chatState = useChatState();
   const fileState = useFileState();
   const layoutState = useLayoutState();
-  const inputState = useInputState();
+  const inputState = useInputState(chatState.currentChatId); // Pass current chat ID
   const featureState = useFeatureState();
 
   const [notes, setNotes] = React.useState<Note[]>([]);
   const [noteCounter, setNoteCounter] = React.useState(1);
-  const [activeTab, setActiveTab] = React.useState<'chat' | 'notebook' | 'todos' | 'github'>('chat');
-  const [isTabSwitching, setIsTabSwitching] = React.useState(false);
+  // Restore activeTab from session
+  const session = sessionPersistence.loadSession();
+  const [activeTab, setActiveTab] = React.useState<'chat' | 'notebook' | 'todos' | 'github'>(session.activeTab || 'chat');
   const [todos, setTodos] = React.useState<Todo[]>([]);
   const [todoGroups, setTodoGroups] = React.useState<TodoGroup[]>([]);
   const [reminders, setReminders] = React.useState<Reminder[]>([]);
@@ -67,7 +70,6 @@ const App: React.FC = () => {
   const [uploadFeedback, setUploadFeedback] = React.useState<{ uploaded: number; skipped: number; skippedFiles: string[] } | null>(null);
   const [uploadProgress, setUploadProgress] = React.useState<{ current: number; total: number; currentFile: string } | null>(null);
   const [contextWarning, setContextWarning] = React.useState<{ totalTokens: number; filesUsed: string[]; selectedCount: number; onProceed: () => void } | null>(null);
-  const [embeddingProgress, setEmbeddingProgress] = React.useState<{ fileId: string; fileName: string; current: number; total: number } | null>(null);
   const [isLogsOpen, setIsLogsOpen] = React.useState(false);
   const [webViewerUrl, setWebViewerUrl] = React.useState<string | null>(null);
   const [showDrawingToolbar, setShowDrawingToolbar] = React.useState(false);
@@ -75,8 +77,11 @@ const App: React.FC = () => {
   const [githubRepoUrl, setGithubRepoUrl] = React.useState('');
   const [notebookControls, setNotebookControls] = React.useState<React.ReactNode>(null);
   const [notebookSidebarOpen, setNotebookSidebarOpen] = React.useState(true);
-  const [isRAGViewerOpen, setIsRAGViewerOpen] = React.useState(false);
   const [todoControls, setTodoControls] = React.useState<React.ReactNode>(null);
+  
+  // Greeting transition state
+  const [isGreetingExiting, setIsGreetingExiting] = React.useState(false);
+  const [showGreeting, setShowGreeting] = React.useState(true);
 
   // REMOVED: Pipeline tracker moved to Help Documentation
   // const [pipelineSteps, setPipelineSteps] = React.useState<any[]>([]);
@@ -141,6 +146,25 @@ const App: React.FC = () => {
     if (savedReminders) setReminders(JSON.parse(savedReminders));
     if (savedSources) setSources(JSON.parse(savedSources));
   }, []);
+
+  // Handle greeting transition when first user message is sent
+  React.useEffect(() => {
+    const hasUserMessage = chatState.messages.some(msg => msg.role === 'user');
+    const hasOnlyIntro = chatState.messages.length === 1 && chatState.messages[0].id === 'intro';
+    
+    if (hasUserMessage && showGreeting) {
+      // Trigger exit animation
+      setIsGreetingExiting(true);
+      // Hide greeting after animation completes
+      setTimeout(() => {
+        setShowGreeting(false);
+        setIsGreetingExiting(false);
+      }, 700); // Match transition duration
+    } else if (hasOnlyIntro && !showGreeting) {
+      // Reset greeting when switching to a new chat
+      setShowGreeting(true);
+    }
+  }, [chatState.messages, showGreeting]);
 
   const handleSaveNote = (content: string, modelId?: string, messageId?: string) => {
     const newNote: Note = {
@@ -292,36 +316,17 @@ const App: React.FC = () => {
     localStorage.setItem('todos', JSON.stringify(updated));
   };
 
-  const handleAddReminder = (reminder: Omit<Reminder, 'id' | 'timestamp' | 'status'>) => {
-    const newReminder: Reminder = { ...reminder, id: Date.now().toString(), timestamp: Date.now(), status: 'pending' };
-    const updated = [newReminder, ...reminders];
-    setReminders(updated);
-    localStorage.setItem('reminders', JSON.stringify(updated));
-  };
-
-  const handleDeleteReminder = (id: string) => {
-    const updated = reminders.filter(r => r.id !== id);
-    setReminders(updated);
-    localStorage.setItem('reminders', JSON.stringify(updated));
-  };
-
   const handleUpdateReminder = (id: string, updates: Partial<Reminder>) => {
     const updated = reminders.map(r => r.id === id ? { ...r, ...updates } : r);
     setReminders(updated);
     localStorage.setItem('reminders', JSON.stringify(updated));
   };
 
-  const handleShowToast = (message: string, reminderId: string) => {
-    const reminder = reminders.find(r => r.id === reminderId);
-    if (reminder) {
-      setTriggeredReminder(reminder);
-    }
-  };
-
   const handleTabChange = (newTab: 'chat' | 'notebook' | 'todos' | 'github') => {
     if (newTab === activeTab) return;
     
-    setIsTabSwitching(true);
+    // Persist tab change
+    sessionPersistence.saveSession({ activeTab: newTab });
     
     // Close sidebars if switching away from chat
     if (activeTab === 'chat' && (layoutState.isSidebarOpen || layoutState.viewState || webViewerUrl)) {
@@ -331,11 +336,9 @@ const App: React.FC = () => {
       
       setTimeout(() => {
         setActiveTab(newTab);
-        setIsTabSwitching(false);
       }, 300);
     } else {
       setActiveTab(newTab);
-      setIsTabSwitching(false);
     }
   };
 
@@ -436,19 +439,18 @@ const App: React.FC = () => {
         // The web viewer will render it perfectly, and AI can work with the URL reference
         try {
           // Try to fetch just to get the title
-          let response;
           let html = '';
           
           try {
-            response = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`);
-            if (response.ok) {
-              html = await response.text();
+            const response1 = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`);
+            if (response1.ok) {
+              html = await response1.text();
             }
           } catch (e) {
             try {
-              response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
-              if (response.ok) {
-                const data = await response.json();
+              const response2 = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+              if (response2.ok) {
+                const data = await response2.json();
                 html = data.contents;
               }
             } catch (e2) {
@@ -590,7 +592,8 @@ const App: React.FC = () => {
     inputState.uploadedImages,
     inputState.setUploadedImages,
     setContextWarning,
-    chatHandlers.updateChatName
+    chatHandlers.updateChatName,
+    chatState.currentChatId
   );
 
   const filteredFiles = fileState.files.filter(f => f.name.toLowerCase().includes(inputState.mentionQuery));
@@ -753,17 +756,6 @@ const App: React.FC = () => {
           <button onClick={() => setToastMessage(null)} className="ml-2 hover:bg-[#f07a76]/90 rounded p-1">
             <X size={14} />
           </button>
-        </div>
-      )}
-      {embeddingProgress && (
-        <div className="fixed top-20 right-4 z-[80] bg-purple-600 text-white px-4 py-3 rounded-lg shadow-xl">
-          <div className="flex items-center gap-3">
-            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            <div>
-              <p className="text-sm font-semibold">Indexing for search...</p>
-              <p className="text-xs opacity-90">{embeddingProgress.fileName} ({embeddingProgress.current}/{embeddingProgress.total})</p>
-            </div>
-          </div>
         </div>
       )}
       {uploadProgress && (
@@ -985,75 +977,102 @@ const App: React.FC = () => {
           onOpenRAGViewer={() => setIsLogsOpen(true)}
           notebookControls={notebookControls}
           todoControls={todoControls}
+          toggleTheme={toggleTheme}
         />
         )}
 
         {activeTab === 'chat' ? (
-          <div ref={layoutState.messagesContainerRef} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 scroll-smooth bg-white dark:bg-[#1a1a1a]">
-            <div className="max-w-3xl mx-auto w-full relative overflow-hidden" style={{ paddingBottom: `${Math.max(0, (inputState.inputHeight || 56) - 40)}px` }}>
-              {chatState.messages.map((msg) => (
-                <MessageBubble 
-                  key={msg.id} 
-                  message={msg}
-                  chatId={chatState.currentChatId}
-                  files={fileState.files}
-                  sources={sources}
-                  onViewDocument={fileHandlers.handleViewDocument}
-                  onSaveNote={msg.role === 'model' && msg.id !== 'intro' ? (content, modelId) => handleSaveNote(content, modelId, msg.id) : undefined}
-                  onUnsaveNote={msg.role === 'model' && msg.id !== 'intro' ? handleUnsaveNote : undefined}
-                  noteNumber={notes.find(n => n.messageId === msg.id)?.noteNumber}
-                  onDeleteMessage={(messageId) => {
-                    chatState.setMessages(chatState.messages.filter(m => m.id !== messageId));
-                  }}
-                  onRetryMessage={msg.role === 'model' ? async (messageId) => {
-                    // Find the previous user message to regenerate from
-                    const msgIndex = chatState.messages.findIndex(m => m.id === messageId);
-                    if (msgIndex === -1) return;
-                    const prevUserMsg = chatState.messages.slice(0, msgIndex).reverse().find(m => m.role === 'user');
-                    if (!prevUserMsg) return;
-                    
-                    const newOutput = await messageHandlers.handleSendMessage(prevUserMsg.content, messageId);
-                    if (newOutput) {
-                      chatState.setMessages((prevMessages) => {
-                        return prevMessages.map(m => {
-                          if (m.id === messageId) {
-                            const alternatives = m.alternativeOutputs || [m.content];
-                            const newAlternatives = [...alternatives, newOutput];
-                            console.log('Regenerate - messageId:', messageId, 'newAlternatives:', newAlternatives, 'length:', newAlternatives.length);
-                            return { ...m, alternativeOutputs: newAlternatives, currentOutputIndex: newAlternatives.length - 1, content: newOutput };
-                          }
-                          return m;
-                        });
-                      });
+          <ChatArea
+            messages={chatState.messages}
+            currentChatId={chatState.currentChatId}
+            isGenerating={chatState.isGenerating}
+            showGreeting={showGreeting}
+            isGreetingExiting={isGreetingExiting}
+            input={inputState.input}
+            inputRef={inputState.inputRef}
+            inputHeight={inputState.inputHeight}
+            uploadedImages={inputState.uploadedImages}
+            files={fileState.files}
+            sources={sources}
+            selectedSourceIds={chatState.selectedSourceIds}
+            isInputDragOver={layoutState.isInputDragOver}
+            showMentionMenu={inputState.showMentionMenu}
+            filteredFiles={filteredFiles}
+            mentionIndex={inputState.mentionIndex}
+            isRecording={featureState.isRecording}
+            isTranscribing={isTranscribing}
+            activeModelId={featureState.activeModelId}
+            mindMapData={featureState.mindMapData}
+            isSettingsOpen={featureState.isSettingsOpen}
+            isCallingEffect={featureState.isCallingEffect}
+            isHelpOpen={featureState.isHelpOpen}
+            messagesContainerRef={layoutState.messagesContainerRef}
+            messagesEndRef={layoutState.messagesEndRef}
+            notes={notes.map(n => ({ messageId: n.messageId || '', noteNumber: n.noteNumber }))}
+            onInputChange={inputHandlers.handleInputChange}
+            onKeyDown={inputHandlers.handleKeyDown}
+            onPaste={inputHandlers.handlePaste}
+            onSendMessage={() => messageHandlers.handleSendMessage()}
+            onFileUpload={fileHandlers.handleFileUpload}
+            onImageUpload={inputHandlers.handleImageUpload}
+            onRemoveImage={(id: string) => inputHandlers.handleRemoveImage(id)}
+            onRecalculateImageTokens={() => (inputHandlers.recalculateImageTokens as any)(featureState.activeModelId)}
+            onToggleRecording={() => (audioHandlers.handleToggleRecording as any)(featureState.activeModelId)}
+            onInsertMention={inputHandlers.insertMention}
+            setIsInputDragOver={layoutState.setIsInputDragOver}
+            setInput={inputState.setInput}
+            setInputHeight={inputState.setInputHeight}
+            onAddSource={(source: Source) => handleAddSource(source.url)}
+            onDeleteSource={handleDeleteSource}
+            onToggleSource={handleToggleSourceLink}
+            onViewDocument={fileHandlers.handleViewDocument}
+            onSaveNote={handleSaveNote}
+            onUnsaveNote={handleUnsaveNote}
+            onDeleteMessage={(messageId) => {
+              chatState.setMessages(chatState.messages.filter(m => m.id !== messageId));
+            }}
+            onRetryMessage={async (messageId) => {
+              const msgIndex = chatState.messages.findIndex(m => m.id === messageId);
+              if (msgIndex === -1) return;
+              const prevUserMsg = chatState.messages.slice(0, msgIndex).reverse().find(m => m.role === 'user');
+              if (!prevUserMsg) return;
+              
+              const newOutput = await messageHandlers.handleSendMessage(prevUserMsg.content, messageId);
+              if (newOutput) {
+                chatState.setMessages((prevMessages) => {
+                  return prevMessages.map(m => {
+                    if (m.id === messageId) {
+                      const alternatives = m.alternativeOutputs || [m.content];
+                      const newAlternatives = [...alternatives, newOutput];
+                      return { ...m, alternativeOutputs: newAlternatives, currentOutputIndex: newAlternatives.length - 1, content: newOutput };
                     }
-                  } : undefined}
-                  alternativeOutputs={msg.alternativeOutputs}
-                  currentOutputIndex={msg.currentOutputIndex}
-                  onSwitchOutput={(messageId, index) => {
-                    chatState.setMessages((prevMessages) => prevMessages.map(m => {
-                      if (m.id === messageId && m.alternativeOutputs) {
-                        return { ...m, content: m.alternativeOutputs[index], currentOutputIndex: index };
-                      }
-                      return m;
-                    }));
-                  }}
-                  onOpenWebViewer={setWebViewerUrl}
-                  onOpenWebViewerNewTab={(url) => {
-                    // Use global function if web viewer is open
-                    if ((window as any).__openWebViewerNewTab) {
-                      (window as any).__openWebViewerNewTab(url);
-                    } else {
-                      // Fallback: open web viewer
-                      setWebViewerUrl(url);
-                    }
-                  }}
-                  onEnableDrawing={enableDrawingMode}
-                  onCreateSummaryDoc={msg.role === 'model' && msg.id !== 'intro' ? handleCreateSummaryDoc : undefined}
-                />
-              ))}
-              <div ref={layoutState.messagesEndRef} className="snapshot-ignore" />
-            </div>
-          </div>
+                    return m;
+                  });
+                });
+              }
+            }}
+            onSwitchOutput={(messageId, index) => {
+              chatState.setMessages((prevMessages) => prevMessages.map(m => {
+                if (m.id === messageId && m.alternativeOutputs) {
+                  return { ...m, content: m.alternativeOutputs[index], currentOutputIndex: index };
+                }
+                return m;
+              }));
+            }}
+            onOpenWebViewer={setWebViewerUrl}
+            onOpenWebViewerNewTab={(url) => {
+              if ((window as any).__openWebViewerNewTab) {
+                (window as any).__openWebViewerNewTab(url);
+              } else {
+                setWebViewerUrl(url);
+              }
+            }}
+            onEnableDrawing={(messageId: string) => enableDrawingMode(0, 0)}
+            onCreateSummaryDoc={(messageId: string) => {
+              const msg = chatState.messages.find(m => m.id === messageId);
+              if (msg) handleCreateSummaryDoc(msg.content, msg.modelId || featureState.activeModelId);
+            }}
+          />
         ) : activeTab === 'todos' ? (
           <div className="flex-1 overflow-hidden">
             <TodoList
@@ -1095,8 +1114,8 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {/* Floating Input Area */}
-        {!featureState.mindMapData && !featureState.isSettingsOpen && !featureState.isCallingEffect && !featureState.isHelpOpen && activeTab === 'chat' && (
+        {/* Floating Input Area - Only show at bottom when NOT in new chat state */}
+        {!featureState.mindMapData && !featureState.isSettingsOpen && !featureState.isCallingEffect && !featureState.isHelpOpen && activeTab === 'chat' && !(showGreeting && chatState.messages.length === 1 && chatState.messages[0].id === 'intro') && (
         <div className="flex justify-center px-4 pb-2 w-full bg-white dark:bg-[#1a1a1a] relative z-10">
             <div className="w-full max-w-[800px]">
             <FloatingInput
@@ -1121,9 +1140,9 @@ const App: React.FC = () => {
               onSendMessage={() => messageHandlers.handleSendMessage()}
               onFileUpload={fileHandlers.handleFileUpload}
               onImageUpload={inputHandlers.handleImageUpload}
-              onRemoveImage={inputHandlers.handleRemoveImage}
-              onRecalculateImageTokens={inputHandlers.recalculateImageTokens}
-              onToggleRecording={audioHandlers.handleToggleRecording}
+              onRemoveImage={(id: string) => inputHandlers.handleRemoveImage(id)}
+              onRecalculateImageTokens={() => (inputHandlers.recalculateImageTokens as any)(featureState.activeModelId)}
+              onToggleRecording={() => (audioHandlers.handleToggleRecording as any)(featureState.activeModelId)}
               onInsertMention={inputHandlers.insertMention}
               setIsInputDragOver={layoutState.setIsInputDragOver}
               setInput={inputState.setInput}

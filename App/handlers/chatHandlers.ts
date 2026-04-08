@@ -80,6 +80,7 @@ export const createChatHandlers = (
     // Use user's default model or fall back to active model
     const defaultModelId = localStorage.getItem('defaultModelId') || activeModelId;
     const newChat = await chatRegistry.createNewChat('New Chat', defaultModelId);
+    activityLogger.startNewSession(`Chat ${newChat.id}`);
     activityLogger.logChatCreated(newChat.id, defaultModelId);
     setCurrentChatId(newChat.id);
     sessionStorage.setItem('currentChatId', newChat.id);
