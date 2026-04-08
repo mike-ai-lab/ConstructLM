@@ -90,3 +90,6 @@ update-key.html
 
 # Qodo/Amazon Q
 .qodo/
+
+# Archive folder (development artifacts)
+_archive/
