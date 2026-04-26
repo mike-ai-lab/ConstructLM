@@ -22,7 +22,6 @@ class PipelineTrackerService {
 
   // File upload pipeline
   startFileUpload(fileName?: string) {
-    console.log(`[PIPELINE] startFileUpload: ${fileName}`);
     this.isActive = true;
     this.steps = [
       { id: 'upload', label: 'Upload', status: 'active', detail: fileName },
@@ -35,7 +34,6 @@ class PipelineTrackerService {
   }
 
   updateStep(stepId: string, status: StepStatus, progress?: string, detail?: string) {
-    console.log(`[PIPELINE ${Date.now()}] updateStep: ${stepId} -> ${status}`, { progress, detail });
     const step = this.steps.find(s => s.id === stepId);
     if (step) {
       step.status = status;
@@ -46,13 +44,11 @@ class PipelineTrackerService {
   }
 
   completeStep(stepId: string) {
-    console.log(`[PIPELINE] completeStep: ${stepId}`);
     this.updateStep(stepId, 'complete');
   }
 
   // Query pipeline
   startQuery(query: string) {
-    console.log(`[PIPELINE] startQuery: ${query.slice(0, 30)}...`);
     this.isActive = true;
     this.steps = [
       { id: 'query', label: 'Query', status: 'complete', detail: query.slice(0, 20) + '...' },

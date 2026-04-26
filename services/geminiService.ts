@@ -32,25 +32,17 @@ export async function sendMessageToGemini(
 ): Promise<{ inputTokens?: number; outputTokens?: number; totalTokens?: number }> {
   if (!apiKey) throw new Error("API Key missing");
 
-  console.log('🔵 [GEMINI] === REQUEST START ===');
-  console.log('🔵 [GEMINI] Model:', modelId);
-  console.log('🔵 [GEMINI] Message length:', message.length);
-  console.log('🔵 [GEMINI] Files attached:', activeFiles.length);
-  console.log('🔵 [GEMINI] History messages:', history?.length || 0);
+
 
   // Separate text and image files
   const imageFiles = activeFiles.filter(f => f.type === 'image');
   const textFiles = activeFiles.filter(f => f.type !== 'image');
-
-  console.log('🔵 [GEMINI] Image files:', imageFiles.length);
-  console.log('🔵 [GEMINI] Text files:', textFiles.length);
 
   // Upload images directly to Gemini File API for efficient token usage (~10 tokens vs 7K)
   const uploadedFiles: any[] = [];
   for (const imgFile of imageFiles) {
     if (imgFile.fileHandle) {
       try {
-        console.log('🔵 [GEMINI] Uploading image to File API:', imgFile.name, `(${Math.round(imgFile.size / 1024)}KB)`);
         
         // Upload original File object directly - no base64 conversion needed!
         const formData = new FormData();
@@ -67,7 +59,6 @@ export async function sendMessageToGemini(
         if (uploadResponse.ok) {
           const uploadResult = await uploadResponse.json();
           const tokenEstimate = Math.ceil(imgFile.size / 750); // Gemini's ~750 bytes per token for images
-          console.log(`🔵 [GEMINI] ✅ Image uploaded successfully: ${uploadResult.file.uri} (~${tokenEstimate} tokens)`);
           uploadedFiles.push({
             fileUri: uploadResult.file.uri,
             mimeType: uploadResult.file.mimeType
@@ -103,7 +94,6 @@ export async function sendMessageToGemini(
   
   // Add uploaded files (uses file URI - only ~10 tokens instead of 7K!)
   for (const file of uploadedFiles) {
-    console.log('🔵 [GEMINI] Adding file reference (efficient):', file.fileUri);
     currentParts.push({
       fileData: {
         mimeType: file.mimeType,

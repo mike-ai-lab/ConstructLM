@@ -1,9 +1,10 @@
 import React from 'react';
-import { PanelLeft, PanelLeftOpen, Cpu, ChevronDown, Phone, Plus, Edit3, Trash2, Check, Minus, Camera, Image, Moon, Sun, HelpCircle, Settings, BookMarked, CheckSquare, Bell, MessageSquare, FileText, Github, Terminal, Activity, List, LayoutGrid, Archive, Download, ArrowUpDown } from 'lucide-react';
+import { PanelLeft, PanelLeftOpen, Cpu, ChevronDown, Phone, Plus, Edit3, Trash2, Check, Minus, Camera, Image, Moon, Sun, HelpCircle, Settings, BookMarked, CheckSquare, Bell, MessageSquare, FileText, Github, Terminal, Activity, List, LayoutGrid, Archive, Download, ArrowUpDown, Menu, X } from 'lucide-react';
 import { MODEL_REGISTRY, getAllModels } from '../../services/modelRegistry';
 import { DRAWING_COLORS } from '../../services/drawingService';
 import GraphicsLibrary from '../../components/GraphicsLibrary';
 import { InteractiveBlob } from '../../components/InteractiveBlob';
+import ActionButton from './ActionButton';
 
 interface AppHeaderProps {
   isMobile: boolean;
@@ -80,8 +81,19 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
   }, []);
   
   return (
-    <header ref={headerRef} className="h-[65px] flex-none border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] flex items-center justify-between px-3 md:px-6 bg-white dark:bg-[#1a1a1a] min-w-0 gap-2 relative z-[50]">
-      <div className="flex items-center gap-2 min-w-0 flex-shrink">
+    <header ref={headerRef} className="h-[65px] flex-none border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] flex items-center justify-between px-2 md:px-6 bg-white dark:bg-[#1a1a1a] min-w-0 gap-1 md:gap-2 relative z-[50]">
+      <div className="flex items-center gap-1 md:gap-2 min-w-0 flex-shrink">
+        {/* Mobile menu button - always visible on mobile for chat tab */}
+        {props.isMobile && props.activeTab === 'chat' && (
+          <button 
+            onClick={() => props.setIsSidebarOpen(!props.isSidebarOpen)} 
+            className="p-1.5 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors flex-shrink-0"
+          >
+            {props.isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
+        )}
+        
+        {/* Desktop sidebar toggle */}
         {!props.isMobile && (props.activeTab === 'chat' || props.activeTab === 'notebook') && (
           <button onClick={() => props.setIsSidebarOpen(!props.isSidebarOpen)} className="p-1.5 text-gray-400 hover:bg-gray-100 rounded-md transition-colors flex-shrink-0">
             {props.isSidebarOpen ? <PanelLeft size={18} /> : <PanelLeftOpen size={18} />}
@@ -105,10 +117,10 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
           <>
             <div className="relative flex-shrink-0" ref={props.modelMenuRef}>
               <button onClick={(e) => { e.stopPropagation(); props.setShowModelMenu(!props.showModelMenu); }} className="flex items-center gap-1 px-2 md:px-3 py-1.5 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] hover:bg-[rgba(0,0,0,0.06)] dark:hover:bg-[#222222] rounded-full text-xs font-medium text-[#1a1a1a] dark:text-white">
-                <Cpu size={12} />
-                <div className="flex flex-col items-start">
-                  <span className="leading-tight">{props.activeModel.name}</span>
-                  <span className="text-[9px] text-[#666666] dark:text-[#a0a0a0] leading-tight">
+                <Cpu size={12} className="flex-shrink-0" />
+                <div className="flex flex-col items-start min-w-0 flex-shrink-0">
+                  <span className="leading-tight whitespace-nowrap">{props.activeModel.name}</span>
+                  <span className="text-[9px] text-[#666666] dark:text-[#a0a0a0] leading-tight hidden md:block whitespace-nowrap">
                     {props.activeModel.provider === 'google' ? 'Google Gemini' :
                      props.activeModel.provider === 'groq' ? 'Groq' :
                      props.activeModel.provider === 'cerebras' ? 'Cerebras' :
@@ -119,9 +131,9 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
                      props.activeModel.provider}
                   </span>
                 </div>
-                <ChevronDown size={10} />
+                <ChevronDown size={10} className="flex-shrink-0" />
               </button>
-            <div style={{display: props.showModelMenu ? 'block' : 'none'}} className="absolute top-full left-0 mt-2 w-80 bg-white dark:bg-[#222222] rounded-xl shadow-xl border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] overflow-hidden z-[100]">
+            <div style={{display: props.showModelMenu ? 'block' : 'none'}} className="absolute top-full left-0 mt-2 w-[90vw] md:w-80 max-w-[400px] bg-white dark:bg-[#222222] rounded-xl shadow-xl border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] overflow-hidden z-[100]">
               <div className="px-3 py-2 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] border-b border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] text-[12px] font-bold text-[#666666] dark:text-[#a0a0a0] uppercase">Select Model</div>
               <div className="max-h-[500px] overflow-y-auto p-1">
                 {/* Google Gemini Models */}
@@ -363,7 +375,7 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
                               {isRateLimited ? (
                                 <span className="text-[12px] px-1.5 py-0.5 rounded bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 font-mono">▽{timeDisplay}</span>
                               ) : (
-                                <span className={`text-[12px] px-1.5 py-0.5 rounded ${model.capacityTag === 'XLarge' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400' : model.capacityTag === 'Large' ? 'bg-[#16b47e]/20 dark:bg-[#16b47e]/10 text-[#16b47e] dark:text-[#5bd8bb]' : model.capacityTag === 'Medium' ? 'bg-[#25b5cd]/20 dark:bg-[#25b5cd]/10 text-[#25b5cd] dark:text-[#5bd8bb]' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}>{model.capacityTag}</span>
+                                <span className={`text-[12px] px-1.5 py-0.5 rounded ${model.capacityTag === 'High' ? 'bg-[#16b47e]/20 dark:bg-[#16b47e]/10 text-[#16b47e] dark:text-[#5bd8bb]' : model.capacityTag === 'Medium' ? 'bg-[#25b5cd]/20 dark:bg-[#25b5cd]/10 text-[#25b5cd] dark:text-[#5bd8bb]' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}>{model.capacityTag}</span>
                               )}
                             </div>
                           </div>
@@ -387,7 +399,8 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
         )}
       </div>
 
-      <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-0.5 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] rounded-lg p-0.5">
+      {/* Mobile: Bottom tabs, Desktop: Center tabs */}
+      <div className="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center gap-0.5 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] rounded-lg p-0.5">
         <button onClick={() => props.onTabChange?.('chat')} className={`px-3 py-1.5 rounded-md flex items-center justify-center gap-1.5 transition-all text-xs font-medium ${props.activeTab === 'chat' ? 'bg-white dark:bg-[#1a1a1a] text-[#1a1a1a] dark:text-white shadow-sm' : 'text-[#666666] dark:text-[#a0a0a0] hover:text-[#1a1a1a] dark:hover:text-white'}`}>
           <MessageSquare size={13} />
           <span>Chat</span>
@@ -412,18 +425,17 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
         </button>
       </div>
 
-      <div className="flex items-center gap-1 md:gap-2 flex-shrink-0 pl-20">
+      <div className="flex items-center gap-1 md:gap-2 flex-shrink-0 pl-2 md:pl-20">
         {props.activeTab === 'notebook' && props.notebookControls && (props.notebookControls as any).element}
         {props.activeTab === 'todos' && props.todoControls && (props.todoControls as any).element}
-        
-        {/* Drawing Tools - Only show on chat tab */}
-        {props.activeTab === 'chat' && !isCompact && (
+        {/* Drawing Tools - Only show on desktop */}
+        {props.activeTab === 'chat' && !isCompact && !props.isMobile && (
           <>
             {/* Clear All - Show when drawing is active */}
             {props.drawingState.isActive && (
               <button
                 onClick={props.handleClearAll}
-                className="p-1.5 md:p-2 text-[#f07a76] hover:bg-[#f07a76]/10 dark:hover:bg-[#f07a76]/10 rounded-full transition-colors flex-shrink-0"
+                className="hidden md:block p-1.5 md:p-2 text-[#f07a76] hover:bg-[#f07a76]/10 dark:hover:bg-[#f07a76]/10 rounded-full transition-colors flex-shrink-0"
                 title="Clear all drawings"
               >
                 <Trash2 size={16} />
@@ -432,9 +444,9 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
           </>
         )}
 
-        {props.activeTab === 'chat' && !isCompact && (
+        {props.activeTab === 'chat' && !isCompact && !props.isMobile && (
           <>
-            {/* Live Call */}
+            {/* Live Call - Desktop only */}
             {!props.isElectron && (
               <button
                 onClick={() => {
@@ -444,7 +456,7 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
                     props.setIsLiveMode(true);
                   }, 1000);
                 }}
-                className={`p-1.5 md:p-2 rounded-full transition-colors flex-shrink-0 ${
+                className={`hidden md:block p-1.5 md:p-2 rounded-full transition-colors flex-shrink-0 ${
                   props.isLiveMode
                     ? 'text-[#16b47e] bg-[#16b47e]/10 hover:bg-[#16b47e]/20'
                     : 'text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] hover:text-[#1a1a1a] dark:hover:text-white'
@@ -455,17 +467,17 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
               </button>
             )}
 
-            {/* Take Snapshot */}
+            {/* Take Snapshot - Desktop only (hidden, now in ActionButton) */}
             <button
               onClick={props.handleTakeSnapshot}
-              className="p-1.5 md:p-2 text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] hover:text-[#1a1a1a] dark:hover:text-white rounded-full transition-colors flex-shrink-0"
+              className="hidden p-1.5 md:p-2 text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] hover:text-[#1a1a1a] dark:hover:text-white rounded-full transition-colors flex-shrink-0"
               title="Take snapshot"
             >
               <Camera size={16} />
             </button>
 
-            {/* Graphics Library */}
-            <div className="relative">
+            {/* Graphics Library - Desktop only (hidden, now in ActionButton) */}
+            <div className="relative hidden">
               <button
                 onClick={() => props.setShowGraphicsLibrary(!props.showGraphicsLibrary)}
                 className="p-1.5 md:p-2 text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] hover:text-[#1a1a1a] dark:hover:text-white rounded-full transition-colors flex-shrink-0 relative"
@@ -484,7 +496,6 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
                   <GraphicsLibrary
                     isOpen={props.showGraphicsLibrary}
                     snapshots={props.snapshots}
-                    mindMapCache={props.mindMapCache}
                     onDownloadSnapshot={props.handleDownloadSnapshot}
                     onCopySnapshot={props.handleCopySnapshot}
                     onDeleteSnapshot={props.handleDeleteSnapshot}
@@ -496,20 +507,72 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
             </div>
           </>
         )}
-        <button onClick={props.toggleTheme} className="p-1.5 md:p-2 hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] rounded-full relative flex-shrink-0" style={{ width: '30px', height: '30px' }}>
-          <Moon size={16} className="dark:!hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" style={{ color: '#666666' }} />
-          <Sun size={16} className="!hidden dark:!block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" style={{ color: '#ffffff' }} />
-        </button>
-        <button onClick={props.onOpenLogs} className="p-1.5 md:p-2 text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] hover:text-[#1a1a1a] dark:hover:text-white rounded-full transition-colors flex-shrink-0" title="Activity Logs">
-          <Activity size={16} />
-        </button>
-        <button onClick={() => props.setIsHelpOpen(true)} className="p-1.5 md:p-2 text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] hover:text-[#1a1a1a] dark:hover:text-white rounded-full transition-colors flex-shrink-0">
-          <HelpCircle size={16} />
-        </button>
-        <button onClick={() => props.setIsSettingsOpen(true)} className="p-1.5 md:p-2 text-[#a0a0a0] hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] hover:text-[#1a1a1a] dark:hover:text-white rounded-full transition-colors flex-shrink-0">
-          <Settings size={16} />
-        </button>
+        {/* ActionButton - Shows on both mobile and desktop */}
+        <ActionButton
+          onCall={!props.isElectron ? () => {
+            props.setIsCallingEffect(true);
+            setTimeout(() => {
+              props.setIsCallingEffect(false);
+              props.setIsLiveMode(true);
+            }, 1000);
+          } : undefined}
+          onSnapshot={props.handleTakeSnapshot}
+          onGraphics={() => props.setShowGraphicsLibrary(!props.showGraphicsLibrary)}
+          onThemeToggle={props.toggleTheme}
+          onHelp={() => props.setIsHelpOpen(true)}
+          onSettings={() => props.setIsSettingsOpen(true)}
+          isLiveMode={props.isLiveMode}
+          isDarkTheme={document.documentElement.classList.contains('dark')}
+          isMobile={props.isMobile}
+        />
       </div>
+      
+      {/* Graphics Library Modal - Accessible from both mobile and desktop */}
+      {props.showGraphicsLibrary && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50" onClick={() => props.setShowGraphicsLibrary(false)}>
+          <div className="w-full max-w-2xl max-h-[80vh] bg-white dark:bg-[#222222] rounded-lg shadow-xl border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <GraphicsLibrary
+              isOpen={props.showGraphicsLibrary}
+              snapshots={props.snapshots}
+              onDownloadSnapshot={props.handleDownloadSnapshot}
+              onCopySnapshot={props.handleCopySnapshot}
+              onDeleteSnapshot={props.handleDeleteSnapshot}
+              onOpenMindMap={props.handleOpenMindMapFromLibrary}
+              onClose={() => props.setShowGraphicsLibrary(false)}
+            />
+          </div>
+        </div>
+      )}
+      
+      {/* Mobile Bottom Navigation */}
+      {props.isMobile && (
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-[#1a1a1a] border-t border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] safe-area-inset-bottom">
+          <div className="flex items-center justify-around px-2 py-2">
+            <button onClick={() => props.onTabChange?.('chat')} className={`flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-all ${props.activeTab === 'chat' ? 'bg-[rgba(68,133,209,0.1)] text-[#4485d1]' : 'text-[#666666] dark:text-[#a0a0a0]'}`}>
+              <MessageSquare size={20} />
+              <span className="text-[10px] font-medium">Chat</span>
+            </button>
+            <button onClick={() => { props.onTabChange?.('notebook'); if (props.isViewerOpen) props.onCloseViewer?.(); }} className={`flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-all relative ${props.activeTab === 'notebook' ? 'bg-[rgba(68,133,209,0.1)] text-[#4485d1]' : 'text-[#666666] dark:text-[#a0a0a0]'}`}>
+              <BookMarked size={20} />
+              <span className="text-[10px] font-medium">Notes</span>
+              {props.notesCount && props.notesCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-[9px] rounded-full w-4 h-4 flex items-center justify-center font-semibold">{props.notesCount}</span>
+              )}
+            </button>
+            <button onClick={() => { props.onTabChange?.('todos'); if (props.isViewerOpen) props.onCloseViewer?.(); }} className={`flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-all relative ${props.activeTab === 'todos' ? 'bg-[rgba(68,133,209,0.1)] text-[#4485d1]' : 'text-[#666666] dark:text-[#a0a0a0]'}`}>
+              <CheckSquare size={20} />
+              <span className="text-[10px] font-medium">Tasks</span>
+              {props.todosCount && props.todosCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-green-600 text-white text-[9px] rounded-full w-4 h-4 flex items-center justify-center font-semibold">{props.todosCount}</span>
+              )}
+            </button>
+            <button onClick={() => { props.onTabChange?.('github'); if (props.isViewerOpen) props.onCloseViewer?.(); }} className={`flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-all ${props.activeTab === 'github' ? 'bg-[rgba(68,133,209,0.1)] text-[#4485d1]' : 'text-[#666666] dark:text-[#a0a0a0]'}`}>
+              <Github size={20} />
+              <span className="text-[10px] font-medium">GitHub</span>
+            </button>
+          </div>
+        </div>
+      )}
     </header>
   );
 };

@@ -101,14 +101,9 @@ export const createInputHandlers = (
   };
 
   const handleImageUpload = async (files: FileList) => {
-    console.log('[inputHandlers] handleImageUpload called with files:', files);
-    console.log('[inputHandlers] Number of files:', files.length);
-    
     const imageFiles = Array.from(files).filter(file => 
       file.type.startsWith('image/')
     );
-    
-    console.log('[inputHandlers] Image files after filter:', imageFiles.length);
 
     for (const file of imageFiles) {
       // Check for duplicates and auto-rename
@@ -140,12 +135,7 @@ export const createInputHandlers = (
         estimatedTokens,
       };
 
-      console.log('[inputHandlers] Adding image:', uploadedImage);
-      setUploadedImages(prev => {
-        const newImages = [...prev, uploadedImage];
-        console.log('[inputHandlers] New uploadedImages array:', newImages);
-        return newImages;
-      });
+      setUploadedImages(prev => [...prev, uploadedImage]);
     }
   };
 

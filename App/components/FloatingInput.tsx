@@ -68,13 +68,12 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
     return model?.supportsImages || false;
   }, [activeModelId]);
 
-  // DEBUG: Log image state
+  // Only log when there are actual changes to debug
   React.useEffect(() => {
-    console.log('[FloatingInput] uploadedImages:', uploadedImages);
-    console.log('[FloatingInput] uploadedImages.length:', uploadedImages?.length);
-    console.log('[FloatingInput] onRemoveImage exists:', !!onRemoveImage);
-    console.log('[FloatingInput] Should render panel:', uploadedImages && uploadedImages.length > 0 && onRemoveImage);
-  }, [uploadedImages, onRemoveImage]);
+    if (uploadedImages && uploadedImages.length > 0) {
+      console.log('[FloatingInput] Images uploaded:', uploadedImages.length);
+    }
+  }, [uploadedImages?.length]);
 
   // Template suggestions for ConstructLM
   const suggestions: Suggestion[] = [
@@ -186,7 +185,7 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
   };
 
   return (
-    <div className="w-full relative">
+    <div className="w-full relative px-2 md:px-0">
       <style>{`
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
@@ -223,7 +222,7 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
             />
           )}
 
-          <div className={`smooth-shadow relative flex flex-col bg-white dark:bg-[#1a1a1a] border rounded-[32px] ${
+          <div className={`smooth-shadow relative flex flex-col bg-white dark:bg-[#1e1f20] border rounded-[32px] ${
             isFocused 
               ? 'border-[#4485d1]/40 shadow-[0_0_80px_-20px_rgba(68,133,209,0.3)]' 
               : 'border-gray-300 dark:border-[rgba(255,255,255,0.1)] shadow-lg'
@@ -305,7 +304,7 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
 
         {/* Floating Suggestions - Only show when showSuggestions is true */}
         {showSuggestions && suggestions.length > 0 && (
-          <div className={`floating-suggestions flex flex-row justify-center gap-2 px-4 relative z-20 ${
+          <div className={`floating-suggestions flex flex-row justify-center gap-2 px-0 relative z-20 mt-4 mb-2 ${
             (!input && !isTranscribing && !isGenerating) 
               ? 'opacity-100 translate-y-0 scale-100' 
               : 'opacity-0 -translate-y-4 scale-95 pointer-events-none'

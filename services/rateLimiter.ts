@@ -23,13 +23,11 @@ class RateLimiter {
 
     recentRequests.push(now);
     this.requests.set(provider, recentRequests);
-    console.log(`[RateLimiter] ${provider}: ${recentRequests.length}/${limit.requests} requests`);
     return { allowed: true };
   }
 
   reset(provider: string) {
     this.requests.delete(provider);
-    console.log(`[RateLimiter] ${provider}: Reset`);
   }
 }
 

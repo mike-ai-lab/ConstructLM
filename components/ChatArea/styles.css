@@ -14,6 +14,9 @@
   background: white;
   padding: 1rem;
   position: relative;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 html.dark .chat-area-new-state {
@@ -28,6 +31,7 @@ html.dark .chat-area-new-state {
   align-items: center;
   gap: 1rem;
   position: relative;
+  box-sizing: border-box;
 }
 
 /* Greeting stays in place */
@@ -44,6 +48,9 @@ html.dark .chat-area-new-state {
   position: relative;
   /* Add bottom margin to ensure template suggestions have space */
   margin-bottom: 1rem;
+  box-sizing: border-box;
+  padding-left: 1rem;
+  padding-right: 1rem;
 }
 
 /* ACTIVE CHAT STATE - Scrollable messages */
@@ -104,7 +111,9 @@ html.dark .chat-area-active-state {
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .chat-area-new-state {
-    padding: 0.75rem;
+    padding: 1rem;
+    width: 100%;
+    max-width: 100vw;
   }
   
   .chat-area-active-state {
@@ -113,25 +122,37 @@ html.dark .chat-area-active-state {
   
   .chat-area-centered-container {
     gap: 0.75rem;
+    width: 100%;
+    max-width: 100%;
   }
   
   .chat-area-input-wrapper {
     margin-bottom: 0.75rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    width: 100%;
+    max-width: 100%;
   }
 }
 
 @media (max-width: 480px) {
   .chat-area-new-state {
-    padding: 0.5rem;
+    padding: 1rem;
+    width: 100%;
+    max-width: 100vw;
   }
   
   .chat-area-centered-container {
     gap: 0.5rem;
+    width: 100%;
+    max-width: 100%;
   }
   
   .chat-area-input-wrapper {
     max-width: 100%;
     margin-bottom: 0.5rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
   }
 }
 

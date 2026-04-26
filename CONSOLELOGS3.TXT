@@ -1,2 +1,719 @@
-Google Gemini
-API Error 403
+15:14:44.278 FloatingInput.tsx:73 [FloatingInput] uploadedImages: []
+15:14:44.278 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 0
+15:14:44.278 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:14:44.279 FloatingInput.tsx:76 [FloatingInput] Should render panel: false
+15:14:44.287 chatRegistry.ts:212 [ChatRegistry] 🎯 Explicit user action - attempting AI greeting
+15:14:44.299 greetingService.ts:132 [Greeting] Using model: gemini-flash-latest
+15:14:44.300 greetingService.ts:136 [Greeting] Model found: Gemini Flash (Latest) Provider: google
+15:14:44.300 greetingService.ts:145 [Greeting] API key found! Generating ultra-short greeting with Gemini Flash (Latest)
+15:14:44.302 llmService.ts:76 🔶 [LLM] === SEND MESSAGE START ===
+15:14:44.302 llmService.ts:77 🔶 [LLM] Model: gemini-flash-latest
+15:14:44.302 llmService.ts:78 🔶 [LLM] Message: Generate a brief professional greeting for Sam . Maximum 4-5 words. Be direct and professional. Exam...
+15:14:44.302 llmService.ts:79 🔶 [LLM] Active files: 0
+15:14:44.302 llmService.ts:80 🔶 [LLM] Active sources: 0
+15:14:44.302 llmService.ts:81 🔶 [LLM] History length: 0
+15:14:44.303 geminiService.ts:35 🔵 [GEMINI] === REQUEST START ===
+15:14:44.303 geminiService.ts:36 🔵 [GEMINI] Model: gemini-flash-latest
+15:14:44.303 geminiService.ts:37 🔵 [GEMINI] Message length: 261
+15:14:44.304 geminiService.ts:38 🔵 [GEMINI] Files attached: 0
+15:14:44.304 geminiService.ts:39 🔵 [GEMINI] History messages: 0
+15:14:44.304 geminiService.ts:45 🔵 [GEMINI] Image files: 0
+15:14:44.304 geminiService.ts:46 🔵 [GEMINI] Text files: 0
+15:14:44.304 geminiService.ts:131 🔵 [GEMINI] Request body size: 519 bytes
+15:14:44.304 geminiService.ts:132 🔵 [GEMINI] Total content messages: 1
+15:14:44.304 geminiService.ts:133 🔵 [GEMINI] Current message parts: 1
+15:14:44.305 geminiService.ts:134 🔵 [GEMINI] Sending request to API...
+15:14:45.301 geminiService.ts:137  POST https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:streamGenerateContent?key=AIzaSyARziqSE9UuEk8-jm5aWOYa1uNMcS3Pw8Y&alt=sse 403 (Forbidden)
+sendMessageToGemini @ geminiService.ts:137
+sendMessageToLLM @ llmService.ts:246
+generateAIGreeting @ greetingService.ts:161
+await in generateAIGreeting
+generateGreeting @ greetingService.ts:109
+createNewChat @ chatRegistry.ts:213
+await in createNewChat
+handleCreateChat @ chatHandlers.ts:83
+executeDispatch @ react-dom-client.development.js:19116
+runWithFiberInDEV @ react-dom-client.development.js:871
+processDispatchQueue @ react-dom-client.development.js:19166
+(anonymous) @ react-dom-client.development.js:19767
+batchedUpdates$1 @ react-dom-client.development.js:3255
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:19320
+dispatchEvent @ react-dom-client.development.js:23585
+dispatchDiscreteEvent @ react-dom-client.development.js:23553
+15:14:45.302 geminiService.ts:145 🔵 [GEMINI] Response status: 403 
+15:14:45.303 geminiService.ts:148 🔴 [GEMINI] API ERROR: 403
+sendMessageToGemini @ geminiService.ts:148
+await in sendMessageToGemini
+sendMessageToLLM @ llmService.ts:246
+generateAIGreeting @ greetingService.ts:161
+await in generateAIGreeting
+generateGreeting @ greetingService.ts:109
+createNewChat @ chatRegistry.ts:213
+await in createNewChat
+handleCreateChat @ chatHandlers.ts:83
+executeDispatch @ react-dom-client.development.js:19116
+runWithFiberInDEV @ react-dom-client.development.js:871
+processDispatchQueue @ react-dom-client.development.js:19166
+(anonymous) @ react-dom-client.development.js:19767
+batchedUpdates$1 @ react-dom-client.development.js:3255
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:19320
+dispatchEvent @ react-dom-client.development.js:23585
+dispatchDiscreteEvent @ react-dom-client.development.js:23553
+15:14:45.305 geminiService.ts:150 🔴 [GEMINI] Error details: {
+  "error": {
+    "code": 403,
+    "message": "Your API key was reported as leaked. Please use another API key.",
+    "status": "PERMISSION_DENIED"
+  }
+}
+
+sendMessageToGemini @ geminiService.ts:150
+await in sendMessageToGemini
+sendMessageToLLM @ llmService.ts:246
+generateAIGreeting @ greetingService.ts:161
+await in generateAIGreeting
+generateGreeting @ greetingService.ts:109
+createNewChat @ chatRegistry.ts:213
+await in createNewChat
+handleCreateChat @ chatHandlers.ts:83
+executeDispatch @ react-dom-client.development.js:19116
+runWithFiberInDEV @ react-dom-client.development.js:871
+processDispatchQueue @ react-dom-client.development.js:19166
+(anonymous) @ react-dom-client.development.js:19767
+batchedUpdates$1 @ react-dom-client.development.js:3255
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:19320
+dispatchEvent @ react-dom-client.development.js:23585
+dispatchDiscreteEvent @ react-dom-client.development.js:23553
+15:14:45.306 greetingService.ts:205 Error generating AI greeting: Error: API Error: 
+    at sendMessageToGemini (geminiService.ts:151:11)
+    at async sendMessageToLLM (llmService.ts:246:27)
+    at async GreetingService.generateAIGreeting (greetingService.ts:161:7)
+    at async GreetingService.generateGreeting (greetingService.ts:109:28)
+    at async ChatRegistryService.createNewChat (chatRegistry.ts:213:28)
+    at async handleCreateChat (chatHandlers.ts:83:21)
+generateAIGreeting @ greetingService.ts:205
+await in generateAIGreeting
+generateGreeting @ greetingService.ts:109
+createNewChat @ chatRegistry.ts:213
+await in createNewChat
+handleCreateChat @ chatHandlers.ts:83
+executeDispatch @ react-dom-client.development.js:19116
+runWithFiberInDEV @ react-dom-client.development.js:871
+processDispatchQueue @ react-dom-client.development.js:19166
+(anonymous) @ react-dom-client.development.js:19767
+batchedUpdates$1 @ react-dom-client.development.js:3255
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:19320
+dispatchEvent @ react-dom-client.development.js:23585
+dispatchDiscreteEvent @ react-dom-client.development.js:23553
+15:14:45.308 chatRegistry.ts:216 [ChatRegistry] ✅ AI greeting generated: Good afternoon, Sam ! Ready to code, analyze files, or tackle any challenge you have.
+15:14:45.309 geminiService.ts:137 Fetch failed loading: POST "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:streamGenerateContent?key=AIzaSyARziqSE9UuEk8-jm5aWOYa1uNMcS3Pw8Y&alt=sse".
+sendMessageToGemini @ geminiService.ts:137
+sendMessageToLLM @ llmService.ts:246
+generateAIGreeting @ greetingService.ts:161
+await in generateAIGreeting
+generateGreeting @ greetingService.ts:109
+createNewChat @ chatRegistry.ts:213
+await in createNewChat
+handleCreateChat @ chatHandlers.ts:83
+executeDispatch @ react-dom-client.development.js:19116
+runWithFiberInDEV @ react-dom-client.development.js:871
+processDispatchQueue @ react-dom-client.development.js:19166
+(anonymous) @ react-dom-client.development.js:19767
+batchedUpdates$1 @ react-dom-client.development.js:3255
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:19320
+dispatchEvent @ react-dom-client.development.js:23585
+dispatchDiscreteEvent @ react-dom-client.development.js:23553
+15:14:45.422 FloatingInput.tsx:73 [FloatingInput] uploadedImages: []
+15:14:45.423 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 0
+15:14:45.423 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:14:45.423 FloatingInput.tsx:76 [FloatingInput] Should render panel: false
+15:14:45.424 App.tsx:588 [App] Current chat ID changed: chat_1777205685308_fognbckt3
+15:14:45.581 FloatingInput.tsx:73 [FloatingInput] uploadedImages: []
+15:14:45.582 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 0
+15:14:45.582 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:14:45.583 FloatingInput.tsx:76 [FloatingInput] Should render panel: false
+15:14:53.326 SettingsModal.tsx:204  GET https://generativelanguage.googleapis.com/v1beta/models?key=AIzaSyARziqSE9UuEk8-jm5aWOYa1uNMcS3Pw8Y 403 (Forbidden)
+validateKey @ SettingsModal.tsx:204
+onClick @ SettingsModal.tsx:478
+executeDispatch @ react-dom-client.development.js:19116
+runWithFiberInDEV @ react-dom-client.development.js:871
+processDispatchQueue @ react-dom-client.development.js:19166
+(anonymous) @ react-dom-client.development.js:19767
+batchedUpdates$1 @ react-dom-client.development.js:3255
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:19320
+dispatchEvent @ react-dom-client.development.js:23585
+dispatchDiscreteEvent @ react-dom-client.development.js:23553
+<button>
+exports.jsxDEV @ react-jsx-dev-runtime.development.js:335
+renderApiInput @ SettingsModal.tsx:477
+SettingsModal @ SettingsModal.tsx:775
+react_stack_bottom_frame @ react-dom-client.development.js:25904
+renderWithHooks @ react-dom-client.development.js:7662
+updateFunctionComponent @ react-dom-client.development.js:10166
+beginWork @ react-dom-client.development.js:11778
+runWithFiberInDEV @ react-dom-client.development.js:871
+performUnitOfWork @ react-dom-client.development.js:17641
+workLoopSync @ react-dom-client.development.js:17469
+renderRootSync @ react-dom-client.development.js:17450
+performWorkOnRoot @ react-dom-client.development.js:16504
+performSyncWorkOnRoot @ react-dom-client.development.js:18972
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:18814
+processRootScheduleInMicrotask @ react-dom-client.development.js:18853
+(anonymous) @ react-dom-client.development.js:18991
+<SettingsModal>
+exports.jsxDEV @ react-jsx-dev-runtime.development.js:335
+App @ App.tsx:847
+react_stack_bottom_frame @ react-dom-client.development.js:25904
+renderWithHooks @ react-dom-client.development.js:7662
+updateFunctionComponent @ react-dom-client.development.js:10166
+beginWork @ react-dom-client.development.js:11778
+runWithFiberInDEV @ react-dom-client.development.js:871
+performUnitOfWork @ react-dom-client.development.js:17641
+workLoopSync @ react-dom-client.development.js:17469
+renderRootSync @ react-dom-client.development.js:17450
+performWorkOnRoot @ react-dom-client.development.js:16504
+performSyncWorkOnRoot @ react-dom-client.development.js:18972
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:18814
+processRootScheduleInMicrotask @ react-dom-client.development.js:18853
+(anonymous) @ react-dom-client.development.js:18991
+15:14:53.625 SettingsModal.tsx:204 Fetch failed loading: GET "https://generativelanguage.googleapis.com/v1beta/models?key=AIzaSyARziqSE9UuEk8-jm5aWOYa1uNMcS3Pw8Y".
+validateKey @ SettingsModal.tsx:204
+onClick @ SettingsModal.tsx:478
+executeDispatch @ react-dom-client.development.js:19116
+runWithFiberInDEV @ react-dom-client.development.js:871
+processDispatchQueue @ react-dom-client.development.js:19166
+(anonymous) @ react-dom-client.development.js:19767
+batchedUpdates$1 @ react-dom-client.development.js:3255
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:19320
+dispatchEvent @ react-dom-client.development.js:23585
+dispatchDiscreteEvent @ react-dom-client.development.js:23553
+<button>
+exports.jsxDEV @ react-jsx-dev-runtime.development.js:335
+renderApiInput @ SettingsModal.tsx:477
+SettingsModal @ SettingsModal.tsx:775
+react_stack_bottom_frame @ react-dom-client.development.js:25904
+renderWithHooks @ react-dom-client.development.js:7662
+updateFunctionComponent @ react-dom-client.development.js:10166
+beginWork @ react-dom-client.development.js:11778
+runWithFiberInDEV @ react-dom-client.development.js:871
+performUnitOfWork @ react-dom-client.development.js:17641
+workLoopSync @ react-dom-client.development.js:17469
+renderRootSync @ react-dom-client.development.js:17450
+performWorkOnRoot @ react-dom-client.development.js:16504
+performSyncWorkOnRoot @ react-dom-client.development.js:18972
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:18814
+processRootScheduleInMicrotask @ react-dom-client.development.js:18853
+(anonymous) @ react-dom-client.development.js:18991
+<SettingsModal>
+exports.jsxDEV @ react-jsx-dev-runtime.development.js:335
+App @ App.tsx:847
+react_stack_bottom_frame @ react-dom-client.development.js:25904
+renderWithHooks @ react-dom-client.development.js:7662
+updateFunctionComponent @ react-dom-client.development.js:10166
+beginWork @ react-dom-client.development.js:11778
+runWithFiberInDEV @ react-dom-client.development.js:871
+performUnitOfWork @ react-dom-client.development.js:17641
+workLoopSync @ react-dom-client.development.js:17469
+renderRootSync @ react-dom-client.development.js:17450
+performWorkOnRoot @ react-dom-client.development.js:16504
+performSyncWorkOnRoot @ react-dom-client.development.js:18972
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:18814
+processRootScheduleInMicrotask @ react-dom-client.development.js:18853
+(anonymous) @ react-dom-client.development.js:18991
+15:15:11.918 FloatingInput.tsx:73 [FloatingInput] uploadedImages: []
+15:15:11.919 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 0
+15:15:11.920 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:15:11.920 FloatingInput.tsx:76 [FloatingInput] Should render panel: false
+15:15:19.394 SettingsModal.tsx:204 Fetch finished loading: GET "https://generativelanguage.googleapis.com/v1beta/models?key=AIzaSyDr-KElrNv3whPAqdSqLNJSpgFIwpQszWM".
+validateKey @ SettingsModal.tsx:204
+onClick @ SettingsModal.tsx:478
+executeDispatch @ react-dom-client.development.js:19116
+runWithFiberInDEV @ react-dom-client.development.js:871
+processDispatchQueue @ react-dom-client.development.js:19166
+(anonymous) @ react-dom-client.development.js:19767
+batchedUpdates$1 @ react-dom-client.development.js:3255
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:19320
+dispatchEvent @ react-dom-client.development.js:23585
+dispatchDiscreteEvent @ react-dom-client.development.js:23553
+<button>
+exports.jsxDEV @ react-jsx-dev-runtime.development.js:335
+renderApiInput @ SettingsModal.tsx:477
+SettingsModal @ SettingsModal.tsx:775
+react_stack_bottom_frame @ react-dom-client.development.js:25904
+renderWithHooks @ react-dom-client.development.js:7662
+updateFunctionComponent @ react-dom-client.development.js:10166
+beginWork @ react-dom-client.development.js:11778
+runWithFiberInDEV @ react-dom-client.development.js:871
+performUnitOfWork @ react-dom-client.development.js:17641
+workLoopSync @ react-dom-client.development.js:17469
+renderRootSync @ react-dom-client.development.js:17450
+performWorkOnRoot @ react-dom-client.development.js:16504
+performSyncWorkOnRoot @ react-dom-client.development.js:18972
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:18814
+processRootScheduleInMicrotask @ react-dom-client.development.js:18853
+(anonymous) @ react-dom-client.development.js:18991
+<SettingsModal>
+exports.jsxDEV @ react-jsx-dev-runtime.development.js:335
+App @ App.tsx:847
+react_stack_bottom_frame @ react-dom-client.development.js:25904
+renderWithHooks @ react-dom-client.development.js:7662
+updateFunctionComponent @ react-dom-client.development.js:10166
+beginWork @ react-dom-client.development.js:11778
+runWithFiberInDEV @ react-dom-client.development.js:871
+performUnitOfWork @ react-dom-client.development.js:17641
+workLoopSync @ react-dom-client.development.js:17469
+renderRootSync @ react-dom-client.development.js:17450
+performWorkOnRoot @ react-dom-client.development.js:16504
+performSyncWorkOnRoot @ react-dom-client.development.js:18972
+flushSyncWorkAcrossRoots_impl @ react-dom-client.development.js:18814
+processRootScheduleInMicrotask @ react-dom-client.development.js:18853
+(anonymous) @ react-dom-client.development.js:18991
+15:15:22.108 FloatingInput.tsx:73 [FloatingInput] uploadedImages: []
+15:15:22.108 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 0
+15:15:22.109 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:15:22.109 FloatingInput.tsx:76 [FloatingInput] Should render panel: false
+15:15:34.602 FloatingInput.tsx:73 [FloatingInput] uploadedImages: []
+15:15:34.602 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 0
+15:15:34.603 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:15:34.603 FloatingInput.tsx:76 [FloatingInput] Should render panel: false
+15:15:36.473 FloatingInput.tsx:73 [FloatingInput] uploadedImages: []
+15:15:36.474 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 0
+15:15:36.474 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:15:36.475 FloatingInput.tsx:76 [FloatingInput] Should render panel: false
+15:15:43.088 FloatingInput.tsx:73 [FloatingInput] uploadedImages: []
+15:15:43.089 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 0
+15:15:43.089 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:15:43.090 FloatingInput.tsx:76 [FloatingInput] Should render panel: false
+15:15:48.166 inputHandlers.ts:104 [inputHandlers] handleImageUpload called with files: FileList {0: File, length: 1}
+15:15:48.167 inputHandlers.ts:105 [inputHandlers] Number of files: 1
+15:15:48.167 inputHandlers.ts:111 [inputHandlers] Image files after filter: 1
+15:15:48.168 inputHandlers.ts:143 [inputHandlers] Adding image: {id: 'img-1777205748167-61mggib25', file: File, preview: 'blob:http://localhost:5847/921e4142-ce89-4030-be38-52cba7f9f677', size: 92185, estimatedTokens: 10}
+15:15:48.169 inputHandlers.ts:146 [inputHandlers] New uploadedImages array: [{…}]
+15:15:48.306 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:15:48.307 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:15:48.307 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:15:48.307 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:15:59.169 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:15:59.171 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:15:59.172 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:15:59.172 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:15:59.389 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:15:59.390 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:15:59.390 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:15:59.391 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:15:59.501 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:15:59.502 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:15:59.502 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:15:59.503 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:15:59.621 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:15:59.622 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:15:59.623 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:15:59.623 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:15:59.748 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:15:59.749 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:15:59.749 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:15:59.750 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:15:59.851 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:15:59.852 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:15:59.852 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:15:59.852 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:00.172 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:00.173 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:00.174 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:00.174 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:00.299 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:00.300 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:00.300 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:00.300 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:00.428 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:00.429 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:00.429 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:00.430 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:00.551 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:00.552 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:00.553 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:00.553 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:00.696 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:00.697 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:00.697 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:00.697 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:00.823 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:00.824 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:00.825 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:00.825 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:00.923 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:00.925 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:00.926 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:00.926 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:01.059 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:01.060 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:01.060 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:01.060 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:01.194 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:01.195 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:01.196 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:01.196 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:01.341 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:01.342 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:01.343 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:01.343 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:01.472 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:01.473 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:01.474 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:01.474 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:01.628 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:01.629 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:01.629 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:01.630 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:01.843 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:01.844 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:01.845 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:01.845 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:02.017 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:02.018 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:02.019 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:02.020 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:02.140 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:02.140 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:02.141 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:02.141 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:02.266 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:02.267 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:02.267 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:02.268 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:02.364 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:02.365 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:02.366 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:02.366 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:05.249 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:05.250 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:05.250 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:05.251 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:05.507 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:05.508 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:05.511 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:05.511 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:06.471 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:06.472 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:06.472 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:06.473 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:06.660 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:06.661 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:06.662 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:06.662 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:06.899 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:06.900 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:06.901 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:06.901 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:07.016 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:07.017 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:07.018 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:07.018 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:07.226 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:07.227 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:07.228 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:07.228 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:07.405 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:07.406 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:07.406 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:07.407 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:07.622 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:07.624 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:07.624 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:07.625 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:07.779 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:07.781 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:07.782 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:07.782 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:07.926 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:07.927 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:07.927 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:07.928 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:08.103 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:08.104 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:08.104 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:08.104 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:08.238 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:08.239 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:08.239 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:08.240 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:08.406 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:08.407 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:08.408 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:08.408 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:08.526 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:08.527 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:08.528 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:08.528 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:08.636 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:08.638 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:08.638 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:08.639 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:08.762 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:08.763 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:08.763 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:08.764 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:08.963 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:08.964 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:08.965 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:08.965 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:09.106 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:09.107 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:09.108 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:09.108 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:09.216 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:09.217 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:09.217 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:09.217 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:09.322 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:09.323 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:09.323 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:09.324 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:09.437 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:09.438 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:09.438 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:09.439 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:09.550 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:09.551 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:09.552 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:09.552 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:09.777 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:09.778 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:09.779 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:09.779 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:09.882 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:09.883 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:09.884 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:09.885 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:10.016 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:10.017 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:10.018 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:10.018 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:10.249 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:10.250 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:10.250 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:10.251 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:10.367 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:10.368 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:10.368 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:10.369 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:10.567 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:10.568 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:10.568 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:10.568 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:10.743 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:10.744 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:10.745 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:10.745 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:10.876 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:10.877 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:10.877 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:10.878 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:10.998 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:10.999 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:10.999 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:11.000 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:11.115 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:11.116 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:11.116 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:11.116 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:11.204 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:11.205 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:11.205 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:11.205 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:11.302 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:11.303 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:11.304 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:11.304 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:11.393 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:11.394 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:11.394 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:11.394 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:11.589 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:11.590 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:11.590 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:11.591 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:11.730 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:11.731 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:11.732 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:11.732 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:11.849 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:11.850 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:11.850 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:11.851 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:11.949 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:11.950 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:11.950 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:11.950 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:12.054 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:12.055 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:12.056 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:12.057 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:12.955 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:12.957 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:12.959 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:12.960 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:13.125 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:13.128 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:13.129 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:13.130 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:13.269 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:13.270 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:13.271 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:13.271 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:13.413 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:13.414 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:13.414 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:13.415 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:13.528 FloatingInput.tsx:73 [FloatingInput] uploadedImages: [{…}]
+15:16:13.528 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 1
+15:16:13.529 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:13.529 FloatingInput.tsx:76 [FloatingInput] Should render panel: (id) => inputHandlers.handleRemoveImage(id)
+15:16:14.095 messageHandlers.ts:89 [MessageHandler] Sending images to vision model: 1
+15:16:14.095 messageHandlers.ts:115 [MessageHandler] Selected files: []
+15:16:14.096 messageHandlers.ts:116 [MessageHandler] Image files: 1
+15:16:14.096 messageHandlers.ts:117 [MessageHandler] Selected source IDs: []
+15:16:14.097 messageHandlers.ts:129 [MessageHandler] Context result: {chunksCount: 0, totalTokens: 0, filesUsed: Array(0)}
+15:16:14.098 messageHandlers.ts:157 [MessageHandler] Context result: {totalTokens: 0, filesUsed: 0, chunksCount: 0, selectedFilesCount: 0, imageFilesCount: 1}
+15:16:14.098 messageHandlers.ts:166 [MessageHandler] Sources: []
+15:16:14.099 messageHandlers.ts:170 [MessageHandler] Sending to LLM with 0 documents and 1 images
+15:16:14.100 messageHandlers.ts:202 [MessageHandler] Sending to LLM, model: gemini-2.5-flash-lite
+15:16:14.100 messageHandlers.ts:227 [MessageHandler] Fetched sources: 0
+15:16:14.101 llmService.ts:76 🔶 [LLM] === SEND MESSAGE START ===
+15:16:14.101 llmService.ts:77 🔶 [LLM] Model: gemini-2.5-flash-lite
+15:16:14.101 llmService.ts:78 🔶 [LLM] Message: analyze the image as an expert in the construction and design field...
+15:16:14.101 llmService.ts:79 🔶 [LLM] Active files: 1
+15:16:14.101 llmService.ts:80 🔶 [LLM] Active sources: 0
+15:16:14.101 llmService.ts:81 🔶 [LLM] History length: 1
+15:16:14.102 geminiService.ts:35 🔵 [GEMINI] === REQUEST START ===
+15:16:14.102 geminiService.ts:36 🔵 [GEMINI] Model: gemini-2.5-flash-lite
+15:16:14.102 geminiService.ts:37 🔵 [GEMINI] Message length: 545
+15:16:14.102 geminiService.ts:38 🔵 [GEMINI] Files attached: 1
+15:16:14.102 geminiService.ts:39 🔵 [GEMINI] History messages: 0
+15:16:14.103 geminiService.ts:45 🔵 [GEMINI] Image files: 1
+15:16:14.103 geminiService.ts:46 🔵 [GEMINI] Text files: 0
+15:16:14.103 geminiService.ts:53 🔵 [GEMINI] Uploading image to File API: WhatsApp Image 2023-08-02 at 3.59.08 PM (2).jpeg (90KB)
+15:16:14.312 FloatingInput.tsx:73 [FloatingInput] uploadedImages: []
+15:16:14.313 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 0
+15:16:14.314 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:14.314 FloatingInput.tsx:76 [FloatingInput] Should render panel: false
+15:16:14.421 FloatingInput.tsx:73 [FloatingInput] uploadedImages: []
+15:16:14.421 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 0
+15:16:14.421 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:14.422 FloatingInput.tsx:76 [FloatingInput] Should render panel: false
+15:16:15.125 FloatingInput.tsx:73 [FloatingInput] uploadedImages: []
+15:16:15.126 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 0
+15:16:15.126 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:15.127 FloatingInput.tsx:76 [FloatingInput] Should render panel: false
+15:16:15.432 FloatingInput.tsx:73 [FloatingInput] uploadedImages: []
+15:16:15.432 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 0
+15:16:15.432 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:15.433 FloatingInput.tsx:76 [FloatingInput] Should render panel: false
+15:16:16.551 geminiService.ts:70 🔵 [GEMINI] ✅ Image uploaded successfully: https://generativelanguage.googleapis.com/v1beta/files/9oxtjyoewoy6 (~123 tokens)
+15:16:16.551 geminiService.ts:106 🔵 [GEMINI] Adding file reference (efficient): https://generativelanguage.googleapis.com/v1beta/files/9oxtjyoewoy6
+15:16:16.551 geminiService.ts:131 🔵 [GEMINI] Request body size: 1293 bytes
+15:16:16.551 geminiService.ts:132 🔵 [GEMINI] Total content messages: 1
+15:16:16.551 geminiService.ts:133 🔵 [GEMINI] Current message parts: 2
+15:16:16.551 geminiService.ts:134 🔵 [GEMINI] Sending request to API...
+15:16:17.007 geminiService.ts:59 Fetch finished loading: POST "https://generativelanguage.googleapis.com/upload/v1beta/files?key=AIzaSyDr-KElrNv3whPAqdSqLNJSpgFIwpQszWM".
+sendMessageToGemini @ geminiService.ts:59
+sendMessageToLLM @ llmService.ts:246
+sendMessageWithContext @ messageHandlers.ts:237
+handleSendMessage @ messageHandlers.ts:153
+await in handleSendMessage
+handleKeyDown @ inputHandlers.ts:99
+handleKeyDownInternal @ FloatingInput.tsx:146
+executeDispatch @ react-dom-client.development.js:19116
+runWithFiberInDEV @ react-dom-client.development.js:871
+processDispatchQueue @ react-dom-client.development.js:19166
+(anonymous) @ react-dom-client.development.js:19767
+batchedUpdates$1 @ react-dom-client.development.js:3255
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:19320
+dispatchEvent @ react-dom-client.development.js:23585
+dispatchDiscreteEvent @ react-dom-client.development.js:23553
+15:16:20.067 geminiService.ts:145 🔵 [GEMINI] Response status: 200 
+15:16:20.069 geminiService.ts:155 🟢 [GEMINI] Streaming response started...
+15:16:20.073 geminiService.ts:200 🟢 [GEMINI] Streaming complete
+15:16:20.074 geminiService.ts:201 🟢 [GEMINI] Chunks received: 2
+15:16:20.074 geminiService.ts:202 🟢 [GEMINI] Total characters: 55
+15:16:20.074 geminiService.ts:203 🟢 [GEMINI] Token usage: {inputTokens: 488, outputTokens: 10, totalTokens: 498}
+15:16:20.075 geminiService.ts:204 🔵 [GEMINI] === REQUEST END ===
+15:16:20.076 messageHandlers.ts:262 [MessageHandler] LLM response complete. Usage: {inputTokens: 488, outputTokens: 10, totalTokens: 498}
+15:16:20.077 messageHandlers.ts:263 [MessageHandler] Final content length: 55
+15:16:20.079 llmService.ts:76 🔶 [LLM] === SEND MESSAGE START ===
+15:16:20.079 llmService.ts:77 🔶 [LLM] Model: gemini-2.5-flash-lite
+15:16:20.080 llmService.ts:78 🔶 [LLM] Message: You must create a descriptive 3-word title that summarizes the TOPIC of this user request. DO NOT ju...
+15:16:20.080 llmService.ts:79 🔶 [LLM] Active files: 0
+15:16:20.080 llmService.ts:80 🔶 [LLM] Active sources: 0
+15:16:20.081 llmService.ts:81 🔶 [LLM] History length: 0
+15:16:20.081 geminiService.ts:35 🔵 [GEMINI] === REQUEST START ===
+15:16:20.081 geminiService.ts:36 🔵 [GEMINI] Model: gemini-2.5-flash-lite
+15:16:20.082 geminiService.ts:37 🔵 [GEMINI] Message length: 634
+15:16:20.082 geminiService.ts:38 🔵 [GEMINI] Files attached: 0
+15:16:20.083 geminiService.ts:39 🔵 [GEMINI] History messages: 0
+15:16:20.085 geminiService.ts:45 🔵 [GEMINI] Image files: 0
+15:16:20.085 geminiService.ts:46 🔵 [GEMINI] Text files: 0
+15:16:20.086 geminiService.ts:131 🔵 [GEMINI] Request body size: 920 bytes
+15:16:20.086 geminiService.ts:132 🔵 [GEMINI] Total content messages: 1
+15:16:20.087 geminiService.ts:133 🔵 [GEMINI] Current message parts: 1
+15:16:20.087 geminiService.ts:134 🔵 [GEMINI] Sending request to API...
+15:16:20.146 geminiService.ts:137 Fetch finished loading: POST "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:streamGenerateContent?key=AIzaSyDr-KElrNv3whPAqdSqLNJSpgFIwpQszWM&alt=sse".
+sendMessageToGemini @ geminiService.ts:137
+await in sendMessageToGemini
+sendMessageToLLM @ llmService.ts:246
+sendMessageWithContext @ messageHandlers.ts:237
+handleSendMessage @ messageHandlers.ts:153
+await in handleSendMessage
+handleKeyDown @ inputHandlers.ts:99
+handleKeyDownInternal @ FloatingInput.tsx:146
+executeDispatch @ react-dom-client.development.js:19116
+runWithFiberInDEV @ react-dom-client.development.js:871
+processDispatchQueue @ react-dom-client.development.js:19166
+(anonymous) @ react-dom-client.development.js:19767
+batchedUpdates$1 @ react-dom-client.development.js:3255
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:19320
+dispatchEvent @ react-dom-client.development.js:23585
+dispatchDiscreteEvent @ react-dom-client.development.js:23553
+15:16:20.229 FloatingInput.tsx:73 [FloatingInput] uploadedImages: []
+15:16:20.230 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 0
+15:16:20.230 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:20.230 FloatingInput.tsx:76 [FloatingInput] Should render panel: false
+15:16:21.365 FloatingInput.tsx:73 [FloatingInput] uploadedImages: []
+15:16:21.365 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 0
+15:16:21.366 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:21.367 FloatingInput.tsx:76 [FloatingInput] Should render panel: false
+15:16:21.504 geminiService.ts:145 🔵 [GEMINI] Response status: 200 
+15:16:21.504 geminiService.ts:155 🟢 [GEMINI] Streaming response started...
+15:16:21.506 geminiService.ts:200 🟢 [GEMINI] Streaming complete
+15:16:21.507 geminiService.ts:201 🟢 [GEMINI] Chunks received: 2
+15:16:21.507 geminiService.ts:202 🟢 [GEMINI] Total characters: 28
+15:16:21.507 geminiService.ts:203 🟢 [GEMINI] Token usage: {inputTokens: 184, outputTokens: 3, totalTokens: 187}
+15:16:21.507 geminiService.ts:204 🔵 [GEMINI] === REQUEST END ===
+15:16:21.602 FloatingInput.tsx:73 [FloatingInput] uploadedImages: []
+15:16:21.603 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 0
+15:16:21.603 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:21.603 FloatingInput.tsx:76 [FloatingInput] Should render panel: false
+15:16:21.656 geminiService.ts:137 Fetch finished loading: POST "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:streamGenerateContent?key=AIzaSyDr-KElrNv3whPAqdSqLNJSpgFIwpQszWM&alt=sse".
+sendMessageToGemini @ geminiService.ts:137
+sendMessageToLLM @ llmService.ts:246
+generateChatTitle @ messageHandlers.ts:48
+sendMessageWithContext @ messageHandlers.ts:294
+await in sendMessageWithContext
+handleSendMessage @ messageHandlers.ts:153
+await in handleSendMessage
+handleKeyDown @ inputHandlers.ts:99
+handleKeyDownInternal @ FloatingInput.tsx:146
+executeDispatch @ react-dom-client.development.js:19116
+runWithFiberInDEV @ react-dom-client.development.js:871
+processDispatchQueue @ react-dom-client.development.js:19166
+(anonymous) @ react-dom-client.development.js:19767
+batchedUpdates$1 @ react-dom-client.development.js:3255
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:19320
+dispatchEvent @ react-dom-client.development.js:23585
+dispatchDiscreteEvent @ react-dom-client.development.js:23553
+15:16:23.262 FloatingInput.tsx:73 [FloatingInput] uploadedImages: []
+15:16:23.262 FloatingInput.tsx:74 [FloatingInput] uploadedImages.length: 0
+15:16:23.263 FloatingInput.tsx:75 [FloatingInput] onRemoveImage exists: true
+15:16:23.263 FloatingInput.tsx:76 [FloatingInput] Should render panel: false
+15:16:30.550 ragService.ts:29 [RAG] Status changed: ❌ DISABLED
+15:16:36.134 ragService.ts:29 [RAG] Status changed: ✅ ENABLED

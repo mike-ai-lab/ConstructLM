@@ -26,7 +26,6 @@ class RAGService {
   setEnabled(enabled: boolean) {
     this.enabled = enabled;
     localStorage.setItem('constructlm_rag_enabled', enabled ? 'true' : 'false');
-    console.log('[RAG] Status changed:', enabled ? '✅ ENABLED' : '❌ DISABLED');
   }
 
   isEnabled(): boolean {
@@ -53,7 +52,6 @@ class RAGService {
       
       // Use provided fileIds or get all indexed files
       const targetFiles = fileIds && fileIds.length > 0 ? fileIds : await this.getAllFileIds();
-      console.log(`[RAG] Searching across ${targetFiles.length} ${fileIds ? 'selected' : 'indexed'} files`);
       
       if (targetFiles.length === 0) {
         console.log('[RAG] No files to search');
@@ -69,7 +67,6 @@ class RAGService {
       const chunksPerQuery = queries.length > 1 ? limit : limit; // Don't reduce for multi-query
       
       for (const subQuery of queries) {
-        console.log(`[RAG] Sub-query: "${subQuery}"`);
         const chunks = await embeddingService.searchSimilar(subQuery, targetFiles, chunksPerQuery);
         chunks.forEach(chunk => {
           const key = `${chunk.fileId}_${chunk.chunkIndex}`;

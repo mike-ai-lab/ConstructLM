@@ -19,25 +19,30 @@ export const createFeatureHandlers = (
   activeModelId: string
 ) => {
   const handleTakeSnapshot = async () => {
-    const button = document.querySelector('[title="Take snapshot"]');
-    const originalIcon = button?.innerHTML;
+    console.log('[featureHandlers] handleTakeSnapshot called');
     try {
       const messagesContainer = document.querySelector('.max-w-3xl.mx-auto.w-full');
-      if (!messagesContainer) return;
+      console.log('[featureHandlers] Messages container found:', !!messagesContainer);
       
-      if (button) button.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+      if (!messagesContainer) {
+        console.error('[featureHandlers] Messages container not found');
+        showToast('Could not find chat area to snapshot', 'error');
+        return;
+      }
       
       const context = { fileCount: files.length, messageCount: messages.length };
+      console.log('[featureHandlers] Taking snapshot with context:', context);
+      
       const snapshot = await snapshotService.takeSnapshot(messagesContainer as HTMLElement, context);
+      console.log('[featureHandlers] Snapshot taken:', snapshot);
+      
       setSnapshots(snapshotService.getSnapshots());
       activityLogger.logAction('SNAPSHOT', 'Snapshot taken', { messageCount: messages.length, fileCount: files.length });
       
-      setTimeout(() => {
-        if (button && originalIcon) button.innerHTML = originalIcon;
-      }, 800);
+      showToast('Snapshot captured successfully!', 'success');
     } catch (error: any) {
-      console.error('Failed to take snapshot:', error);
-      if (button && originalIcon) button.innerHTML = originalIcon;
+      console.error('[featureHandlers] Failed to take snapshot:', error);
+      showToast('Failed to take snapshot', 'error');
     }
   };
 

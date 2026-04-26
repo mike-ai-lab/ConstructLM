@@ -756,7 +756,7 @@ const App: React.FC = () => {
   const WebViewerComponent = isElectron ? TabbedWebViewerElectron : TabbedWebViewer;
 
   return (
-    <div className="flex h-screen w-full bg-white dark:bg-[#1a1a1a] overflow-hidden text-sm relative">
+    <div className="flex h-screen w-full bg-white dark:bg-[#1a1a1a] overflow-hidden text-sm relative pb-0 md:pb-0" style={{ paddingBottom: layoutState.isMobile ? '60px' : '0' }}>
 
       {triggeredReminder && (
         <ReminderOverlay
@@ -894,22 +894,25 @@ const App: React.FC = () => {
         }}
       />
       
-      {layoutState.isMobile && !layoutState.isSidebarOpen && (
-        <button 
-          onClick={() => layoutState.setIsSidebarOpen(true)}
-          className="absolute top-4 left-4 z-50 p-2 bg-white shadow-md rounded-full border border-gray-200"
-        >
-          <Menu size={20} className="text-gray-600" />
-        </button>
-      )}
-
       {activeTab === 'chat' && (
-        <div 
-          className={`fixed md:relative z-40 h-full bg-[#f9f9f9] dark:bg-[#2a2a2a] flex flex-col border-r border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] transition-all duration-300 ease-in-out ${layoutState.isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} ${!layoutState.isSidebarOpen && !layoutState.isMobile ? 'md:w-0 md:opacity-0 md:overflow-hidden' : ''} overflow-hidden`}
-          style={{ 
-            width: layoutState.isMobile ? '85%' : (layoutState.isSidebarOpen ? layoutState.sidebarWidth : 0)
-          }}
-        >
+        <>
+          {/* Mobile sidebar overlay */}
+          {layoutState.isMobile && layoutState.isSidebarOpen && (
+            <div 
+              className="fixed inset-0 bg-black/50 z-30"
+              onClick={() => layoutState.setIsSidebarOpen(false)}
+            />
+          )}
+          
+          <div 
+            className={`fixed md:relative bg-[#f9f9f9] dark:bg-[#1e1f20] flex flex-col border-r border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] transition-all duration-300 ease-in-out ${layoutState.isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} ${!layoutState.isSidebarOpen && !layoutState.isMobile ? 'md:w-0 md:opacity-0 md:overflow-hidden' : ''} overflow-hidden`}
+            style={{ 
+              width: layoutState.isMobile ? '85%' : (layoutState.isSidebarOpen ? layoutState.sidebarWidth : 0),
+              height: layoutState.isMobile ? 'calc(100% - 156px)' : '100%',
+              top: layoutState.isMobile ? '65px' : 'auto',
+              zIndex: 60
+            }}
+          >
           <FileSidebar 
             files={fileState.files} 
             onUpload={fileHandlers.handleFileUpload} 
@@ -947,12 +950,13 @@ const App: React.FC = () => {
             />
           )}
         </div>
+        </>
       )}
 
 
 
       {/* MIDDLE CHAT AREA */}
-      <div className="flex-1 flex flex-col h-full relative bg-white dark:bg-[#1a1a1a] transition-all duration-300" style={{ minWidth: MIN_CHAT_WIDTH }}>
+      <div className="flex-1 flex flex-col h-full relative bg-white dark:bg-[#1a1a1a] transition-all duration-300" style={{ minWidth: layoutState.isMobile ? 0 : MIN_CHAT_WIDTH, width: '100%', maxWidth: '100%' }}>
         {!featureState.isHelpOpen && (
           <AppHeader
           isMobile={layoutState.isMobile}
@@ -1150,7 +1154,7 @@ const App: React.FC = () => {
 
         {/* Floating Input Area - Only show at bottom when NOT in new chat state */}
         {!featureState.mindMapData && !featureState.isSettingsOpen && !featureState.isCallingEffect && !featureState.isHelpOpen && activeTab === 'chat' && !(showGreeting && chatState.messages.length === 1 && chatState.messages[0].id === 'intro') && (
-        <div className="flex justify-center px-4 pb-2 w-full bg-white dark:bg-[#1a1a1a] relative z-10">
+        <div className="flex justify-center px-2 md:px-4 pb-2 w-full bg-white dark:bg-[#1a1a1a] relative z-10">
             <div className="w-full max-w-[800px]">
             <FloatingInput
               input={inputState.input}

@@ -19,8 +19,6 @@ export async function* streamOpenRouter(
     max_tokens: 8192
   };
 
-  console.log('[OpenRouter] Sending request:', { model: modelId, messageCount: messages.length });
-
   try {
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -98,7 +96,6 @@ export async function* streamOpenRouter(
       }
     }
 
-    console.log('[OpenRouter] Stream complete. Usage:', usage);
     return usage;
     
   } catch (error: any) {

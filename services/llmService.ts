@@ -1,4 +1,4 @@
-
+﻿
 import { Message, ProcessedFile, ModelConfig } from "../types";
 import { getModel, getApiKeyForModel, setRateLimitCooldown, getStoredApiKey } from "./modelRegistry";
 import { sendMessageToGemini } from "./geminiService";
@@ -73,12 +73,6 @@ export const sendMessageToLLM = async (
   onStream: (chunk: string, thinking?: string) => void,
   activeSources: any[] = []
 ): Promise<{ inputTokens?: number; outputTokens?: number; totalTokens?: number }> => {
-    console.log('🔶 [LLM] === SEND MESSAGE START ===');
-    console.log('🔶 [LLM] Model:', modelId);
-    console.log('🔶 [LLM] Message:', newMessage.substring(0, 100) + '...');
-    console.log('🔶 [LLM] Active files:', activeFiles.length);
-    console.log('🔶 [LLM] Active sources:', activeSources.length);
-    console.log('🔶 [LLM] History length:', history.length);
     
     const model = getModel(modelId);
     
@@ -121,17 +115,10 @@ export const sendMessageToLLM = async (
                 chunkLimit = 20; // Mixed - increased from 10
             }
             
-            console.log(`[RAG] Using ${chunkLimit} chunks (Excel/CSV: ${hasStructuredFiles}, PDF: ${hasPdfFiles})`);
-            
             const ragResults = await ragService.searchRelevantChunks(newMessage, chunkLimit, selectedFileIds);
             
             if (ragResults.length > 0) {
                 console.log(`[RAG] ✅ Found ${ragResults.length} relevant chunks from selected files`);
-                
-                // DEBUG: Log first chunk to verify page numbers
-                if (ragResults.length > 0) {
-                    console.log('[RAG] 🔍 First chunk preview:', ragResults[0].chunk.content.substring(0, 200));
-                }
                 
                 ragContext = '\n\nRELEVANT CONTEXT FROM SEMANTIC SEARCH:\n' + 
                     ragResults.map((result, i) => {
@@ -149,30 +136,6 @@ export const sendMessageToLLM = async (
             } else {
                 console.log('[RAG] No relevant chunks found in selected files');
             }
-            
-            // Construct system prompt
-            const baseSystemPrompt = constructBaseSystemPrompt(activeFiles.length > 0, activeSources.length > 0, activeSources, activeFiles);
-            const systemPrompt = baseSystemPrompt + ragContext;
-            
-            // FULL REQUEST LOGGING (always show, even if no RAG results)
-            const systemPromptTokens = Math.ceil(systemPrompt.length / 4);
-            const ragContextTokens = Math.ceil(ragContext.length / 4);
-            const userMessageTokens = Math.ceil(newMessage.length / 4);
-            const totalRequestTokens = systemPromptTokens + ragContextTokens + userMessageTokens;
-            
-            console.log('\n🔶 [RAG] === FULL REQUEST BREAKDOWN ===');
-            console.log(`���� System Prompt: ${systemPromptTokens} tokens`);
-            console.log(`📊 RAG Context: ${ragContextTokens} tokens (${ragResults.length} chunks)`);
-            console.log(`📊 User Message: ${userMessageTokens} tokens`);
-            console.log(`📊 TOTAL REQUEST: ${totalRequestTokens} tokens`);
-            console.log(`📊 Model Limits: Groq ~8K, Gemini ~1M, GPT-4o ~128K`);
-            console.log('\n📄 FULL SYSTEM PROMPT (first 500 chars):');
-            console.log(systemPrompt.substring(0, 500));
-            console.log('\n📄 FULL RAG CONTEXT (first 500 chars):');
-            console.log(ragContext.substring(0, 500));
-            console.log('\n📄 USER MESSAGE:');
-            console.log(newMessage);
-            console.log('\n🔶 === END FULL REQUEST ===\n');
         } catch (error) {
             console.warn('[RAG] Search failed, continuing without RAG context:', error);
         }
@@ -300,7 +263,6 @@ export const sendMessageToLLM = async (
                         try {
                             const base64 = await fileToBase64(imgFile.fileHandle);
                             const sizeKB = Math.round(imgFile.size / 1024);
-                            console.log(`[OpenAI] Converting image to base64: ${imgFile.name} (${sizeKB}KB)`);
                             contentParts.push({
                                 type: 'image_url',
                                 image_url: {
@@ -320,9 +282,6 @@ export const sendMessageToLLM = async (
             }
             
             // DIAGNOSTIC: 5. LLM CONTEXT ASSEMBLY (Full Prompt)
-            console.log('[LLM] Final system prompt being sent (first 300 chars):', finalSystemPrompt.substring(0, 300));
-            console.log('[LLM] Final system prompt length:', finalSystemPrompt.length);
-            console.log('[LLM] Messages array:', messages.map((m, i) => ({ index: i, role: m.role, contentLength: typeof m.content === 'string' ? m.content.length : 'multipart' })));
             
             diagnosticLogger.log('5. LLM_CONTEXT_FULL_PROMPT', {
                 model_id: modelId,
@@ -389,7 +348,6 @@ export const sendMessageToLLM = async (
                         try {
                             const base64 = await fileToBase64(imgFile.fileHandle);
                             const sizeKB = Math.round(imgFile.size / 1024);
-                            console.log(`[OpenRouter] Converting image to base64: ${imgFile.name} (${sizeKB}KB)`);
                             contentParts.push({
                                 type: 'image_url',
                                 image_url: {
@@ -407,8 +365,6 @@ export const sendMessageToLLM = async (
                 // Standard text-only message
                 messages.push({ role: 'user', content: newMessage });
             }
-            
-            console.log('[OpenRouter] Sending request with', messages.length, 'messages', imageFiles.length > 0 ? `(${imageFiles.length} images)` : '');
             
             // Consume the generator properly
             const generator = streamOpenRouter(model.id, apiKey, messages, onStream);
