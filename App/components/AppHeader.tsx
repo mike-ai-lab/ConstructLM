@@ -5,6 +5,7 @@ import { DRAWING_COLORS } from '../../services/drawingService';
 import GraphicsLibrary from '../../components/GraphicsLibrary';
 import { InteractiveBlob } from '../../components/InteractiveBlob';
 import ActionButton from './ActionButton';
+import { Theme } from '../../hooks/useTheme';
 
 interface AppHeaderProps {
   isMobile: boolean;
@@ -49,6 +50,7 @@ interface AppHeaderProps {
   notesCount?: number;
   onOpenNotebook?: () => void;
   activeTab?: 'chat' | 'notebook' | 'todos' | 'github';
+  theme: Theme;
   toggleTheme: () => void;
   onTabChange?: (tab: 'chat' | 'notebook' | 'todos' | 'github') => void;
   todosCount?: number;
@@ -491,7 +493,8 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
                 )}
               </button>
 
-              {props.showGraphicsLibrary && (
+              {/* OLD GRAPHICS LIBRARY DROPDOWN - COMMENTED OUT, NOW USING MODAL */}
+              {/* {props.showGraphicsLibrary && (
                 <div className="absolute right-0 top-full mt-2 w-96 max-h-96 bg-white dark:bg-[#222222] rounded-lg shadow-xl border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] z-50 overflow-hidden flex flex-col">
                   <GraphicsLibrary
                     isOpen={props.showGraphicsLibrary}
@@ -503,7 +506,7 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
                     onClose={() => props.setShowGraphicsLibrary(false)}
                   />
                 </div>
-              )}
+              )} */}
             </div>
           </>
         )}
@@ -516,27 +519,34 @@ const AppHeader: React.FC<AppHeaderProps> = (props) => {
               props.setIsLiveMode(true);
             }, 1000);
           } : undefined}
-          onSnapshot={props.handleTakeSnapshot}
+          // onSnapshot={props.handleTakeSnapshot}
           onGraphics={() => props.setShowGraphicsLibrary(!props.showGraphicsLibrary)}
           onThemeToggle={props.toggleTheme}
           onHelp={() => props.setIsHelpOpen(true)}
           onSettings={() => props.setIsSettingsOpen(true)}
           isLiveMode={props.isLiveMode}
-          isDarkTheme={document.documentElement.classList.contains('dark')}
+          isDarkTheme={props.theme === 'dark'}
           isMobile={props.isMobile}
         />
       </div>
       
       {/* Graphics Library Modal - Accessible from both mobile and desktop */}
       {props.showGraphicsLibrary && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50" onClick={() => props.setShowGraphicsLibrary(false)}>
-          <div className="w-full max-w-2xl max-h-[80vh] bg-white dark:bg-[#222222] rounded-lg shadow-xl border border-[rgba(0,0,0,0.15)] dark:border-[rgba(255,255,255,0.05)] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <div 
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50" 
+          onClick={() => props.setShowGraphicsLibrary(false)}
+        >
+          <div 
+            className="w-full max-w-2xl max-h-[80vh] rounded-lg shadow-xl border border-[rgba(255,255,255,0.1)] overflow-hidden flex flex-col" 
+            style={{ backgroundColor: '#1e1f20' }}
+            onClick={(e) => e.stopPropagation()}
+          >
             <GraphicsLibrary
               isOpen={props.showGraphicsLibrary}
-              snapshots={props.snapshots}
-              onDownloadSnapshot={props.handleDownloadSnapshot}
-              onCopySnapshot={props.handleCopySnapshot}
-              onDeleteSnapshot={props.handleDeleteSnapshot}
+              // snapshots={props.snapshots}
+              // onDownloadSnapshot={props.handleDownloadSnapshot}
+              // onCopySnapshot={props.handleCopySnapshot}
+              // onDeleteSnapshot={props.handleDeleteSnapshot}
               onOpenMindMap={props.handleOpenMindMapFromLibrary}
               onClose={() => props.setShowGraphicsLibrary(false)}
             />

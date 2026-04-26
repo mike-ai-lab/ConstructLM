@@ -201,8 +201,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
 
             try {
                 if (provider === 'google') {
-                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`, {
+                    // Use header-based authentication to prevent API key exposure in browser logs
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models`, {
                         method: 'GET',
+                        headers: {
+                            'x-goog-api-key': key  // Use header instead of URL parameter
+                        },
                         signal: controller.signal
                     });
                     if (!response.ok) {

@@ -374,7 +374,7 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
               return (
                   <div key={node.path} className="select-none">
                       <div 
-                        className="flex items-center gap-1.5 px-2 py-1.5 hover:bg-[#eaeaea] dark:hover:bg-[#2a2a2a] rounded cursor-pointer text-[#1a1a1a] dark:text-white group"
+                        className="flex items-center gap-1.5 px-2 py-1.5 hover:bg-[#181819] rounded cursor-pointer text-[#1a1a1a] dark:text-white group"
                         style={{ paddingLeft: `${depth * 12 + 8}px` }}
                         onClick={() => toggleFolder(node.path)}
                       >
@@ -428,7 +428,7 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
                     }}
                     className={`
                         group relative flex items-center gap-1.5 px-2 py-1.5 rounded-md transition-all cursor-grab active:cursor-grabbing
-                        ${file.status === 'error' ? 'bg-red-50 dark:bg-red-900/20' : 'hover:bg-[#eaeaea] dark:hover:bg-[#2a2a2a]'}
+                        ${file.status === 'error' ? 'bg-red-50 dark:bg-red-900/20' : 'hover:bg-[#181819]'}
                     `}
                     style={{ paddingLeft: `${depth * 12 + 8}px` }}
                 >
@@ -530,13 +530,13 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
       )}
 
       {/* Tab Navigation */}
-      <div className="h-[65px] flex-shrink-0 flex bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] border-b border-[rgba(0,0,0,0.1)] dark:border-[rgba(255,255,255,0.05)]">
+      <div className="h-[65px] flex-shrink-0 flex bg-[#181819] border-b border-[rgba(255,255,255,0.05)]">
         <button
           onClick={() => setActiveTab('files')}
           className={`flex-1 h-full px-2 text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 min-w-0 ${
             activeTab === 'files' 
-              ? 'text-[#333333] dark:text-[#cccccc] border-b-2 border-[#4485d1]' 
-              : 'text-[#666666] dark:text-[#a0a0a0] hover:text-[#333333] dark:hover:text-[#cccccc]'
+              ? 'text-[#cccccc] border-b-2 border-[#4485d1]' 
+              : 'text-[#a0a0a0] hover:text-[#cccccc]'
           }`}
         >
           <Files size={14} className="flex-shrink-0" />
@@ -546,8 +546,8 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
           onClick={() => setActiveTab('chats')}
           className={`flex-1 h-full px-2 text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 min-w-0 ${
             activeTab === 'chats' 
-              ? 'text-[#333333] dark:text-[#cccccc] border-b-2 border-[#4485d1]' 
-              : 'text-[#666666] dark:text-[#a0a0a0] hover:text-[#333333] dark:hover:text-[#cccccc]'
+              ? 'text-[#cccccc] border-b-2 border-[#4485d1]' 
+              : 'text-[#a0a0a0] hover:text-[#cccccc]'
           }`}
         >
           <MessageCircle size={14} className="flex-shrink-0" />
@@ -573,7 +573,7 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
                     <>
                       <button
                         onClick={handleAutoOrganize}
-                        className="p-1.5 text-[#666666] dark:text-[#a0a0a0] hover:bg-[#eaeaea] dark:hover:bg-[#2a2a2a] rounded-lg transition-colors text-[10px] font-semibold"
+                        className="p-1.5 text-[#666666] dark:text-[#a0a0a0] hover:bg-[#181819] rounded-lg transition-colors text-[10px] font-semibold"
                         title="Auto-organize by extension"
                       >
                         <List size={14} />
@@ -587,7 +587,7 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
                             files.filter(f => !selectedSourceIds.includes(f.id)).forEach(f => onToggleSource(f.id));
                           }
                         }}
-                        className="p-1.5 text-[#666666] dark:text-[#a0a0a0] hover:bg-[#eaeaea] dark:hover:bg-[#2a2a2a] rounded-lg transition-colors text-[10px] font-semibold"
+                        className="p-1.5 text-[#666666] dark:text-[#a0a0a0] hover:bg-[#181819] rounded-lg transition-colors text-[10px] font-semibold"
                         title={files.every(f => selectedSourceIds.includes(f.id)) ? "Deselect All" : "Select All"}
                       >
                         {files.every(f => selectedSourceIds.includes(f.id)) ? "Deselect All" : "Select All"}
@@ -597,7 +597,7 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
                   <button
                     onClick={() => handleCreateFolder()}
                     disabled={isProcessing}
-                    className="p-1.5 text-[#666666] dark:text-[#a0a0a0] hover:bg-[#eaeaea] dark:hover:bg-[#2a2a2a] rounded-lg transition-colors disabled:opacity-50"
+                    className="p-1.5 text-[#666666] dark:text-[#a0a0a0] hover:bg-[#181819] rounded-lg transition-colors disabled:opacity-50"
                     title="Create Folder"
                   >
                     <FolderPlus size={14} />
@@ -625,7 +625,7 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
                         }
                       }}
                       disabled={isProcessing}
-                      className="p-1.5 text-[#666666] dark:text-[#a0a0a0] hover:bg-[#eaeaea] dark:hover:bg-[#2a2a2a] rounded-lg transition-colors disabled:opacity-50"
+                      className="p-1.5 text-[#666666] dark:text-[#a0a0a0] hover:bg-[#181819] rounded-lg transition-colors disabled:opacity-50"
                       title={"Add Folder (Ctrl+Click to force re-upload)"}
                     >
                       <FolderOpen size={14} />
@@ -633,7 +633,7 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
                   )}
                 </div>
               </div>
-              <div className="flex gap-1 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] rounded p-0.5">
+              <div className="flex gap-1 bg-[#181819] rounded p-0.5">
                 <button
                   onClick={() => setFileViewTab('all')}
                   className={`flex-1 px-2 py-1 rounded text-[10px] font-semibold uppercase transition-colors ${fileViewTab === 'all' ? 'bg-white dark:bg-[#1a1a1a] text-[#4485d1]' : 'text-[#666666] dark:text-[#a0a0a0]'}`}
@@ -701,7 +701,7 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
 
               {files.length === 0 && !isProcessing ? (
                 <div className="text-center mt-12 px-6">
-                  <div className="w-16 h-16 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] rounded-full flex items-center justify-center mx-auto mb-3">
+                  <div className="w-16 h-16 bg-[#181819] rounded-full flex items-center justify-center mx-auto mb-3">
                       <FileText size={24} className="text-[#a0a0a0]" />
                   </div>
                   <p className="text-sm font-medium text-[#666666] dark:text-[#a0a0a0]">No sources yet</p>
@@ -723,7 +723,7 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
                           return (
                             <div key={folder.path} className="mb-1">
                               <div
-                                className="flex items-center gap-1.5 px-2 py-1.5 hover:bg-[#eaeaea] dark:hover:bg-[#2a2a2a] rounded cursor-pointer text-[#1a1a1a] dark:text-white group mx-2"
+                                className="flex items-center gap-1.5 px-2 py-1.5 hover:bg-[#181819] rounded cursor-pointer text-[#1a1a1a] dark:text-white group mx-2"
                                 onContextMenu={(e) => handleContextMenu(e, [], folder.path)}
                               >
                                 <div className="w-3 h-3 flex items-center justify-center flex-shrink-0" onClick={() => toggleFolder(folder.path)}>
@@ -764,7 +764,7 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
                                       }}
                                       className={`
                                         group relative flex items-center gap-2 px-2 py-2 rounded-md transition-all cursor-grab active:cursor-grabbing mx-2
-                                        ${selectedFiles.has(file.id) ? 'bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-400' : 'hover:bg-[#eaeaea] dark:hover:bg-[#2a2a2a]'}
+                                        ${selectedFiles.has(file.id) ? 'bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-400' : 'hover:bg-[#181819]'}
                                         ${cutFiles.has(file.id) ? 'opacity-40 scale-95' : ''}
                                       `}
                                       onClick={(e) => handleFileClick(file.id, e)}
@@ -824,7 +824,7 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
                           }}
                           className={`
                               group relative flex items-center gap-2 px-2 py-2 rounded-md transition-all cursor-grab active:cursor-grabbing mx-2
-                              ${selectedFiles.has(file.id) ? 'bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-400' : file.status === 'error' ? 'bg-red-50 dark:bg-red-900/20' : 'hover:bg-[#eaeaea] dark:hover:bg-[#2a2a2a]'}
+                              ${selectedFiles.has(file.id) ? 'bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-400' : file.status === 'error' ? 'bg-red-50 dark:bg-red-900/20' : 'hover:bg-[#181819]'}
                               ${cutFiles.has(file.id) ? 'opacity-40 scale-95' : ''}
                           `}
                           onClick={(e) => handleFileClick(file.id, e)}
@@ -912,7 +912,7 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
           <div className="flex gap-2 justify-end">
             <button
               onClick={() => setShowFolderInput(false)}
-              className="px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 dark:hover:bg-[#2a2a2a] rounded"
+              className="px-3 py-1.5 text-sm text-gray-600 hover:bg-[#181819] rounded"
             >
               Cancel
             </button>
@@ -943,7 +943,7 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
                   onGenerateMindMap(contextMenu.fileIds[0]);
                   setContextMenu(null);
                 }}
-                className="w-full px-3 py-2 text-left text-sm hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] flex items-center gap-2"
+                className="w-full px-3 py-2 text-left text-sm hover:bg-[#181819] flex items-center gap-2"
               >
                 <Network size={14} className="text-purple-500" />
                 Generate Mind Map
@@ -951,7 +951,7 @@ const FileSidebar: React.FC<FileSidebarProps> = ({
             )}
             <button
               onClick={() => handleCut(contextMenu.fileIds)}
-              className="w-full px-3 py-2 text-left text-sm hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[#2a2a2a] flex items-center gap-2"
+              className="w-full px-3 py-2 text-left text-sm hover:bg-[#181819] flex items-center gap-2"
             >
               <Scissors size={14} className="text-blue-500" />
               Cut

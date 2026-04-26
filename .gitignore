@@ -19,6 +19,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 diagnostic-logs-*.txt
+consolelogs*.txt
+CONSOLELOGS*.TXT
 
 # OS files
 .DS_Store

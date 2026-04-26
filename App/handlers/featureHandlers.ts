@@ -18,50 +18,64 @@ export const createFeatureHandlers = (
   setShowGraphicsLibrary: (show: boolean) => void,
   activeModelId: string
 ) => {
-  const handleTakeSnapshot = async () => {
-    console.log('[featureHandlers] handleTakeSnapshot called');
-    try {
-      const messagesContainer = document.querySelector('.max-w-3xl.mx-auto.w-full');
-      console.log('[featureHandlers] Messages container found:', !!messagesContainer);
-      
-      if (!messagesContainer) {
-        console.error('[featureHandlers] Messages container not found');
-        showToast('Could not find chat area to snapshot', 'error');
-        return;
-      }
-      
-      const context = { fileCount: files.length, messageCount: messages.length };
-      console.log('[featureHandlers] Taking snapshot with context:', context);
-      
-      const snapshot = await snapshotService.takeSnapshot(messagesContainer as HTMLElement, context);
-      console.log('[featureHandlers] Snapshot taken:', snapshot);
-      
-      setSnapshots(snapshotService.getSnapshots());
-      activityLogger.logAction('SNAPSHOT', 'Snapshot taken', { messageCount: messages.length, fileCount: files.length });
-      
-      showToast('Snapshot captured successfully!', 'success');
-    } catch (error: any) {
-      console.error('[featureHandlers] Failed to take snapshot:', error);
-      showToast('Failed to take snapshot', 'error');
-    }
-  };
+  // SNAPSHOT FEATURE COMMENTED OUT - Users can use Windows screenshot or export chat
+  // const handleTakeSnapshot = async () => {
+  //   console.log('[featureHandlers] handleTakeSnapshot called');
+  //   try {
+  //     // Try multiple selectors to find the chat messages container
+  //     let messagesContainer = document.querySelector('.chat-area-messages-container');
+  //     
+  //     if (!messagesContainer) {
+  //       // Fallback to the main chat area container
+  //       messagesContainer = document.querySelector('.chat-area-active-state');
+  //     }
+  //     
+  //     if (!messagesContainer) {
+  //       // Another fallback for new chat state
+  //       messagesContainer = document.querySelector('.chat-area-new-state');
+  //     }
+  //     
+  //     console.log('[featureHandlers] Messages container found:', !!messagesContainer);
+  //     
+  //     if (!messagesContainer) {
+  //       console.error('[featureHandlers] Messages container not found');
+  //       showToast('Could not find chat area to snapshot', 'error');
+  //       return;
+  //     }
+  //     
+  //     const context = { fileCount: files.length, messageCount: messages.length };
+  //     console.log('[featureHandlers] Taking snapshot with context:', context);
+  //     
+  //     const snapshot = await snapshotService.takeSnapshot(messagesContainer as HTMLElement, context);
+  //     console.log('[featureHandlers] Snapshot taken:', snapshot);
+  //     
+  //     setSnapshots(snapshotService.getSnapshots());
+  //     activityLogger.logAction('SNAPSHOT', 'Snapshot taken', { messageCount: messages.length, fileCount: files.length });
+  //     
+  //     showToast('Snapshot captured successfully!', 'success');
+  //   } catch (error: any) {
+  //     console.error('[featureHandlers] Failed to take snapshot:', error);
+  //     showToast('Failed to take snapshot', 'error');
+  //   }
+  // };
 
-  const handleDownloadSnapshot = (snapshot: Snapshot) => {
-    snapshotService.downloadSnapshot(snapshot);
-  };
+  // SNAPSHOT HANDLERS COMMENTED OUT
+  // const handleDownloadSnapshot = (snapshot: Snapshot) => {
+  //   snapshotService.downloadSnapshot(snapshot);
+  // };
 
-  const handleCopySnapshot = async (snapshot: Snapshot) => {
-    try {
-      await snapshotService.copyToClipboard(snapshot);
-    } catch (error: any) {
-      console.error('Failed to copy snapshot:', error);
-    }
-  };
+  // const handleCopySnapshot = async (snapshot: Snapshot) => {
+  //   try {
+  //     await snapshotService.copyToClipboard(snapshot);
+  //   } catch (error: any) {
+  //     console.error('Failed to copy snapshot:', error);
+  //   }
+  // };
 
-  const handleDeleteSnapshot = (id: string) => {
-    snapshotService.deleteSnapshot(id);
-    setSnapshots(snapshotService.getSnapshots());
-  };
+  // const handleDeleteSnapshot = (id: string) => {
+  //   snapshotService.deleteSnapshot(id);
+  //   setSnapshots(snapshotService.getSnapshots());
+  // };
 
   const handleDrawingToolChange = (tool: DrawingTool) => {
     drawingService.setTool(tool);
@@ -143,10 +157,10 @@ export const createFeatureHandlers = (
   const currentColor = DRAWING_COLORS.find(c => c.id === drawingState.colorId) || DRAWING_COLORS[0];
 
   return {
-    handleTakeSnapshot,
-    handleDownloadSnapshot,
-    handleCopySnapshot,
-    handleDeleteSnapshot,
+    // handleTakeSnapshot,
+    // handleDownloadSnapshot,
+    // handleCopySnapshot,
+    // handleDeleteSnapshot,
     handleDrawingToolChange,
     handleColorChange,
     handleStrokeWidthChange,

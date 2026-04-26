@@ -6,6 +6,7 @@ import {
   LIVE_SAMPLE_RATE,
   INPUT_SAMPLE_RATE,
 } from "./audioUtils";
+import { maskApiKeyInUrl, safeLog, safeError } from "../utils/securityUtils";
 
 export function getApiKey(): string | undefined {
   // Use same storage format as modelRegistry
@@ -48,10 +49,14 @@ export async function sendMessageToGemini(
         const formData = new FormData();
         formData.append('file', imgFile.fileHandle, imgFile.name);
         
+        // Use header-based authentication to prevent API key exposure
         const uploadResponse = await fetch(
-          `https://generativelanguage.googleapis.com/upload/v1beta/files?key=${apiKey}`,
+          `https://generativelanguage.googleapis.com/upload/v1beta/files`,
           {
             method: 'POST',
+            headers: {
+              "x-goog-api-key": apiKey  // Use header instead of URL parameter
+            },
             body: formData
           }
         );
@@ -69,7 +74,7 @@ export async function sendMessageToGemini(
           throw new Error(`Upload failed: ${errorText}`);
         }
       } catch (error) {
-        console.error('🔵 [GEMINI] ❌ File upload error:', error);
+        safeError('🔵 [GEMINI] ❌ File upload error:', error);
         throw new Error(`Failed to upload image "${imgFile.name}": ${error instanceof Error ? error.message : 'Unknown error'}. Try using a smaller image or switch to a different model.`);
       }
     }
@@ -118,31 +123,35 @@ export async function sendMessageToGemini(
     requestBody.systemInstruction = { parts: [{ text: systemPrompt }] };
   }
 
-  console.log('🔵 [GEMINI] Request body size:', JSON.stringify(requestBody).length, 'bytes');
-  console.log('🔵 [GEMINI] Total content messages:', contents.length);
-  console.log('🔵 [GEMINI] Current message parts:', currentParts.length);
-  console.log('🔵 [GEMINI] Sending request to API...');
+  safeLog('🔵 [GEMINI] Request body size:', JSON.stringify(requestBody).length, 'bytes');
+  safeLog('🔵 [GEMINI] Total content messages:', contents.length);
+  safeLog('🔵 [GEMINI] Current message parts:', currentParts.length);
+  safeLog('🔵 [GEMINI] Sending request to API...');
   
-  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:streamGenerateContent?key=${apiKey}&alt=sse`;
+  // Use header-based authentication instead of URL parameter to prevent API key exposure in browser logs
+  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:streamGenerateContent?alt=sse`;
   const response = await fetch(apiUrl,
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+        "Content-Type": "application/json",
+        "x-goog-api-key": apiKey  // Use header instead of URL parameter
+      },
       body: JSON.stringify(requestBody)
     }
   );
 
-  console.log('🔵 [GEMINI] Response status:', response.status, response.statusText);
+  safeLog('🔵 [GEMINI] Response status:', response.status, response.statusText);
   
   if (!response.ok) {
-    console.error('🔴 [GEMINI] API ERROR:', response.status);
+    safeError('🔴 [GEMINI] API ERROR:', response.status);
     const errorBody = await response.text().catch(() => 'Unable to read error');
-    console.error('🔴 [GEMINI] Error details:', errorBody.substring(0, 200));
+    safeError('🔴 [GEMINI] Error details:', errorBody.substring(0, 200));
     throw new Error(`API Error: ${response.statusText}`);
   }
   if (!response.body) throw new Error("No response body");
 
-  console.log('🟢 [GEMINI] Streaming response started...');
+  safeLog('🟢 [GEMINI] Streaming response started...');
 
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
@@ -172,6 +181,8 @@ export async function sendMessageToGemini(
             } else if (part.text) {
               chunkCount++;
               totalChars += part.text.length;
+              
+              // FAST STREAMING: Send chunks immediately for powerful, realistic streaming
               onStream(part.text, thinkingContent || undefined);
             }
           }
@@ -187,11 +198,11 @@ export async function sendMessageToGemini(
     }
   }
   
-  console.log('🟢 [GEMINI] Streaming complete');
-  console.log('🟢 [GEMINI] Chunks received:', chunkCount);
-  console.log('🟢 [GEMINI] Total characters:', totalChars);
-  console.log('🟢 [GEMINI] Token usage:', usage);
-  console.log('🔵 [GEMINI] === REQUEST END ===');
+  safeLog('🟢 [GEMINI] Streaming complete');
+  safeLog('🟢 [GEMINI] Chunks received:', chunkCount);
+  safeLog('🟢 [GEMINI] Total characters:', totalChars);
+  safeLog('🟢 [GEMINI] Token usage:', usage);
+  safeLog('🔵 [GEMINI] === REQUEST END ===');
   
   return usage;
 }
@@ -201,11 +212,15 @@ export async function generateSpeech(text: string): Promise<Uint8Array | null> {
     const apiKey = getApiKey();
     if (!apiKey) throw new Error("API Key missing");
     
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`;
+    // Use header-based authentication to prevent API key exposure
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent`;
     const response = await fetch(apiUrl,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "x-goog-api-key": apiKey  // Use header instead of URL parameter
+        },
         body: JSON.stringify({
           contents: [{ role: "user", parts: [{ text }] }],
           generationConfig: {

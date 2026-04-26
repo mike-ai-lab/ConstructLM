@@ -21,11 +21,14 @@ export const createAudioHandlers = (
       const arrayBuffer = await audioBlob.arrayBuffer();
       const base64Audio = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
       
-      // Use Google Speech-to-Text API (correct endpoint)
-      const apiUrl = `https://speech.googleapis.com/v1/speech:recognize?key=${apiKey}`;
+      // Use header-based authentication to prevent API key exposure
+      const apiUrl = `https://speech.googleapis.com/v1/speech:recognize`;
       const response = await fetch(apiUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-goog-api-key': apiKey  // Use header instead of URL parameter
+        },
         body: JSON.stringify({
           config: {
             encoding: 'WEBM_OPUS',

@@ -1014,6 +1014,7 @@ const App: React.FC = () => {
           onOpenRAGViewer={() => setIsLogsOpen(true)}
           notebookControls={notebookControls}
           todoControls={todoControls}
+          theme={theme}
           toggleTheme={toggleTheme}
         />
         )}

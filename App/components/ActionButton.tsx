@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Phone, Camera, Palette, HelpCircle, Settings, Plus, X, Image as ImageIcon, Moon, Sun } from 'lucide-react';
+import { Phone, /* Camera, */ Palette, HelpCircle, Settings, Plus, X, Image as ImageIcon, Moon, Sun } from 'lucide-react';
 
 interface ActionButtonProps {
   onCall?: () => void;
@@ -47,21 +47,21 @@ const ActionButton: React.FC<ActionButtonProps> = ({
       },
       show: !!onCall
     },
-    { 
-      icon: <Camera size={20} className="text-emerald-400" />, 
-      label: 'Snapshot', 
-      onClick: () => { 
-        console.log('[ActionButton] Snapshot clicked');
-        onSnapshot?.(); 
-        setIsOpen(false); 
-      },
-      show: !!onSnapshot
-    },
+    // { 
+    //   icon: <Camera size={20} className="text-emerald-400" />, 
+    //   label: 'Snapshot', 
+    //   onClick: () => { 
+    //     console.log('[ActionButton] Snapshot clicked');
+    //     onSnapshot?.(); 
+    //     setIsOpen(false); 
+    //   },
+    //   show: !!onSnapshot
+    // },
     { 
       icon: <ImageIcon size={20} className="text-purple-400" />, 
-      label: 'Graphics', 
+      label: 'Mind Maps', 
       onClick: () => { 
-        console.log('[ActionButton] Graphics clicked');
+        console.log('[ActionButton] Mind Maps clicked');
         onGraphics?.(); 
         setIsOpen(false); 
       },

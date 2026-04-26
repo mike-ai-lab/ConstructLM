@@ -18,12 +18,16 @@ export async function sendMessageToGeminiViaProxy(
   onStream: (chunk: string) => void
 ): Promise<void> {
   const proxy = getNextProxy();
-  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:streamGenerateContent?key=${apiKey}&alt=sse`;
+  // Use header-based authentication to prevent API key exposure
+  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:streamGenerateContent?alt=sse`;
   const url = `${proxy}${encodeURIComponent(apiUrl)}`;
   
   const response = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { 
+      "Content-Type": "application/json",
+      "x-goog-api-key": apiKey  // Use header instead of URL parameter
+    },
     body: JSON.stringify({
       contents: [{ role: "user", parts: [{ text: message }] }]
     })

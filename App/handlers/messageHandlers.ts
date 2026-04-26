@@ -125,6 +125,56 @@ Extract the KEY TOPIC and create a proper title. Output ONLY 3 words, no punctua
       modelId: activeModelId
     });
 
+    // ✅ CRITICAL FIX: Create user message and AI bubble IMMEDIATELY before heavy processing
+    const userMsg: Message = {
+      id: `user-${Date.now()}`,
+      role: 'user',
+      content: finalTextToSend,
+      timestamp: Date.now(),
+      sourcesUsed: []
+    };
+
+    const modelMsgId = retryMessageId || `model-${Date.now()}`;
+    const modelMsg: Message = {
+      id: modelMsgId,
+      role: 'model',
+      content: '',
+      timestamp: Date.now() + 1,
+      isStreaming: true,
+      modelId: activeModelId,
+      sourcesUsed: []
+    };
+
+    // Add messages to UI IMMEDIATELY
+    if (!retryMessageId) {
+      setMessages(prev => [...prev, userMsg, modelMsg]);
+      setInput('');
+      // Clear input draft for current chat from session persistence
+      if (currentChatId) {
+        sessionPersistence.clearChatDraft(currentChatId);
+      }
+      // Clear uploaded images after sending
+      setUploadedImages([]);
+      // Clean up blob URLs
+      imageFiles.forEach(img => {
+        if (img.fileHandle) {
+          const preview = URL.createObjectURL(img.fileHandle);
+          URL.revokeObjectURL(preview);
+        }
+      });
+      const actualFileNames = selectedFiles.map(f => f.name);
+      activityLogger.logMessageSent('current', finalTextToSend.length, activeModelId, actualFileNames);
+    } else {
+      setMessages(prev => prev.map(m => m.id === retryMessageId ? { ...modelMsg, id: retryMessageId } : m));
+    }
+    
+    setShowMentionMenu(false);
+    setIsGenerating(true);
+
+    // Force immediate UI render before heavy processing
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    // NOW do the heavy context processing (RAG/embeddings)
     const contextResult = await contextManager.selectContext(finalTextToSend, selectedFiles, activeModelId);
     console.log('[MessageHandler] Context result:', { 
       chunksCount: contextResult.chunks.length, 
@@ -145,15 +195,15 @@ Extract the KEY TOPIC and create a proper title. Output ONLY 3 words, no punctua
         totalTokens: contextResult.totalTokens,
         filesUsed: fileNames,
         selectedCount: selectedFiles.length,
-        onProceed: () => sendMessageWithContext(contextResult, selectedFiles, imageFiles, finalTextToSend, retryMessageId)
+        onProceed: () => sendMessageWithContext(contextResult, selectedFiles, imageFiles, finalTextToSend, retryMessageId, modelMsgId)
       });
       return null;
     }
 
-    return await sendMessageWithContext(contextResult, selectedFiles, imageFiles, finalTextToSend, retryMessageId);
+    return await sendMessageWithContext(contextResult, selectedFiles, imageFiles, finalTextToSend, retryMessageId, modelMsgId);
   };
 
-  const sendMessageWithContext = async (contextResult: any, selectedFiles: ProcessedFile[], imageFiles: ProcessedFile[], textToSend: string, retryMessageId?: string): Promise<string | null> => {
+  const sendMessageWithContext = async (contextResult: any, selectedFiles: ProcessedFile[], imageFiles: ProcessedFile[], textToSend: string, retryMessageId?: string, modelMsgId?: string): Promise<string | null> => {
     console.log('[MessageHandler] Context result:', { 
       totalTokens: contextResult.totalTokens, 
       filesUsed: contextResult.filesUsed.length,
@@ -169,54 +219,13 @@ Extract the KEY TOPIC and create a proper title. Output ONLY 3 words, no punctua
     const allFiles = [...selectedFiles, ...imageFiles];
     console.log('[MessageHandler] Sending to LLM with', selectedFiles.length, 'documents and', imageFiles.length, 'images');
     
-    const userMsg: Message = {
-      id: `user-${Date.now()}`,
-      role: 'user',
-      content: textToSend,
-      timestamp: Date.now(),
-      sourcesUsed: fileNames
-    };
+    // Update the model message with source files
+    const finalModelMsgId = modelMsgId || retryMessageId || `model-${Date.now()}`;
+    setMessages(prev => prev.map(msg => 
+      msg.id === finalModelMsgId ? { ...msg, sourcesUsed: fileNames } : msg
+    ));
 
-    if (!retryMessageId) {
-      setMessages(prev => [...prev, userMsg]);
-      setInput('');
-      // Clear input draft for current chat from session persistence
-      if (currentChatId) {
-        sessionPersistence.clearChatDraft(currentChatId);
-      }
-      // Clear uploaded images after sending
-      setUploadedImages([]);
-      // Clean up blob URLs
-      imageFiles.forEach(img => {
-        if (img.fileHandle) {
-          const preview = URL.createObjectURL(img.fileHandle);
-          URL.revokeObjectURL(preview);
-        }
-      });
-      const actualFileNames = selectedFiles.map(f => f.name);
-      activityLogger.logMessageSent('current', textToSend.length, activeModelId, actualFileNames);
-    }
-    setShowMentionMenu(false);
-    setIsGenerating(true);
-    
     console.log('[MessageHandler] Sending to LLM, model:', activeModelId);
-
-    const modelMsgId = retryMessageId || `model-${Date.now()}`;
-    const modelMsg: Message = {
-      id: modelMsgId,
-      role: 'model',
-      content: '',
-      timestamp: Date.now() + 1,
-      isStreaming: true,
-      modelId: activeModelId,
-      sourcesUsed: fileNames
-    };
-    
-    if (!retryMessageId) {
-      setMessages(prev => [...prev, modelMsg]);
-    } else {
-      setMessages(prev => prev.map(m => m.id === retryMessageId ? { ...modelMsg, id: retryMessageId } : m));
-    }
 
     try {
       let accumText = "";
@@ -237,17 +246,18 @@ Extract the KEY TOPIC and create a proper title. Output ONLY 3 words, no punctua
       const usage = await sendMessageToLLM(
         activeModelId,
         messages,
-        userMsg.content,
+        textToSend,
         allFiles, // Send both documents and images
         (chunk, thinking) => {
           accumText += chunk;
           if (thinking) thinkingText = thinking;
-          
-          // Update every 5 chunks OR immediately for final chunk (BATCHED UPDATES)
           updateCounter++;
-          if (updateCounter % 5 === 0 || chunk.length === 0) {
+          
+          // SMOOTH STREAMING: Batch updates every 3 chunks for smooth, powerful streaming
+          // This creates a natural typing effect without being too slow or too jumpy
+          if (updateCounter % 3 === 0 || chunk.includes('\n')) {
             setMessages(prev => prev.map(msg => 
-              msg.id === modelMsgId ? { ...msg, content: accumText, thinking: thinkingText || undefined } : msg
+              msg.id === finalModelMsgId ? { ...msg, content: accumText, thinking: thinkingText || undefined } : msg
             ));
           }
         },
@@ -256,7 +266,7 @@ Extract the KEY TOPIC and create a proper title. Output ONLY 3 words, no punctua
       
       // ✅ ENSURE FINAL UPDATE AFTER STREAMING COMPLETES
       setMessages(prev => prev.map(msg => 
-        msg.id === modelMsgId ? { ...msg, content: accumText, thinking: thinkingText || undefined } : msg
+        msg.id === finalModelMsgId ? { ...msg, content: accumText, thinking: thinkingText || undefined } : msg
       ));
       
       console.log('[MessageHandler] LLM response complete. Usage:', usage);
@@ -282,7 +292,7 @@ Extract the KEY TOPIC and create a proper title. Output ONLY 3 words, no punctua
       
       if (usage && (usage.inputTokens || usage.outputTokens)) {
         setMessages(prev => prev.map(msg => 
-          msg.id === modelMsgId 
+          msg.id === finalModelMsgId 
             ? { ...msg, usage: { inputTokens: usage.inputTokens || 0, outputTokens: usage.outputTokens || 0, totalTokens: usage.totalTokens || 0 } } 
             : msg
         ));

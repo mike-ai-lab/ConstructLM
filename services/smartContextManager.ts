@@ -128,7 +128,9 @@ function calculateRelevance(query: string, section: PDFSection): number {
   const queryWords = queryLower.split(/\s+/).filter(w => w.length > 2);
   queryWords.forEach(word => {
     if (titleLower.includes(word)) score += 20;
-    const contentMatches = (contentLower.match(new RegExp(word, 'g')) || []).length;
+    // Escape special regex characters to prevent regex errors
+    const escapedWord = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const contentMatches = (contentLower.match(new RegExp(escapedWord, 'g')) || []).length;
     score += contentMatches * 3;
   });
   
@@ -157,7 +159,9 @@ function calculateRelevanceFromContent(query: string, content: string, filename:
   
   const queryWords = queryLower.split(/\s+/).filter(w => w.length > 2);
   queryWords.forEach(word => {
-    const matches = (contentLower.match(new RegExp(word, 'g')) || []).length;
+    // Escape special regex characters to prevent regex errors
+    const escapedWord = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const matches = (contentLower.match(new RegExp(escapedWord, 'g')) || []).length;
     score += matches * 2;
   });
   

@@ -46,49 +46,80 @@ const ChatListItem = memo(({
     <div
       onClick={() => onSelect(chat.id)}
       className={`
-        group relative flex items-center gap-2 px-3 py-2 rounded-lg transition-all cursor-pointer h-[55px]
+        group relative flex items-start gap-3 px-3 py-3 rounded-lg transition-all cursor-pointer min-h-[50px]
         ${isActive 
-          ? 'bg-[rgba(0,0,0,0.06)] dark:bg-[rgba(255,255,255,0.06)]' 
-          : 'hover:bg-[rgba(0,0,0,0.03)] dark:hover:bg-[rgba(255,255,255,0.03)]'}
+          ? 'bg-[#4485d1] shadow-sm' 
+          : 'bg-[#181819] hover:bg-[#2a2a2a]'}
       `}
       role="button"
       aria-selected={isActive}
     >
+      {/* Content Area - Full width without icon */}
       <div className="flex-1 min-w-0">
-        <h3 className="text-sm font-medium text-[#1a1a1a] dark:text-white truncate mb-0.5">
-          {chat.name}
-        </h3>
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="text-[12px] text-[#666666] dark:text-[#a0a0a0] truncate">
-            {modelName}
-          </span>
-          <span className="text-[12px] text-[#666666] dark:text-[#a0a0a0] flex-shrink-0">•</span>
-          <span className="text-[12px] text-[#666666] dark:text-[#a0a0a0] flex-shrink-0">
+        <div className="flex items-start justify-between gap-2 mb-1">
+          <h3 className={`
+            text-sm font-semibold leading-tight
+            ${isActive 
+              ? 'text-white' 
+              : 'text-white'}
+          `}>
+            {chat.name}
+          </h3>
+          
+          {/* Timestamp - now white for better visibility */}
+          <span className={`
+            text-[10px] flex-shrink-0 font-medium leading-tight
+            ${isActive 
+              ? 'text-white opacity-90' 
+              : 'text-white opacity-70'}
+          `}>
             {formatDate(chat.updatedAt)}
           </span>
         </div>
+        
+        {/* Model info and action buttons */}
+        <div className="flex items-center justify-between">
+          <span className={`
+            text-[11px] truncate font-medium
+            ${isActive 
+              ? 'text-white opacity-80' 
+              : 'text-[#a0a0a0]'}
+          `}>
+            {modelName}
+          </span>
+          
+          {/* Action Buttons - always visible icons */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={(e) => onExportClick(chat.id, e)}
+              className={`
+                p-1 rounded transition-all flex-shrink-0
+                ${isActive 
+                  ? 'text-white hover:bg-[rgba(255,255,255,0.2)]' 
+                  : 'text-[#a0a0a0] hover:text-[#4485d1] hover:bg-[rgba(68,133,209,0.1)]'}
+              `}
+              title="Export chat as markdown"
+            >
+              <Download size={14} />
+            </button>
+
+            <button
+              onClick={(e) => onDeleteClick(chat.id, e)}
+              className={`
+                p-1 rounded transition-all flex-shrink-0
+                ${isDeleteConfirming 
+                  ? 'bg-red-500 text-white scale-105' 
+                  : isActive
+                    ? 'text-white hover:bg-red-500 hover:text-white'
+                    : 'text-[#a0a0a0] hover:text-red-500 hover:bg-red-900/20'}
+              `}
+              title={isDeleteConfirming ? 'Click again to confirm' : 'Delete chat'}
+            >
+              <Trash2 size={14} />
+            </button>
+          </div>
+        </div>
       </div>
-
-      <button
-        onClick={(e) => onExportClick(chat.id, e)}
-        className="opacity-0 group-hover:opacity-100 p-1.5 rounded transition-all flex-shrink-0 text-[#4485d1] hover:bg-[rgba(68,133,209,0.1)]"
-        title="Export chat as markdown"
-      >
-        <Download size={14} />
-      </button>
-
-      <button
-        onClick={(e) => onDeleteClick(chat.id, e)}
-        className={`
-          opacity-0 group-hover:opacity-100 p-1.5 rounded transition-all flex-shrink-0
-          ${isDeleteConfirming 
-            ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 opacity-100' 
-            : 'text-[#a0a0a0] hover:text-[#ef4444] hover:bg-red-50 dark:hover:bg-red-900/20'}
-        `}
-        title={isDeleteConfirming ? 'Click again to confirm' : 'Delete chat'}
-      >
-        <Trash2 size={14} />
-      </button>
     </div>
   );
 });
@@ -150,45 +181,67 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
   }, [onExportChat]);
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="px-4 py-2 flex-shrink-0">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-[12px] font-medium text-[#666666] dark:text-[#a0a0a0]">
-            {chats.length} chats
-          </span>
+    <div className="flex flex-col h-full bg-[#181819]">
+      {/* Header Section */}
+      <div className="px-4 py-4 flex-shrink-0 bg-[#181819] border-b border-[rgba(255,255,255,0.08)]">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-[rgba(68,133,209,0.15)] flex items-center justify-center">
+              <MessageCircle size={16} className="text-[#4485d1]" />
+            </div>
+            <div>
+              <span className="text-sm font-semibold text-white">Chats</span>
+              <span className="text-[11px] text-[#a0a0a0] ml-2">
+                {chats.length} conversations
+              </span>
+            </div>
+          </div>
           <button
             onClick={onCreateChat}
-            className="p-1.5 text-[#4485d1] hover:bg-[rgba(68,133,209,0.1)] rounded-lg transition-colors"
+            className="p-2 text-[#4485d1] hover:bg-[rgba(68,133,209,0.15)] rounded-lg transition-all shadow-sm border border-[rgba(68,133,209,0.3)]"
             title="New Chat"
           >
-            <Plus size={14} />
+            <Plus size={16} />
           </button>
         </div>
-        <div className="flex gap-1 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] rounded p-0.5">
+        
+        {/* Tab Selector */}
+        <div className="flex gap-1 bg-[#181819] rounded-lg p-1">
           <button
             onClick={() => setChatViewTab('files')}
-            className={`flex-1 px-2 py-1 rounded text-[10px] font-semibold uppercase transition-colors ${chatViewTab === 'files' ? 'bg-white dark:bg-[#1a1a1a] text-[#4485d1]' : 'text-[#666666] dark:text-[#a0a0a0]'}`}
+            className={`
+              flex-1 px-3 py-2 rounded-md text-[11px] font-semibold uppercase transition-all
+              ${chatViewTab === 'files' 
+                ? 'bg-[#181819] text-[#4485d1] shadow-sm border border-[rgba(68,133,209,0.2)]' 
+                : 'text-[#a0a0a0] hover:text-[#4485d1] hover:bg-[rgba(255,255,255,0.05)]'}
+            `}
           >
-            Files
+            Files ({chats.filter(c => !c.sourceType || c.sourceType === 'files').length})
           </button>
           <button
             onClick={() => setChatViewTab('links')}
-            className={`flex-1 px-2 py-1 rounded text-[10px] font-semibold uppercase transition-colors ${chatViewTab === 'links' ? 'bg-white dark:bg-[#1a1a1a] text-[#4485d1]' : 'text-[#666666] dark:text-[#a0a0a0]'}`}
+            className={`
+              flex-1 px-3 py-2 rounded-md text-[11px] font-semibold uppercase transition-all
+              ${chatViewTab === 'links' 
+                ? 'bg-[#181819] text-[#4485d1] shadow-sm border border-[rgba(68,133,209,0.2)]' 
+                : 'text-[#a0a0a0] hover:text-[#4485d1] hover:bg-[rgba(255,255,255,0.05)]'}
+            `}
           >
-            Links
+            Links ({chats.filter(c => c.sourceType === 'links').length})
           </button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-2 py-2 custom-scrollbar">
+      {/* Chat List */}
+      <div className="flex-1 overflow-y-auto px-3 py-3 custom-scrollbar">
         {chats.length === 0 ? (
-          <div className="text-center mt-12 px-6">
-            <div className="w-16 h-16 bg-[rgba(0,0,0,0.03)] dark:bg-[#2a2a2a] rounded-full flex items-center justify-center mx-auto mb-3">
-              <MessageCircle size={24} className="text-[#a0a0a0]" />
+          <div className="text-center mt-16 px-6">
+            <div className="w-20 h-20 bg-[rgba(68,133,209,0.12)] rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <MessageCircle size={32} className="text-[#4485d1]" />
             </div>
-            <p className="text-sm font-medium text-[#666666] dark:text-[#a0a0a0]">No chat history</p>
-            <p className="text-xs text-[#666666] dark:text-[#a0a0a0] mt-1 leading-relaxed">
-              Create a new chat to get started.
+            <p className="text-base font-semibold text-white mb-2">No conversations yet</p>
+            <p className="text-sm text-[#a0a0a0] leading-relaxed max-w-xs mx-auto">
+              Start a new chat to begin your conversation with AI
             </p>
           </div>
         ) : (

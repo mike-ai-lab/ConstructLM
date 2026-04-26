@@ -38,27 +38,15 @@ Cite: {{citation:URL|Section|exact quote}}`;
     const hasExcel = fileTypes.has('excel');
     const hasCsv = fileTypes.has('csv');
     
-    // Build MINIMAL file-type-specific citation instructions
-    let citationInstructions = '';
-    
-    if (hasPdf) {
-      citationInstructions += `\nPDF: {{citation:File.pdf|Page X|quote}}`;
-    }
-    
+    // ULTRA-MINIMAL citation format
+    let citationFormat = '{{citation:File|Page|quote}}';
     if (hasExcel || hasCsv) {
-      citationInstructions += `\nExcel/CSV: {{citation:File.xlsx|Sheet: Name, Row X|quote}}`;
+      citationFormat = '{{citation:File|Sheet/Row|quote}}';
     }
     
-    // If no specific types, generic
-    if (!citationInstructions) {
-      citationInstructions = `\nCite: {{citation:FileName|Location|exact quote}}`;
-    }
-    
-    return `You are ConstructLM. Answer using document chunks below.
+    return `You are ConstructLM. Answer using documents below.
 
-**Citation:**${citationInstructions}
-
-Cite exact text (3-10 words). Be detailed and thorough.`;
+Write complete sentences. Add citations at end: ${citationFormat}`;
   }
   
   return `You are ConstructLM, an AI assistant. Provide helpful, detailed answers.`;
@@ -102,17 +90,18 @@ export const sendMessageToLLM = async (
             console.log('[RAG] 🔍 Searching relevant chunks in selected files only...');
             const selectedFileIds = activeFiles.map(f => f.id);
             
-            // Adaptive chunk count based on file types (INCREASED FOR BETTER CONTEXT)
+            // Adaptive chunk count based on file types (OPTIMIZED FOR TOKEN EFFICIENCY)
             const hasStructuredFiles = activeFiles.some(f => f.type === 'excel' || f.type === 'csv');
             const hasPdfFiles = activeFiles.some(f => f.type === 'pdf');
             
-            let chunkLimit = 20; // Default - increased from 10
+            // AGGRESSIVE TOKEN OPTIMIZATION: Reduce chunks significantly
+            let chunkLimit = 8; // Default - reduced from 12
             if (hasStructuredFiles && !hasPdfFiles) {
-                chunkLimit = 15; // Excel/CSV only - increased from 6
+                chunkLimit = 5; // Excel/CSV only - reduced from 8
             } else if (hasPdfFiles && !hasStructuredFiles) {
-                chunkLimit = 25; // PDF only - increased from 12
+                chunkLimit = 10; // PDF only - reduced from 15
             } else if (hasStructuredFiles && hasPdfFiles) {
-                chunkLimit = 20; // Mixed - increased from 10
+                chunkLimit = 8; // Mixed - reduced from 12
             }
             
             const ragResults = await ragService.searchRelevantChunks(newMessage, chunkLimit, selectedFileIds);
@@ -120,19 +109,12 @@ export const sendMessageToLLM = async (
             if (ragResults.length > 0) {
                 console.log(`[RAG] ✅ Found ${ragResults.length} relevant chunks from selected files`);
                 
-                ragContext = '\n\nRELEVANT CONTEXT FROM SEMANTIC SEARCH:\n' + 
-                    ragResults.map((result, i) => {
-                        const score = result.score ? ` (relevance: ${(result.score * 100).toFixed(0)}%)` : '';
-                        return `[${i + 1}] From ${result.chunk.fileName}${score}:\n${result.chunk.content}`;
-                    }).join('\n\n') + 
-                    '\n\n🔴 CRITICAL CITATION RULES:\n' +
-                    '1. Answer ONCE - no repetitions, alternatives, or "better answers"\n' +
-                    '2. Find location markers in chunks: "--- [Page N] ---", "Sheet:", "Row", or section headers\n' +
-                    '3. Cite EXACT text: Copy 3-10 words directly from chunk (include numbers + context)\n' +
-                    '4. Format: {{citation:FileName|Location|exact quote}}\n' +
-                    '5. NEVER use "Page not specified" - use the actual location from the chunk\n' +
-                    '6. NEVER cite just item names - include quantities/specifications\n' +
-                    '7. Be confident and direct - give ONE clear answer';
+                // ULTRA-OPTIMIZED: Absolute minimal format to maximize token efficiency
+                ragContext = '\n\nCONTEXT:\n' + 
+                    ragResults.map((result, i) => 
+                        `[${i + 1}] ${result.chunk.fileName}:\n${result.chunk.content}`
+                    ).join('\n\n') + 
+                    '\n\nRULES: Write naturally. Cite at sentence end: {{citation:File|Page|quote}}';
             } else {
                 console.log('[RAG] No relevant chunks found in selected files');
             }
