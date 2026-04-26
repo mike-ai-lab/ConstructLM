@@ -161,6 +161,26 @@ export async function sendMessageToGemini(
   let totalChars = 0;
   let usage = { inputTokens: 0, outputTokens: 0, totalTokens: 0 };
 
+  // Character-by-character streaming buffer
+  let pendingText = "";
+  let streamingInterval: NodeJS.Timeout | null = null;
+  
+  // Start character-by-character streaming
+  const startCharacterStreaming = () => {
+    if (streamingInterval) return;
+    
+    streamingInterval = setInterval(() => {
+      if (pendingText.length > 0) {
+        // Stream 2-3 characters at a time for smooth, realistic typing
+        const charsToSend = Math.min(3, pendingText.length);
+        const textToSend = pendingText.slice(0, charsToSend);
+        pendingText = pendingText.slice(charsToSend);
+        
+        onStream(textToSend, thinkingContent || undefined);
+      }
+    }, 30); // 30ms = ~33 characters per second (realistic typing speed)
+  };
+
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
@@ -182,8 +202,13 @@ export async function sendMessageToGemini(
               chunkCount++;
               totalChars += part.text.length;
               
-              // FAST STREAMING: Send chunks immediately for powerful, realistic streaming
-              onStream(part.text, thinkingContent || undefined);
+              // Add to pending buffer for character-by-character streaming
+              pendingText += part.text;
+              
+              // Start streaming if not already started
+              if (!streamingInterval) {
+                startCharacterStreaming();
+              }
             }
           }
           
@@ -196,6 +221,16 @@ export async function sendMessageToGemini(
         } catch (e) {}
       }
     }
+  }
+  
+  // Wait for all pending characters to be streamed
+  while (pendingText.length > 0) {
+    await new Promise(resolve => setTimeout(resolve, 50));
+  }
+  
+  // Clean up interval
+  if (streamingInterval) {
+    clearInterval(streamingInterval);
   }
   
   safeLog('🟢 [GEMINI] Streaming complete');

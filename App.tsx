@@ -616,7 +616,8 @@ const App: React.FC = () => {
     inputState.setUploadedImages,
     setContextWarning,
     chatHandlers.updateChatName,
-    chatState.currentChatId
+    chatState.currentChatId,
+    layoutState.messagesEndRef
   );
 
   const filteredFiles = fileState.files.filter(f => f.name.toLowerCase().includes(inputState.mentionQuery));

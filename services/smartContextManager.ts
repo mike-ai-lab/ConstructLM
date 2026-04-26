@@ -20,8 +20,10 @@ const MODEL_LIMITS: Record<string, number> = {
   'gemini-1.5-pro': 2000000,
   'gemini-1.5-flash': 1000000,
   'gemini-flash-latest': 1000000,
-  'llama-3.3-70b-versatile': 1000,
-  'llama-3.1-8b-instant': 1500,
+  'llama-3.3-70b-versatile': 5000,  // Groq models have strict limits
+  'llama-3.1-8b-instant': 5000,
+  'qwen/qwen3-32b': 5000,
+  'openai/gpt-oss-120b': 7000,
 };
 
 export async function selectRelevantContext(
@@ -30,7 +32,10 @@ export async function selectRelevantContext(
   modelId: string
 ): Promise<ContextSelection> {
   const modelLimit = MODEL_LIMITS[modelId] || 32000;
-  const maxTokenBudget = Math.floor(modelLimit * 0.1); // Use only 10% for very strict selection
+  
+  // AGGRESSIVE REDUCTION: Use only 5% for Groq models, 10% for others
+  const isGroqModel = modelId.includes('llama') || modelId.includes('qwen') || modelId.includes('gpt-oss');
+  const maxTokenBudget = Math.floor(modelLimit * (isGroqModel ? 0.05 : 0.1));
   
   const allSections: any[] = [];
   

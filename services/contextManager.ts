@@ -57,14 +57,14 @@ class ContextManager {
       const contextWindow = model?.contextWindow || 32000;
       
       const groqLimits: Record<string, number> = {
-        'llama-3.3-70b-versatile': 1000,
-        'llama-3.1-8b-instant': 1500,
-        'qwen/qwen3-32b': 2000,
-        'openai/gpt-oss-120b': 3000,
-        'meta-llama/llama-4-scout-17b-16e-instruct': 2000,
-        'meta-llama/llama-4-maverick-17b-128e-instruct': 2000,
-        'openai/gpt-oss-safeguard-20b': 3000,
-        'openai/gpt-oss-20b': 3000
+        'llama-3.3-70b-versatile': 250,  // DRASTICALLY REDUCED - only 250 tokens for context
+        'llama-3.1-8b-instant': 250,
+        'qwen/qwen3-32b': 250,
+        'openai/gpt-oss-120b': 350,
+        'meta-llama/llama-4-scout-17b-16e-instruct': 250,
+        'meta-llama/llama-4-maverick-17b-128e-instruct': 250,
+        'openai/gpt-oss-safeguard-20b': 350,
+        'openai/gpt-oss-20b': 350
       };
       
       const maxTokens = model?.provider === 'groq' && groqLimits[modelId]

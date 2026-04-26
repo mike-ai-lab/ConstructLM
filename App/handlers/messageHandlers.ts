@@ -24,7 +24,8 @@ export const createMessageHandlers = (
   setUploadedImages: (images: UploadedImage[] | ((prev: UploadedImage[]) => UploadedImage[])) => void,
   onShowContextWarning?: (data: { totalTokens: number; filesUsed: string[]; selectedCount: number; onProceed: () => void }) => void,
   updateChatName?: (name: string) => void,
-  currentChatId?: string | null
+  currentChatId?: string | null,
+  messagesEndRef?: React.RefObject<HTMLDivElement>
 ) => {
   
   const generateChatTitle = async (userMessage: string) => {
@@ -174,6 +175,13 @@ Extract the KEY TOPIC and create a proper title. Output ONLY 3 words, no punctua
     // Force immediate UI render before heavy processing
     await new Promise(resolve => setTimeout(resolve, 0));
 
+    // ✅ AUTO-SCROLL: Scroll to bottom after messages are added
+    setTimeout(() => {
+      if (messagesEndRef?.current) {
+        messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      }
+    }, 100);
+
     // NOW do the heavy context processing (RAG/embeddings)
     const contextResult = await contextManager.selectContext(finalTextToSend, selectedFiles, activeModelId);
     console.log('[MessageHandler] Context result:', { 
@@ -230,7 +238,6 @@ Extract the KEY TOPIC and create a proper title. Output ONLY 3 words, no punctua
     try {
       let accumText = "";
       let thinkingText = "";
-      let updateCounter = 0;
       
       const fetchedSources = sources.filter(s => s.status === 'fetched' && s.selected !== false);
       console.log('[MessageHandler] Fetched sources:', fetchedSources.length);
@@ -251,15 +258,11 @@ Extract the KEY TOPIC and create a proper title. Output ONLY 3 words, no punctua
         (chunk, thinking) => {
           accumText += chunk;
           if (thinking) thinkingText = thinking;
-          updateCounter++;
           
-          // SMOOTH STREAMING: Batch updates every 3 chunks for smooth, powerful streaming
-          // This creates a natural typing effect without being too slow or too jumpy
-          if (updateCounter % 3 === 0 || chunk.includes('\n')) {
-            setMessages(prev => prev.map(msg => 
-              msg.id === finalModelMsgId ? { ...msg, content: accumText, thinking: thinkingText || undefined } : msg
-            ));
-          }
+          // Update immediately - streaming is already throttled at the service level
+          setMessages(prev => prev.map(msg => 
+            msg.id === finalModelMsgId ? { ...msg, content: accumText, thinking: thinkingText || undefined } : msg
+          ));
         },
         fetchedSources
       );
